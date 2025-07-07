@@ -4,15 +4,15 @@ import "time"
 
 // Task represents a work unit in the TaskGuild system
 type Task struct {
-	ID              string    `yaml:"id"`
-	Title           string    `yaml:"title"`
-	Type            string    `yaml:"type"`
-	Status          string    `yaml:"status"`
-	Worktree        string    `yaml:"worktree"`
-	Branch          string    `yaml:"branch"`
-	AssignedAgents  []string  `yaml:"assigned_agents"`
-	CreatedAt       time.Time `yaml:"created_at"`
-	UpdatedAt       time.Time `yaml:"updated_at"`
+	ID             string    `yaml:"id"`
+	Title          string    `yaml:"title"`
+	Type           string    `yaml:"type"`
+	Status         string    `yaml:"status"`
+	Worktree       string    `yaml:"worktree"`
+	Branch         string    `yaml:"branch"`
+	AssignedAgents []string  `yaml:"assigned_agents"`
+	CreatedAt      time.Time `yaml:"created_at"`
+	UpdatedAt      time.Time `yaml:"updated_at"`
 }
 
 // Repository defines the interface for task persistence operations

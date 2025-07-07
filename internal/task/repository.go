@@ -33,7 +33,7 @@ func (r *YAMLRepository) Create(task *Task) error {
 	}
 
 	data.Tasks = append(data.Tasks, task)
-	
+
 	return r.saveData(data)
 }
 
