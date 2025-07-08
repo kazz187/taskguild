@@ -1,0 +1,112 @@
+syntax = "proto3";
+
+package taskguild.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1";
+
+// TaskService handles task management operations
+service TaskService {
+  // Create a new task
+  rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
+  
+  // List all tasks
+  rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
+  
+  // Get task details
+  rpc GetTask(GetTaskRequest) returns (GetTaskResponse);
+  
+  // Update task status
+  rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse);
+  
+  // Close a task
+  rpc CloseTask(CloseTaskRequest) returns (CloseTaskResponse);
+}
+
+// Task represents a task in the system
+message Task {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  TaskStatus status = 4;
+  string type = 5;
+  string assigned_to = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  map<string, string> metadata = 9;
+}
+
+// TaskStatus represents the status of a task
+enum TaskStatus {
+  TASK_STATUS_UNSPECIFIED = 0;
+  TASK_STATUS_CREATED = 1;
+  TASK_STATUS_ANALYZING = 2;
+  TASK_STATUS_DESIGNED = 3;
+  TASK_STATUS_IN_PROGRESS = 4;
+  TASK_STATUS_REVIEW_READY = 5;
+  TASK_STATUS_QA_READY = 6;
+  TASK_STATUS_CLOSED = 7;
+  TASK_STATUS_CANCELLED = 8;
+}
+
+// CreateTaskRequest represents a request to create a new task
+message CreateTaskRequest {
+  string title = 1;
+  string description = 2;
+  string type = 3;
+  map<string, string> metadata = 4;
+}
+
+// CreateTaskResponse represents the response from creating a task
+message CreateTaskResponse {
+  Task task = 1;
+}
+
+// ListTasksRequest represents a request to list tasks
+message ListTasksRequest {
+  string status_filter = 1;
+  string type_filter = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+// ListTasksResponse represents the response from listing tasks
+message ListTasksResponse {
+  repeated Task tasks = 1;
+  int32 total = 2;
+}
+
+// GetTaskRequest represents a request to get a specific task
+message GetTaskRequest {
+  string id = 1;
+}
+
+// GetTaskResponse represents the response from getting a task
+message GetTaskResponse {
+  Task task = 1;
+}
+
+// UpdateTaskRequest represents a request to update a task
+message UpdateTaskRequest {
+  string id = 1;
+  TaskStatus status = 2;
+  string description = 3;
+  map<string, string> metadata = 4;
+}
+
+// UpdateTaskResponse represents the response from updating a task
+message UpdateTaskResponse {
+  Task task = 1;
+}
+
+// CloseTaskRequest represents a request to close a task
+message CloseTaskRequest {
+  string id = 1;
+  string reason = 2;
+}
+
+// CloseTaskResponse represents the response from closing a task
+message CloseTaskResponse {
+  Task task = 1;
+}

@@ -93,10 +93,14 @@ func TestTaskService(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	repo := NewYAMLRepository(filepath.Join(tempDir, "test-tasks.yaml"))
-	service := NewTaskService(repo)
+	service := NewService(repo, nil) // Pass nil for eventBus in test
 
 	// Test CreateTask
-	task, err := service.CreateTask("Test Task", "feature")
+	createReq := &CreateTaskRequest{
+		Title: "Test Task",
+		Type:  "feature",
+	}
+	task, err := service.CreateTask(createReq)
 	if err != nil {
 		t.Fatalf("Failed to create task: %v", err)
 	}
@@ -138,7 +142,11 @@ func TestTaskService(t *testing.T) {
 	}
 
 	// Test UpdateTaskStatus
-	if err := service.UpdateTaskStatus("TASK-001", "IN_PROGRESS"); err != nil {
+	updateReq := &UpdateTaskRequest{
+		ID:     "TASK-001",
+		Status: StatusInProgress,
+	}
+	if _, err := service.UpdateTask(updateReq); err != nil {
 		t.Fatalf("Failed to update task status: %v", err)
 	}
 
@@ -151,46 +159,10 @@ func TestTaskService(t *testing.T) {
 		t.Errorf("Expected status IN_PROGRESS, got %s", updatedTask.Status)
 	}
 
-	// Test AssignAgent
-	if err := service.AssignAgent("TASK-001", "agent1"); err != nil {
-		t.Fatalf("Failed to assign agent: %v", err)
-	}
-
-	taskWithAgent, err := service.GetTask("TASK-001")
-	if err != nil {
-		t.Fatalf("Failed to get task with agent: %v", err)
-	}
-
-	if len(taskWithAgent.AssignedAgents) != 1 {
-		t.Errorf("Expected 1 assigned agent, got %d", len(taskWithAgent.AssignedAgents))
-	}
-
-	if taskWithAgent.AssignedAgents[0] != "agent1" {
-		t.Errorf("Expected agent1, got %s", taskWithAgent.AssignedAgents[0])
-	}
-
-	// Test UnassignAgent
-	if err := service.UnassignAgent("TASK-001", "agent1"); err != nil {
-		t.Fatalf("Failed to unassign agent: %v", err)
-	}
-
-	taskWithoutAgent, err := service.GetTask("TASK-001")
-	if err != nil {
-		t.Fatalf("Failed to get task without agent: %v", err)
-	}
-
-	if len(taskWithoutAgent.AssignedAgents) != 0 {
-		t.Errorf("Expected 0 assigned agents, got %d", len(taskWithoutAgent.AssignedAgents))
-	}
-
 	// Test CloseTask
-	if err := service.CloseTask("TASK-001"); err != nil {
-		t.Fatalf("Failed to close task: %v", err)
-	}
-
-	closedTask, err := service.GetTask("TASK-001")
+	closedTask, err := service.CloseTask("TASK-001")
 	if err != nil {
-		t.Fatalf("Failed to get closed task: %v", err)
+		t.Fatalf("Failed to close task: %v", err)
 	}
 
 	if closedTask.Status != "CLOSED" {
@@ -207,10 +179,13 @@ func TestTaskServiceValidation(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	repo := NewYAMLRepository(filepath.Join(tempDir, "test-tasks.yaml"))
-	service := NewTaskService(repo)
+	service := NewService(repo, nil) // Pass nil for eventBus in test
 
 	// Test CreateTask with empty title
-	_, err = service.CreateTask("", "feature")
+	_, err = service.CreateTask(&CreateTaskRequest{
+		Title: "",
+		Type:  "feature",
+	})
 	if err == nil {
 		t.Error("Expected error for empty title, but got none")
 	}
@@ -221,15 +196,12 @@ func TestTaskServiceValidation(t *testing.T) {
 		t.Error("Expected error for empty ID, but got none")
 	}
 
-	// Test UpdateTaskStatus with empty ID
-	err = service.UpdateTaskStatus("", "IN_PROGRESS")
+	// Test UpdateTask with empty ID
+	_, err = service.UpdateTask(&UpdateTaskRequest{
+		ID:     "",
+		Status: StatusInProgress,
+	})
 	if err == nil {
 		t.Error("Expected error for empty ID, but got none")
-	}
-
-	// Test UpdateTaskStatus with empty status
-	err = service.UpdateTaskStatus("TASK-001", "")
-	if err == nil {
-		t.Error("Expected error for empty status, but got none")
 	}
 }

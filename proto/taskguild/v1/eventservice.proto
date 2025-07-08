@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package taskguild.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1";
+
+// EventService handles event management operations
+service EventService {
+  // Get event logs
+  rpc GetEventLogs(GetEventLogsRequest) returns (GetEventLogsResponse);
+  
+  // Subscribe to events (streaming)
+  rpc SubscribeEvents(SubscribeEventsRequest) returns (stream EventMessage);
+  
+  // Publish an event
+  rpc PublishEvent(PublishEventRequest) returns (PublishEventResponse);
+}
+
+// Event represents an event in the system
+message Event {
+  string id = 1;
+  string type = 2;
+  string payload = 3;
+  map<string, string> metadata = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+// EventMessage represents a streaming event message
+message EventMessage {
+  Event event = 1;
+}
+
+// GetEventLogsRequest represents a request to get event logs
+message GetEventLogsRequest {
+  string type_filter = 1;
+  google.protobuf.Timestamp from_time = 2;
+  google.protobuf.Timestamp to_time = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+// GetEventLogsResponse represents the response from getting event logs
+message GetEventLogsResponse {
+  repeated Event events = 1;
+  int32 total = 2;
+}
+
+// SubscribeEventsRequest represents a request to subscribe to events
+message SubscribeEventsRequest {
+  repeated string event_types = 1;
+  map<string, string> filters = 2;
+}
+
+// PublishEventRequest represents a request to publish an event
+message PublishEventRequest {
+  string type = 1;
+  string payload = 2;
+  map<string, string> metadata = 3;
+}
+
+// PublishEventResponse represents the response from publishing an event
+message PublishEventResponse {
+  Event event = 1;
+}

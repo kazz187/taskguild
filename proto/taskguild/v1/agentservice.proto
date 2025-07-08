@@ -1,0 +1,136 @@
+syntax = "proto3";
+
+package taskguild.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1";
+
+// AgentService handles agent management operations
+service AgentService {
+  // List all agents
+  rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
+  
+  // Get agent details
+  rpc GetAgent(GetAgentRequest) returns (GetAgentResponse);
+  
+  // Start an agent
+  rpc StartAgent(StartAgentRequest) returns (StartAgentResponse);
+  
+  // Stop an agent
+  rpc StopAgent(StopAgentRequest) returns (StopAgentResponse);
+  
+  // Get agent status
+  rpc GetAgentStatus(GetAgentStatusRequest) returns (GetAgentStatusResponse);
+  
+  // Scale agents
+  rpc ScaleAgent(ScaleAgentRequest) returns (ScaleAgentResponse);
+}
+
+// Agent represents an agent in the system
+message Agent {
+  string id = 1;
+  string role = 2;
+  string type = 3;
+  string memory_path = 4;
+  AgentStatus status = 5;
+  string task_id = 6;
+  string worktree_path = 7;
+  repeated EventTrigger triggers = 8;
+  repeated ApprovalRule approval_required = 9;
+  ScalingConfig scaling = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+// AgentStatus represents the status of an agent
+enum AgentStatus {
+  AGENT_STATUS_UNSPECIFIED = 0;
+  AGENT_STATUS_IDLE = 1;
+  AGENT_STATUS_BUSY = 2;
+  AGENT_STATUS_WAITING = 3;
+  AGENT_STATUS_ERROR = 4;
+  AGENT_STATUS_STOPPED = 5;
+}
+
+// EventTrigger represents an event trigger configuration
+message EventTrigger {
+  string event = 1;
+  string condition = 2;
+}
+
+// ApprovalRule represents an approval rule configuration
+message ApprovalRule {
+  string action = 1;
+  string pattern = 2;
+  string condition = 3;
+}
+
+// ScalingConfig represents scaling configuration for an agent
+message ScalingConfig {
+  int32 min = 1;
+  int32 max = 2;
+  bool auto = 3;
+}
+
+// ListAgentsRequest represents a request to list agents
+message ListAgentsRequest {
+  string role_filter = 1;
+  string status_filter = 2;
+}
+
+// ListAgentsResponse represents the response from listing agents
+message ListAgentsResponse {
+  repeated Agent agents = 1;
+}
+
+// GetAgentRequest represents a request to get a specific agent
+message GetAgentRequest {
+  string id = 1;
+}
+
+// GetAgentResponse represents the response from getting an agent
+message GetAgentResponse {
+  Agent agent = 1;
+}
+
+// StartAgentRequest represents a request to start an agent
+message StartAgentRequest {
+  string id = 1;
+}
+
+// StartAgentResponse represents the response from starting an agent
+message StartAgentResponse {
+  Agent agent = 1;
+}
+
+// StopAgentRequest represents a request to stop an agent
+message StopAgentRequest {
+  string id = 1;
+}
+
+// StopAgentResponse represents the response from stopping an agent
+message StopAgentResponse {
+  Agent agent = 1;
+}
+
+// GetAgentStatusRequest represents a request to get agent status
+message GetAgentStatusRequest {
+  string id = 1;
+}
+
+// GetAgentStatusResponse represents the response from getting agent status
+message GetAgentStatusResponse {
+  Agent agent = 1;
+}
+
+// ScaleAgentRequest represents a request to scale agents
+message ScaleAgentRequest {
+  string role = 1;
+  int32 count = 2;
+}
+
+// ScaleAgentResponse represents the response from scaling agents
+message ScaleAgentResponse {
+  repeated Agent agents = 1;
+}

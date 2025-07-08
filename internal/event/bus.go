@@ -22,6 +22,7 @@ type EventBus struct {
 	pubSub PubSub
 	router *message.Router
 	logger watermill.LoggerAdapter
+	cancel context.CancelFunc
 }
 
 // EventHandler is a function that handles events
@@ -52,11 +53,29 @@ func NewEventBus() *EventBus {
 
 // Start starts the event bus
 func (eb *EventBus) Start(ctx context.Context) error {
-	return eb.router.Run(ctx)
+	// Create a cancellable context for the router
+	routerCtx, cancel := context.WithCancel(ctx)
+	eb.cancel = cancel
+
+	// Run router in a goroutine since it blocks
+	go func() {
+		if err := eb.router.Run(routerCtx); err != nil {
+			// Log error but don't crash - router.Run returns error when context is cancelled
+			eb.logger.Error("Event bus router stopped", err, nil)
+		}
+	}()
+
+	return nil
 }
 
 // Stop stops the event bus
 func (eb *EventBus) Stop() error {
+	// Cancel the router context to stop it gracefully
+	if eb.cancel != nil {
+		eb.cancel()
+	}
+
+	// Close the router
 	return eb.router.Close()
 }
 

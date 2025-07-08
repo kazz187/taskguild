@@ -194,6 +194,7 @@ func (a *Agent) run() {
 			return
 		}
 
+		fmt.Println("Agent running:", a.ID, "Role:", a.Role, "Status:", a.Status)
 		select {
 		case <-ctx.Done():
 			return

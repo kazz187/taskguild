@@ -296,3 +296,31 @@ func (m *Manager) handleApprovals() {
 func (m *Manager) GetApprovalRequests() <-chan *ApprovalRequest {
 	return m.approvals
 }
+
+func (m *Manager) StartAgent(agentID string) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	agent, exists := m.agents[agentID]
+	if !exists {
+		return fmt.Errorf("agent %s not found", agentID)
+	}
+
+	if agent.ctx != nil {
+		return fmt.Errorf("agent %s is already running", agentID)
+	}
+
+	return agent.Start(m.ctx)
+}
+
+func (m *Manager) StopAgent(agentID string) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	agent, exists := m.agents[agentID]
+	if !exists {
+		return fmt.Errorf("agent %s not found", agentID)
+	}
+
+	return agent.Stop()
+}

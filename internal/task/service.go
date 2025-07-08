@@ -1,30 +1,36 @@
 package task
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/kazz187/taskguild/internal/event"
 )
 
-// TaskService implements Service interface with business logic for task operations
-type TaskService struct {
+// ServiceImpl implements the Service interface
+type ServiceImpl struct {
 	repository Repository
+	eventBus   *event.EventBus
 }
 
-// NewTaskService creates a new task service instance
-func NewTaskService(repository Repository) *TaskService {
-	return &TaskService{
+// NewService creates a new task service instance with event bus
+func NewService(repository Repository, eventBus *event.EventBus) Service {
+	return &ServiceImpl{
 		repository: repository,
+		eventBus:   eventBus,
 	}
 }
 
-// CreateTask creates a new task with the given title and type
-func (s *TaskService) CreateTask(title, taskType string) (*Task, error) {
-	if title == "" {
+// CreateTask creates a new task with the given request
+func (s *ServiceImpl) CreateTask(req *CreateTaskRequest) (*Task, error) {
+	if req.Title == "" {
 		return nil, fmt.Errorf("task title cannot be empty")
 	}
 
+	taskType := req.Type
 	if taskType == "" {
 		taskType = "task"
 	}
@@ -42,12 +48,14 @@ func (s *TaskService) CreateTask(title, taskType string) (*Task, error) {
 	now := time.Now()
 	task := &Task{
 		ID:             taskID,
-		Title:          title,
+		Title:          req.Title,
+		Description:    req.Description,
 		Type:           taskType,
-		Status:         "CREATED",
+		Status:         string(StatusCreated),
 		Worktree:       worktreePath,
 		Branch:         branchName,
 		AssignedAgents: []string{},
+		Metadata:       req.Metadata,
 		CreatedAt:      now,
 		UpdatedAt:      now,
 	}
@@ -56,25 +64,36 @@ func (s *TaskService) CreateTask(title, taskType string) (*Task, error) {
 		return nil, fmt.Errorf("failed to create task: %w", err)
 	}
 
+	// Publish event
+	if s.eventBus != nil {
+		eventData := &event.TaskCreatedData{
+			TaskID:      task.ID,
+			Title:       task.Title,
+			Description: task.Description,
+			Type:        task.Type,
+		}
+		s.eventBus.Publish(context.Background(), "task-service", eventData)
+	}
+
 	return task, nil
 }
 
-// GetTask retrieves a task by its ID
-func (s *TaskService) GetTask(id string) (*Task, error) {
+// GetTask retrieves a task by ID
+func (s *ServiceImpl) GetTask(id string) (*Task, error) {
 	if id == "" {
 		return nil, fmt.Errorf("task ID cannot be empty")
 	}
 
 	task, err := s.repository.GetByID(id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get task: %w", err)
+		return nil, fmt.Errorf("failed to get task %s: %w", id, err)
 	}
 
 	return task, nil
 }
 
-// ListTasks retrieves all tasks
-func (s *TaskService) ListTasks() ([]*Task, error) {
+// ListTasks returns all tasks
+func (s *ServiceImpl) ListTasks() ([]*Task, error) {
 	tasks, err := s.repository.GetAll()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tasks: %w", err)
@@ -83,119 +102,62 @@ func (s *TaskService) ListTasks() ([]*Task, error) {
 	return tasks, nil
 }
 
-// UpdateTaskStatus updates the status of a task
-func (s *TaskService) UpdateTaskStatus(id, status string) error {
-	if id == "" {
-		return fmt.Errorf("task ID cannot be empty")
+// UpdateTask updates a task with the given request
+func (s *ServiceImpl) UpdateTask(req *UpdateTaskRequest) (*Task, error) {
+	if req.ID == "" {
+		return nil, fmt.Errorf("task ID cannot be empty")
 	}
 
-	if status == "" {
-		return fmt.Errorf("status cannot be empty")
-	}
-
-	task, err := s.repository.GetByID(id)
+	task, err := s.repository.GetByID(req.ID)
 	if err != nil {
-		return fmt.Errorf("failed to get task: %w", err)
+		return nil, fmt.Errorf("failed to get task %s: %w", req.ID, err)
 	}
 
-	task.Status = status
-	task.UpdatedAt = time.Now()
+	oldStatus := task.Status
+	task.Update(req)
 
 	if err := s.repository.Update(task); err != nil {
-		return fmt.Errorf("failed to update task: %w", err)
+		return nil, fmt.Errorf("failed to update task: %w", err)
 	}
 
-	return nil
-}
-
-// CloseTask marks a task as closed
-func (s *TaskService) CloseTask(id string) error {
-	return s.UpdateTaskStatus(id, "CLOSED")
-}
-
-// AssignAgent assigns an agent to a task
-func (s *TaskService) AssignAgent(taskID, agentID string) error {
-	if taskID == "" {
-		return fmt.Errorf("task ID cannot be empty")
-	}
-
-	if agentID == "" {
-		return fmt.Errorf("agent ID cannot be empty")
-	}
-
-	task, err := s.repository.GetByID(taskID)
-	if err != nil {
-		return fmt.Errorf("failed to get task: %w", err)
-	}
-
-	// Check if agent is already assigned
-	for _, assignedAgent := range task.AssignedAgents {
-		if assignedAgent == agentID {
-			return fmt.Errorf("agent %s is already assigned to task %s", agentID, taskID)
+	// Publish event if status changed
+	if s.eventBus != nil && oldStatus != task.Status {
+		eventData := &event.TaskStatusChangedData{
+			TaskID:     task.ID,
+			FromStatus: oldStatus,
+			ToStatus:   task.Status,
 		}
+		s.eventBus.Publish(context.Background(), "task-service", eventData)
 	}
 
-	task.AssignedAgents = append(task.AssignedAgents, agentID)
-	task.UpdatedAt = time.Now()
-
-	if err := s.repository.Update(task); err != nil {
-		return fmt.Errorf("failed to update task: %w", err)
-	}
-
-	return nil
+	return task, nil
 }
 
-// UnassignAgent removes an agent from a task
-func (s *TaskService) UnassignAgent(taskID, agentID string) error {
-	if taskID == "" {
-		return fmt.Errorf("task ID cannot be empty")
+// CloseTask closes a task
+func (s *ServiceImpl) CloseTask(id string) (*Task, error) {
+	req := &UpdateTaskRequest{
+		ID:     id,
+		Status: StatusClosed,
 	}
-
-	if agentID == "" {
-		return fmt.Errorf("agent ID cannot be empty")
-	}
-
-	task, err := s.repository.GetByID(taskID)
-	if err != nil {
-		return fmt.Errorf("failed to get task: %w", err)
-	}
-
-	// Find and remove the agent
-	for i, assignedAgent := range task.AssignedAgents {
-		if assignedAgent == agentID {
-			task.AssignedAgents = append(task.AssignedAgents[:i], task.AssignedAgents[i+1:]...)
-			task.UpdatedAt = time.Now()
-
-			if err := s.repository.Update(task); err != nil {
-				return fmt.Errorf("failed to update task: %w", err)
-			}
-
-			return nil
-		}
-	}
-
-	return fmt.Errorf("agent %s is not assigned to task %s", agentID, taskID)
+	return s.UpdateTask(req)
 }
 
 // generateTaskID generates a unique task ID
-func (s *TaskService) generateTaskID() (string, error) {
+func (s *ServiceImpl) generateTaskID() (string, error) {
 	tasks, err := s.repository.GetAll()
 	if err != nil {
-		return "", fmt.Errorf("failed to get existing tasks: %w", err)
+		return "", err
 	}
 
-	// Find the highest task number
-	maxNumber := 0
+	maxID := 0
 	for _, task := range tasks {
 		if strings.HasPrefix(task.ID, "TASK-") {
-			var number int
-			if _, err := fmt.Sscanf(task.ID, "TASK-%d", &number); err == nil {
-				if number > maxNumber {
-					maxNumber = number
-				}
+			var id int
+			if _, err := fmt.Sscanf(task.ID, "TASK-%d", &id); err == nil && id > maxID {
+				maxID = id
 			}
 		}
 	}
 
-	return fmt.Sprintf("TASK-%03d", maxNumber+1), nil
+	return fmt.Sprintf("TASK-%03d", maxID+1), nil
 }
