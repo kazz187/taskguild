@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/sourcegraph/conc"
 )
 
 type Status string
@@ -60,9 +62,10 @@ type Agent struct {
 	UpdatedAt        time.Time      `yaml:"updated_at"`
 
 	// Runtime fields
-	ctx    context.Context
-	cancel context.CancelFunc
-	mutex  sync.RWMutex
+	ctx       context.Context
+	cancel    context.CancelFunc
+	mutex     sync.RWMutex
+	waitGroup *conc.WaitGroup
 }
 
 func NewAgent(role, agentType, memoryPath string) *Agent {
@@ -75,6 +78,7 @@ func NewAgent(role, agentType, memoryPath string) *Agent {
 		Status:     StatusIdle,
 		CreatedAt:  now,
 		UpdatedAt:  now,
+		waitGroup:  conc.NewWaitGroup(),
 	}
 }
 
@@ -161,24 +165,26 @@ func (a *Agent) Start(ctx context.Context) error {
 	a.Status = StatusIdle
 	a.UpdatedAt = time.Now()
 
-	// Start agent goroutine
-	go a.run()
+	// Start agent goroutine using conc.WaitGroup for proper goroutine management
+	a.waitGroup.Go(a.run)
 
 	return nil
 }
 
 func (a *Agent) Stop() error {
+	// Cancel the context first
 	a.mutex.Lock()
-	defer a.mutex.Unlock()
-
 	if a.cancel != nil {
 		a.cancel()
 		a.cancel = nil
 		a.ctx = nil
 	}
-
 	a.Status = StatusStopped
 	a.UpdatedAt = time.Now()
+	a.mutex.Unlock()
+
+	// Wait for all goroutines to finish (outside of mutex lock to avoid deadlock)
+	a.waitGroup.Wait()
 
 	return nil
 }

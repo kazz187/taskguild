@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -87,30 +86,17 @@ func handleStartDaemon(addr string, port int) {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	// Start daemon
+	// Start daemon - this will block until context is cancelled or error occurs
+	// The new design uses pool.WithCancelOnError() so Start() will return when signal is received
 	if err := d.Start(ctx); err != nil {
-		fmt.Fprintf(os.Stderr, "Error starting daemon: %v\n", err)
-		os.Exit(1)
+		if ctx.Err() != nil {
+			// Context was cancelled (signal received)
+			fmt.Println("\nReceived shutdown signal...")
+			fmt.Println("Daemon stopped gracefully")
+		} else {
+			// Actual error occurred
+			fmt.Fprintf(os.Stderr, "Error running daemon: %v\n", err)
+			os.Exit(1)
+		}
 	}
-
-	fmt.Printf("TaskGuild daemon started on %s:%d\n", addr, port)
-	fmt.Println("Press Ctrl+C to stop...")
-
-	// Wait for context cancellation (signal received)
-	<-ctx.Done()
-	fmt.Println("\nReceived shutdown signal...")
-	fmt.Printf("Context error: %v\n", ctx.Err())
-
-	// Create a new context for graceful shutdown with timeout
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	// Graceful shutdown
-	fmt.Println("Stopping daemon...")
-	if err := d.Stop(shutdownCtx); err != nil {
-		fmt.Fprintf(os.Stderr, "Error stopping daemon: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Println("Daemon stopped")
 }

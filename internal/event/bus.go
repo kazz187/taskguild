@@ -22,7 +22,6 @@ type EventBus struct {
 	pubSub PubSub
 	router *message.Router
 	logger watermill.LoggerAdapter
-	cancel context.CancelFunc
 }
 
 // EventHandler is a function that handles events
@@ -30,7 +29,7 @@ type EventHandler[T any] func(ctx context.Context, event *Event[T]) error
 
 // NewEventBus creates a new event bus
 func NewEventBus() *EventBus {
-	logger := watermill.NewStdLogger(false, false)
+	logger := watermill.NopLogger{}
 
 	pubSub := gochannel.NewGoChannel(
 		gochannel.Config{
@@ -39,7 +38,9 @@ func NewEventBus() *EventBus {
 		logger,
 	)
 
-	router, err := message.NewRouter(message.RouterConfig{}, logger)
+	router, err := message.NewRouter(message.RouterConfig{
+		CloseTimeout: 30 * time.Second,
+	}, logger)
 	if err != nil {
 		log.Fatalf("failed to create router: %v", err)
 	}
@@ -51,32 +52,30 @@ func NewEventBus() *EventBus {
 	}
 }
 
-// Start starts the event bus
+// Start starts the event bus and blocks until context is cancelled
 func (eb *EventBus) Start(ctx context.Context) error {
-	// Create a cancellable context for the router
-	routerCtx, cancel := context.WithCancel(ctx)
-	eb.cancel = cancel
 
-	// Run router in a goroutine since it blocks
+	// Run router in a goroutine
+	errCh := make(chan error, 1)
 	go func() {
-		if err := eb.router.Run(routerCtx); err != nil {
-			// Log error but don't crash - router.Run returns error when context is cancelled
-			eb.logger.Error("Event bus router stopped", err, nil)
+		if err := eb.router.Run(ctx); err != nil {
+			errCh <- fmt.Errorf("event bus router failed: %w", err)
+		} else {
+			errCh <- nil
 		}
 	}()
 
-	return nil
-}
-
-// Stop stops the event bus
-func (eb *EventBus) Stop() error {
-	// Cancel the router context to stop it gracefully
-	if eb.cancel != nil {
-		eb.cancel()
+	// Wait for context cancellation or router error
+	select {
+	case <-ctx.Done():
+		if err := eb.router.Close(); err != nil {
+			return fmt.Errorf("failed to close router: %w", err)
+		}
+		// Wait for router to actually stop
+		return <-errCh
+	case err := <-errCh:
+		return err
 	}
-
-	// Close the router
-	return eb.router.Close()
 }
 
 // Publish publishes an event

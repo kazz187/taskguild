@@ -2,10 +2,12 @@ package daemon
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/sourcegraph/conc/pool"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/kazz187/taskguild/internal/event"
 	"github.com/kazz187/taskguild/internal/server"
 	"github.com/kazz187/taskguild/internal/task"
+	"github.com/kazz187/taskguild/pkg/panicerr"
 )
 
 // Daemon represents the TaskGuild daemon process
@@ -68,18 +71,8 @@ func New(config *Config) (*Daemon, error) {
 	}, nil
 }
 
-// Start starts the daemon
+// Start starts the daemon with parallel execution using pool and panic protection
 func (d *Daemon) Start(ctx context.Context) error {
-	// Start event bus
-	if err := d.eventBus.Start(ctx); err != nil {
-		return fmt.Errorf("failed to start event bus: %w", err)
-	}
-
-	// Start agent manager
-	if err := d.agentManager.Start(ctx); err != nil {
-		return fmt.Errorf("failed to start agent manager: %w", err)
-	}
-
 	// Create server handlers
 	taskHandler := server.NewTaskServiceHandler(d.taskService)
 	agentHandler := server.NewAgentServiceHandler(d.agentManager)
@@ -101,7 +94,7 @@ func (d *Daemon) Start(ctx context.Context) error {
 	// Add health check endpoint
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	})
 
 	// Create HTTP server with h2c support for gRPC-Web compatibility
@@ -116,40 +109,39 @@ func (d *Daemon) Start(ctx context.Context) error {
 
 	fmt.Printf("TaskGuild daemon starting on %s\n", addr)
 
-	// Start HTTP server in a goroutine
-	go func() {
-		if err := d.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			fmt.Printf("HTTP server error: %v\n", err)
+	// Use pool for parallel execution with error cancellation and panic protection
+	p := pool.New().WithContext(ctx).WithCancelOnError()
+
+	// Start eventBus wrapped with SafeContext for panic protection
+	p.Go(panicerr.SafeContext(d.eventBus.Start))
+
+	// Start agentManager wrapped with SafeContext for panic protection
+	p.Go(panicerr.SafeContext(d.agentManager.Start))
+
+	// Start HTTP server wrapped with SafeContext for panic protection
+	p.Go(panicerr.SafeContext(func(ctx context.Context) error {
+		// Start server in a goroutine
+		errCh := make(chan error, 1)
+		go func() {
+			if err := d.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				errCh <- fmt.Errorf("HTTP server error: %w", err)
+			} else {
+				errCh <- nil
+			}
+		}()
+
+		// Wait for context cancellation or server error
+		select {
+		case <-ctx.Done():
+			// Context cancelled, shutdown server gracefully
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			return d.httpServer.Shutdown(shutdownCtx)
+		case err := <-errCh:
+			return err
 		}
-	}()
+	}))
 
-	return nil
-}
-
-// Stop stops the daemon
-func (d *Daemon) Stop(ctx context.Context) error {
-	// Stop HTTP server
-	if d.httpServer != nil {
-		if err := d.httpServer.Shutdown(ctx); err != nil {
-			return fmt.Errorf("failed to shutdown HTTP server: %w", err)
-		}
-	}
-
-	// Stop agent manager
-	if err := d.agentManager.Stop(); err != nil {
-		return fmt.Errorf("failed to stop agent manager: %w", err)
-	}
-
-	// Stop event bus
-	if err := d.eventBus.Stop(); err != nil {
-		return fmt.Errorf("failed to stop event bus: %w", err)
-	}
-
-	return nil
-}
-
-// WaitForShutdown waits for shutdown signal
-func (d *Daemon) WaitForShutdown(ctx context.Context) error {
-	<-ctx.Done()
-	return d.Stop(context.Background())
+	// Wait for all services to complete or for context cancellation
+	return p.Wait()
 }

@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sourcegraph/conc"
+
 	"github.com/kazz187/taskguild/internal/event"
 )
 
@@ -14,9 +16,9 @@ type Manager struct {
 	config    *Config
 	eventBus  *event.EventBus
 	ctx       context.Context
-	cancel    context.CancelFunc
 	mutex     sync.RWMutex
 	approvals chan *ApprovalRequest
+	waitGroup *conc.WaitGroup
 }
 
 type ApprovalRequest struct {
@@ -34,56 +36,37 @@ func NewManager(config *Config, eventBus *event.EventBus) *Manager {
 		config:    config,
 		eventBus:  eventBus,
 		approvals: make(chan *ApprovalRequest, 100),
+		waitGroup: conc.NewWaitGroup(),
 	}
 }
 
 func (m *Manager) Start(ctx context.Context) error {
 	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
 	if m.ctx != nil {
+		m.mutex.Unlock()
 		return fmt.Errorf("agent manager is already running")
 	}
 
-	m.ctx, m.cancel = context.WithCancel(ctx)
+	m.ctx = ctx
 
-	// Subscribe to events
 	if err := m.subscribeToEvents(); err != nil {
+		m.mutex.Unlock()
 		return fmt.Errorf("failed to subscribe to events: %w", err)
 	}
 
-	// Initialize agents from config
 	for _, agentConfig := range m.config.Agents {
 		agent := m.createAgentFromConfig(agentConfig)
 		m.agents[agent.ID] = agent
 	}
+	m.mutex.Unlock()
 
-	// Start approval handler
-	go m.handleApprovals()
+	m.waitGroup.Go(m.handleApprovals)
 
-	return nil
-}
-
-func (m *Manager) Stop() error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	if m.cancel != nil {
-		m.cancel()
-		m.cancel = nil
-		m.ctx = nil
-	}
-
-	// Stop all agents
-	for _, agent := range m.agents {
-		if err := agent.Stop(); err != nil {
-			// Log error but continue stopping other agents
-			fmt.Printf("Error stopping agent %s: %v\n", agent.ID, err)
-		}
-	}
-
-	close(m.approvals)
-
+	m.waitGroup.Go(func() {
+		<-ctx.Done()
+		m.cleanup()
+	})
+	m.waitGroup.Wait()
 	return nil
 }
 
@@ -295,6 +278,21 @@ func (m *Manager) handleApprovals() {
 
 func (m *Manager) GetApprovalRequests() <-chan *ApprovalRequest {
 	return m.approvals
+}
+
+func (m *Manager) cleanup() {
+	m.mutex.Lock()
+	m.ctx = nil
+	close(m.approvals)
+
+	// Stop all agents
+	for _, agent := range m.agents {
+		if err := agent.Stop(); err != nil {
+			// Log error but continue stopping other agents
+			fmt.Printf("Error stopping agent %s: %v\n", agent.ID, err)
+		}
+	}
+	m.mutex.Unlock()
 }
 
 func (m *Manager) StartAgent(agentID string) error {

@@ -39,10 +39,6 @@ func (s *Service) Start(ctx context.Context) error {
 	return s.manager.Start(ctx)
 }
 
-func (s *Service) Stop() error {
-	return s.manager.Stop()
-}
-
 func (s *Service) ListAgents() []*Agent {
 	return s.manager.ListAgents()
 }
