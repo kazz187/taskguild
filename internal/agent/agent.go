@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/sourcegraph/conc"
+
+	"github.com/kazz187/taskguild/pkg/claudecode"
 )
 
 type Status string
@@ -62,10 +64,11 @@ type Agent struct {
 	UpdatedAt        time.Time      `yaml:"updated_at"`
 
 	// Runtime fields
-	ctx       context.Context
-	cancel    context.CancelFunc
-	mutex     sync.RWMutex
-	waitGroup *conc.WaitGroup
+	ctx          context.Context
+	cancel       context.CancelFunc
+	mutex        sync.RWMutex
+	waitGroup    *conc.WaitGroup
+	claudeClient claudecode.Client
 }
 
 func NewAgent(role, agentType, memoryPath string) *Agent {
@@ -182,6 +185,9 @@ func (a *Agent) Start(ctx context.Context) error {
 	a.Status = StatusIdle
 	a.UpdatedAt = time.Now()
 
+	// Initialize Claude Code client
+	a.claudeClient = claudecode.NewClient()
+
 	// Start agent goroutine using conc.WaitGroup for proper goroutine management
 	a.waitGroup.Go(a.run)
 
@@ -196,6 +202,7 @@ func (a *Agent) Stop() error {
 		a.cancel = nil
 		a.ctx = nil
 	}
+	a.claudeClient = nil
 	a.Status = StatusStopped
 	a.UpdatedAt = time.Now()
 	a.mutex.Unlock()
@@ -211,20 +218,89 @@ func (a *Agent) run() {
 		// Get context safely
 		a.mutex.RLock()
 		ctx := a.ctx
+		client := a.claudeClient
+		taskID := a.TaskID
 		a.mutex.RUnlock()
 
 		if ctx == nil {
 			return
 		}
 
-		fmt.Println("Agent running:", a.ID, "Role:", a.Role, "Status:", a.Status)
 		select {
 		case <-ctx.Done():
 			return
 		default:
 			// Agent main loop
-			// TODO: Implement agent execution logic
-			time.Sleep(1 * time.Second)
+			if client != nil && taskID != "" && a.GetStatus() == StatusBusy {
+				// Execute the task
+				a.executeTask(ctx, client)
+			} else {
+				// Wait for task assignment
+				time.Sleep(1 * time.Second)
+			}
 		}
 	}
+}
+
+func (a *Agent) executeTask(ctx context.Context, client claudecode.Client) {
+	// Read memory file
+	memoryContent := ""
+	if a.MemoryPath != "" {
+		// TODO: Read memory file content
+	}
+
+	// Create initial prompt based on task and memory
+	prompt := fmt.Sprintf("You are an AI agent with role: %s\n\nTask ID: %s\n\nInstructions:\n%s\n\nPlease analyze the task and execute it.",
+		a.Role, a.TaskID, memoryContent)
+
+	// Create options with model and working directory
+	opts := &claudecode.ClaudeCodeOptions{
+		Model: stringPtr("claude-sonnet-4-20250514"), // Use Claude Sonnet 4 which is balanced and suitable for coding
+	}
+
+	// Set working directory if we have a worktree
+	if a.WorktreePath != "" {
+		opts.Cwd = stringPtr(a.WorktreePath)
+	}
+
+	// Send query to Claude
+	messages, err := client.Query(ctx, prompt, opts)
+	if err != nil {
+		fmt.Printf("Agent %s error: %v\n", a.ID, err)
+		a.UpdateStatus(StatusError)
+		return
+	}
+
+	// Process response messages
+	for msg := range messages {
+		switch m := msg.(type) {
+		case claudecode.UserMessage:
+			fmt.Printf("Agent %s user message: %s\n", a.ID, m.Content)
+		case claudecode.AssistantMessage:
+			for _, content := range m.Content {
+				switch c := content.(type) {
+				case claudecode.TextBlock:
+					fmt.Printf("Agent %s response: %s\n", a.ID, c.Text)
+				case claudecode.ToolUseBlock:
+					// TODO: Handle tool use blocks for actions that require approval
+					fmt.Printf("Agent %s tool use: %s\n", a.ID, c.Name)
+				}
+			}
+		case claudecode.ResultMessage:
+			if m.IsError {
+				fmt.Printf("Agent %s execution error\n", a.ID)
+				a.UpdateStatus(StatusError)
+				return
+			}
+			fmt.Printf("Agent %s execution completed\n", a.ID)
+		}
+	}
+
+	// Mark task as completed
+	a.UpdateStatus(StatusIdle)
+}
+
+// Helper function to create string pointers
+func stringPtr(s string) *string {
+	return &s
 }

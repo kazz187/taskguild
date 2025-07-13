@@ -16,6 +16,7 @@ import (
 	"github.com/kazz187/taskguild/internal/server"
 	"github.com/kazz187/taskguild/internal/task"
 	"github.com/kazz187/taskguild/pkg/panicerr"
+	"github.com/kazz187/taskguild/pkg/worktree"
 )
 
 // Daemon represents the TaskGuild daemon process
@@ -61,7 +62,13 @@ func New(config *Config) (*Daemon, error) {
 		return nil, fmt.Errorf("failed to load agent config: %w", err)
 	}
 
-	agentManager := agent.NewManager(agentConfig, eventBus)
+	// Create worktree manager
+	worktreeManager, err := worktree.NewManager(".")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create worktree manager: %w", err)
+	}
+
+	agentManager := agent.NewManager(agentConfig, eventBus, worktreeManager)
 
 	return &Daemon{
 		config:       config,

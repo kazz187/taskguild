@@ -2,24 +2,28 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/sourcegraph/conc"
 
 	"github.com/kazz187/taskguild/internal/event"
+	"github.com/kazz187/taskguild/pkg/worktree"
 )
 
 type Manager struct {
-	agents      map[string]*Agent
-	config      *Config
-	eventBus    *event.EventBus
-	ctx         context.Context
-	mutex       sync.RWMutex
-	approvals   chan *ApprovalRequest
-	waitGroup   *conc.WaitGroup
-	agentSeqNum map[string]map[int]bool // role -> {used numbers}
+	agents          map[string]*Agent
+	config          *Config
+	eventBus        *event.EventBus
+	worktreeManager *worktree.Manager
+	ctx             context.Context
+	mutex           sync.RWMutex
+	approvals       chan *ApprovalRequest
+	waitGroup       *conc.WaitGroup
+	agentSeqNum     map[string]map[int]bool // role -> {used numbers}
 }
 
 type ApprovalRequest struct {
@@ -31,14 +35,15 @@ type ApprovalRequest struct {
 	Timestamp time.Time
 }
 
-func NewManager(config *Config, eventBus *event.EventBus) *Manager {
+func NewManager(config *Config, eventBus *event.EventBus, worktreeManager *worktree.Manager) *Manager {
 	return &Manager{
-		agents:      make(map[string]*Agent),
-		config:      config,
-		eventBus:    eventBus,
-		approvals:   make(chan *ApprovalRequest, 100),
-		waitGroup:   conc.NewWaitGroup(),
-		agentSeqNum: make(map[string]map[int]bool),
+		agents:          make(map[string]*Agent),
+		config:          config,
+		eventBus:        eventBus,
+		worktreeManager: worktreeManager,
+		approvals:       make(chan *ApprovalRequest, 100),
+		waitGroup:       conc.NewWaitGroup(),
+		agentSeqNum:     make(map[string]map[int]bool),
 	}
 }
 
@@ -238,27 +243,111 @@ func (m *Manager) createAgentFromConfig(config AgentConfig) *Agent {
 }
 
 func (m *Manager) subscribeToEvents() error {
-	// TODO: Implement proper event subscription using watermill
-	// For now, this is a placeholder
+	// Subscribe to task.created events
+	err := m.eventBus.SubscribeAsync(event.TaskCreated, "agent-manager-task-created",
+		func(msg *message.Message) error {
+			var eventMsg event.EventMessage
+			if err := json.Unmarshal(msg.Payload, &eventMsg); err != nil {
+				return fmt.Errorf("failed to unmarshal event: %w", err)
+			}
+
+			var data event.TaskCreatedData
+			if err := json.Unmarshal(eventMsg.Data, &data); err != nil {
+				return fmt.Errorf("failed to unmarshal task data: %w", err)
+			}
+
+			return m.handleTaskCreated(&data)
+		})
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to task.created: %w", err)
+	}
+
+	// Subscribe to task.status_changed events
+	err = m.eventBus.SubscribeAsync(event.TaskStatusChanged, "agent-manager-status-changed",
+		func(msg *message.Message) error {
+			var eventMsg event.EventMessage
+			if err := json.Unmarshal(msg.Payload, &eventMsg); err != nil {
+				return fmt.Errorf("failed to unmarshal event: %w", err)
+			}
+
+			var data event.TaskStatusChangedData
+			if err := json.Unmarshal(eventMsg.Data, &data); err != nil {
+				return fmt.Errorf("failed to unmarshal task data: %w", err)
+			}
+
+			return m.handleTaskStatusChanged(&data)
+		})
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to task.status_changed: %w", err)
+	}
+
 	return nil
 }
 
-func (m *Manager) handleEvent(eventType string, data map[string]interface{}) error {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
+func (m *Manager) handleTaskCreated(data *event.TaskCreatedData) error {
 
-	// Find agents that should respond to this event
+	// Create worktree for the task
+	branchName := fmt.Sprintf("task-%s", data.TaskID)
+	worktreePath, err := m.worktreeManager.CreateWorktree(data.TaskID, branchName)
+	if err != nil {
+		return fmt.Errorf("failed to create worktree for task %s: %w", data.TaskID, err)
+	}
+
+	// Find agents that should respond to task creation
+	contextData := map[string]interface{}{
+		"task_id":    data.TaskID,
+		"task_type":  data.Type,
+		"task_title": data.Title,
+		"worktree":   worktreePath,
+	}
+
+	m.mutex.RLock()
 	var matchingAgents []*Agent
 	for _, agent := range m.agents {
-		if agent.MatchesTrigger(eventType, data) {
+		if agent.MatchesTrigger("task.created", contextData) {
 			matchingAgents = append(matchingAgents, agent)
 		}
 	}
+	m.mutex.RUnlock()
 
-	// TODO: Implement event handling logic
-	// For now, just log the matching agents
-	if len(matchingAgents) > 0 {
-		fmt.Printf("Event %s matched %d agents\n", eventType, len(matchingAgents))
+	// Assign matching agents to the task
+	for _, agent := range matchingAgents {
+		if agent.IsAvailable() {
+			if err := m.AssignAgentToTask(agent.ID, data.TaskID, worktreePath); err != nil {
+				fmt.Printf("Failed to assign agent %s to task %s: %v\n", agent.ID, data.TaskID, err)
+				continue
+			}
+			fmt.Printf("Assigned agent %s to task %s\n", agent.ID, data.TaskID)
+		}
+	}
+
+	return nil
+}
+
+func (m *Manager) handleTaskStatusChanged(data *event.TaskStatusChangedData) error {
+
+	// Find agents that should respond to status change
+	contextData := map[string]interface{}{
+		"task_id":     data.TaskID,
+		"from_status": data.FromStatus,
+		"to_status":   data.ToStatus,
+	}
+
+	m.mutex.RLock()
+	var matchingAgents []*Agent
+	for _, agent := range m.agents {
+		if agent.MatchesTrigger("task.status_changed", contextData) {
+			matchingAgents = append(matchingAgents, agent)
+		}
+	}
+	m.mutex.RUnlock()
+
+	// Handle scaling based on status change
+	if data.ToStatus == "IN_PROGRESS" {
+		// Scale up developers if needed
+		if err := m.ScaleAgents("developer", 2); err != nil {
+			fmt.Printf("Failed to scale developer agents: %v\n", err)
+		}
 	}
 
 	return nil

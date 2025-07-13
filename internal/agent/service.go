@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/kazz187/taskguild/internal/event"
+	"github.com/kazz187/taskguild/pkg/worktree"
 )
 
 type Service struct {
@@ -21,7 +22,13 @@ func NewService(configPath string, eventBus *event.EventBus) (*Service, error) {
 		return nil, fmt.Errorf("failed to load agent config: %w", err)
 	}
 
-	manager := NewManager(config, eventBus)
+	// Create worktree manager
+	worktreeManager, err := worktree.NewManager(".")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create worktree manager: %w", err)
+	}
+
+	manager := NewManager(config, eventBus, worktreeManager)
 
 	return &Service{
 		manager:    manager,
