@@ -12,13 +12,14 @@ import (
 )
 
 type Manager struct {
-	agents    map[string]*Agent
-	config    *Config
-	eventBus  *event.EventBus
-	ctx       context.Context
-	mutex     sync.RWMutex
-	approvals chan *ApprovalRequest
-	waitGroup *conc.WaitGroup
+	agents      map[string]*Agent
+	config      *Config
+	eventBus    *event.EventBus
+	ctx         context.Context
+	mutex       sync.RWMutex
+	approvals   chan *ApprovalRequest
+	waitGroup   *conc.WaitGroup
+	agentSeqNum map[string]map[int]bool // role -> {used numbers}
 }
 
 type ApprovalRequest struct {
@@ -32,11 +33,12 @@ type ApprovalRequest struct {
 
 func NewManager(config *Config, eventBus *event.EventBus) *Manager {
 	return &Manager{
-		agents:    make(map[string]*Agent),
-		config:    config,
-		eventBus:  eventBus,
-		approvals: make(chan *ApprovalRequest, 100),
-		waitGroup: conc.NewWaitGroup(),
+		agents:      make(map[string]*Agent),
+		config:      config,
+		eventBus:    eventBus,
+		approvals:   make(chan *ApprovalRequest, 100),
+		waitGroup:   conc.NewWaitGroup(),
+		agentSeqNum: make(map[string]map[int]bool),
 	}
 }
 
@@ -217,6 +219,7 @@ func (m *Manager) ScaleAgents(role string, targetCount int) error {
 				if err := agent.Stop(); err != nil {
 					fmt.Printf("Error stopping agent %s: %v\n", agent.ID, err)
 				}
+				m.freeAgentSequenceNumber(agent.ID, agent.Role)
 				delete(m.agents, agent.ID)
 			}
 		}
@@ -226,7 +229,8 @@ func (m *Manager) ScaleAgents(role string, targetCount int) error {
 }
 
 func (m *Manager) createAgentFromConfig(config AgentConfig) *Agent {
-	agent := NewAgent(config.Role, config.Type, config.Memory)
+	agentID := m.generateSequentialAgentID(config.Role)
+	agent := NewAgentWithID(agentID, config.Role, config.Type, config.Memory)
 	agent.Triggers = config.Triggers
 	agent.ApprovalRequired = config.ApprovalRequired
 	agent.Scaling = config.Scaling
@@ -280,6 +284,34 @@ func (m *Manager) GetApprovalRequests() <-chan *ApprovalRequest {
 	return m.approvals
 }
 
+func (m *Manager) generateSequentialAgentID(role string) string {
+	// Initialize role map if not exists
+	if m.agentSeqNum[role] == nil {
+		m.agentSeqNum[role] = make(map[int]bool)
+	}
+
+	// Find the lowest available sequence number
+	seqNum := 1
+	for m.agentSeqNum[role][seqNum] {
+		seqNum++
+	}
+
+	// Mark the number as used
+	m.agentSeqNum[role][seqNum] = true
+
+	return fmt.Sprintf("%s-%04d", role, seqNum)
+}
+
+func (m *Manager) freeAgentSequenceNumber(agentID, role string) {
+	// Extract sequence number from agent ID
+	var seqNum int
+	if n, err := fmt.Sscanf(agentID, role+"-%04d", &seqNum); n == 1 && err == nil {
+		if m.agentSeqNum[role] != nil {
+			delete(m.agentSeqNum[role], seqNum)
+		}
+	}
+}
+
 func (m *Manager) cleanup() {
 	m.mutex.Lock()
 	m.ctx = nil
@@ -291,6 +323,7 @@ func (m *Manager) cleanup() {
 			// Log error but continue stopping other agents
 			fmt.Printf("Error stopping agent %s: %v\n", agent.ID, err)
 		}
+		m.freeAgentSequenceNumber(agent.ID, agent.Role)
 	}
 	m.mutex.Unlock()
 }
@@ -320,5 +353,10 @@ func (m *Manager) StopAgent(agentID string) error {
 		return fmt.Errorf("agent %s not found", agentID)
 	}
 
-	return agent.Stop()
+	err := agent.Stop()
+	if err == nil {
+		m.freeAgentSequenceNumber(agent.ID, agent.Role)
+		delete(m.agents, agent.ID)
+	}
+	return err
 }

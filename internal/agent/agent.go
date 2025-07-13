@@ -70,8 +70,25 @@ type Agent struct {
 
 func NewAgent(role, agentType, memoryPath string) *Agent {
 	now := time.Now()
+	// Generate a temporary ID using timestamp for backward compatibility
+	// This function is deprecated in favor of NewAgentWithID
+	id := fmt.Sprintf("%s-%d", role, now.UnixNano())
 	return &Agent{
-		ID:         generateAgentID(role),
+		ID:         id,
+		Role:       role,
+		Type:       agentType,
+		MemoryPath: memoryPath,
+		Status:     StatusIdle,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+		waitGroup:  conc.NewWaitGroup(),
+	}
+}
+
+func NewAgentWithID(id, role, agentType, memoryPath string) *Agent {
+	now := time.Now()
+	return &Agent{
+		ID:         id,
 		Role:       role,
 		Type:       agentType,
 		MemoryPath: memoryPath,
@@ -210,8 +227,4 @@ func (a *Agent) run() {
 			time.Sleep(1 * time.Second)
 		}
 	}
-}
-
-func generateAgentID(role string) string {
-	return fmt.Sprintf("%s-%d", role, time.Now().UnixNano())
 }
