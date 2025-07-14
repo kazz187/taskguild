@@ -209,7 +209,7 @@ func createDefaultConfig(configPath string) (*Config, error) {
 				Memory: ".taskguild/agents/architect/CLAUDE.md",
 				Triggers: []EventTrigger{
 					{
-						Event:     "TaskCreated",
+						Event:     "task.created",
 						Condition: `task.type == "feature"`,
 					},
 				},
@@ -225,7 +225,7 @@ func createDefaultConfig(configPath string) (*Config, error) {
 				},
 				Triggers: []EventTrigger{
 					{
-						Event:     "TaskStatusChanged",
+						Event:     "task.status_changed",
 						Condition: `task.status == "DESIGNED"`,
 					},
 				},
@@ -248,7 +248,7 @@ func createDefaultConfig(configPath string) (*Config, error) {
 				Memory: ".taskguild/agents/reviewer/CLAUDE.md",
 				Triggers: []EventTrigger{
 					{
-						Event:     "TaskStatusChanged",
+						Event:     "task.status_changed",
 						Condition: `task.status == "REVIEW_READY"`,
 					},
 				},
@@ -265,7 +265,7 @@ func createDefaultConfig(configPath string) (*Config, error) {
 				Memory: ".taskguild/agents/qa/CLAUDE.md",
 				Triggers: []EventTrigger{
 					{
-						Event:     "TaskStatusChanged",
+						Event:     "task.status_changed",
 						Condition: `task.status == "QA_READY"`,
 					},
 				},
@@ -299,7 +299,7 @@ func createDefaultIndividualConfigs() error {
 			Version:     "1.0",
 			Triggers: []EventTrigger{
 				{
-					Event:     "TaskCreated",
+					Event:     "task.created",
 					Condition: `task.type == "feature"`,
 				},
 			},
@@ -317,7 +317,7 @@ func createDefaultIndividualConfigs() error {
 			},
 			Triggers: []EventTrigger{
 				{
-					Event:     "TaskStatusChanged",
+					Event:     "task.status_changed",
 					Condition: `task.status == "DESIGNED"`,
 				},
 			},
@@ -342,7 +342,7 @@ func createDefaultIndividualConfigs() error {
 			Version:     "1.0",
 			Triggers: []EventTrigger{
 				{
-					Event:     "TaskStatusChanged",
+					Event:     "task.status_changed",
 					Condition: `task.status == "REVIEW_READY"`,
 				},
 			},
@@ -361,7 +361,7 @@ func createDefaultIndividualConfigs() error {
 			Version:     "1.0",
 			Triggers: []EventTrigger{
 				{
-					Event:     "TaskStatusChanged",
+					Event:     "task.status_changed",
 					Condition: `task.status == "QA_READY"`,
 				},
 			},

@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -164,12 +165,75 @@ func (a *Agent) MatchesTrigger(eventName string, context map[string]interface{})
 	for _, trigger := range a.Triggers {
 		if trigger.Event == eventName {
 			if trigger.Condition != "" {
-				// TODO: Condition evaluation logic
-				return true
+				// Simple condition evaluation for common patterns
+				return a.evaluateCondition(trigger.Condition, context)
 			}
-			return true
+			return true // No condition means always match for this event
 		}
 	}
+	return false
+}
+
+// evaluateCondition provides simple condition evaluation
+func (a *Agent) evaluateCondition(condition string, context map[string]interface{}) bool {
+	// Handle OR conditions (||)
+	if strings.Contains(condition, "||") {
+		parts := strings.Split(condition, "||")
+		for _, part := range parts {
+			if a.evaluateSimpleCondition(strings.TrimSpace(part), context) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// Handle AND conditions (&&)
+	if strings.Contains(condition, "&&") {
+		parts := strings.Split(condition, "&&")
+		for _, part := range parts {
+			if !a.evaluateSimpleCondition(strings.TrimSpace(part), context) {
+				return false
+			}
+		}
+		return true
+	}
+
+	// Single condition
+	return a.evaluateSimpleCondition(condition, context)
+}
+
+// evaluateSimpleCondition evaluates a single condition like: task.type == "feature"
+func (a *Agent) evaluateSimpleCondition(condition string, context map[string]interface{}) bool {
+	// Parse condition: variable == "value" or variable == value
+	if strings.Contains(condition, "==") {
+		parts := strings.SplitN(condition, "==", 2)
+		if len(parts) != 2 {
+			return false
+		}
+
+		variable := strings.TrimSpace(parts[0])
+		expectedValue := strings.TrimSpace(parts[1])
+
+		// Remove quotes from expected value if present
+		if (strings.HasPrefix(expectedValue, `"`) && strings.HasSuffix(expectedValue, `"`)) ||
+			(strings.HasPrefix(expectedValue, `'`) && strings.HasSuffix(expectedValue, `'`)) {
+			expectedValue = expectedValue[1 : len(expectedValue)-1]
+		}
+
+		// Get actual value from context
+		contextKey := strings.Replace(variable, "task.", "task_", 1)
+		contextKey = strings.Replace(contextKey, ".", "_", -1)
+
+		actualValue, exists := context[contextKey]
+		if !exists {
+			return false
+		}
+
+		// Convert to string for comparison
+		actualStr := fmt.Sprintf("%v", actualValue)
+		return actualStr == expectedValue
+	}
+
 	return false
 }
 
