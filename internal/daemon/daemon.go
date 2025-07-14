@@ -118,14 +118,11 @@ func (d *Daemon) Start(ctx context.Context) error {
 
 	// Use pool for parallel execution with error cancellation and panic protection
 	p := pool.New().WithContext(ctx).WithCancelOnError()
-
-	// Start eventBus wrapped with SafeContext for panic protection
-	p.Go(panicerr.SafeContext(
-		func(ctx context.Context) error {
-			defer fmt.Println("EventBus stopped")
-			return d.eventBus.Start(ctx)
-		},
-	))
+	ebCtx, ebCancel := context.WithCancel(context.Background())
+	defer ebCancel()
+	if err := d.eventBus.Start(ebCtx); err != nil {
+		return fmt.Errorf("failed to start event bus: %w", err)
+	}
 
 	// Start agentManager wrapped with SafeContext for panic protection
 	p.Go(panicerr.SafeContext(
@@ -161,5 +158,14 @@ func (d *Daemon) Start(ctx context.Context) error {
 	}))
 
 	// Wait for all services to complete or for context cancellation
-	return p.Wait()
+	if err := p.Wait(); err != nil {
+		return fmt.Errorf("daemon stopped with error: %w", err)
+	}
+
+	ebCancel()
+	if err := d.eventBus.Stop(); err != nil {
+		return fmt.Errorf("failed to stop event bus: %w", err)
+	}
+
+	return nil
 }

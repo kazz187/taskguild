@@ -1,10 +1,12 @@
 package worktree
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 )
 
 type Manager struct {
@@ -31,8 +33,11 @@ func (m *Manager) CreateWorktree(taskID, branchName string) (string, error) {
 		return worktreePath, nil
 	}
 
-	// Use git command to create worktree and branch
-	cmd := exec.Command("git", "worktree", "add", "-b", branchName, worktreePath)
+	// Use git command to create worktree and branch with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "git", "worktree", "add", "-b", branchName, worktreePath)
 	cmd.Dir = m.repoPath
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("failed to create git worktree: %w", err)
@@ -49,8 +54,11 @@ func (m *Manager) RemoveWorktree(taskID string) error {
 		return nil
 	}
 
-	// Remove worktree using git command
-	cmd := exec.Command("git", "worktree", "remove", worktreePath)
+	// Remove worktree using git command with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "git", "worktree", "remove", worktreePath)
 	cmd.Dir = m.repoPath
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to remove git worktree: %w", err)

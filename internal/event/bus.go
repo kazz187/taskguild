@@ -39,7 +39,7 @@ func NewEventBus() *EventBus {
 	)
 
 	router, err := message.NewRouter(message.RouterConfig{
-		CloseTimeout: 30 * time.Second,
+		CloseTimeout: 5 * time.Second, // Allow time for handlers to complete gracefully
 	}, logger)
 	if err != nil {
 		log.Fatalf("failed to create router: %v", err)
@@ -57,25 +57,38 @@ func (eb *EventBus) Start(ctx context.Context) error {
 
 	// Run router in a goroutine
 	errCh := make(chan error, 1)
+	defer close(errCh)
 	go func() {
 		if err := eb.router.Run(ctx); err != nil {
 			errCh <- fmt.Errorf("event bus router failed: %w", err)
-		} else {
-			errCh <- nil
 		}
 	}()
-
-	// Wait for context cancellation or router error
 	select {
 	case <-ctx.Done():
-		if err := eb.router.Close(); err != nil {
-			return fmt.Errorf("failed to close router: %w", err)
-		}
-		// Wait for router to actually stop
-		return <-errCh
+		return fmt.Errorf("event bus context cancelled: %w", ctx.Err())
 	case err := <-errCh:
-		return err
+		if err != nil {
+			return fmt.Errorf("event bus router error: %w", err)
+		}
+	case <-eb.router.Running():
+		// Router started successfully
+		return nil
 	}
+	return fmt.Errorf("event bus router did not start successfully")
+}
+
+func (eb *EventBus) Stop() error {
+	// Close the pubsub to stop publishing and subscribing
+	if err := eb.pubSub.Close(); err != nil {
+		return fmt.Errorf("failed to close pubsub: %w", err)
+	}
+
+	// Close the router
+	if err := eb.router.Close(); err != nil {
+		return fmt.Errorf("failed to close router: %w", err)
+	}
+
+	return nil
 }
 
 // Publish publishes an event
@@ -110,14 +123,41 @@ func (eb *EventBus) Publish(ctx context.Context, source string, data any) error 
 
 // SubscribeAsync subscribes to events using watermill's message router
 func (eb *EventBus) SubscribeAsync(eventType EventType, handlerName string, handler func(msg *message.Message) error) error {
+	// Wrap handler with timeout middleware
+	timeoutHandler := eb.withTimeout(handler, 15*time.Second)
+
 	eb.router.AddNoPublisherHandler(
 		handlerName,
 		string(eventType),
 		eb.pubSub,
-		handler,
+		timeoutHandler,
 	)
 
 	return nil
+}
+
+// withTimeout wraps a handler with timeout protection
+func (eb *EventBus) withTimeout(handler func(msg *message.Message) error, timeout time.Duration) func(msg *message.Message) error {
+	return func(msg *message.Message) error {
+		ctx, cancel := context.WithTimeout(msg.Context(), timeout)
+		defer cancel()
+
+		// Create a channel to receive the result
+		resultCh := make(chan error, 1)
+
+		// Run handler in a goroutine
+		go func() {
+			resultCh <- handler(msg)
+		}()
+
+		// Wait for either completion or timeout
+		select {
+		case err := <-resultCh:
+			return err
+		case <-ctx.Done():
+			return fmt.Errorf("handler timeout after %v for event type %s", timeout, msg.Metadata.Get("topic"))
+		}
+	}
 }
 
 // PublishTyped publishes a typed event (helper function)

@@ -113,12 +113,16 @@ func handleStartDaemon(addr string, port int) {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	go func() {
+		// Wait for context cancellation (signal received)
+		<-ctx.Done()
+		fmt.Println("Received shutdown signal, stopping daemon...")
+	}()
 	// Start daemon - this will block until context is cancelled or error occurs
 	// The new design uses pool.WithCancelOnError() so Start() will return when signal is received
 	if err := d.Start(ctx); err != nil {
 		if ctx.Err() != nil {
 			// Context was cancelled (signal received)
-			fmt.Println("\nReceived shutdown signal...")
 			fmt.Println("Daemon stopped gracefully")
 		} else {
 			// Actual error occurred
