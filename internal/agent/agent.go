@@ -214,6 +214,9 @@ func (a *Agent) Stop() error {
 }
 
 func (a *Agent) run() {
+	t := time.NewTimer(0)
+	defer t.Stop()
+
 	for {
 		// Get context safely
 		a.mutex.RLock()
@@ -229,15 +232,15 @@ func (a *Agent) run() {
 		select {
 		case <-ctx.Done():
 			return
-		default:
-			// Agent main loop
-			if client != nil && taskID != "" && a.GetStatus() == StatusBusy {
-				// Execute the task
-				a.executeTask(ctx, client)
-			} else {
-				// Wait for task assignment
-				time.Sleep(1 * time.Second)
-			}
+		case <-t.C:
+		}
+		// Agent main loop
+		if client != nil && taskID != "" && a.GetStatus() == StatusBusy {
+			// Execute the task
+			a.executeTask(ctx, client)
+		} else {
+			// Wait for task assignment
+			t.Reset(1 * time.Second)
 		}
 	}
 }

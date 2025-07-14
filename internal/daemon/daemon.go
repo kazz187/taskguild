@@ -120,13 +120,24 @@ func (d *Daemon) Start(ctx context.Context) error {
 	p := pool.New().WithContext(ctx).WithCancelOnError()
 
 	// Start eventBus wrapped with SafeContext for panic protection
-	p.Go(panicerr.SafeContext(d.eventBus.Start))
+	p.Go(panicerr.SafeContext(
+		func(ctx context.Context) error {
+			defer fmt.Println("EventBus stopped")
+			return d.eventBus.Start(ctx)
+		},
+	))
 
 	// Start agentManager wrapped with SafeContext for panic protection
-	p.Go(panicerr.SafeContext(d.agentManager.Start))
+	p.Go(panicerr.SafeContext(
+		func(ctx context.Context) error {
+			defer fmt.Println("AgentManager stopped")
+			return d.agentManager.Start(ctx)
+		},
+	))
 
 	// Start HTTP server wrapped with SafeContext for panic protection
 	p.Go(panicerr.SafeContext(func(ctx context.Context) error {
+		defer fmt.Println("HTTP server stopped")
 		// Start server in a goroutine
 		errCh := make(chan error, 1)
 		go func() {
