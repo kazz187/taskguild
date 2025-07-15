@@ -72,7 +72,9 @@ func (s *ServiceImpl) CreateTask(req *CreateTaskRequest) (*Task, error) {
 			Description: task.Description,
 			Type:        task.Type,
 		}
-		s.eventBus.Publish(context.Background(), "task-service", eventData)
+		if err := s.eventBus.Publish(context.Background(), "task-service", eventData); err != nil {
+			return nil, fmt.Errorf("failed to publish task created event: %w", err)
+		}
 	}
 
 	return task, nil

@@ -102,12 +102,15 @@ func RegisterHooks(eventBus *EventBus, executor *HookExecutor) {
 	}
 
 	for _, eventType := range allEventTypes {
-		eventBus.SubscribeAsync(eventType, fmt.Sprintf("hook-%s", eventType), func(msg *message.Message) error {
+		if err := eventBus.SubscribeAsync(eventType, fmt.Sprintf("hook-%s", eventType), func(msg *message.Message) error {
 			var eventMsg EventMessage
 			if err := json.Unmarshal(msg.Payload, &eventMsg); err != nil {
 				return err
 			}
 			return executor.Execute(msg.Context(), &eventMsg)
-		})
+		}); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to subscribe to event %s: %v\n", eventType, err)
+			continue
+		}
 	}
 }

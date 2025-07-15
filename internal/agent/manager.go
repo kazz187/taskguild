@@ -2,12 +2,10 @@ package agent
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/sourcegraph/conc"
 
 	"github.com/kazz187/taskguild/internal/event"
@@ -244,38 +242,18 @@ func (m *Manager) createAgentFromConfig(config AgentConfig) *Agent {
 
 func (m *Manager) subscribeToEvents() error {
 	// Subscribe to task.created events
-	err := m.eventBus.SubscribeAsync(event.TaskCreated, "agent-manager-task-created",
-		func(msg *message.Message) error {
-			var eventMsg event.EventMessage
-			if err := json.Unmarshal(msg.Payload, &eventMsg); err != nil {
-				return fmt.Errorf("failed to unmarshal event: %w", err)
-			}
-
-			var data event.TaskCreatedData
-			if err := json.Unmarshal(eventMsg.Data, &data); err != nil {
-				return fmt.Errorf("failed to unmarshal task data: %w", err)
-			}
-
-			return m.handleTaskCreated(&data)
+	err := event.SubscribeTyped(m.eventBus, event.TaskCreated, "agent-manager-task-created",
+		func(ctx context.Context, event *event.Event[event.TaskCreatedData]) error {
+			return m.handleTaskCreated(&event.Data)
 		})
 	if err != nil {
 		return fmt.Errorf("failed to subscribe to task.created: %w", err)
 	}
 
 	// Subscribe to task.status_changed events
-	err = m.eventBus.SubscribeAsync(event.TaskStatusChanged, "agent-manager-status-changed",
-		func(msg *message.Message) error {
-			var eventMsg event.EventMessage
-			if err := json.Unmarshal(msg.Payload, &eventMsg); err != nil {
-				return fmt.Errorf("failed to unmarshal event: %w", err)
-			}
-
-			var data event.TaskStatusChangedData
-			if err := json.Unmarshal(eventMsg.Data, &data); err != nil {
-				return fmt.Errorf("failed to unmarshal task data: %w", err)
-			}
-
-			return m.handleTaskStatusChanged(&data)
+	err = event.SubscribeTyped(m.eventBus, event.TaskStatusChanged, "agent-manager-status-changed",
+		func(ctx context.Context, event *event.Event[event.TaskStatusChangedData]) error {
+			return m.handleTaskStatusChanged(&event.Data)
 		})
 	if err != nil {
 		return fmt.Errorf("failed to subscribe to task.status_changed: %w", err)
@@ -285,7 +263,6 @@ func (m *Manager) subscribeToEvents() error {
 }
 
 func (m *Manager) handleTaskCreated(data *event.TaskCreatedData) error {
-
 	// Create worktree for the task
 	branchName := fmt.Sprintf("task-%s", data.TaskID)
 	worktreePath, err := m.worktreeManager.CreateWorktree(data.TaskID, branchName)

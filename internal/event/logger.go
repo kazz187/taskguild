@@ -93,7 +93,7 @@ func RegisterEventLogger(eventBus *EventBus, logger *EventLogger) {
 	}
 
 	for _, eventType := range allEventTypes {
-		eventBus.SubscribeAsync(eventType, fmt.Sprintf("logger-%s", eventType), func(msg *message.Message) error {
+		if err := eventBus.SubscribeAsync(eventType, fmt.Sprintf("logger-%s", eventType), func(msg *message.Message) error {
 			var eventMsg EventMessage
 			if err := json.Unmarshal(msg.Payload, &eventMsg); err != nil {
 				return err
@@ -102,7 +102,10 @@ func RegisterEventLogger(eventBus *EventBus, logger *EventLogger) {
 				log.Printf("Failed to log event %s: %v", eventMsg.ID, err)
 			}
 			return nil
-		})
+		}); err != nil {
+			log.Printf("Failed to subscribe to event %s: %v", eventType, err)
+			continue
+		}
 	}
 }
 

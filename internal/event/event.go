@@ -97,7 +97,14 @@ func FromMessage[T any](msg *EventMessage) (*Event[T], error) {
 
 // inferEventType infers EventType from data type
 func inferEventType(data any) EventType {
-	typeName := reflect.TypeOf(data).Name()
+	dataType := reflect.TypeOf(data)
+
+	// Handle pointer types
+	if dataType.Kind() == reflect.Ptr {
+		dataType = dataType.Elem()
+	}
+
+	typeName := dataType.Name()
 
 	// Convert from Go type name to event type
 	switch typeName {

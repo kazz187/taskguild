@@ -52,17 +52,18 @@ func NewEventBus() *EventBus {
 	}
 }
 
-// Start starts the event bus and blocks until context is cancelled
+// Start starts the event bus
 func (eb *EventBus) Start(ctx context.Context) error {
-
 	// Run router in a goroutine
 	errCh := make(chan error, 1)
 	defer close(errCh)
+
 	go func() {
 		if err := eb.router.Run(ctx); err != nil {
 			errCh <- fmt.Errorf("event bus router failed: %w", err)
 		}
 	}()
+	// Wait for router to start or error
 	select {
 	case <-ctx.Done():
 		return fmt.Errorf("event bus context cancelled: %w", ctx.Err())
@@ -133,7 +134,25 @@ func (eb *EventBus) SubscribeAsync(eventType EventType, handlerName string, hand
 		timeoutHandler,
 	)
 
+	// If router is already running, start the new handler
+	if eb.isRunning() {
+		ctx := context.Background()
+		if err := eb.router.RunHandlers(ctx); err != nil {
+			return fmt.Errorf("failed to start new handler: %w", err)
+		}
+	}
+
 	return nil
+}
+
+// isRunning checks if the router is running
+func (eb *EventBus) isRunning() bool {
+	select {
+	case <-eb.router.Running():
+		return true
+	default:
+		return false
+	}
 }
 
 // withTimeout wraps a handler with timeout protection
