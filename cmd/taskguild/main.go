@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mattn/go-runewidth"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/kazz187/taskguild/internal/client"
@@ -368,14 +369,15 @@ func handleTaskList() {
 		"--------------------")
 
 	for _, task := range tasks {
-		title := task.Title
-		if len(title) > 38 {
-			title = title[:35] + "..."
-		}
+		// Truncate title to fit in 40 character width properly handling full-width chars
+		title := runewidth.Truncate(task.Title, 40, "...")
 
-		fmt.Printf("%-10s %-40s %-10s %-15s %-20s\n",
+		// Fill title to exactly 40 width for proper column alignment
+		titleFilled := runewidth.FillRight(title, 40)
+
+		fmt.Printf("%-10s %s %-10s %-15s %-20s\n",
 			task.Id,
-			title,
+			titleFilled,
 			task.Type,
 			getTaskStatusString(task.Status),
 			task.CreatedAt.AsTime().Format("2006-01-02 15:04:05"))
