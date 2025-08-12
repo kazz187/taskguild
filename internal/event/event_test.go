@@ -124,9 +124,9 @@ func TestEventBus_MultipleSubscribersAsync(t *testing.T) {
 
 	// Publish a TaskStatusChanged event
 	data := TaskStatusChangedData{
-		TaskID:     "TASK-001",
-		FromStatus: "CREATED",
-		ToStatus:   "IN_PROGRESS",
+		TaskID:    "TASK-001",
+		OldStatus: "CREATED",
+		NewStatus: "IN_PROGRESS",
 	}
 
 	event := NewEvent("test-service", data)

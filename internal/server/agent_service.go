@@ -185,15 +185,8 @@ func (h *AgentServiceHandler) agentToProto(a *agent.Agent) (*taskguildv1.Agent, 
 		})
 	}
 
-	// Convert approval rules
-	protoApprovalRules := make([]*taskguildv1.ApprovalRule, 0, len(a.ApprovalRequired))
-	for _, rule := range a.ApprovalRequired {
-		protoApprovalRules = append(protoApprovalRules, &taskguildv1.ApprovalRule{
-			Action:    string(rule.Action),
-			Pattern:   rule.Pattern,
-			Condition: rule.Condition,
-		})
-	}
+	// Convert approval rules - removed as approval is now handled by Claude Code
+	protoApprovalRules := make([]*taskguildv1.ApprovalRule, 0)
 
 	// Convert scaling config
 	var protoScaling *taskguildv1.ScalingConfig

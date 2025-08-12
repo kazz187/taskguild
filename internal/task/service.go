@@ -125,9 +125,12 @@ func (s *ServiceImpl) UpdateTask(req *UpdateTaskRequest) (*Task, error) {
 	// Publish event if status changed
 	if s.eventBus != nil && oldStatus != task.Status {
 		eventData := &event.TaskStatusChangedData{
-			TaskID:     task.ID,
-			FromStatus: oldStatus,
-			ToStatus:   task.Status,
+			TaskID:    task.ID,
+			OldStatus: oldStatus,
+			NewStatus: task.Status,
+			ChangedBy: "system",
+			ChangedAt: time.Now(),
+			Reason:    "Task status updated",
 		}
 		s.eventBus.Publish(context.Background(), "task-service", eventData)
 	}

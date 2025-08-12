@@ -34,6 +34,9 @@ const (
 	GitCommitted EventType = "git.committed"
 	GitPushed    EventType = "git.pushed"
 	GitMerged    EventType = "git.merged"
+
+	// Task completion events
+	TaskCompleted EventType = "task.completed"
 )
 
 // Event represents a typed system event
@@ -161,9 +164,12 @@ type TaskCreatedData struct {
 
 // TaskStatusChangedData represents data for task status changed event
 type TaskStatusChangedData struct {
-	TaskID     string `json:"task_id"`
-	FromStatus string `json:"from_status"`
-	ToStatus   string `json:"to_status"`
+	TaskID    string    `json:"task_id"`
+	OldStatus string    `json:"old_status"`
+	NewStatus string    `json:"new_status"`
+	ChangedBy string    `json:"changed_by"`
+	ChangedAt time.Time `json:"changed_at"`
+	Reason    string    `json:"reason"`
 }
 
 // TaskClosedData represents data for task closed event
@@ -187,4 +193,28 @@ type ApprovalRequestData struct {
 	Action      string                 `json:"action"`
 	Description string                 `json:"description"`
 	Details     map[string]interface{} `json:"details"`
+}
+
+// TaskCompletedData represents data for task completed event
+type TaskCompletedData struct {
+	TaskID      string       `json:"task_id"`
+	AgentRole   string       `json:"agent_role"`
+	CompletedAt time.Time    `json:"completed_at"`
+	WorkSummary string       `json:"work_summary"`
+	Artifacts   []Artifact   `json:"artifacts"`
+	NextActions []NextAction `json:"next_actions"`
+}
+
+// Artifact represents a work artifact
+type Artifact struct {
+	Path        string `json:"path"`
+	Type        string `json:"type"`
+	Description string `json:"description"`
+}
+
+// NextAction represents a next action to be taken
+type NextAction struct {
+	Description string `json:"description"`
+	Priority    string `json:"priority"`
+	AssignedTo  string `json:"assigned_to,omitempty"`
 }

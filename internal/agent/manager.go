@@ -232,10 +232,14 @@ func (m *Manager) ScaleAgents(role string, targetCount int) error {
 }
 
 func (m *Manager) createAgentFromConfig(config AgentConfig) *Agent {
-	agentID := m.generateSequentialAgentID(config.Role)
-	agent := NewAgentWithID(agentID, config.Role, config.Type, config.Memory)
+	// Use Name if available, otherwise fall back to Role
+	agentIdentifier := config.Name
+	if agentIdentifier == "" {
+		agentIdentifier = config.Role
+	}
+	agentID := m.generateSequentialAgentID(agentIdentifier)
+	agent := NewAgentWithID(agentID, agentIdentifier, config.Type)
 	agent.Triggers = config.Triggers
-	agent.ApprovalRequired = config.ApprovalRequired
 	agent.Scaling = config.Scaling
 	return agent
 }
@@ -306,8 +310,8 @@ func (m *Manager) handleTaskStatusChanged(data *event.TaskStatusChangedData) err
 	// Find agents that should respond to status change
 	contextData := map[string]interface{}{
 		"task_id":     data.TaskID,
-		"from_status": data.FromStatus,
-		"to_status":   data.ToStatus,
+		"from_status": data.OldStatus,
+		"to_status":   data.NewStatus,
 	}
 
 	m.mutex.RLock()
@@ -320,7 +324,7 @@ func (m *Manager) handleTaskStatusChanged(data *event.TaskStatusChangedData) err
 	m.mutex.RUnlock()
 
 	// Handle scaling based on status change
-	if data.ToStatus == "IN_PROGRESS" {
+	if data.NewStatus == "IN_PROGRESS" {
 		// Scale up developers if needed
 		if err := m.ScaleAgents("developer", 2); err != nil {
 			fmt.Printf("Failed to scale developer agents: %v\n", err)

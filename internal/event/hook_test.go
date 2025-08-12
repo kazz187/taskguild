@@ -82,9 +82,9 @@ func TestHookExecutor_MultipleHooks(t *testing.T) {
 
 	// Create an event with struct data
 	event := NewEvent("test", TaskStatusChangedData{
-		TaskID:     "TASK-001",
-		FromStatus: "CREATED",
-		ToStatus:   "IN_PROGRESS",
+		TaskID:    "TASK-001",
+		OldStatus: "CREATED",
+		NewStatus: "IN_PROGRESS",
 	})
 	eventMsg, err := event.ToMessage()
 	if err != nil {

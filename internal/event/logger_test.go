@@ -75,9 +75,12 @@ func TestEventLogger_MultipleEvents(t *testing.T) {
 	eventMsg1.Timestamp = now
 
 	event2 := NewEvent("test", TaskStatusChangedData{
-		TaskID:     "TASK-001",
-		FromStatus: "CREATED",
-		ToStatus:   "IN_PROGRESS",
+		TaskID:    "TASK-001",
+		OldStatus: "CREATED",
+		NewStatus: "IN_PROGRESS",
+		ChangedBy: "test",
+		ChangedAt: time.Now(),
+		Reason:    "test reason",
 	})
 	eventMsg2, _ := event2.ToMessage()
 	eventMsg2.Timestamp = now
@@ -125,7 +128,7 @@ func TestEventLogReader_ReadEventsByType(t *testing.T) {
 	}{
 		{TaskCreatedData{TaskID: "TASK-001"}, TaskCreated},
 		{TaskCreatedData{TaskID: "TASK-002"}, TaskCreated},
-		{TaskStatusChangedData{TaskID: "TASK-001", FromStatus: "CREATED", ToStatus: "IN_PROGRESS"}, TaskStatusChanged},
+		{TaskStatusChangedData{TaskID: "TASK-001", OldStatus: "CREATED", NewStatus: "IN_PROGRESS", ChangedBy: "test", ChangedAt: time.Now(), Reason: "test reason"}, TaskStatusChanged},
 		{TaskClosedData{TaskID: "TASK-002"}, TaskClosed},
 	}
 

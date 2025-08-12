@@ -5,29 +5,29 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
 type AgentConfig struct {
-	Role             string         `yaml:"role"`
-	Type             string         `yaml:"type"`
-	Memory           string         `yaml:"memory"`
-	Triggers         []EventTrigger `yaml:"triggers"`
-	ApprovalRequired []ApprovalRule `yaml:"approval_required"`
-	Scaling          *ScalingConfig `yaml:"scaling,omitempty"`
+	Name     string         `yaml:"name"`
+	Role     string         `yaml:"role,omitempty"` // Deprecated: use Name instead
+	Type     string         `yaml:"type"`
+	Triggers []EventTrigger `yaml:"triggers"`
+	Scaling  *ScalingConfig `yaml:"scaling,omitempty"`
 }
 
 // IndividualAgentConfig represents a single agent's configuration file
 type IndividualAgentConfig struct {
-	Role             string         `yaml:"role"`
-	Type             string         `yaml:"type"`
-	Memory           string         `yaml:"memory"`
-	Triggers         []EventTrigger `yaml:"triggers"`
-	ApprovalRequired []ApprovalRule `yaml:"approval_required"`
-	Scaling          *ScalingConfig `yaml:"scaling,omitempty"`
-	Description      string         `yaml:"description,omitempty"`
-	Version          string         `yaml:"version,omitempty"`
+	Name         string         `yaml:"name"`
+	Role         string         `yaml:"role,omitempty"` // Deprecated: use Name instead
+	Type         string         `yaml:"type"`
+	Triggers     []EventTrigger `yaml:"triggers"`
+	Scaling      *ScalingConfig `yaml:"scaling,omitempty"`
+	Description  string         `yaml:"description,omitempty"`
+	Version      string         `yaml:"version,omitempty"`
+	Instructions string         `yaml:"instructions,omitempty"`
 }
 
 type Config struct {
@@ -83,17 +83,12 @@ func loadIndividualConfigs() (*Config, error) {
 
 	var config Config
 	for _, entry := range entries {
-		if !entry.IsDir() {
+		// Skip directories and non-yaml files
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".yaml" {
 			continue
 		}
 
-		roleName := entry.Name()
-		configFilePath := filepath.Join(agentsDir, roleName, "agent.yaml")
-
-		// Check if individual config file exists
-		if _, err := os.Stat(configFilePath); os.IsNotExist(err) {
-			continue
-		}
+		configFilePath := filepath.Join(agentsDir, entry.Name())
 
 		agentConfig, err := loadIndividualAgentConfig(configFilePath)
 		if err != nil {
@@ -101,19 +96,22 @@ func loadIndividualConfigs() (*Config, error) {
 			continue
 		}
 
-		// Convert IndividualAgentConfig to AgentConfig
-		memoryPath := agentConfig.Memory
-		if !filepath.IsAbs(memoryPath) {
-			memoryPath = filepath.Join(agentsDir, roleName, memoryPath)
+		// Use Name if available, otherwise fall back to Role, otherwise use filename without extension
+		agentName := agentConfig.Name
+		if agentName == "" {
+			agentName = agentConfig.Role
+		}
+		if agentName == "" {
+			filenameWithoutExt := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
+			agentName = filenameWithoutExt
 		}
 
 		config.Agents = append(config.Agents, AgentConfig{
-			Role:             agentConfig.Role,
-			Type:             agentConfig.Type,
-			Memory:           memoryPath,
-			Triggers:         agentConfig.Triggers,
-			ApprovalRequired: agentConfig.ApprovalRequired,
-			Scaling:          agentConfig.Scaling,
+			Name:     agentName,
+			Role:     agentConfig.Role,
+			Type:     agentConfig.Type,
+			Triggers: agentConfig.Triggers,
+			Scaling:  agentConfig.Scaling,
 		})
 	}
 
@@ -148,12 +146,18 @@ func SaveIndividualAgentConfig(config *IndividualAgentConfig, agentsDir string) 
 		agentsDir = ".taskguild/agents"
 	}
 
-	roleDir := filepath.Join(agentsDir, config.Role)
-	if err := os.MkdirAll(roleDir, 0755); err != nil {
-		return fmt.Errorf("failed to create role directory: %w", err)
+	// Use Name if available, otherwise fall back to Role
+	agentName := config.Name
+	if agentName == "" {
+		agentName = config.Role
 	}
 
-	configPath := filepath.Join(roleDir, "agent.yaml")
+	// Create agents directory if it doesn't exist
+	if err := os.MkdirAll(agentsDir, 0755); err != nil {
+		return fmt.Errorf("failed to create agents directory: %w", err)
+	}
+
+	configPath := filepath.Join(agentsDir, agentName+".yaml")
 	data, err := yaml.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
@@ -204,9 +208,14 @@ func createDefaultConfig(configPath string) (*Config, error) {
 	config := &Config{
 		Agents: []AgentConfig{
 			{
-				Role:   "architect",
-				Type:   "claude-code",
-				Memory: ".taskguild/agents/architect/CLAUDE.md",
+				Name: "developer",
+				Role: "developer",
+				Type: "claude-code",
+				Scaling: &ScalingConfig{
+					Min:  1,
+					Max:  3,
+					Auto: true,
+				},
 				Triggers: []EventTrigger{
 					{
 						Event:     "task.created",
@@ -215,64 +224,24 @@ func createDefaultConfig(configPath string) (*Config, error) {
 				},
 			},
 			{
-				Role:   "developer",
-				Type:   "claude-code",
-				Memory: ".taskguild/agents/developer/CLAUDE.md",
-				Scaling: &ScalingConfig{
-					Min:  1,
-					Max:  3,
-					Auto: true,
-				},
-				Triggers: []EventTrigger{
-					{
-						Event:     "task.status_changed",
-						Condition: `task.status == "DESIGNED"`,
-					},
-				},
-				ApprovalRequired: []ApprovalRule{
-					{
-						Action:  ActionFileWrite,
-						Pattern: "*.go",
-					},
-					{
-						Action: ActionGitCommit,
-					},
-					{
-						Action: ActionGitPush,
-					},
-				},
-			},
-			{
-				Role:   "reviewer",
-				Type:   "claude-code",
-				Memory: ".taskguild/agents/reviewer/CLAUDE.md",
+				Name: "reviewer",
+				Role: "reviewer",
+				Type: "claude-code",
 				Triggers: []EventTrigger{
 					{
 						Event:     "task.status_changed",
 						Condition: `task.status == "REVIEW_READY"`,
 					},
 				},
-				ApprovalRequired: []ApprovalRule{
-					{
-						Action:    ActionStatusChange,
-						Condition: `to_status == "QA_READY"`,
-					},
-				},
 			},
 			{
-				Role:   "qa",
-				Type:   "claude-code",
-				Memory: ".taskguild/agents/qa/CLAUDE.md",
+				Name: "qa",
+				Role: "qa",
+				Type: "claude-code",
 				Triggers: []EventTrigger{
 					{
 						Event:     "task.status_changed",
 						Condition: `task.status == "QA_READY"`,
-					},
-				},
-				ApprovalRequired: []ApprovalRule{
-					{
-						Action:    ActionStatusChange,
-						Condition: `to_status == "CLOSED"`,
 					},
 				},
 			},
@@ -292,23 +261,10 @@ func createDefaultIndividualConfigs() error {
 
 	defaultConfigs := []*IndividualAgentConfig{
 		{
-			Role:        "architect",
-			Type:        "claude-code",
-			Memory:      "CLAUDE.md",
-			Description: "System architect for analyzing tasks and proposing optimal designs",
-			Version:     "1.0",
-			Triggers: []EventTrigger{
-				{
-					Event:     "task.created",
-					Condition: `task.type == "feature"`,
-				},
-			},
-		},
-		{
+			Name:        "developer",
 			Role:        "developer",
 			Type:        "claude-code",
-			Memory:      "CLAUDE.md",
-			Description: "Developer for implementing features based on architectural designs",
+			Description: "Developer for implementing features",
 			Version:     "1.0",
 			Scaling: &ScalingConfig{
 				Min:  1,
@@ -317,27 +273,15 @@ func createDefaultIndividualConfigs() error {
 			},
 			Triggers: []EventTrigger{
 				{
-					Event:     "task.status_changed",
-					Condition: `task.status == "DESIGNED"`,
-				},
-			},
-			ApprovalRequired: []ApprovalRule{
-				{
-					Action:  ActionFileWrite,
-					Pattern: "*.go",
-				},
-				{
-					Action: ActionGitCommit,
-				},
-				{
-					Action: ActionGitPush,
+					Event:     "task.created",
+					Condition: `task.type == "feature"`,
 				},
 			},
 		},
 		{
+			Name:        "reviewer",
 			Role:        "reviewer",
 			Type:        "claude-code",
-			Memory:      "CLAUDE.md",
 			Description: "Senior engineer for conducting thorough code reviews",
 			Version:     "1.0",
 			Triggers: []EventTrigger{
@@ -346,29 +290,17 @@ func createDefaultIndividualConfigs() error {
 					Condition: `task.status == "REVIEW_READY"`,
 				},
 			},
-			ApprovalRequired: []ApprovalRule{
-				{
-					Action:    ActionStatusChange,
-					Condition: `to_status == "QA_READY"`,
-				},
-			},
 		},
 		{
+			Name:        "qa",
 			Role:        "qa",
 			Type:        "claude-code",
-			Memory:      "CLAUDE.md",
-			Description: "QA engineer for comprehensive testing of implemented features",
+			Description: "QA engineer for comprehensive testing",
 			Version:     "1.0",
 			Triggers: []EventTrigger{
 				{
 					Event:     "task.status_changed",
 					Condition: `task.status == "QA_READY"`,
-				},
-			},
-			ApprovalRequired: []ApprovalRule{
-				{
-					Action:    ActionStatusChange,
-					Condition: `to_status == "CLOSED"`,
 				},
 			},
 		},
@@ -390,29 +322,31 @@ func validateConfig(config *Config) error {
 
 	roleMap := make(map[string]bool)
 	for _, agent := range config.Agents {
-		if agent.Role == "" {
-			return fmt.Errorf("agent role cannot be empty")
+		// Check Name first, then fall back to Role
+		agentIdentifier := agent.Name
+		if agentIdentifier == "" {
+			agentIdentifier = agent.Role
+		}
+		if agentIdentifier == "" {
+			return fmt.Errorf("agent name/role cannot be empty")
 		}
 		if agent.Type == "" {
 			return fmt.Errorf("agent type cannot be empty")
 		}
-		if agent.Memory == "" {
-			return fmt.Errorf("agent memory path cannot be empty")
-		}
 
-		// Check for duplicate roles
-		if roleMap[agent.Role] {
-			return fmt.Errorf("duplicate agent role: %s", agent.Role)
+		// Check for duplicate agent names
+		if roleMap[agentIdentifier] {
+			return fmt.Errorf("duplicate agent name: %s", agentIdentifier)
 		}
-		roleMap[agent.Role] = true
+		roleMap[agentIdentifier] = true
 
 		// Validate scaling config
 		if agent.Scaling != nil {
 			if agent.Scaling.Min < 0 {
-				return fmt.Errorf("agent %s: min scaling cannot be negative", agent.Role)
+				return fmt.Errorf("agent %s: min scaling cannot be negative", agentIdentifier)
 			}
 			if agent.Scaling.Max < agent.Scaling.Min {
-				return fmt.Errorf("agent %s: max scaling cannot be less than min", agent.Role)
+				return fmt.Errorf("agent %s: max scaling cannot be less than min", agentIdentifier)
 			}
 		}
 	}
@@ -420,9 +354,10 @@ func validateConfig(config *Config) error {
 	return nil
 }
 
-func (c *Config) GetAgentConfig(role string) (*AgentConfig, bool) {
+func (c *Config) GetAgentConfig(nameOrRole string) (*AgentConfig, bool) {
 	for _, agent := range c.Agents {
-		if agent.Role == role {
+		// Check Name first, then Role for backward compatibility
+		if agent.Name == nameOrRole || agent.Role == nameOrRole {
 			return &agent, true
 		}
 	}

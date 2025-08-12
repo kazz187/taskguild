@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/kazz187/taskguild/internal/event"
 	"github.com/kazz187/taskguild/pkg/worktree"
@@ -98,25 +97,8 @@ func (s *Service) ReloadConfig() error {
 }
 
 func (s *Service) ensureAgentMemoryDirs() error {
-	for _, agentConfig := range s.config.Agents {
-		memoryPath := agentConfig.Memory
-		if memoryPath == "" {
-			continue
-		}
-
-		dir := filepath.Dir(memoryPath)
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create memory directory %s: %w", dir, err)
-		}
-
-		// Create default CLAUDE.md if it doesn't exist
-		if _, err := os.Stat(memoryPath); os.IsNotExist(err) {
-			if err := s.createDefaultMemoryFile(memoryPath, agentConfig.Role); err != nil {
-				return fmt.Errorf("failed to create default memory file %s: %w", memoryPath, err)
-			}
-		}
-	}
-
+	// Memory management is now handled by Claude Code itself
+	// No need to create agent-specific memory directories
 	return nil
 }
 

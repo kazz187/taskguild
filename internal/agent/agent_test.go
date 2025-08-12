@@ -81,25 +81,3 @@ func TestAgentStartStop(t *testing.T) {
 		t.Errorf("Expected status 'STOPPED', got %s", agent.GetStatus())
 	}
 }
-
-func TestAgentApprovalRequirement(t *testing.T) {
-	agent := NewAgent("developer", "claude-code", "/path/to/memory.md")
-
-	// Add approval rule
-	agent.ApprovalRequired = []ApprovalRule{
-		{Action: ActionFileWrite, Pattern: "*.go"},
-		{Action: ActionGitCommit},
-	}
-
-	if !agent.RequiresApproval(ActionFileWrite, "main.go") {
-		t.Error("Expected file write action to require approval")
-	}
-
-	if !agent.RequiresApproval(ActionGitCommit, "") {
-		t.Error("Expected git commit action to require approval")
-	}
-
-	if agent.RequiresApproval(ActionFileDelete, "main.go") {
-		t.Error("Expected file delete action to not require approval")
-	}
-}

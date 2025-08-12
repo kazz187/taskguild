@@ -38,12 +38,6 @@ type EventTrigger struct {
 	Condition string `yaml:"condition"`
 }
 
-type ApprovalRule struct {
-	Action    Action `yaml:"action"`
-	Pattern   string `yaml:"pattern,omitempty"`
-	Condition string `yaml:"condition,omitempty"`
-}
-
 type ScalingConfig struct {
 	Min  int  `yaml:"min"`
 	Max  int  `yaml:"max"`
@@ -51,18 +45,17 @@ type ScalingConfig struct {
 }
 
 type Agent struct {
-	ID               string         `yaml:"id"`
-	Role             string         `yaml:"role"`
-	Type             string         `yaml:"type"`
-	MemoryPath       string         `yaml:"memory"`
-	Triggers         []EventTrigger `yaml:"triggers"`
-	ApprovalRequired []ApprovalRule `yaml:"approval_required"`
-	Scaling          *ScalingConfig `yaml:"scaling,omitempty"`
-	Status           Status         `yaml:"status"`
-	TaskID           string         `yaml:"task_id,omitempty"`
-	WorktreePath     string         `yaml:"worktree_path,omitempty"`
-	CreatedAt        time.Time      `yaml:"created_at"`
-	UpdatedAt        time.Time      `yaml:"updated_at"`
+	ID           string         `yaml:"id"`
+	Role         string         `yaml:"role"`
+	Type         string         `yaml:"type"`
+	MemoryPath   string         `yaml:"memory"`
+	Triggers     []EventTrigger `yaml:"triggers"`
+	Scaling      *ScalingConfig `yaml:"scaling,omitempty"`
+	Status       Status         `yaml:"status"`
+	TaskID       string         `yaml:"task_id,omitempty"`
+	WorktreePath string         `yaml:"worktree_path,omitempty"`
+	CreatedAt    time.Time      `yaml:"created_at"`
+	UpdatedAt    time.Time      `yaml:"updated_at"`
 
 	// Runtime fields
 	ctx          context.Context
@@ -72,34 +65,32 @@ type Agent struct {
 	claudeClient claudecode.Client
 }
 
-func NewAgent(role, agentType, memoryPath string) *Agent {
+func NewAgent(role, agentType string) *Agent {
 	now := time.Now()
 	// Generate a temporary ID using timestamp for backward compatibility
 	// This function is deprecated in favor of NewAgentWithID
 	id := fmt.Sprintf("%s-%d", role, now.UnixNano())
 	return &Agent{
-		ID:         id,
-		Role:       role,
-		Type:       agentType,
-		MemoryPath: memoryPath,
-		Status:     StatusIdle,
-		CreatedAt:  now,
-		UpdatedAt:  now,
-		waitGroup:  conc.NewWaitGroup(),
+		ID:        id,
+		Role:      role,
+		Type:      agentType,
+		Status:    StatusIdle,
+		CreatedAt: now,
+		UpdatedAt: now,
+		waitGroup: conc.NewWaitGroup(),
 	}
 }
 
-func NewAgentWithID(id, role, agentType, memoryPath string) *Agent {
+func NewAgentWithID(id, role, agentType string) *Agent {
 	now := time.Now()
 	return &Agent{
-		ID:         id,
-		Role:       role,
-		Type:       agentType,
-		MemoryPath: memoryPath,
-		Status:     StatusIdle,
-		CreatedAt:  now,
-		UpdatedAt:  now,
-		waitGroup:  conc.NewWaitGroup(),
+		ID:        id,
+		Role:      role,
+		Type:      agentType,
+		Status:    StatusIdle,
+		CreatedAt: now,
+		UpdatedAt: now,
+		waitGroup: conc.NewWaitGroup(),
 	}
 }
 
@@ -142,23 +133,6 @@ func (a *Agent) IsAssigned() bool {
 	a.mutex.RLock()
 	defer a.mutex.RUnlock()
 	return a.TaskID != ""
-}
-
-func (a *Agent) RequiresApproval(action Action, target string) bool {
-	for _, rule := range a.ApprovalRequired {
-		if rule.Action == action {
-			if rule.Pattern != "" {
-				// TODO: Pattern matching logic
-				return true
-			}
-			if rule.Condition != "" {
-				// TODO: Condition evaluation logic
-				return true
-			}
-			return true
-		}
-	}
-	return false
 }
 
 func (a *Agent) MatchesTrigger(eventName string, context map[string]interface{}) bool {
