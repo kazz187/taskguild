@@ -5,8 +5,12 @@ go 1.24.3
 require (
 	connectrpc.com/connect v1.18.1
 	github.com/ThreeDotsLabs/watermill v1.4.7
+	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/mattn/go-runewidth v0.0.16
+	github.com/modelcontextprotocol/go-sdk v0.2.0
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.10.0
+	github.com/yosida95/uritemplate/v3 v3.0.2
 	golang.org/x/net v0.41.0
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
@@ -17,11 +21,9 @@ require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/lithammer/shortuuid/v3 v3.0.7 // indirect
-	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

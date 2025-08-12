@@ -29,6 +29,8 @@ coverage.html
 
 # TaskGuild specific
 .taskguild/
+/taskguild
+/mcp-taskguild
 
 # IDE files
 .vscode/
