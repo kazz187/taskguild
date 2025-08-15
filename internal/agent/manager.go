@@ -94,13 +94,13 @@ func (m *Manager) GetAgent(agentID string) (*Agent, bool) {
 	return agent, exists
 }
 
-func (m *Manager) GetAgentsByRole(role string) []*Agent {
+func (m *Manager) GetAgentsByName(name string) []*Agent {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 
 	var agents []*Agent
 	for _, agent := range m.agents {
-		if agent.Role == role {
+		if agent.Name == name {
 			agents = append(agents, agent)
 		}
 	}
@@ -185,17 +185,17 @@ func (m *Manager) RequestApproval(agentID string, action Action, target string, 
 	}
 }
 
-func (m *Manager) ScaleAgents(role string, targetCount int) error {
+func (m *Manager) ScaleAgents(name string, targetCount int) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	agentConfig, exists := m.config.GetAgentConfig(role)
+	agentConfig, exists := m.config.GetAgentConfig(name)
 	if !exists {
-		return fmt.Errorf("agent role %s not found in config", role)
+		return fmt.Errorf("agent %s not found in config", name)
 	}
 
 	if agentConfig.Scaling == nil {
-		return fmt.Errorf("agent role %s is not scalable", role)
+		return fmt.Errorf("agent %s is not scalable", name)
 	}
 
 	if targetCount < agentConfig.Scaling.Min {
@@ -205,7 +205,7 @@ func (m *Manager) ScaleAgents(role string, targetCount int) error {
 		targetCount = agentConfig.Scaling.Max
 	}
 
-	currentAgents := m.GetAgentsByRole(role)
+	currentAgents := m.GetAgentsByName(name)
 	currentCount := len(currentAgents)
 
 	if targetCount > currentCount {
@@ -222,7 +222,7 @@ func (m *Manager) ScaleAgents(role string, targetCount int) error {
 				if err := agent.Stop(); err != nil {
 					fmt.Printf("Error stopping agent %s: %v\n", agent.ID, err)
 				}
-				m.freeAgentSequenceNumber(agent.ID, agent.Role)
+				m.freeAgentSequenceNumber(agent.ID, agent.Name)
 				delete(m.agents, agent.ID)
 			}
 		}
@@ -232,13 +232,8 @@ func (m *Manager) ScaleAgents(role string, targetCount int) error {
 }
 
 func (m *Manager) createAgentFromConfig(config AgentConfig) *Agent {
-	// Use Name if available, otherwise fall back to Role
-	agentIdentifier := config.Name
-	if agentIdentifier == "" {
-		agentIdentifier = config.Role
-	}
-	agentID := m.generateSequentialAgentID(agentIdentifier)
-	agent := NewAgentWithID(agentID, agentIdentifier, config.Type)
+	agentID := m.generateSequentialAgentID(config.Name)
+	agent := NewAgentWithID(agentID, config.Name, config.Type)
 	agent.Triggers = config.Triggers
 	agent.Scaling = config.Scaling
 	return agent
@@ -393,7 +388,7 @@ func (m *Manager) cleanup() {
 			// Log error but continue stopping other agents
 			fmt.Printf("Error stopping agent %s: %v\n", agent.ID, err)
 		}
-		m.freeAgentSequenceNumber(agent.ID, agent.Role)
+		m.freeAgentSequenceNumber(agent.ID, agent.Name)
 	}
 	m.mutex.Unlock()
 }
@@ -425,7 +420,7 @@ func (m *Manager) StopAgent(agentID string) error {
 
 	err := agent.Stop()
 	if err == nil {
-		m.freeAgentSequenceNumber(agent.ID, agent.Role)
+		m.freeAgentSequenceNumber(agent.ID, agent.Name)
 		delete(m.agents, agent.ID)
 	}
 	return err

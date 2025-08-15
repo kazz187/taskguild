@@ -8,8 +8,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/mattn/go-runewidth"
-	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/kazz187/taskguild/internal/client"
 	"github.com/kazz187/taskguild/internal/daemon"
@@ -161,7 +161,7 @@ func handleAgentList() {
 		return
 	}
 
-	fmt.Printf("%-30s %-15s %-15s %-10s %-20s %-20s\n", "ID", "ROLE", "TYPE", "STATUS", "TASK_ID", "WORKTREE_PATH")
+	fmt.Printf("%-30s %-15s %-15s %-10s %-20s %-20s\n", "ID", "NAME", "TYPE", "STATUS", "TASK_ID", "WORKTREE_PATH")
 	fmt.Printf("%-30s %-15s %-15s %-10s %-20s %-20s\n",
 		"------------------------------",
 		"---------------",
@@ -183,7 +183,7 @@ func handleAgentList() {
 
 		fmt.Printf("%-30s %-15s %-15s %-10s %-20s %-20s\n",
 			agent.Id,
-			agent.Role,
+			agent.Name,
 			agent.Type,
 			status,
 			taskID,
@@ -231,7 +231,7 @@ func handleAgentStatus(agentID string) {
 	}
 
 	fmt.Printf("Agent: %s\n", agent.Id)
-	fmt.Printf("Role: %s\n", agent.Role)
+	fmt.Printf("Name: %s\n", agent.Name)
 	fmt.Printf("Type: %s\n", agent.Type)
 	fmt.Printf("Status: %s\n", getAgentStatusString(agent.Status))
 	fmt.Printf("Memory Path: %s\n", agent.MemoryPath)

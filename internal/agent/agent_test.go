@@ -7,18 +7,14 @@ import (
 )
 
 func TestNewAgent(t *testing.T) {
-	agent := NewAgent("developer", "claude-code", "/path/to/memory.md")
+	agent := NewAgent("developer", "claude-code")
 
-	if agent.Role != "developer" {
-		t.Errorf("Expected role 'developer', got %s", agent.Role)
+	if agent.Name != "developer" {
+		t.Errorf("Expected name 'developer', got %s", agent.Name)
 	}
 
 	if agent.Type != "claude-code" {
 		t.Errorf("Expected type 'claude-code', got %s", agent.Type)
-	}
-
-	if agent.MemoryPath != "/path/to/memory.md" {
-		t.Errorf("Expected memory path '/path/to/memory.md', got %s", agent.MemoryPath)
 	}
 
 	if agent.Status != StatusIdle {
@@ -27,7 +23,7 @@ func TestNewAgent(t *testing.T) {
 }
 
 func TestAgentStatusUpdate(t *testing.T) {
-	agent := NewAgent("developer", "claude-code", "/path/to/memory.md")
+	agent := NewAgent("developer", "claude-code")
 
 	agent.UpdateStatus(StatusBusy)
 
@@ -37,7 +33,7 @@ func TestAgentStatusUpdate(t *testing.T) {
 }
 
 func TestAgentTaskAssignment(t *testing.T) {
-	agent := NewAgent("developer", "claude-code", "/path/to/memory.md")
+	agent := NewAgent("developer", "claude-code")
 
 	agent.AssignTask("TASK-001", "/path/to/worktree")
 
@@ -61,7 +57,7 @@ func TestAgentTaskAssignment(t *testing.T) {
 }
 
 func TestAgentStartStop(t *testing.T) {
-	agent := NewAgent("developer", "claude-code", "/path/to/memory.md")
+	agent := NewAgent("developer", "claude-code")
 	ctx := context.Background()
 
 	// Test start

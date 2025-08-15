@@ -146,13 +146,13 @@ func (h *AgentServiceHandler) ScaleAgent(
 	ctx context.Context,
 	req *connect.Request[taskguildv1.ScaleAgentRequest],
 ) (*connect.Response[taskguildv1.ScaleAgentResponse], error) {
-	err := h.manager.ScaleAgents(req.Msg.Role, int(req.Msg.Count))
+	err := h.manager.ScaleAgents(req.Msg.Name, int(req.Msg.Count))
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to scale agents: %w", err))
 	}
 
-	// Get updated agents for this role
-	agents := h.manager.GetAgentsByRole(req.Msg.Role)
+	// Get updated agents for this name
+	agents := h.manager.GetAgentsByName(req.Msg.Name)
 
 	protoAgents := make([]*taskguildv1.Agent, 0, len(agents))
 	for _, a := range agents {
@@ -200,7 +200,7 @@ func (h *AgentServiceHandler) agentToProto(a *agent.Agent) (*taskguildv1.Agent, 
 
 	return &taskguildv1.Agent{
 		Id:               a.ID,
-		Role:             a.Role,
+		Name:             a.Name,
 		Type:             a.Type,
 		MemoryPath:       a.MemoryPath,
 		Status:           status,

@@ -46,7 +46,7 @@ type ScalingConfig struct {
 
 type Agent struct {
 	ID           string         `yaml:"id"`
-	Role         string         `yaml:"role"`
+	Name         string         `yaml:"name"`
 	Type         string         `yaml:"type"`
 	MemoryPath   string         `yaml:"memory"`
 	Triggers     []EventTrigger `yaml:"triggers"`
@@ -65,14 +65,14 @@ type Agent struct {
 	claudeClient claudecode.Client
 }
 
-func NewAgent(role, agentType string) *Agent {
+func NewAgent(name, agentType string) *Agent {
 	now := time.Now()
 	// Generate a temporary ID using timestamp for backward compatibility
 	// This function is deprecated in favor of NewAgentWithID
-	id := fmt.Sprintf("%s-%d", role, now.UnixNano())
+	id := fmt.Sprintf("%s-%d", name, now.UnixNano())
 	return &Agent{
 		ID:        id,
-		Role:      role,
+		Name:      name,
 		Type:      agentType,
 		Status:    StatusIdle,
 		CreatedAt: now,
@@ -81,11 +81,11 @@ func NewAgent(role, agentType string) *Agent {
 	}
 }
 
-func NewAgentWithID(id, role, agentType string) *Agent {
+func NewAgentWithID(id, name, agentType string) *Agent {
 	now := time.Now()
 	return &Agent{
 		ID:        id,
-		Role:      role,
+		Name:      name,
 		Type:      agentType,
 		Status:    StatusIdle,
 		CreatedAt: now,
@@ -292,7 +292,7 @@ func (a *Agent) executeTask(ctx context.Context, client claudecode.Client) {
 
 	// Create initial prompt based on task and memory
 	prompt := fmt.Sprintf("You are an AI agent with role: %s\n\nTask ID: %s\n\nInstructions:\n%s\n\nPlease analyze the task and execute it.",
-		a.Role, a.TaskID, memoryContent)
+		a.Name, a.TaskID, memoryContent)
 
 	// Create options with model and working directory
 	opts := &claudecode.ClaudeCodeOptions{

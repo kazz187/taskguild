@@ -30,7 +30,7 @@ service AgentService {
 // Agent represents an agent in the system
 message Agent {
   string id = 1;
-  string role = 2;
+  string name = 2;
   string type = 3;
   string memory_path = 4;
   AgentStatus status = 5;
@@ -126,7 +126,7 @@ message GetAgentStatusResponse {
 
 // ScaleAgentRequest represents a request to scale agents
 message ScaleAgentRequest {
-  string role = 1;
+  string name = 1;
   int32 count = 2;
 }
 

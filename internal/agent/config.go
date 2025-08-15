@@ -12,7 +12,6 @@ import (
 
 type AgentConfig struct {
 	Name     string         `yaml:"name"`
-	Role     string         `yaml:"role,omitempty"` // Deprecated: use Name instead
 	Type     string         `yaml:"type"`
 	Triggers []EventTrigger `yaml:"triggers"`
 	Scaling  *ScalingConfig `yaml:"scaling,omitempty"`
@@ -21,7 +20,6 @@ type AgentConfig struct {
 // IndividualAgentConfig represents a single agent's configuration file
 type IndividualAgentConfig struct {
 	Name         string         `yaml:"name"`
-	Role         string         `yaml:"role,omitempty"` // Deprecated: use Name instead
 	Type         string         `yaml:"type"`
 	Triggers     []EventTrigger `yaml:"triggers"`
 	Scaling      *ScalingConfig `yaml:"scaling,omitempty"`
@@ -96,11 +94,8 @@ func loadIndividualConfigs() (*Config, error) {
 			continue
 		}
 
-		// Use Name if available, otherwise fall back to Role, otherwise use filename without extension
+		// Use Name if available, otherwise use filename without extension
 		agentName := agentConfig.Name
-		if agentName == "" {
-			agentName = agentConfig.Role
-		}
 		if agentName == "" {
 			filenameWithoutExt := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
 			agentName = filenameWithoutExt
@@ -108,7 +103,6 @@ func loadIndividualConfigs() (*Config, error) {
 
 		config.Agents = append(config.Agents, AgentConfig{
 			Name:     agentName,
-			Role:     agentConfig.Role,
 			Type:     agentConfig.Type,
 			Triggers: agentConfig.Triggers,
 			Scaling:  agentConfig.Scaling,
@@ -146,11 +140,7 @@ func SaveIndividualAgentConfig(config *IndividualAgentConfig, agentsDir string) 
 		agentsDir = ".taskguild/agents"
 	}
 
-	// Use Name if available, otherwise fall back to Role
 	agentName := config.Name
-	if agentName == "" {
-		agentName = config.Role
-	}
 
 	// Create agents directory if it doesn't exist
 	if err := os.MkdirAll(agentsDir, 0755); err != nil {
@@ -209,7 +199,6 @@ func createDefaultConfig(configPath string) (*Config, error) {
 		Agents: []AgentConfig{
 			{
 				Name: "developer",
-				Role: "developer",
 				Type: "claude-code",
 				Scaling: &ScalingConfig{
 					Min:  1,
@@ -225,7 +214,6 @@ func createDefaultConfig(configPath string) (*Config, error) {
 			},
 			{
 				Name: "reviewer",
-				Role: "reviewer",
 				Type: "claude-code",
 				Triggers: []EventTrigger{
 					{
@@ -235,8 +223,7 @@ func createDefaultConfig(configPath string) (*Config, error) {
 				},
 			},
 			{
-				Name: "qa",
-				Role: "qa",
+				Name: "qa-validator",
 				Type: "claude-code",
 				Triggers: []EventTrigger{
 					{
@@ -262,7 +249,6 @@ func createDefaultIndividualConfigs() error {
 	defaultConfigs := []*IndividualAgentConfig{
 		{
 			Name:        "developer",
-			Role:        "developer",
 			Type:        "claude-code",
 			Description: "Developer for implementing features",
 			Version:     "1.0",
@@ -280,7 +266,6 @@ func createDefaultIndividualConfigs() error {
 		},
 		{
 			Name:        "reviewer",
-			Role:        "reviewer",
 			Type:        "claude-code",
 			Description: "Senior engineer for conducting thorough code reviews",
 			Version:     "1.0",
@@ -292,8 +277,7 @@ func createDefaultIndividualConfigs() error {
 			},
 		},
 		{
-			Name:        "qa",
-			Role:        "qa",
+			Name:        "qa-validator",
 			Type:        "claude-code",
 			Description: "QA engineer for comprehensive testing",
 			Version:     "1.0",
@@ -308,7 +292,7 @@ func createDefaultIndividualConfigs() error {
 
 	for _, config := range defaultConfigs {
 		if err := SaveIndividualAgentConfig(config, agentsDir); err != nil {
-			return fmt.Errorf("failed to save %s config: %w", config.Role, err)
+			return fmt.Errorf("failed to save %s config: %w", config.Name, err)
 		}
 	}
 
@@ -322,13 +306,9 @@ func validateConfig(config *Config) error {
 
 	roleMap := make(map[string]bool)
 	for _, agent := range config.Agents {
-		// Check Name first, then fall back to Role
 		agentIdentifier := agent.Name
 		if agentIdentifier == "" {
-			agentIdentifier = agent.Role
-		}
-		if agentIdentifier == "" {
-			return fmt.Errorf("agent name/role cannot be empty")
+			return fmt.Errorf("agent name cannot be empty")
 		}
 		if agent.Type == "" {
 			return fmt.Errorf("agent type cannot be empty")
@@ -354,10 +334,9 @@ func validateConfig(config *Config) error {
 	return nil
 }
 
-func (c *Config) GetAgentConfig(nameOrRole string) (*AgentConfig, bool) {
+func (c *Config) GetAgentConfig(name string) (*AgentConfig, bool) {
 	for _, agent := range c.Agents {
-		// Check Name first, then Role for backward compatibility
-		if agent.Name == nameOrRole || agent.Role == nameOrRole {
+		if agent.Name == name {
 			return &agent, true
 		}
 	}

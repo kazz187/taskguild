@@ -53,8 +53,8 @@ func (s *Service) GetAgent(agentID string) (*Agent, bool) {
 	return s.manager.GetAgent(agentID)
 }
 
-func (s *Service) GetAgentsByRole(role string) []*Agent {
-	return s.manager.GetAgentsByRole(role)
+func (s *Service) GetAgentsByName(name string) []*Agent {
+	return s.manager.GetAgentsByName(name)
 }
 
 func (s *Service) GetAvailableAgents() []*Agent {
@@ -73,8 +73,8 @@ func (s *Service) RequestApproval(agentID string, action Action, target string, 
 	return s.manager.RequestApproval(agentID, action, target, details)
 }
 
-func (s *Service) ScaleAgents(role string, targetCount int) error {
-	return s.manager.ScaleAgents(role, targetCount)
+func (s *Service) ScaleAgents(name string, targetCount int) error {
+	return s.manager.ScaleAgents(name, targetCount)
 }
 
 func (s *Service) GetApprovalRequests() <-chan *ApprovalRequest {
@@ -189,7 +189,7 @@ func (s *Service) createDefaultMemoryFile(memoryPath, role string) error {
 - 具体的な改善例の提示
 - 良い点も積極的に評価
 `
-	case "qa":
+	case "qa-validator":
 		content = `# QAエージェント仕様
 
 ## 役割

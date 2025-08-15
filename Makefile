@@ -1,5 +1,5 @@
 # TaskGuild Makefile
-.PHONY: build clean test lint fmt vet deps install run help all
+.PHONY: build clean test lint fmt vet deps install run help all gen-proto
 
 # Variables
 BINARY_NAME=taskguild
@@ -109,10 +109,11 @@ clean: ## Clean build artifacts
 	@rm -rf $(BUILD_DIR)
 	@rm -f coverage.out coverage.html
 
-# Generate mocks (requires mockery)
-generate-mocks: ## Generate mocks (requires mockery)
-	@echo "Generating mocks..."
-	@go generate ./...
+# Generate protobuf files
+gen-proto: ## Generate protobuf files using buf
+	@echo "Generating protobuf files..."
+	@pushd proto && go tool buf generate && popd
+	@echo "Protobuf generation complete"
 
 # Check for security vulnerabilities
 security: ## Check for security vulnerabilities (requires gosec)

@@ -9,7 +9,7 @@ import (
 
 // ClaudeCodeAgent represents a Claude Code agent integration
 type ClaudeCodeAgent struct {
-	Role           string
+	Name           string
 	TaskID         string
 	WorkingDir     string
 	Config         *AgentConfigWithPrompt
@@ -66,7 +66,7 @@ func (a *ClaudeCodeAgent) ExecuteTask(ctx context.Context, task *TaskContext) (*
 	if err != nil {
 		return &TaskCompletionReport{
 			TaskID:           task.TaskID,
-			AgentRole:        a.Role,
+			AgentRole:        a.Name,
 			CompletionStatus: "failed",
 			WorkSummary:      fmt.Sprintf("Failed to execute task: %v", err),
 			Duration:         time.Since(startTime),
@@ -123,7 +123,7 @@ func (a *ClaudeCodeAgent) buildPrompt(task *TaskContext) string {
 		prompt.WriteString(a.Config.Prompt.SystemContext)
 		prompt.WriteString("\n\n")
 	} else {
-		prompt.WriteString(fmt.Sprintf("You are a %s agent in a TaskGuild system.\n\n", a.Role))
+		prompt.WriteString(fmt.Sprintf("You are a %s agent in a TaskGuild system.\n\n", a.Name))
 	}
 
 	// Add task information
@@ -213,7 +213,7 @@ func (a *ClaudeCodeAgent) buildCompletionFormat() string {
 	format.WriteString("WORK_SUMMARY: Implemented JWT authentication handler and unit tests\n")
 	format.WriteString("NEXT_TASK_STATUS: REVIEW_READY\n")
 	format.WriteString("NEXT_ACTIONS: Code review, Integration testing, Security review\n")
-	format.WriteString("REQUIRED_AGENTS: reviewer, qa\n")
+	format.WriteString("REQUIRED_AGENTS: reviewer, qa-validator\n")
 	format.WriteString("METADATA: {\"tests_passing\": true, \"code_formatted\": true, \"implementation_complete\": true}\n")
 
 	return format.String()
@@ -227,7 +227,7 @@ func (a *ClaudeCodeAgent) executeClaudeCode(ctx context.Context, prompt string, 
 	if a.Config != nil {
 		return &ClaudeCodeResult{
 			Success:        true,
-			WorkSummary:    fmt.Sprintf("Completed task using %s agent configuration", a.Role),
+			WorkSummary:    fmt.Sprintf("Completed task using %s agent configuration", a.Name),
 			NextTaskStatus: a.Config.Prompt.NextStatusRules.Success,
 			NextActions:    a.Config.Prompt.NextActions,
 			RequiredAgents: a.Config.Prompt.RequiredAgents,
@@ -238,7 +238,7 @@ func (a *ClaudeCodeAgent) executeClaudeCode(ctx context.Context, prompt string, 
 	// Fallback to generic response
 	return &ClaudeCodeResult{
 		Success:        true,
-		WorkSummary:    fmt.Sprintf("Completed task using %s agent", a.Role),
+		WorkSummary:    fmt.Sprintf("Completed task using %s agent", a.Name),
 		NextTaskStatus: "IN_PROGRESS",
 		NextActions:    []string{"Continue with next phase"},
 		RequiredAgents: []string{},
@@ -268,7 +268,7 @@ func (a *ClaudeCodeAgent) parseResult(result *ClaudeCodeResult, task *TaskContex
 		artifacts = append(artifacts, Artifact{
 			Path:        file,
 			Type:        "file",
-			Description: fmt.Sprintf("Created by %s agent", a.Role),
+			Description: fmt.Sprintf("Created by %s agent", a.Name),
 		})
 	}
 
@@ -276,7 +276,7 @@ func (a *ClaudeCodeAgent) parseResult(result *ClaudeCodeResult, task *TaskContex
 		artifacts = append(artifacts, Artifact{
 			Path:        file,
 			Type:        "file",
-			Description: fmt.Sprintf("Modified by %s agent", a.Role),
+			Description: fmt.Sprintf("Modified by %s agent", a.Name),
 		})
 	}
 
@@ -297,7 +297,7 @@ func (a *ClaudeCodeAgent) parseResult(result *ClaudeCodeResult, task *TaskContex
 
 	return &TaskCompletionReport{
 		TaskID:           task.TaskID,
-		AgentRole:        a.Role,
+		AgentRole:        a.Name,
 		CompletionStatus: completionStatus,
 		WorkSummary:      result.WorkSummary,
 		NextTaskStatus:   result.NextTaskStatus,

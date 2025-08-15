@@ -97,9 +97,9 @@ func (c *AgentClient) GetAgentStatus(ctx context.Context, agentID string) (*task
 }
 
 // ScaleAgent scales agents
-func (c *AgentClient) ScaleAgent(ctx context.Context, role string, count int32) ([]*taskguildv1.Agent, error) {
+func (c *AgentClient) ScaleAgent(ctx context.Context, name string, count int32) ([]*taskguildv1.Agent, error) {
 	req := connect.NewRequest(&taskguildv1.ScaleAgentRequest{
-		Role:  role,
+		Name:  name,
 		Count: count,
 	})
 
