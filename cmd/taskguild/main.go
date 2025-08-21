@@ -234,7 +234,15 @@ func handleAgentStatus(agentID string) {
 	fmt.Printf("Name: %s\n", agent.Name)
 	fmt.Printf("Type: %s\n", agent.Type)
 	fmt.Printf("Status: %s\n", getAgentStatusString(agent.Status))
-	fmt.Printf("Memory Path: %s\n", agent.MemoryPath)
+	if agent.Description != "" {
+		fmt.Printf("Description: %s\n", agent.Description)
+	}
+	if agent.Version != "" {
+		fmt.Printf("Version: %s\n", agent.Version)
+	}
+	if agent.Instructions != "" {
+		fmt.Printf("Instructions: %s\n", agent.Instructions)
+	}
 	if agent.TaskId != "" {
 		fmt.Printf("Task ID: %s\n", agent.TaskId)
 	}

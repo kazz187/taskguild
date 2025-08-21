@@ -48,7 +48,9 @@ type Agent struct {
 	ID           string         `yaml:"id"`
 	Name         string         `yaml:"name"`
 	Type         string         `yaml:"type"`
-	MemoryPath   string         `yaml:"memory"`
+	Description  string         `yaml:"description,omitempty"`
+	Version      string         `yaml:"version,omitempty"`
+	Instructions string         `yaml:"instructions,omitempty"`
 	Triggers     []EventTrigger `yaml:"triggers"`
 	Scaling      *ScalingConfig `yaml:"scaling,omitempty"`
 	Status       Status         `yaml:"status"`
@@ -284,15 +286,9 @@ func (a *Agent) run() {
 }
 
 func (a *Agent) executeTask(ctx context.Context, client claudecode.Client) {
-	// Read memory file
-	memoryContent := ""
-	if a.MemoryPath != "" {
-		// TODO: Read memory file content
-	}
-
-	// Create initial prompt based on task and memory
+	// Create initial prompt based on task and instructions
 	prompt := fmt.Sprintf("You are an AI agent with role: %s\n\nTask ID: %s\n\nInstructions:\n%s\n\nPlease analyze the task and execute it.",
-		a.Name, a.TaskID, memoryContent)
+		a.Name, a.TaskID, a.Instructions)
 
 	// Create options with model and working directory
 	opts := &claudecode.ClaudeCodeOptions{

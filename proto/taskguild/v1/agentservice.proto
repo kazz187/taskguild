@@ -32,15 +32,17 @@ message Agent {
   string id = 1;
   string name = 2;
   string type = 3;
-  string memory_path = 4;
-  AgentStatus status = 5;
-  string task_id = 6;
-  string worktree_path = 7;
-  repeated EventTrigger triggers = 8;
-  repeated ApprovalRule approval_required = 9;
-  ScalingConfig scaling = 10;
-  google.protobuf.Timestamp created_at = 11;
-  google.protobuf.Timestamp updated_at = 12;
+  string description = 4;
+  string version = 5;
+  string instructions = 6;
+  AgentStatus status = 7;
+  string task_id = 8;
+  string worktree_path = 9;
+  repeated EventTrigger triggers = 10;
+  repeated ApprovalRule approval_required = 11;
+  ScalingConfig scaling = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
 }
 
 // AgentStatus represents the status of an agent
