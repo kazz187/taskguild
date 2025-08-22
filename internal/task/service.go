@@ -147,6 +147,89 @@ func (s *ServiceImpl) CloseTask(id string) (*Task, error) {
 	return s.UpdateTask(req)
 }
 
+// TryAcquireTask atomically acquires a task using compare-and-swap semantics
+func (s *ServiceImpl) TryAcquireTask(req *TryAcquireTaskRequest) (*Task, error) {
+	if req.ID == "" {
+		return nil, fmt.Errorf("task ID cannot be empty")
+	}
+	if req.AgentID == "" {
+		return nil, fmt.Errorf("agent ID cannot be empty")
+	}
+
+	task, err := s.repository.GetByID(req.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get task %s: %w", req.ID, err)
+	}
+
+	// Compare-and-swap: only proceed if current status matches expected status
+	if task.Status != string(req.ExpectedStatus) {
+		return nil, fmt.Errorf("task %s status mismatch: expected %s, got %s",
+			req.ID, req.ExpectedStatus, task.Status)
+	}
+
+	// Check if task is already assigned to another agent
+	if task.AssignedTo != "" && task.AssignedTo != req.AgentID {
+		return nil, fmt.Errorf("task %s is already assigned to agent %s", req.ID, task.AssignedTo)
+	}
+
+	oldStatus := task.Status
+
+	// Atomically update status and assign to agent
+	task.Status = string(req.NewStatus)
+	task.AssignedTo = req.AgentID
+	task.UpdatedAt = time.Now()
+
+	if err := s.repository.Update(task); err != nil {
+		return nil, fmt.Errorf("failed to update task: %w", err)
+	}
+
+	// Publish event if status changed
+	if s.eventBus != nil && oldStatus != task.Status {
+		eventData := &event.TaskStatusChangedData{
+			TaskID:    task.ID,
+			OldStatus: oldStatus,
+			NewStatus: task.Status,
+			ChangedBy: req.AgentID,
+			ChangedAt: time.Now(),
+			Reason:    fmt.Sprintf("Task acquired by agent %s", req.AgentID),
+		}
+		s.eventBus.Publish(context.Background(), "task-service", eventData)
+	}
+
+	return task, nil
+}
+
+// ReleaseTask clears the task assignment (for task completion or error)
+func (s *ServiceImpl) ReleaseTask(taskID, agentID string) error {
+	if taskID == "" {
+		return fmt.Errorf("task ID cannot be empty")
+	}
+	if agentID == "" {
+		return fmt.Errorf("agent ID cannot be empty")
+	}
+
+	task, err := s.repository.GetByID(taskID)
+	if err != nil {
+		return fmt.Errorf("failed to get task %s: %w", taskID, err)
+	}
+
+	// Only allow the assigned agent to release the task
+	if task.AssignedTo != agentID {
+		return fmt.Errorf("task %s is not assigned to agent %s (assigned to: %s)",
+			taskID, agentID, task.AssignedTo)
+	}
+
+	// Clear assignment
+	task.AssignedTo = ""
+	task.UpdatedAt = time.Now()
+
+	if err := s.repository.Update(task); err != nil {
+		return fmt.Errorf("failed to release task: %w", err)
+	}
+
+	return nil
+}
+
 // generateTaskID generates a unique task ID
 func (s *ServiceImpl) generateTaskID() (string, error) {
 	tasks, err := s.repository.GetAll()

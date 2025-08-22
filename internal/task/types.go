@@ -18,6 +18,15 @@ type UpdateTaskRequest struct {
 	Metadata    map[string]string `json:"metadata"`
 }
 
+// TryAcquireTaskRequest represents a request to atomically acquire a task
+// using compare-and-swap semantics
+type TryAcquireTaskRequest struct {
+	ID             string `json:"id"`
+	ExpectedStatus Status `json:"expected_status"`
+	NewStatus      Status `json:"new_status"`
+	AgentID        string `json:"agent_id"`
+}
+
 // Status represents task status
 type Status string
 

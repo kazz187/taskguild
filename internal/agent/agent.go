@@ -233,7 +233,7 @@ func (a *Agent) Start(ctx context.Context) error {
 	defer a.mutex.Unlock()
 
 	if a.ctx != nil {
-		return fmt.Errorf("agent %s is already running", a.ID)
+		return fmt.Errorf("[%s] already running", a.ID)
 	}
 
 	a.ctx, a.cancel = context.WithCancel(ctx)
@@ -307,11 +307,13 @@ func (a *Agent) run() {
 		a.mutex.RUnlock()
 
 		if ctx == nil {
+			fmt.Printf("[%s] context is nil, stopping\n", a.ID)
 			return
 		}
 
 		select {
 		case <-ctx.Done():
+			fmt.Printf("[%s] context cancelled, stopping\n", a.ID)
 			return
 		default:
 		}
@@ -328,14 +330,19 @@ func (a *Agent) run() {
 
 				// Execute the task
 				if err := a.executor.ExecuteTask(ctx, availableTasks); err != nil {
-					fmt.Printf("Agent %s: error executing task %s: %v\n", a.ID, availableTasks.ID, err)
+					fmt.Printf("[%s] error executing task %s: %v\n", a.ID, availableTasks.ID, err)
 					a.UpdateStatus(StatusError)
 				} else {
-					fmt.Printf("Agent %s: completed task %s\n", a.ID, availableTasks.ID)
+					fmt.Printf("[%s] completed task %s\n", a.ID, availableTasks.ID)
 					a.UpdateStatus(StatusIdle)
 				}
 
-				// Clear task assignment
+				// Release task assignment (both on success and error)
+				if err := a.taskService.ReleaseTask(availableTasks.ID, a.ID); err != nil {
+					fmt.Printf("[%s] error releasing task %s: %v\n", a.ID, availableTasks.ID, err)
+				}
+
+				// Clear local task assignment
 				a.mutex.Lock()
 				a.TaskID = ""
 				a.mutex.Unlock()
@@ -346,6 +353,7 @@ func (a *Agent) run() {
 		// No task available, wait for events
 		select {
 		case <-ctx.Done():
+			fmt.Printf("[%s] context cancelled during wait\n", a.ID)
 			return
 		case eventData := <-a.eventChan:
 			// Check if this event matches our triggers
@@ -355,17 +363,15 @@ func (a *Agent) run() {
 
 					// Handle the event
 					if err := a.executor.HandleEvent(ctx, trigger.Event, eventData); err != nil {
-						fmt.Printf("Agent %s: error handling event %s: %v\n", a.ID, trigger.Event, err)
+						fmt.Printf("[%s] error handling event %s: %v\n", a.ID, trigger.Event, err)
 						a.UpdateStatus(StatusError)
 					} else {
-						fmt.Printf("Agent %s: handled event %s\n", a.ID, trigger.Event)
+						fmt.Printf("[%s] handled event %s\n", a.ID, trigger.Event)
 						a.UpdateStatus(StatusIdle)
 					}
 					break
 				}
 			}
-		case <-time.After(5 * time.Second):
-			// Timeout, loop back to check for tasks
 		}
 	}
 }
@@ -373,13 +379,14 @@ func (a *Agent) run() {
 // fetchAvailableTask fetches an available task that matches this agent's capabilities
 func (a *Agent) fetchAvailableTask() *task.Task {
 	if a.taskService == nil {
+		fmt.Printf("[%s] task service is nil\n", a.ID)
 		return nil
 	}
 
 	// Get all tasks
 	tasks, err := a.taskService.ListTasks()
 	if err != nil {
-		fmt.Printf("Agent %s: error fetching tasks: %v\n", a.ID, err)
+		fmt.Printf("[%s] error fetching tasks: %v\n", a.ID, err)
 		return nil
 	}
 
@@ -390,10 +397,19 @@ func (a *Agent) fetchAvailableTask() *task.Task {
 			continue
 		}
 
+		// Skip if task is already assigned to a different agent
+		if t.AssignedTo != "" && t.AssignedTo != a.ID {
+			continue
+		}
+
 		// Check if this task matches our triggers
 		for _, trigger := range a.Triggers {
-			// For tasks in DESIGNED status, check if we have a trigger for status change to DESIGNED
-			if trigger.Event == "task.status_changed" && t.Status == "DESIGNED" {
+			var shouldAcquire bool
+			var expectedStatus task.Status
+			var newStatus task.Status
+
+			// For tasks in specific status, check if we have a trigger for status change
+			if trigger.Event == "task.status_changed" {
 				// Create context data that matches the event trigger condition
 				contextData := map[string]interface{}{
 					"task_id":    t.ID,
@@ -403,16 +419,45 @@ func (a *Agent) fetchAvailableTask() *task.Task {
 				}
 
 				if a.evaluateCondition(trigger.Condition, contextData) {
-					return t
+					shouldAcquire = true
+					expectedStatus = task.Status(t.Status)
+					newStatus = "IN_PROGRESS"
 				}
 			}
 
 			// For task.created events, check if task is recently created
-			if trigger.Event == "task.created" && (trigger.Condition == "" || a.evaluateCondition(trigger.Condition, map[string]interface{}{
-				"task_id":   t.ID,
-				"task_type": t.Type,
-			})) {
-				return t
+			if trigger.Event == "task.created" {
+				contextData := map[string]interface{}{
+					"task_id":   t.ID,
+					"task_type": t.Type,
+				}
+
+				if trigger.Condition == "" || a.evaluateCondition(trigger.Condition, contextData) {
+					shouldAcquire = true
+					expectedStatus = task.Status(t.Status)
+					newStatus = "IN_PROGRESS"
+				}
+			}
+
+			if shouldAcquire {
+				// Try to atomically acquire the task using compare-and-swap
+				acquireReq := &task.TryAcquireTaskRequest{
+					ID:             t.ID,
+					ExpectedStatus: expectedStatus,
+					NewStatus:      newStatus,
+					AgentID:        a.ID,
+				}
+
+				acquiredTask, err := a.taskService.TryAcquireTask(acquireReq)
+				if err != nil {
+					// Task was already acquired by another agent or status changed
+					// This is expected in concurrent scenarios, just continue to next task
+					continue
+				}
+
+				fmt.Printf("[%s] successfully acquired task %s (status: %s -> %s)\n",
+					a.ID, acquiredTask.ID, expectedStatus, newStatus)
+				return acquiredTask
 			}
 		}
 	}
@@ -460,7 +505,7 @@ func (a *Agent) matchesEventTrigger(trigger EventTrigger, eventData interface{})
 func (a *Agent) executeTask(ctx context.Context, client claudecode.Client) {
 	// Check if this is a claude-code type agent
 	if a.Type != "claude-code" {
-		fmt.Printf("Agent %s: type %s is not supported for task execution\n", a.ID, a.Type)
+		fmt.Printf("[%s] type %s is not supported for task execution\n", a.ID, a.Type)
 		a.UpdateStatus(StatusError)
 		return
 	}
@@ -482,7 +527,7 @@ func (a *Agent) executeTask(ctx context.Context, client claudecode.Client) {
 	// Send query to Claude
 	messages, err := client.Query(ctx, prompt, opts)
 	if err != nil {
-		fmt.Printf("Agent %s error: %v\n", a.ID, err)
+		fmt.Printf("[%s] error: %v\n", a.ID, err)
 		a.UpdateStatus(StatusError)
 		return
 	}
@@ -491,24 +536,24 @@ func (a *Agent) executeTask(ctx context.Context, client claudecode.Client) {
 	for msg := range messages {
 		switch m := msg.(type) {
 		case claudecode.UserMessage:
-			fmt.Printf("Agent %s user message: %s\n", a.ID, m.Content)
+			fmt.Printf("[%s] user message: %s\n", a.ID, m.Content)
 		case claudecode.AssistantMessage:
 			for _, content := range m.Content {
 				switch c := content.(type) {
 				case claudecode.TextBlock:
-					fmt.Printf("Agent %s response: %s\n", a.ID, c.Text)
+					fmt.Printf("[%s] response: %s\n", a.ID, c.Text)
 				case claudecode.ToolUseBlock:
 					// TODO: Handle tool use blocks for actions that require approval
-					fmt.Printf("Agent %s tool use: %s\n", a.ID, c.Name)
+					fmt.Printf("[%s] tool use: %s\n", a.ID, c.Name)
 				}
 			}
 		case claudecode.ResultMessage:
 			if m.IsError {
-				fmt.Printf("Agent %s execution error\n", a.ID)
+				fmt.Printf("[%s] execution error\n", a.ID)
 				a.UpdateStatus(StatusError)
 				return
 			}
-			fmt.Printf("Agent %s execution completed\n", a.ID)
+			fmt.Printf("[%s] execution completed\n", a.ID)
 		}
 	}
 

@@ -154,6 +154,77 @@ func (h *TaskServiceHandler) CloseTask(
 	}), nil
 }
 
+// TryAcquireTask handles atomic task acquisition requests
+func (h *TaskServiceHandler) TryAcquireTask(ctx context.Context, req *connect.Request[taskguildv1.TryAcquireTaskRequest]) (*connect.Response[taskguildv1.TryAcquireTaskResponse], error) {
+	// Convert proto request to internal type
+	expectedStatus, err := h.protoToTaskStatus(req.Msg.ExpectedStatus)
+	if err != nil {
+		return connect.NewResponse(&taskguildv1.TryAcquireTaskResponse{
+			Task:         nil,
+			Success:      false,
+			ErrorMessage: fmt.Sprintf("invalid expected status: %v", err),
+		}), nil
+	}
+
+	newStatus, err := h.protoToTaskStatus(req.Msg.NewStatus)
+	if err != nil {
+		return connect.NewResponse(&taskguildv1.TryAcquireTaskResponse{
+			Task:         nil,
+			Success:      false,
+			ErrorMessage: fmt.Sprintf("invalid new status: %v", err),
+		}), nil
+	}
+
+	acquireReq := &task.TryAcquireTaskRequest{
+		ID:             req.Msg.Id,
+		ExpectedStatus: expectedStatus,
+		NewStatus:      newStatus,
+		AgentID:        req.Msg.AgentId,
+	}
+
+	taskResult, err := h.service.TryAcquireTask(acquireReq)
+	if err != nil {
+		// Return response with error message but don't fail the RPC
+		return connect.NewResponse(&taskguildv1.TryAcquireTaskResponse{
+			Task:         nil,
+			Success:      false,
+			ErrorMessage: err.Error(),
+		}), nil
+	}
+
+	protoTask, err := h.taskToProto(taskResult)
+	if err != nil {
+		return connect.NewResponse(&taskguildv1.TryAcquireTaskResponse{
+			Task:         nil,
+			Success:      false,
+			ErrorMessage: fmt.Sprintf("failed to convert task to proto: %v", err),
+		}), nil
+	}
+
+	return connect.NewResponse(&taskguildv1.TryAcquireTaskResponse{
+		Task:         protoTask,
+		Success:      true,
+		ErrorMessage: "",
+	}), nil
+}
+
+// ReleaseTask handles task release requests
+func (h *TaskServiceHandler) ReleaseTask(ctx context.Context, req *connect.Request[taskguildv1.ReleaseTaskRequest]) (*connect.Response[taskguildv1.ReleaseTaskResponse], error) {
+	err := h.service.ReleaseTask(req.Msg.Id, req.Msg.AgentId)
+	if err != nil {
+		// Return response with error message but don't fail the RPC
+		return connect.NewResponse(&taskguildv1.ReleaseTaskResponse{
+			Success:      false,
+			ErrorMessage: err.Error(),
+		}), nil
+	}
+
+	return connect.NewResponse(&taskguildv1.ReleaseTaskResponse{
+		Success:      true,
+		ErrorMessage: "",
+	}), nil
+}
+
 // Helper methods for conversion
 
 func (h *TaskServiceHandler) taskToProto(t *task.Task) (*taskguildv1.Task, error) {

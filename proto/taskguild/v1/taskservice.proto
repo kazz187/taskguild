@@ -22,6 +22,12 @@ service TaskService {
   
   // Close a task
   rpc CloseTask(CloseTaskRequest) returns (CloseTaskResponse);
+  
+  // Try to atomically acquire a task using compare-and-swap semantics
+  rpc TryAcquireTask(TryAcquireTaskRequest) returns (TryAcquireTaskResponse);
+  
+  // Release a task assignment
+  rpc ReleaseTask(ReleaseTaskRequest) returns (ReleaseTaskResponse);
 }
 
 // Task represents a task in the system
@@ -109,4 +115,31 @@ message CloseTaskRequest {
 // CloseTaskResponse represents the response from closing a task
 message CloseTaskResponse {
   Task task = 1;
+}
+
+// TryAcquireTaskRequest represents a request to atomically acquire a task
+message TryAcquireTaskRequest {
+  string id = 1;
+  TaskStatus expected_status = 2;
+  TaskStatus new_status = 3;
+  string agent_id = 4;
+}
+
+// TryAcquireTaskResponse represents the response from trying to acquire a task
+message TryAcquireTaskResponse {
+  Task task = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+// ReleaseTaskRequest represents a request to release a task assignment
+message ReleaseTaskRequest {
+  string id = 1;
+  string agent_id = 2;
+}
+
+// ReleaseTaskResponse represents the response from releasing a task
+message ReleaseTaskResponse {
+  bool success = 1;
+  string error_message = 2;
 }

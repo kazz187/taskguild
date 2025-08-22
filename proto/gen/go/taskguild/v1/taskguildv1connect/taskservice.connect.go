@@ -43,6 +43,11 @@ const (
 	TaskServiceUpdateTaskProcedure = "/taskguild.v1.TaskService/UpdateTask"
 	// TaskServiceCloseTaskProcedure is the fully-qualified name of the TaskService's CloseTask RPC.
 	TaskServiceCloseTaskProcedure = "/taskguild.v1.TaskService/CloseTask"
+	// TaskServiceTryAcquireTaskProcedure is the fully-qualified name of the TaskService's
+	// TryAcquireTask RPC.
+	TaskServiceTryAcquireTaskProcedure = "/taskguild.v1.TaskService/TryAcquireTask"
+	// TaskServiceReleaseTaskProcedure is the fully-qualified name of the TaskService's ReleaseTask RPC.
+	TaskServiceReleaseTaskProcedure = "/taskguild.v1.TaskService/ReleaseTask"
 )
 
 // TaskServiceClient is a client for the taskguild.v1.TaskService service.
@@ -57,6 +62,10 @@ type TaskServiceClient interface {
 	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.UpdateTaskResponse], error)
 	// Close a task
 	CloseTask(context.Context, *connect.Request[v1.CloseTaskRequest]) (*connect.Response[v1.CloseTaskResponse], error)
+	// Try to atomically acquire a task using compare-and-swap semantics
+	TryAcquireTask(context.Context, *connect.Request[v1.TryAcquireTaskRequest]) (*connect.Response[v1.TryAcquireTaskResponse], error)
+	// Release a task assignment
+	ReleaseTask(context.Context, *connect.Request[v1.ReleaseTaskRequest]) (*connect.Response[v1.ReleaseTaskResponse], error)
 }
 
 // NewTaskServiceClient constructs a client for the taskguild.v1.TaskService service. By default, it
@@ -100,16 +109,30 @@ func NewTaskServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(taskServiceMethods.ByName("CloseTask")),
 			connect.WithClientOptions(opts...),
 		),
+		tryAcquireTask: connect.NewClient[v1.TryAcquireTaskRequest, v1.TryAcquireTaskResponse](
+			httpClient,
+			baseURL+TaskServiceTryAcquireTaskProcedure,
+			connect.WithSchema(taskServiceMethods.ByName("TryAcquireTask")),
+			connect.WithClientOptions(opts...),
+		),
+		releaseTask: connect.NewClient[v1.ReleaseTaskRequest, v1.ReleaseTaskResponse](
+			httpClient,
+			baseURL+TaskServiceReleaseTaskProcedure,
+			connect.WithSchema(taskServiceMethods.ByName("ReleaseTask")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // taskServiceClient implements TaskServiceClient.
 type taskServiceClient struct {
-	createTask *connect.Client[v1.CreateTaskRequest, v1.CreateTaskResponse]
-	listTasks  *connect.Client[v1.ListTasksRequest, v1.ListTasksResponse]
-	getTask    *connect.Client[v1.GetTaskRequest, v1.GetTaskResponse]
-	updateTask *connect.Client[v1.UpdateTaskRequest, v1.UpdateTaskResponse]
-	closeTask  *connect.Client[v1.CloseTaskRequest, v1.CloseTaskResponse]
+	createTask     *connect.Client[v1.CreateTaskRequest, v1.CreateTaskResponse]
+	listTasks      *connect.Client[v1.ListTasksRequest, v1.ListTasksResponse]
+	getTask        *connect.Client[v1.GetTaskRequest, v1.GetTaskResponse]
+	updateTask     *connect.Client[v1.UpdateTaskRequest, v1.UpdateTaskResponse]
+	closeTask      *connect.Client[v1.CloseTaskRequest, v1.CloseTaskResponse]
+	tryAcquireTask *connect.Client[v1.TryAcquireTaskRequest, v1.TryAcquireTaskResponse]
+	releaseTask    *connect.Client[v1.ReleaseTaskRequest, v1.ReleaseTaskResponse]
 }
 
 // CreateTask calls taskguild.v1.TaskService.CreateTask.
@@ -137,6 +160,16 @@ func (c *taskServiceClient) CloseTask(ctx context.Context, req *connect.Request[
 	return c.closeTask.CallUnary(ctx, req)
 }
 
+// TryAcquireTask calls taskguild.v1.TaskService.TryAcquireTask.
+func (c *taskServiceClient) TryAcquireTask(ctx context.Context, req *connect.Request[v1.TryAcquireTaskRequest]) (*connect.Response[v1.TryAcquireTaskResponse], error) {
+	return c.tryAcquireTask.CallUnary(ctx, req)
+}
+
+// ReleaseTask calls taskguild.v1.TaskService.ReleaseTask.
+func (c *taskServiceClient) ReleaseTask(ctx context.Context, req *connect.Request[v1.ReleaseTaskRequest]) (*connect.Response[v1.ReleaseTaskResponse], error) {
+	return c.releaseTask.CallUnary(ctx, req)
+}
+
 // TaskServiceHandler is an implementation of the taskguild.v1.TaskService service.
 type TaskServiceHandler interface {
 	// Create a new task
@@ -149,6 +182,10 @@ type TaskServiceHandler interface {
 	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.UpdateTaskResponse], error)
 	// Close a task
 	CloseTask(context.Context, *connect.Request[v1.CloseTaskRequest]) (*connect.Response[v1.CloseTaskResponse], error)
+	// Try to atomically acquire a task using compare-and-swap semantics
+	TryAcquireTask(context.Context, *connect.Request[v1.TryAcquireTaskRequest]) (*connect.Response[v1.TryAcquireTaskResponse], error)
+	// Release a task assignment
+	ReleaseTask(context.Context, *connect.Request[v1.ReleaseTaskRequest]) (*connect.Response[v1.ReleaseTaskResponse], error)
 }
 
 // NewTaskServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -188,6 +225,18 @@ func NewTaskServiceHandler(svc TaskServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(taskServiceMethods.ByName("CloseTask")),
 		connect.WithHandlerOptions(opts...),
 	)
+	taskServiceTryAcquireTaskHandler := connect.NewUnaryHandler(
+		TaskServiceTryAcquireTaskProcedure,
+		svc.TryAcquireTask,
+		connect.WithSchema(taskServiceMethods.ByName("TryAcquireTask")),
+		connect.WithHandlerOptions(opts...),
+	)
+	taskServiceReleaseTaskHandler := connect.NewUnaryHandler(
+		TaskServiceReleaseTaskProcedure,
+		svc.ReleaseTask,
+		connect.WithSchema(taskServiceMethods.ByName("ReleaseTask")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/taskguild.v1.TaskService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case TaskServiceCreateTaskProcedure:
@@ -200,6 +249,10 @@ func NewTaskServiceHandler(svc TaskServiceHandler, opts ...connect.HandlerOption
 			taskServiceUpdateTaskHandler.ServeHTTP(w, r)
 		case TaskServiceCloseTaskProcedure:
 			taskServiceCloseTaskHandler.ServeHTTP(w, r)
+		case TaskServiceTryAcquireTaskProcedure:
+			taskServiceTryAcquireTaskHandler.ServeHTTP(w, r)
+		case TaskServiceReleaseTaskProcedure:
+			taskServiceReleaseTaskHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -227,4 +280,12 @@ func (UnimplementedTaskServiceHandler) UpdateTask(context.Context, *connect.Requ
 
 func (UnimplementedTaskServiceHandler) CloseTask(context.Context, *connect.Request[v1.CloseTaskRequest]) (*connect.Response[v1.CloseTaskResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.CloseTask is not implemented"))
+}
+
+func (UnimplementedTaskServiceHandler) TryAcquireTask(context.Context, *connect.Request[v1.TryAcquireTaskRequest]) (*connect.Response[v1.TryAcquireTaskResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.TryAcquireTask is not implemented"))
+}
+
+func (UnimplementedTaskServiceHandler) ReleaseTask(context.Context, *connect.Request[v1.ReleaseTaskRequest]) (*connect.Response[v1.ReleaseTaskResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.ReleaseTask is not implemented"))
 }

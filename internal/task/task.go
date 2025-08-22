@@ -34,4 +34,8 @@ type Service interface {
 	ListTasks() ([]*Task, error)
 	UpdateTask(req *UpdateTaskRequest) (*Task, error)
 	CloseTask(id string) (*Task, error)
+	// TryAcquireTask atomically acquires a task using compare-and-swap semantics
+	TryAcquireTask(req *TryAcquireTaskRequest) (*Task, error)
+	// ReleaseTask clears the task assignment (for task completion or error)
+	ReleaseTask(taskID, agentID string) error
 }
