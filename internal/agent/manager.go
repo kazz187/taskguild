@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -202,6 +203,12 @@ func (m *Manager) ListAgents() []*Agent {
 	for _, agent := range m.agents {
 		agents = append(agents, agent)
 	}
+
+	// Sort agents by ID for consistent ordering
+	sort.Slice(agents, func(i, j int) bool {
+		return agents[i].ID < agents[j].ID
+	})
+
 	return agents
 }
 

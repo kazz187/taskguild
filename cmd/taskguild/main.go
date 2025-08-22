@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sort"
 	"syscall"
 	"time"
 
@@ -141,6 +142,11 @@ func handleAgentList() {
 		fmt.Println("No agents found")
 		return
 	}
+
+	// Sort agents by ID for consistent ordering (client-side fallback)
+	sort.Slice(agents, func(i, j int) bool {
+		return agents[i].Id < agents[j].Id
+	})
 
 	fmt.Printf("%-30s %-15s %-15s %-10s %-20s %-20s\n", "ID", "NAME", "TYPE", "STATUS", "TASK_ID", "WORKTREE_PATH")
 	fmt.Printf("%-30s %-15s %-15s %-10s %-20s %-20s\n",
