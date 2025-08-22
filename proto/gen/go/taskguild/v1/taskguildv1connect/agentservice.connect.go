@@ -37,15 +37,9 @@ const (
 	AgentServiceListAgentsProcedure = "/taskguild.v1.AgentService/ListAgents"
 	// AgentServiceGetAgentProcedure is the fully-qualified name of the AgentService's GetAgent RPC.
 	AgentServiceGetAgentProcedure = "/taskguild.v1.AgentService/GetAgent"
-	// AgentServiceStartAgentProcedure is the fully-qualified name of the AgentService's StartAgent RPC.
-	AgentServiceStartAgentProcedure = "/taskguild.v1.AgentService/StartAgent"
-	// AgentServiceStopAgentProcedure is the fully-qualified name of the AgentService's StopAgent RPC.
-	AgentServiceStopAgentProcedure = "/taskguild.v1.AgentService/StopAgent"
 	// AgentServiceGetAgentStatusProcedure is the fully-qualified name of the AgentService's
 	// GetAgentStatus RPC.
 	AgentServiceGetAgentStatusProcedure = "/taskguild.v1.AgentService/GetAgentStatus"
-	// AgentServiceScaleAgentProcedure is the fully-qualified name of the AgentService's ScaleAgent RPC.
-	AgentServiceScaleAgentProcedure = "/taskguild.v1.AgentService/ScaleAgent"
 )
 
 // AgentServiceClient is a client for the taskguild.v1.AgentService service.
@@ -54,14 +48,8 @@ type AgentServiceClient interface {
 	ListAgents(context.Context, *connect.Request[v1.ListAgentsRequest]) (*connect.Response[v1.ListAgentsResponse], error)
 	// Get agent details
 	GetAgent(context.Context, *connect.Request[v1.GetAgentRequest]) (*connect.Response[v1.GetAgentResponse], error)
-	// Start an agent
-	StartAgent(context.Context, *connect.Request[v1.StartAgentRequest]) (*connect.Response[v1.StartAgentResponse], error)
-	// Stop an agent
-	StopAgent(context.Context, *connect.Request[v1.StopAgentRequest]) (*connect.Response[v1.StopAgentResponse], error)
 	// Get agent status
 	GetAgentStatus(context.Context, *connect.Request[v1.GetAgentStatusRequest]) (*connect.Response[v1.GetAgentStatusResponse], error)
-	// Scale agents
-	ScaleAgent(context.Context, *connect.Request[v1.ScaleAgentRequest]) (*connect.Response[v1.ScaleAgentResponse], error)
 }
 
 // NewAgentServiceClient constructs a client for the taskguild.v1.AgentService service. By default,
@@ -87,28 +75,10 @@ func NewAgentServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(agentServiceMethods.ByName("GetAgent")),
 			connect.WithClientOptions(opts...),
 		),
-		startAgent: connect.NewClient[v1.StartAgentRequest, v1.StartAgentResponse](
-			httpClient,
-			baseURL+AgentServiceStartAgentProcedure,
-			connect.WithSchema(agentServiceMethods.ByName("StartAgent")),
-			connect.WithClientOptions(opts...),
-		),
-		stopAgent: connect.NewClient[v1.StopAgentRequest, v1.StopAgentResponse](
-			httpClient,
-			baseURL+AgentServiceStopAgentProcedure,
-			connect.WithSchema(agentServiceMethods.ByName("StopAgent")),
-			connect.WithClientOptions(opts...),
-		),
 		getAgentStatus: connect.NewClient[v1.GetAgentStatusRequest, v1.GetAgentStatusResponse](
 			httpClient,
 			baseURL+AgentServiceGetAgentStatusProcedure,
 			connect.WithSchema(agentServiceMethods.ByName("GetAgentStatus")),
-			connect.WithClientOptions(opts...),
-		),
-		scaleAgent: connect.NewClient[v1.ScaleAgentRequest, v1.ScaleAgentResponse](
-			httpClient,
-			baseURL+AgentServiceScaleAgentProcedure,
-			connect.WithSchema(agentServiceMethods.ByName("ScaleAgent")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -118,10 +88,7 @@ func NewAgentServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 type agentServiceClient struct {
 	listAgents     *connect.Client[v1.ListAgentsRequest, v1.ListAgentsResponse]
 	getAgent       *connect.Client[v1.GetAgentRequest, v1.GetAgentResponse]
-	startAgent     *connect.Client[v1.StartAgentRequest, v1.StartAgentResponse]
-	stopAgent      *connect.Client[v1.StopAgentRequest, v1.StopAgentResponse]
 	getAgentStatus *connect.Client[v1.GetAgentStatusRequest, v1.GetAgentStatusResponse]
-	scaleAgent     *connect.Client[v1.ScaleAgentRequest, v1.ScaleAgentResponse]
 }
 
 // ListAgents calls taskguild.v1.AgentService.ListAgents.
@@ -134,24 +101,9 @@ func (c *agentServiceClient) GetAgent(ctx context.Context, req *connect.Request[
 	return c.getAgent.CallUnary(ctx, req)
 }
 
-// StartAgent calls taskguild.v1.AgentService.StartAgent.
-func (c *agentServiceClient) StartAgent(ctx context.Context, req *connect.Request[v1.StartAgentRequest]) (*connect.Response[v1.StartAgentResponse], error) {
-	return c.startAgent.CallUnary(ctx, req)
-}
-
-// StopAgent calls taskguild.v1.AgentService.StopAgent.
-func (c *agentServiceClient) StopAgent(ctx context.Context, req *connect.Request[v1.StopAgentRequest]) (*connect.Response[v1.StopAgentResponse], error) {
-	return c.stopAgent.CallUnary(ctx, req)
-}
-
 // GetAgentStatus calls taskguild.v1.AgentService.GetAgentStatus.
 func (c *agentServiceClient) GetAgentStatus(ctx context.Context, req *connect.Request[v1.GetAgentStatusRequest]) (*connect.Response[v1.GetAgentStatusResponse], error) {
 	return c.getAgentStatus.CallUnary(ctx, req)
-}
-
-// ScaleAgent calls taskguild.v1.AgentService.ScaleAgent.
-func (c *agentServiceClient) ScaleAgent(ctx context.Context, req *connect.Request[v1.ScaleAgentRequest]) (*connect.Response[v1.ScaleAgentResponse], error) {
-	return c.scaleAgent.CallUnary(ctx, req)
 }
 
 // AgentServiceHandler is an implementation of the taskguild.v1.AgentService service.
@@ -160,14 +112,8 @@ type AgentServiceHandler interface {
 	ListAgents(context.Context, *connect.Request[v1.ListAgentsRequest]) (*connect.Response[v1.ListAgentsResponse], error)
 	// Get agent details
 	GetAgent(context.Context, *connect.Request[v1.GetAgentRequest]) (*connect.Response[v1.GetAgentResponse], error)
-	// Start an agent
-	StartAgent(context.Context, *connect.Request[v1.StartAgentRequest]) (*connect.Response[v1.StartAgentResponse], error)
-	// Stop an agent
-	StopAgent(context.Context, *connect.Request[v1.StopAgentRequest]) (*connect.Response[v1.StopAgentResponse], error)
 	// Get agent status
 	GetAgentStatus(context.Context, *connect.Request[v1.GetAgentStatusRequest]) (*connect.Response[v1.GetAgentStatusResponse], error)
-	// Scale agents
-	ScaleAgent(context.Context, *connect.Request[v1.ScaleAgentRequest]) (*connect.Response[v1.ScaleAgentResponse], error)
 }
 
 // NewAgentServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -189,28 +135,10 @@ func NewAgentServiceHandler(svc AgentServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(agentServiceMethods.ByName("GetAgent")),
 		connect.WithHandlerOptions(opts...),
 	)
-	agentServiceStartAgentHandler := connect.NewUnaryHandler(
-		AgentServiceStartAgentProcedure,
-		svc.StartAgent,
-		connect.WithSchema(agentServiceMethods.ByName("StartAgent")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentServiceStopAgentHandler := connect.NewUnaryHandler(
-		AgentServiceStopAgentProcedure,
-		svc.StopAgent,
-		connect.WithSchema(agentServiceMethods.ByName("StopAgent")),
-		connect.WithHandlerOptions(opts...),
-	)
 	agentServiceGetAgentStatusHandler := connect.NewUnaryHandler(
 		AgentServiceGetAgentStatusProcedure,
 		svc.GetAgentStatus,
 		connect.WithSchema(agentServiceMethods.ByName("GetAgentStatus")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentServiceScaleAgentHandler := connect.NewUnaryHandler(
-		AgentServiceScaleAgentProcedure,
-		svc.ScaleAgent,
-		connect.WithSchema(agentServiceMethods.ByName("ScaleAgent")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/taskguild.v1.AgentService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -219,14 +147,8 @@ func NewAgentServiceHandler(svc AgentServiceHandler, opts ...connect.HandlerOpti
 			agentServiceListAgentsHandler.ServeHTTP(w, r)
 		case AgentServiceGetAgentProcedure:
 			agentServiceGetAgentHandler.ServeHTTP(w, r)
-		case AgentServiceStartAgentProcedure:
-			agentServiceStartAgentHandler.ServeHTTP(w, r)
-		case AgentServiceStopAgentProcedure:
-			agentServiceStopAgentHandler.ServeHTTP(w, r)
 		case AgentServiceGetAgentStatusProcedure:
 			agentServiceGetAgentStatusHandler.ServeHTTP(w, r)
-		case AgentServiceScaleAgentProcedure:
-			agentServiceScaleAgentHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -244,18 +166,6 @@ func (UnimplementedAgentServiceHandler) GetAgent(context.Context, *connect.Reque
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentService.GetAgent is not implemented"))
 }
 
-func (UnimplementedAgentServiceHandler) StartAgent(context.Context, *connect.Request[v1.StartAgentRequest]) (*connect.Response[v1.StartAgentResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentService.StartAgent is not implemented"))
-}
-
-func (UnimplementedAgentServiceHandler) StopAgent(context.Context, *connect.Request[v1.StopAgentRequest]) (*connect.Response[v1.StopAgentResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentService.StopAgent is not implemented"))
-}
-
 func (UnimplementedAgentServiceHandler) GetAgentStatus(context.Context, *connect.Request[v1.GetAgentStatusRequest]) (*connect.Response[v1.GetAgentStatusResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentService.GetAgentStatus is not implemented"))
-}
-
-func (UnimplementedAgentServiceHandler) ScaleAgent(context.Context, *connect.Request[v1.ScaleAgentRequest]) (*connect.Response[v1.ScaleAgentResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentService.ScaleAgent is not implemented"))
 }

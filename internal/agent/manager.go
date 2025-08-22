@@ -9,6 +9,7 @@ import (
 	"github.com/sourcegraph/conc"
 
 	"github.com/kazz187/taskguild/internal/event"
+	"github.com/kazz187/taskguild/internal/task"
 	"github.com/kazz187/taskguild/pkg/worktree"
 )
 
@@ -16,6 +17,7 @@ type Manager struct {
 	agents          map[string]*Agent
 	config          *Config
 	eventBus        *event.EventBus
+	taskService     task.Service
 	worktreeManager *worktree.Manager
 	ctx             context.Context
 	mutex           sync.RWMutex
@@ -33,11 +35,12 @@ type ApprovalRequest struct {
 	Timestamp time.Time
 }
 
-func NewManager(config *Config, eventBus *event.EventBus, worktreeManager *worktree.Manager) *Manager {
+func NewManager(config *Config, eventBus *event.EventBus, taskService task.Service, worktreeManager *worktree.Manager) *Manager {
 	return &Manager{
 		agents:          make(map[string]*Agent),
 		config:          config,
 		eventBus:        eventBus,
+		taskService:     taskService,
 		worktreeManager: worktreeManager,
 		approvals:       make(chan *ApprovalRequest, 100),
 		waitGroup:       conc.NewWaitGroup(),
@@ -54,17 +57,36 @@ func (m *Manager) Start(ctx context.Context) error {
 
 	m.ctx = ctx
 
-	if err := m.subscribeToEvents(); err != nil {
-		m.mutex.Unlock()
-		return fmt.Errorf("failed to subscribe to events: %w", err)
-	}
-
+	// Create initial agents based on configuration
 	for _, agentConfig := range m.config.Agents {
-		agent := m.createAgentFromConfig(agentConfig)
-		m.agents[agent.ID] = agent
+		// Create minimum number of agents
+		minAgents := 1
+		if agentConfig.Scaling != nil && agentConfig.Scaling.Min > 0 {
+			minAgents = agentConfig.Scaling.Min
+		}
+
+		for i := 0; i < minAgents; i++ {
+			agent, err := m.createAgentFromConfig(agentConfig)
+			if err != nil {
+				m.mutex.Unlock()
+				return fmt.Errorf("failed to create agent: %w", err)
+			}
+			m.agents[agent.ID] = agent
+
+			// Start the agent
+			if err := agent.Start(ctx); err != nil {
+				m.mutex.Unlock()
+				return fmt.Errorf("failed to start agent %s: %w", agent.ID, err)
+			}
+			fmt.Printf("Started agent %s (type: %s)\n", agent.ID, agent.Type)
+		}
 	}
 	m.mutex.Unlock()
 
+	// Start scaling monitor
+	m.waitGroup.Go(m.monitorAndScale)
+
+	// Handle approvals
 	m.waitGroup.Go(m.handleApprovals)
 
 	m.waitGroup.Go(func() {
@@ -73,6 +95,102 @@ func (m *Manager) Start(ctx context.Context) error {
 	})
 	m.waitGroup.Wait()
 	return nil
+}
+
+// monitorAndScale monitors agent status and scales up/down as needed
+func (m *Manager) monitorAndScale() {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-m.ctx.Done():
+			return
+		case <-ticker.C:
+			m.performScaling()
+		}
+	}
+}
+
+// performScaling checks agent status and scales appropriately
+func (m *Manager) performScaling() {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	// Group agents by name
+	agentsByName := make(map[string][]*Agent)
+	for _, agent := range m.agents {
+		agentsByName[agent.Name] = append(agentsByName[agent.Name], agent)
+	}
+
+	// Check each agent type
+	for _, config := range m.config.Agents {
+		agents := agentsByName[config.Name]
+		if len(agents) == 0 {
+			continue
+		}
+
+		// Count busy and idle agents
+		busyCount := 0
+		idleCount := 0
+		for _, agent := range agents {
+			switch agent.GetStatus() {
+			case StatusBusy:
+				busyCount++
+			case StatusIdle:
+				idleCount++
+			}
+		}
+
+		totalCount := len(agents)
+
+		// Scale up if all agents are busy and we haven't reached max
+		if config.Scaling != nil && config.Scaling.Auto {
+			if busyCount == totalCount && totalCount < config.Scaling.Max {
+				// Create a new agent
+				go func(cfg AgentConfig) {
+					m.mutex.Lock()
+					defer m.mutex.Unlock()
+
+					newAgent, err := m.createAgentFromConfig(cfg)
+					if err != nil {
+						fmt.Printf("Failed to create new agent: %v\n", err)
+						return
+					}
+
+					m.agents[newAgent.ID] = newAgent
+					if err := newAgent.Start(m.ctx); err != nil {
+						fmt.Printf("Failed to start new agent %s: %v\n", newAgent.ID, err)
+						delete(m.agents, newAgent.ID)
+						return
+					}
+					fmt.Printf("Scaled up: created new agent %s (type: %s)\n", newAgent.ID, newAgent.Type)
+				}(config)
+			}
+
+			// Scale down if we have too many idle agents
+			if idleCount >= 2 && totalCount > config.Scaling.Min {
+				// Stop an idle agent
+				for _, agent := range agents {
+					if agent.GetStatus() == StatusIdle {
+						go func(a *Agent) {
+							m.mutex.Lock()
+							defer m.mutex.Unlock()
+
+							if err := a.Stop(); err != nil {
+								fmt.Printf("Failed to stop agent %s: %v\n", a.ID, err)
+								return
+							}
+							delete(m.agents, a.ID)
+							m.freeAgentSequenceNumber(a.Name, a.ID)
+							fmt.Printf("Scaled down: stopped agent %s\n", a.ID)
+						}(agent)
+						break
+					}
+				}
+			}
+		}
+	}
 }
 
 func (m *Manager) ListAgents() []*Agent {
@@ -120,213 +238,15 @@ func (m *Manager) GetAvailableAgents() []*Agent {
 	return available
 }
 
-func (m *Manager) AssignAgentToTask(agentID, taskID, worktreePath string) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	agent, exists := m.agents[agentID]
-	if !exists {
-		return fmt.Errorf("agent %s not found", agentID)
-	}
-
-	if !agent.IsAvailable() {
-		return fmt.Errorf("agent %s is not available", agentID)
-	}
-
-	agent.AssignTask(taskID, worktreePath)
-	agent.UpdateStatus(StatusBusy)
-
-	// Start the agent if not already running
-	if agent.ctx == nil {
-		if err := agent.Start(m.ctx); err != nil {
-			return fmt.Errorf("failed to start agent %s: %w", agentID, err)
-		}
-	}
-
-	return nil
-}
-
-func (m *Manager) UnassignAgent(agentID string) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	agent, exists := m.agents[agentID]
-	if !exists {
-		return fmt.Errorf("agent %s not found", agentID)
-	}
-
-	agent.ClearTask()
-	agent.UpdateStatus(StatusIdle)
-
-	return nil
-}
-
-func (m *Manager) RequestApproval(agentID string, action Action, target string, details map[string]interface{}) (bool, error) {
-	request := &ApprovalRequest{
-		AgentID:   agentID,
-		Action:    action,
-		Target:    target,
-		Details:   details,
-		Response:  make(chan bool, 1),
-		Timestamp: time.Now(),
-	}
-
-	select {
-	case m.approvals <- request:
-		// Wait for approval response
-		select {
-		case approved := <-request.Response:
-			return approved, nil
-		case <-time.After(5 * time.Minute):
-			return false, fmt.Errorf("approval timeout for agent %s", agentID)
-		}
-	case <-m.ctx.Done():
-		return false, fmt.Errorf("manager is shutting down")
-	}
-}
-
-func (m *Manager) ScaleAgents(name string, targetCount int) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	agentConfig, exists := m.config.GetAgentConfig(name)
-	if !exists {
-		return fmt.Errorf("agent %s not found in config", name)
-	}
-
-	if agentConfig.Scaling == nil {
-		return fmt.Errorf("agent %s is not scalable", name)
-	}
-
-	if targetCount < agentConfig.Scaling.Min {
-		targetCount = agentConfig.Scaling.Min
-	}
-	if targetCount > agentConfig.Scaling.Max {
-		targetCount = agentConfig.Scaling.Max
-	}
-
-	currentAgents := m.GetAgentsByName(name)
-	currentCount := len(currentAgents)
-
-	if targetCount > currentCount {
-		// Scale up
-		for i := currentCount; i < targetCount; i++ {
-			agent := m.createAgentFromConfig(*agentConfig)
-			m.agents[agent.ID] = agent
-		}
-	} else if targetCount < currentCount {
-		// Scale down
-		for i := currentCount - 1; i >= targetCount; i-- {
-			agent := currentAgents[i]
-			if !agent.IsAssigned() {
-				if err := agent.Stop(); err != nil {
-					fmt.Printf("Error stopping agent %s: %v\n", agent.ID, err)
-				}
-				m.freeAgentSequenceNumber(agent.ID, agent.Name)
-				delete(m.agents, agent.ID)
-			}
-		}
-	}
-
-	return nil
-}
-
-func (m *Manager) createAgentFromConfig(config AgentConfig) *Agent {
+func (m *Manager) createAgentFromConfig(config AgentConfig) (*Agent, error) {
 	agentID := m.generateSequentialAgentID(config.Name)
-	agent := NewAgentWithID(agentID, config.Name, config.Type)
+	agent, err := NewAgentWithID(agentID, config.Name, config.Type, m.taskService, m.eventBus, config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create agent: %w", err)
+	}
 	agent.Triggers = config.Triggers
 	agent.Scaling = config.Scaling
-	return agent
-}
-
-func (m *Manager) subscribeToEvents() error {
-	// Subscribe to task.created events
-	err := event.SubscribeTyped(m.eventBus, event.TaskCreated, "agent-manager-task-created",
-		func(ctx context.Context, event *event.Event[event.TaskCreatedData]) error {
-			return m.handleTaskCreated(&event.Data)
-		})
-	if err != nil {
-		return fmt.Errorf("failed to subscribe to task.created: %w", err)
-	}
-
-	// Subscribe to task.status_changed events
-	err = event.SubscribeTyped(m.eventBus, event.TaskStatusChanged, "agent-manager-status-changed",
-		func(ctx context.Context, event *event.Event[event.TaskStatusChangedData]) error {
-			return m.handleTaskStatusChanged(&event.Data)
-		})
-	if err != nil {
-		return fmt.Errorf("failed to subscribe to task.status_changed: %w", err)
-	}
-
-	return nil
-}
-
-func (m *Manager) handleTaskCreated(data *event.TaskCreatedData) error {
-	// Create worktree for the task
-	branchName := fmt.Sprintf("task-%s", data.TaskID)
-	worktreePath, err := m.worktreeManager.CreateWorktree(data.TaskID, branchName)
-	if err != nil {
-		return fmt.Errorf("failed to create worktree for task %s: %w", data.TaskID, err)
-	}
-
-	// Find agents that should respond to task creation
-	contextData := map[string]interface{}{
-		"task_id":    data.TaskID,
-		"task_type":  data.Type,
-		"task_title": data.Title,
-		"worktree":   worktreePath,
-	}
-
-	m.mutex.RLock()
-	var matchingAgents []*Agent
-	for _, agent := range m.agents {
-		if agent.MatchesTrigger("task.created", contextData) {
-			matchingAgents = append(matchingAgents, agent)
-		}
-	}
-	m.mutex.RUnlock()
-
-	// Assign matching agents to the task
-	for _, agent := range matchingAgents {
-		if agent.IsAvailable() {
-			if err := m.AssignAgentToTask(agent.ID, data.TaskID, worktreePath); err != nil {
-				fmt.Printf("Failed to assign agent %s to task %s: %v\n", agent.ID, data.TaskID, err)
-				continue
-			}
-			fmt.Printf("Assigned agent %s to task %s\n", agent.ID, data.TaskID)
-		}
-	}
-
-	return nil
-}
-
-func (m *Manager) handleTaskStatusChanged(data *event.TaskStatusChangedData) error {
-
-	// Find agents that should respond to status change
-	contextData := map[string]interface{}{
-		"task_id":     data.TaskID,
-		"from_status": data.OldStatus,
-		"to_status":   data.NewStatus,
-	}
-
-	m.mutex.RLock()
-	var matchingAgents []*Agent
-	for _, agent := range m.agents {
-		if agent.MatchesTrigger("task.status_changed", contextData) {
-			matchingAgents = append(matchingAgents, agent)
-		}
-	}
-	m.mutex.RUnlock()
-
-	// Handle scaling based on status change
-	if data.NewStatus == "IN_PROGRESS" {
-		// Scale up developers if needed
-		if err := m.ScaleAgents("developer", 2); err != nil {
-			fmt.Printf("Failed to scale developer agents: %v\n", err)
-		}
-	}
-
-	return nil
+	return agent, nil
 }
 
 func (m *Manager) handleApprovals() {
@@ -343,10 +263,6 @@ func (m *Manager) handleApprovals() {
 			return
 		}
 	}
-}
-
-func (m *Manager) GetApprovalRequests() <-chan *ApprovalRequest {
-	return m.approvals
 }
 
 func (m *Manager) generateSequentialAgentID(role string) string {
@@ -391,37 +307,4 @@ func (m *Manager) cleanup() {
 		m.freeAgentSequenceNumber(agent.ID, agent.Name)
 	}
 	m.mutex.Unlock()
-}
-
-func (m *Manager) StartAgent(agentID string) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	agent, exists := m.agents[agentID]
-	if !exists {
-		return fmt.Errorf("agent %s not found", agentID)
-	}
-
-	if agent.ctx != nil {
-		return fmt.Errorf("agent %s is already running", agentID)
-	}
-
-	return agent.Start(m.ctx)
-}
-
-func (m *Manager) StopAgent(agentID string) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	agent, exists := m.agents[agentID]
-	if !exists {
-		return fmt.Errorf("agent %s not found", agentID)
-	}
-
-	err := agent.Stop()
-	if err == nil {
-		m.freeAgentSequenceNumber(agent.ID, agent.Name)
-		delete(m.agents, agent.ID)
-	}
-	return err
 }

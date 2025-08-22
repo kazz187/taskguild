@@ -71,56 +71,6 @@ func (h *AgentServiceHandler) GetAgent(
 	}), nil
 }
 
-// StartAgent starts an agent
-func (h *AgentServiceHandler) StartAgent(
-	ctx context.Context,
-	req *connect.Request[taskguildv1.StartAgentRequest],
-) (*connect.Response[taskguildv1.StartAgentResponse], error) {
-	err := h.manager.StartAgent(req.Msg.Id)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to start agent: %w", err))
-	}
-
-	agentObj, exists := h.manager.GetAgent(req.Msg.Id)
-	if !exists {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get started agent: %s", req.Msg.Id))
-	}
-
-	protoAgent, err := h.agentToProto(agentObj)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to convert agent: %w", err))
-	}
-
-	return connect.NewResponse(&taskguildv1.StartAgentResponse{
-		Agent: protoAgent,
-	}), nil
-}
-
-// StopAgent stops an agent
-func (h *AgentServiceHandler) StopAgent(
-	ctx context.Context,
-	req *connect.Request[taskguildv1.StopAgentRequest],
-) (*connect.Response[taskguildv1.StopAgentResponse], error) {
-	err := h.manager.StopAgent(req.Msg.Id)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to stop agent: %w", err))
-	}
-
-	agentObj, exists := h.manager.GetAgent(req.Msg.Id)
-	if !exists {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stopped agent: %s", req.Msg.Id))
-	}
-
-	protoAgent, err := h.agentToProto(agentObj)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to convert agent: %w", err))
-	}
-
-	return connect.NewResponse(&taskguildv1.StopAgentResponse{
-		Agent: protoAgent,
-	}), nil
-}
-
 // GetAgentStatus gets agent status
 func (h *AgentServiceHandler) GetAgentStatus(
 	ctx context.Context,
@@ -138,33 +88,6 @@ func (h *AgentServiceHandler) GetAgentStatus(
 
 	return connect.NewResponse(&taskguildv1.GetAgentStatusResponse{
 		Agent: protoAgent,
-	}), nil
-}
-
-// ScaleAgent scales agents
-func (h *AgentServiceHandler) ScaleAgent(
-	ctx context.Context,
-	req *connect.Request[taskguildv1.ScaleAgentRequest],
-) (*connect.Response[taskguildv1.ScaleAgentResponse], error) {
-	err := h.manager.ScaleAgents(req.Msg.Name, int(req.Msg.Count))
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to scale agents: %w", err))
-	}
-
-	// Get updated agents for this name
-	agents := h.manager.GetAgentsByName(req.Msg.Name)
-
-	protoAgents := make([]*taskguildv1.Agent, 0, len(agents))
-	for _, a := range agents {
-		protoAgent, err := h.agentToProto(a)
-		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to convert agent: %w", err))
-		}
-		protoAgents = append(protoAgents, protoAgent)
-	}
-
-	return connect.NewResponse(&taskguildv1.ScaleAgentResponse{
-		Agents: protoAgents,
 	}), nil
 }
 

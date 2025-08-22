@@ -11,10 +11,11 @@ import (
 )
 
 type AgentConfig struct {
-	Name     string         `yaml:"name"`
-	Type     string         `yaml:"type"`
-	Triggers []EventTrigger `yaml:"triggers"`
-	Scaling  *ScalingConfig `yaml:"scaling,omitempty"`
+	Name         string         `yaml:"name"`
+	Type         string         `yaml:"type"`
+	Instructions string         `yaml:"instructions,omitempty"`
+	Triggers     []EventTrigger `yaml:"triggers"`
+	Scaling      *ScalingConfig `yaml:"scaling,omitempty"`
 }
 
 // IndividualAgentConfig represents a single agent's configuration file

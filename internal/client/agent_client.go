@@ -54,34 +54,6 @@ func (c *AgentClient) GetAgent(ctx context.Context, agentID string) (*taskguildv
 	return resp.Msg.Agent, nil
 }
 
-// StartAgent starts an agent
-func (c *AgentClient) StartAgent(ctx context.Context, agentID string) (*taskguildv1.Agent, error) {
-	req := connect.NewRequest(&taskguildv1.StartAgentRequest{
-		Id: agentID,
-	})
-
-	resp, err := c.client.StartAgent(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to start agent: %w", err)
-	}
-
-	return resp.Msg.Agent, nil
-}
-
-// StopAgent stops an agent
-func (c *AgentClient) StopAgent(ctx context.Context, agentID string) (*taskguildv1.Agent, error) {
-	req := connect.NewRequest(&taskguildv1.StopAgentRequest{
-		Id: agentID,
-	})
-
-	resp, err := c.client.StopAgent(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to stop agent: %w", err)
-	}
-
-	return resp.Msg.Agent, nil
-}
-
 // GetAgentStatus gets agent status
 func (c *AgentClient) GetAgentStatus(ctx context.Context, agentID string) (*taskguildv1.Agent, error) {
 	req := connect.NewRequest(&taskguildv1.GetAgentStatusRequest{
@@ -94,19 +66,4 @@ func (c *AgentClient) GetAgentStatus(ctx context.Context, agentID string) (*task
 	}
 
 	return resp.Msg.Agent, nil
-}
-
-// ScaleAgent scales agents
-func (c *AgentClient) ScaleAgent(ctx context.Context, name string, count int32) ([]*taskguildv1.Agent, error) {
-	req := connect.NewRequest(&taskguildv1.ScaleAgentRequest{
-		Name:  name,
-		Count: count,
-	})
-
-	resp, err := c.client.ScaleAgent(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to scale agents: %w", err)
-	}
-
-	return resp.Msg.Agents, nil
 }

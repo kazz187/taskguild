@@ -14,17 +14,8 @@ service AgentService {
   // Get agent details
   rpc GetAgent(GetAgentRequest) returns (GetAgentResponse);
   
-  // Start an agent
-  rpc StartAgent(StartAgentRequest) returns (StartAgentResponse);
-  
-  // Stop an agent
-  rpc StopAgent(StopAgentRequest) returns (StopAgentResponse);
-  
   // Get agent status
   rpc GetAgentStatus(GetAgentStatusRequest) returns (GetAgentStatusResponse);
-  
-  // Scale agents
-  rpc ScaleAgent(ScaleAgentRequest) returns (ScaleAgentResponse);
 }
 
 // Agent represents an agent in the system
@@ -96,26 +87,6 @@ message GetAgentResponse {
   Agent agent = 1;
 }
 
-// StartAgentRequest represents a request to start an agent
-message StartAgentRequest {
-  string id = 1;
-}
-
-// StartAgentResponse represents the response from starting an agent
-message StartAgentResponse {
-  Agent agent = 1;
-}
-
-// StopAgentRequest represents a request to stop an agent
-message StopAgentRequest {
-  string id = 1;
-}
-
-// StopAgentResponse represents the response from stopping an agent
-message StopAgentResponse {
-  Agent agent = 1;
-}
-
 // GetAgentStatusRequest represents a request to get agent status
 message GetAgentStatusRequest {
   string id = 1;
@@ -124,15 +95,4 @@ message GetAgentStatusRequest {
 // GetAgentStatusResponse represents the response from getting agent status
 message GetAgentStatusResponse {
   Agent agent = 1;
-}
-
-// ScaleAgentRequest represents a request to scale agents
-message ScaleAgentRequest {
-  string name = 1;
-  int32 count = 2;
-}
-
-// ScaleAgentResponse represents the response from scaling agents
-message ScaleAgentResponse {
-  repeated Agent agents = 1;
 }

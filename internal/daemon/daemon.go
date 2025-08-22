@@ -68,7 +68,7 @@ func New(config *Config) (*Daemon, error) {
 		return nil, fmt.Errorf("failed to create worktree manager: %w", err)
 	}
 
-	agentManager := agent.NewManager(agentConfig, eventBus, worktreeManager)
+	agentManager := agent.NewManager(agentConfig, eventBus, taskService, worktreeManager)
 
 	return &Daemon{
 		config:       config,

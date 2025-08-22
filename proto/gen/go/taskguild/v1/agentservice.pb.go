@@ -593,186 +593,6 @@ func (x *GetAgentResponse) GetAgent() *Agent {
 	return nil
 }
 
-// StartAgentRequest represents a request to start an agent
-type StartAgentRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *StartAgentRequest) Reset() {
-	*x = StartAgentRequest{}
-	mi := &file_taskguild_v1_agentservice_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *StartAgentRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*StartAgentRequest) ProtoMessage() {}
-
-func (x *StartAgentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agentservice_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use StartAgentRequest.ProtoReflect.Descriptor instead.
-func (*StartAgentRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agentservice_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *StartAgentRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-// StartAgentResponse represents the response from starting an agent
-type StartAgentResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Agent         *Agent                 `protobuf:"bytes,1,opt,name=agent,proto3" json:"agent,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *StartAgentResponse) Reset() {
-	*x = StartAgentResponse{}
-	mi := &file_taskguild_v1_agentservice_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *StartAgentResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*StartAgentResponse) ProtoMessage() {}
-
-func (x *StartAgentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agentservice_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use StartAgentResponse.ProtoReflect.Descriptor instead.
-func (*StartAgentResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agentservice_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *StartAgentResponse) GetAgent() *Agent {
-	if x != nil {
-		return x.Agent
-	}
-	return nil
-}
-
-// StopAgentRequest represents a request to stop an agent
-type StopAgentRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *StopAgentRequest) Reset() {
-	*x = StopAgentRequest{}
-	mi := &file_taskguild_v1_agentservice_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *StopAgentRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*StopAgentRequest) ProtoMessage() {}
-
-func (x *StopAgentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agentservice_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use StopAgentRequest.ProtoReflect.Descriptor instead.
-func (*StopAgentRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agentservice_proto_rawDescGZIP(), []int{10}
-}
-
-func (x *StopAgentRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-// StopAgentResponse represents the response from stopping an agent
-type StopAgentResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Agent         *Agent                 `protobuf:"bytes,1,opt,name=agent,proto3" json:"agent,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *StopAgentResponse) Reset() {
-	*x = StopAgentResponse{}
-	mi := &file_taskguild_v1_agentservice_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *StopAgentResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*StopAgentResponse) ProtoMessage() {}
-
-func (x *StopAgentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agentservice_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use StopAgentResponse.ProtoReflect.Descriptor instead.
-func (*StopAgentResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agentservice_proto_rawDescGZIP(), []int{11}
-}
-
-func (x *StopAgentResponse) GetAgent() *Agent {
-	if x != nil {
-		return x.Agent
-	}
-	return nil
-}
-
 // GetAgentStatusRequest represents a request to get agent status
 type GetAgentStatusRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -783,7 +603,7 @@ type GetAgentStatusRequest struct {
 
 func (x *GetAgentStatusRequest) Reset() {
 	*x = GetAgentStatusRequest{}
-	mi := &file_taskguild_v1_agentservice_proto_msgTypes[12]
+	mi := &file_taskguild_v1_agentservice_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -795,7 +615,7 @@ func (x *GetAgentStatusRequest) String() string {
 func (*GetAgentStatusRequest) ProtoMessage() {}
 
 func (x *GetAgentStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agentservice_proto_msgTypes[12]
+	mi := &file_taskguild_v1_agentservice_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -808,7 +628,7 @@ func (x *GetAgentStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAgentStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetAgentStatusRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agentservice_proto_rawDescGZIP(), []int{12}
+	return file_taskguild_v1_agentservice_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetAgentStatusRequest) GetId() string {
@@ -828,7 +648,7 @@ type GetAgentStatusResponse struct {
 
 func (x *GetAgentStatusResponse) Reset() {
 	*x = GetAgentStatusResponse{}
-	mi := &file_taskguild_v1_agentservice_proto_msgTypes[13]
+	mi := &file_taskguild_v1_agentservice_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -840,7 +660,7 @@ func (x *GetAgentStatusResponse) String() string {
 func (*GetAgentStatusResponse) ProtoMessage() {}
 
 func (x *GetAgentStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agentservice_proto_msgTypes[13]
+	mi := &file_taskguild_v1_agentservice_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -853,110 +673,12 @@ func (x *GetAgentStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAgentStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetAgentStatusResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agentservice_proto_rawDescGZIP(), []int{13}
+	return file_taskguild_v1_agentservice_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetAgentStatusResponse) GetAgent() *Agent {
 	if x != nil {
 		return x.Agent
-	}
-	return nil
-}
-
-// ScaleAgentRequest represents a request to scale agents
-type ScaleAgentRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Count         int32                  `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ScaleAgentRequest) Reset() {
-	*x = ScaleAgentRequest{}
-	mi := &file_taskguild_v1_agentservice_proto_msgTypes[14]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ScaleAgentRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ScaleAgentRequest) ProtoMessage() {}
-
-func (x *ScaleAgentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agentservice_proto_msgTypes[14]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ScaleAgentRequest.ProtoReflect.Descriptor instead.
-func (*ScaleAgentRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agentservice_proto_rawDescGZIP(), []int{14}
-}
-
-func (x *ScaleAgentRequest) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *ScaleAgentRequest) GetCount() int32 {
-	if x != nil {
-		return x.Count
-	}
-	return 0
-}
-
-// ScaleAgentResponse represents the response from scaling agents
-type ScaleAgentResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Agents        []*Agent               `protobuf:"bytes,1,rep,name=agents,proto3" json:"agents,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ScaleAgentResponse) Reset() {
-	*x = ScaleAgentResponse{}
-	mi := &file_taskguild_v1_agentservice_proto_msgTypes[15]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ScaleAgentResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ScaleAgentResponse) ProtoMessage() {}
-
-func (x *ScaleAgentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agentservice_proto_msgTypes[15]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ScaleAgentResponse.ProtoReflect.Descriptor instead.
-func (*ScaleAgentResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agentservice_proto_rawDescGZIP(), []int{15}
-}
-
-func (x *ScaleAgentResponse) GetAgents() []*Agent {
-	if x != nil {
-		return x.Agents
 	}
 	return nil
 }
@@ -1004,41 +726,23 @@ const file_taskguild_v1_agentservice_proto_rawDesc = "" +
 	"\x0fGetAgentRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"=\n" +
 	"\x10GetAgentResponse\x12)\n" +
-	"\x05agent\x18\x01 \x01(\v2\x13.taskguild.v1.AgentR\x05agent\"#\n" +
-	"\x11StartAgentRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"?\n" +
-	"\x12StartAgentResponse\x12)\n" +
-	"\x05agent\x18\x01 \x01(\v2\x13.taskguild.v1.AgentR\x05agent\"\"\n" +
-	"\x10StopAgentRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\">\n" +
-	"\x11StopAgentResponse\x12)\n" +
 	"\x05agent\x18\x01 \x01(\v2\x13.taskguild.v1.AgentR\x05agent\"'\n" +
 	"\x15GetAgentStatusRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"C\n" +
 	"\x16GetAgentStatusResponse\x12)\n" +
-	"\x05agent\x18\x01 \x01(\v2\x13.taskguild.v1.AgentR\x05agent\"=\n" +
-	"\x11ScaleAgentRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
-	"\x05count\x18\x02 \x01(\x05R\x05count\"A\n" +
-	"\x12ScaleAgentResponse\x12+\n" +
-	"\x06agents\x18\x01 \x03(\v2\x13.taskguild.v1.AgentR\x06agents*\xa5\x01\n" +
+	"\x05agent\x18\x01 \x01(\v2\x13.taskguild.v1.AgentR\x05agent*\xa5\x01\n" +
 	"\vAgentStatus\x12\x1c\n" +
 	"\x18AGENT_STATUS_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11AGENT_STATUS_IDLE\x10\x01\x12\x15\n" +
 	"\x11AGENT_STATUS_BUSY\x10\x02\x12\x18\n" +
 	"\x14AGENT_STATUS_WAITING\x10\x03\x12\x16\n" +
 	"\x12AGENT_STATUS_ERROR\x10\x04\x12\x18\n" +
-	"\x14AGENT_STATUS_STOPPED\x10\x052\xf7\x03\n" +
+	"\x14AGENT_STATUS_STOPPED\x10\x052\x87\x02\n" +
 	"\fAgentService\x12O\n" +
 	"\n" +
 	"ListAgents\x12\x1f.taskguild.v1.ListAgentsRequest\x1a .taskguild.v1.ListAgentsResponse\x12I\n" +
-	"\bGetAgent\x12\x1d.taskguild.v1.GetAgentRequest\x1a\x1e.taskguild.v1.GetAgentResponse\x12O\n" +
-	"\n" +
-	"StartAgent\x12\x1f.taskguild.v1.StartAgentRequest\x1a .taskguild.v1.StartAgentResponse\x12L\n" +
-	"\tStopAgent\x12\x1e.taskguild.v1.StopAgentRequest\x1a\x1f.taskguild.v1.StopAgentResponse\x12[\n" +
-	"\x0eGetAgentStatus\x12#.taskguild.v1.GetAgentStatusRequest\x1a$.taskguild.v1.GetAgentStatusResponse\x12O\n" +
-	"\n" +
-	"ScaleAgent\x12\x1f.taskguild.v1.ScaleAgentRequest\x1a .taskguild.v1.ScaleAgentResponseB\xba\x01\n" +
+	"\bGetAgent\x12\x1d.taskguild.v1.GetAgentRequest\x1a\x1e.taskguild.v1.GetAgentResponse\x12[\n" +
+	"\x0eGetAgentStatus\x12#.taskguild.v1.GetAgentStatusRequest\x1a$.taskguild.v1.GetAgentStatusResponseB\xba\x01\n" +
 	"\x10com.taskguild.v1B\x11AgentserviceProtoP\x01ZBgithub.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
@@ -1054,7 +758,7 @@ func file_taskguild_v1_agentservice_proto_rawDescGZIP() []byte {
 }
 
 var file_taskguild_v1_agentservice_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_taskguild_v1_agentservice_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_taskguild_v1_agentservice_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_taskguild_v1_agentservice_proto_goTypes = []any{
 	(AgentStatus)(0),               // 0: taskguild.v1.AgentStatus
 	(*Agent)(nil),                  // 1: taskguild.v1.Agent
@@ -1065,46 +769,31 @@ var file_taskguild_v1_agentservice_proto_goTypes = []any{
 	(*ListAgentsResponse)(nil),     // 6: taskguild.v1.ListAgentsResponse
 	(*GetAgentRequest)(nil),        // 7: taskguild.v1.GetAgentRequest
 	(*GetAgentResponse)(nil),       // 8: taskguild.v1.GetAgentResponse
-	(*StartAgentRequest)(nil),      // 9: taskguild.v1.StartAgentRequest
-	(*StartAgentResponse)(nil),     // 10: taskguild.v1.StartAgentResponse
-	(*StopAgentRequest)(nil),       // 11: taskguild.v1.StopAgentRequest
-	(*StopAgentResponse)(nil),      // 12: taskguild.v1.StopAgentResponse
-	(*GetAgentStatusRequest)(nil),  // 13: taskguild.v1.GetAgentStatusRequest
-	(*GetAgentStatusResponse)(nil), // 14: taskguild.v1.GetAgentStatusResponse
-	(*ScaleAgentRequest)(nil),      // 15: taskguild.v1.ScaleAgentRequest
-	(*ScaleAgentResponse)(nil),     // 16: taskguild.v1.ScaleAgentResponse
-	(*timestamppb.Timestamp)(nil),  // 17: google.protobuf.Timestamp
+	(*GetAgentStatusRequest)(nil),  // 9: taskguild.v1.GetAgentStatusRequest
+	(*GetAgentStatusResponse)(nil), // 10: taskguild.v1.GetAgentStatusResponse
+	(*timestamppb.Timestamp)(nil),  // 11: google.protobuf.Timestamp
 }
 var file_taskguild_v1_agentservice_proto_depIdxs = []int32{
 	0,  // 0: taskguild.v1.Agent.status:type_name -> taskguild.v1.AgentStatus
 	2,  // 1: taskguild.v1.Agent.triggers:type_name -> taskguild.v1.EventTrigger
 	3,  // 2: taskguild.v1.Agent.approval_required:type_name -> taskguild.v1.ApprovalRule
 	4,  // 3: taskguild.v1.Agent.scaling:type_name -> taskguild.v1.ScalingConfig
-	17, // 4: taskguild.v1.Agent.created_at:type_name -> google.protobuf.Timestamp
-	17, // 5: taskguild.v1.Agent.updated_at:type_name -> google.protobuf.Timestamp
+	11, // 4: taskguild.v1.Agent.created_at:type_name -> google.protobuf.Timestamp
+	11, // 5: taskguild.v1.Agent.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 6: taskguild.v1.ListAgentsResponse.agents:type_name -> taskguild.v1.Agent
 	1,  // 7: taskguild.v1.GetAgentResponse.agent:type_name -> taskguild.v1.Agent
-	1,  // 8: taskguild.v1.StartAgentResponse.agent:type_name -> taskguild.v1.Agent
-	1,  // 9: taskguild.v1.StopAgentResponse.agent:type_name -> taskguild.v1.Agent
-	1,  // 10: taskguild.v1.GetAgentStatusResponse.agent:type_name -> taskguild.v1.Agent
-	1,  // 11: taskguild.v1.ScaleAgentResponse.agents:type_name -> taskguild.v1.Agent
-	5,  // 12: taskguild.v1.AgentService.ListAgents:input_type -> taskguild.v1.ListAgentsRequest
-	7,  // 13: taskguild.v1.AgentService.GetAgent:input_type -> taskguild.v1.GetAgentRequest
-	9,  // 14: taskguild.v1.AgentService.StartAgent:input_type -> taskguild.v1.StartAgentRequest
-	11, // 15: taskguild.v1.AgentService.StopAgent:input_type -> taskguild.v1.StopAgentRequest
-	13, // 16: taskguild.v1.AgentService.GetAgentStatus:input_type -> taskguild.v1.GetAgentStatusRequest
-	15, // 17: taskguild.v1.AgentService.ScaleAgent:input_type -> taskguild.v1.ScaleAgentRequest
-	6,  // 18: taskguild.v1.AgentService.ListAgents:output_type -> taskguild.v1.ListAgentsResponse
-	8,  // 19: taskguild.v1.AgentService.GetAgent:output_type -> taskguild.v1.GetAgentResponse
-	10, // 20: taskguild.v1.AgentService.StartAgent:output_type -> taskguild.v1.StartAgentResponse
-	12, // 21: taskguild.v1.AgentService.StopAgent:output_type -> taskguild.v1.StopAgentResponse
-	14, // 22: taskguild.v1.AgentService.GetAgentStatus:output_type -> taskguild.v1.GetAgentStatusResponse
-	16, // 23: taskguild.v1.AgentService.ScaleAgent:output_type -> taskguild.v1.ScaleAgentResponse
-	18, // [18:24] is the sub-list for method output_type
-	12, // [12:18] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	1,  // 8: taskguild.v1.GetAgentStatusResponse.agent:type_name -> taskguild.v1.Agent
+	5,  // 9: taskguild.v1.AgentService.ListAgents:input_type -> taskguild.v1.ListAgentsRequest
+	7,  // 10: taskguild.v1.AgentService.GetAgent:input_type -> taskguild.v1.GetAgentRequest
+	9,  // 11: taskguild.v1.AgentService.GetAgentStatus:input_type -> taskguild.v1.GetAgentStatusRequest
+	6,  // 12: taskguild.v1.AgentService.ListAgents:output_type -> taskguild.v1.ListAgentsResponse
+	8,  // 13: taskguild.v1.AgentService.GetAgent:output_type -> taskguild.v1.GetAgentResponse
+	10, // 14: taskguild.v1.AgentService.GetAgentStatus:output_type -> taskguild.v1.GetAgentStatusResponse
+	12, // [12:15] is the sub-list for method output_type
+	9,  // [9:12] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_agentservice_proto_init() }
@@ -1118,7 +807,7 @@ func file_taskguild_v1_agentservice_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_agentservice_proto_rawDesc), len(file_taskguild_v1_agentservice_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   16,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

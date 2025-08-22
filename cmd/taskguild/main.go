@@ -46,18 +46,8 @@ var (
 
 	agentListCmd = agentCmd.Command("list", "List all agents")
 
-	agentStartCmd = agentCmd.Command("start", "Start an agent")
-	agentStartID  = agentStartCmd.Arg("id", "Agent ID").Required().String()
-
-	agentStopCmd = agentCmd.Command("stop", "Stop an agent")
-	agentStopID  = agentStopCmd.Arg("id", "Agent ID").Required().String()
-
 	agentStatusCmd = agentCmd.Command("status", "Show agent status")
 	agentStatusID  = agentStatusCmd.Arg("id", "Agent ID").String()
-
-	agentScaleCmd   = agentCmd.Command("scale", "Scale agents")
-	agentScaleRole  = agentScaleCmd.Arg("role", "Agent role").Required().String()
-	agentScaleCount = agentScaleCmd.Arg("count", "Target count").Required().Int()
 )
 
 func main() {
@@ -68,18 +58,12 @@ func main() {
 		handleStartDaemon(*startAddr, *startPort)
 	case agentListCmd.FullCommand():
 		handleAgentList()
-	case agentStartCmd.FullCommand():
-		handleAgentStart(*agentStartID)
-	case agentStopCmd.FullCommand():
-		handleAgentStop(*agentStopID)
 	case agentStatusCmd.FullCommand():
 		if agentStatusID != nil && *agentStatusID != "" {
 			handleAgentStatus(*agentStatusID)
 		} else {
 			handleAgentList()
 		}
-	case agentScaleCmd.FullCommand():
-		handleAgentScale(*agentScaleRole, *agentScaleCount)
 	case createCmd.FullCommand():
 		handleTaskCreate(*createTitle, *createType)
 	case listCmd.FullCommand():
@@ -191,34 +175,6 @@ func handleAgentList() {
 	}
 }
 
-func handleAgentStart(agentID string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	agentClient := createAgentClient()
-	agent, err := agentClient.StartAgent(ctx, agentID)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error starting agent: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("Agent %s started successfully. Status: %s\n", agent.Id, getAgentStatusString(agent.Status))
-}
-
-func handleAgentStop(agentID string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	agentClient := createAgentClient()
-	agent, err := agentClient.StopAgent(ctx, agentID)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error stopping agent: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("Agent %s stopped successfully. Status: %s\n", agent.Id, getAgentStatusString(agent.Status))
-}
-
 func handleAgentStatus(agentID string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -251,23 +207,6 @@ func handleAgentStatus(agentID string) {
 	}
 	fmt.Printf("Created At: %s\n", agent.CreatedAt.AsTime().Format(time.RFC3339))
 	fmt.Printf("Updated At: %s\n", agent.UpdatedAt.AsTime().Format(time.RFC3339))
-}
-
-func handleAgentScale(role string, count int) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	agentClient := createAgentClient()
-	agents, err := agentClient.ScaleAgent(ctx, role, int32(count))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error scaling agents: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("Scaled agents for role '%s' to %d instances:\n", role, count)
-	for _, agent := range agents {
-		fmt.Printf("  - %s (%s)\n", agent.Id, getAgentStatusString(agent.Status))
-	}
 }
 
 func getAgentStatusString(status taskguildv1.AgentStatus) string {
