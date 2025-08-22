@@ -10,7 +10,7 @@ import (
 // AgentExecutor defines the interface for executing agent-specific logic
 type AgentExecutor interface {
 	// Initialize the executor with agent configuration
-	Initialize(ctx context.Context, config AgentConfig, worktreePath string) error
+	Initialize(ctx context.Context, agentID string, config AgentConfig, worktreePath string) error
 
 	// ExecuteTask Execute a task
 	ExecuteTask(ctx context.Context, task *task.Task) error
@@ -37,6 +37,7 @@ func NewExecutor(agentType string) (AgentExecutor, error) {
 
 // BaseExecutor provides common functionality for all executors
 type BaseExecutor struct {
+	AgentID      string
 	Config       AgentConfig
 	WorktreePath string
 	Ready        bool

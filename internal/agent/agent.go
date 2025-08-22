@@ -14,6 +14,7 @@ import (
 	"github.com/kazz187/taskguild/internal/event"
 	"github.com/kazz187/taskguild/internal/task"
 	"github.com/kazz187/taskguild/pkg/claudecode"
+	"github.com/kazz187/taskguild/pkg/color"
 )
 
 type Status string
@@ -241,7 +242,7 @@ func (a *Agent) Start(ctx context.Context) error {
 	a.UpdatedAt = time.Now()
 
 	// Initialize executor
-	if err := a.executor.Initialize(ctx, a.config, a.WorktreePath); err != nil {
+	if err := a.executor.Initialize(ctx, a.ID, a.config, a.WorktreePath); err != nil {
 		return fmt.Errorf("failed to initialize executor: %w", err)
 	}
 
@@ -307,13 +308,13 @@ func (a *Agent) run() {
 		a.mutex.RUnlock()
 
 		if ctx == nil {
-			fmt.Printf("[%s] context is nil, stopping\n", a.ID)
+			color.ColoredPrintln(a.ID, "context is nil, stopping")
 			return
 		}
 
 		select {
 		case <-ctx.Done():
-			fmt.Printf("[%s] context cancelled, stopping\n", a.ID)
+			color.ColoredPrintln(a.ID, "context cancelled, stopping")
 			return
 		default:
 		}
@@ -330,16 +331,16 @@ func (a *Agent) run() {
 
 				// Execute the task
 				if err := a.executor.ExecuteTask(ctx, availableTasks); err != nil {
-					fmt.Printf("[%s] error executing task %s: %v\n", a.ID, availableTasks.ID, err)
+					color.ColoredPrintf(a.ID, "error executing task %s: %v\n", availableTasks.ID, err)
 					a.UpdateStatus(StatusError)
 				} else {
-					fmt.Printf("[%s] completed task %s\n", a.ID, availableTasks.ID)
+					color.ColoredPrintf(a.ID, "completed task %s\n", availableTasks.ID)
 					a.UpdateStatus(StatusIdle)
 				}
 
 				// Release task assignment (both on success and error)
 				if err := a.taskService.ReleaseTask(availableTasks.ID, a.ID); err != nil {
-					fmt.Printf("[%s] error releasing task %s: %v\n", a.ID, availableTasks.ID, err)
+					color.ColoredPrintf(a.ID, "error releasing task %s: %v\n", availableTasks.ID, err)
 				}
 
 				// Clear local task assignment
@@ -353,7 +354,7 @@ func (a *Agent) run() {
 		// No task available, wait for events
 		select {
 		case <-ctx.Done():
-			fmt.Printf("[%s] context cancelled during wait\n", a.ID)
+			color.ColoredPrintln(a.ID, "context cancelled during wait")
 			return
 		case eventData := <-a.eventChan:
 			// Check if this event matches our triggers
@@ -363,10 +364,10 @@ func (a *Agent) run() {
 
 					// Handle the event
 					if err := a.executor.HandleEvent(ctx, trigger.Event, eventData); err != nil {
-						fmt.Printf("[%s] error handling event %s: %v\n", a.ID, trigger.Event, err)
+						color.ColoredPrintf(a.ID, "error handling event %s: %v\n", trigger.Event, err)
 						a.UpdateStatus(StatusError)
 					} else {
-						fmt.Printf("[%s] handled event %s\n", a.ID, trigger.Event)
+						color.ColoredPrintf(a.ID, "handled event %s\n", trigger.Event)
 						a.UpdateStatus(StatusIdle)
 					}
 					break
@@ -379,14 +380,14 @@ func (a *Agent) run() {
 // fetchAvailableTask fetches an available task that matches this agent's capabilities
 func (a *Agent) fetchAvailableTask() *task.Task {
 	if a.taskService == nil {
-		fmt.Printf("[%s] task service is nil\n", a.ID)
+		color.ColoredPrintln(a.ID, "task service is nil")
 		return nil
 	}
 
 	// Get all tasks
 	tasks, err := a.taskService.ListTasks()
 	if err != nil {
-		fmt.Printf("[%s] error fetching tasks: %v\n", a.ID, err)
+		color.ColoredPrintf(a.ID, "error fetching tasks: %v\n", err)
 		return nil
 	}
 
@@ -455,8 +456,8 @@ func (a *Agent) fetchAvailableTask() *task.Task {
 					continue
 				}
 
-				fmt.Printf("[%s] successfully acquired task %s (status: %s -> %s)\n",
-					a.ID, acquiredTask.ID, expectedStatus, newStatus)
+				color.ColoredPrintf(a.ID, "successfully acquired task %s (status: %s -> %s)\n",
+					acquiredTask.ID, expectedStatus, newStatus)
 				return acquiredTask
 			}
 		}
@@ -505,7 +506,7 @@ func (a *Agent) matchesEventTrigger(trigger EventTrigger, eventData interface{})
 func (a *Agent) executeTask(ctx context.Context, client claudecode.Client) {
 	// Check if this is a claude-code type agent
 	if a.Type != "claude-code" {
-		fmt.Printf("[%s] type %s is not supported for task execution\n", a.ID, a.Type)
+		color.ColoredPrintf(a.ID, "type %s is not supported for task execution\n", a.Type)
 		a.UpdateStatus(StatusError)
 		return
 	}
@@ -527,7 +528,7 @@ func (a *Agent) executeTask(ctx context.Context, client claudecode.Client) {
 	// Send query to Claude
 	messages, err := client.Query(ctx, prompt, opts)
 	if err != nil {
-		fmt.Printf("[%s] error: %v\n", a.ID, err)
+		color.ColoredPrintf(a.ID, "error: %v\n", err)
 		a.UpdateStatus(StatusError)
 		return
 	}
@@ -536,24 +537,24 @@ func (a *Agent) executeTask(ctx context.Context, client claudecode.Client) {
 	for msg := range messages {
 		switch m := msg.(type) {
 		case claudecode.UserMessage:
-			fmt.Printf("[%s] user message: %s\n", a.ID, m.Content)
+			color.ColoredPrintf(a.ID, "user message: %s\n", m.Content)
 		case claudecode.AssistantMessage:
 			for _, content := range m.Content {
 				switch c := content.(type) {
 				case claudecode.TextBlock:
-					fmt.Printf("[%s] response: %s\n", a.ID, c.Text)
+					color.ColoredPrintf(a.ID, "response: %s\n", c.Text)
 				case claudecode.ToolUseBlock:
 					// TODO: Handle tool use blocks for actions that require approval
-					fmt.Printf("[%s] tool use: %s\n", a.ID, c.Name)
+					color.ColoredPrintf(a.ID, "tool use: %s\n", c.Name)
 				}
 			}
 		case claudecode.ResultMessage:
 			if m.IsError {
-				fmt.Printf("[%s] execution error\n", a.ID)
+				color.ColoredPrintln(a.ID, "execution error")
 				a.UpdateStatus(StatusError)
 				return
 			}
-			fmt.Printf("[%s] execution completed\n", a.ID)
+			color.ColoredPrintln(a.ID, "execution completed")
 		}
 	}
 

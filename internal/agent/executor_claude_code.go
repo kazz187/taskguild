@@ -6,6 +6,7 @@ import (
 
 	"github.com/kazz187/taskguild/internal/task"
 	"github.com/kazz187/taskguild/pkg/claudecode"
+	"github.com/kazz187/taskguild/pkg/color"
 )
 
 // ClaudeCodeExecutor implements AgentExecutor for Claude Code agents
@@ -20,7 +21,8 @@ func NewClaudeCodeExecutor() *ClaudeCodeExecutor {
 }
 
 // Initialize sets up the Claude Code client
-func (e *ClaudeCodeExecutor) Initialize(ctx context.Context, config AgentConfig, worktreePath string) error {
+func (e *ClaudeCodeExecutor) Initialize(ctx context.Context, agentID string, config AgentConfig, worktreePath string) error {
+	e.AgentID = agentID
 	e.Config = config
 	e.WorktreePath = worktreePath
 	e.client = claudecode.NewClient()
@@ -58,21 +60,21 @@ func (e *ClaudeCodeExecutor) ExecuteTask(ctx context.Context, t *task.Task) erro
 	for msg := range messages {
 		switch m := msg.(type) {
 		case claudecode.UserMessage:
-			fmt.Printf("[Claude Code] User: %s\n", m.Content)
+			color.ColoredPrintf(e.AgentID, "[Claude Code] User: %s\n", m.Content)
 		case claudecode.AssistantMessage:
 			for _, content := range m.Content {
 				switch c := content.(type) {
 				case claudecode.TextBlock:
-					fmt.Printf("[Claude Code] Assistant: %s\n", c.Text)
+					color.ColoredPrintf(e.AgentID, "[Claude Code] Assistant: %s\n", c.Text)
 				case claudecode.ToolUseBlock:
-					fmt.Printf("[Claude Code] Tool Use: %s\n", c.Name)
+					color.ColoredPrintf(e.AgentID, "[Claude Code] Tool Use: %s\n", c.Name)
 				}
 			}
 		case claudecode.ResultMessage:
 			if m.IsError {
 				return fmt.Errorf("Claude Code execution error")
 			}
-			fmt.Printf("[Claude Code] Execution completed\n")
+			color.ColoredPrintln(e.AgentID, "[Claude Code] Execution completed")
 		}
 	}
 
@@ -109,21 +111,21 @@ func (e *ClaudeCodeExecutor) HandleEvent(ctx context.Context, eventType string, 
 	for msg := range messages {
 		switch m := msg.(type) {
 		case claudecode.UserMessage:
-			fmt.Printf("[Claude Code Event] User: %s\n", m.Content)
+			color.ColoredPrintf(e.AgentID, "[Claude Code Event] User: %s\n", m.Content)
 		case claudecode.AssistantMessage:
 			for _, content := range m.Content {
 				switch c := content.(type) {
 				case claudecode.TextBlock:
-					fmt.Printf("[Claude Code Event] Assistant: %s\n", c.Text)
+					color.ColoredPrintf(e.AgentID, "[Claude Code Event] Assistant: %s\n", c.Text)
 				case claudecode.ToolUseBlock:
-					fmt.Printf("[Claude Code Event] Tool Use: %s\n", c.Name)
+					color.ColoredPrintf(e.AgentID, "[Claude Code Event] Tool Use: %s\n", c.Name)
 				}
 			}
 		case claudecode.ResultMessage:
 			if m.IsError {
 				return fmt.Errorf("Claude Code execution error during event handling")
 			}
-			fmt.Printf("[Claude Code Event] Event handling completed\n")
+			color.ColoredPrintln(e.AgentID, "[Claude Code Event] Event handling completed")
 		}
 	}
 

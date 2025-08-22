@@ -10,6 +10,7 @@ import (
 
 	"github.com/kazz187/taskguild/internal/event"
 	"github.com/kazz187/taskguild/internal/task"
+	"github.com/kazz187/taskguild/pkg/color"
 	"github.com/kazz187/taskguild/pkg/worktree"
 )
 
@@ -78,7 +79,7 @@ func (m *Manager) Start(ctx context.Context) error {
 				m.mutex.Unlock()
 				return fmt.Errorf("failed to start agent %s: %w", agent.ID, err)
 			}
-			fmt.Printf("Started agent %s (type: %s)\n", agent.ID, agent.Type)
+			color.ColoredPrintf(agent.ID, "Started (type: %s)\n", agent.Type)
 		}
 	}
 	m.mutex.Unlock()
@@ -160,11 +161,11 @@ func (m *Manager) performScaling() {
 
 					m.agents[newAgent.ID] = newAgent
 					if err := newAgent.Start(m.ctx); err != nil {
-						fmt.Printf("Failed to start new agent %s: %v\n", newAgent.ID, err)
+						color.ColoredPrintf(newAgent.ID, "Failed to start: %v\n", err)
 						delete(m.agents, newAgent.ID)
 						return
 					}
-					fmt.Printf("Scaled up: created new agent %s (type: %s)\n", newAgent.ID, newAgent.Type)
+					color.ColoredPrintf(newAgent.ID, "Scaled up: created (type: %s)\n", newAgent.Type)
 				}(config)
 			}
 
@@ -178,12 +179,12 @@ func (m *Manager) performScaling() {
 							defer m.mutex.Unlock()
 
 							if err := a.Stop(); err != nil {
-								fmt.Printf("Failed to stop agent %s: %v\n", a.ID, err)
+								color.ColoredPrintf(a.ID, "Failed to stop: %v\n", err)
 								return
 							}
 							delete(m.agents, a.ID)
 							m.freeAgentSequenceNumber(a.Name, a.ID)
-							fmt.Printf("Scaled down: stopped agent %s\n", a.ID)
+							color.ColoredPrintln(a.ID, "Scaled down: stopped")
 						}(agent)
 						break
 					}
@@ -302,7 +303,7 @@ func (m *Manager) cleanup() {
 	for _, agent := range m.agents {
 		if err := agent.Stop(); err != nil {
 			// Log error but continue stopping other agents
-			fmt.Printf("Error stopping agent %s: %v\n", agent.ID, err)
+			color.ColoredPrintf(agent.ID, "Error stopping: %v\n", err)
 		}
 		m.freeAgentSequenceNumber(agent.ID, agent.Name)
 	}
