@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -75,8 +76,7 @@ func main() {
 	case showCmd.FullCommand():
 		handleTaskShow(*showID)
 	default:
-		fmt.Fprintf(os.Stderr, "Command not yet implemented in daemon mode. Please start daemon first with 'taskguild start'\n")
-		os.Exit(1)
+		log.Fatal("Command not yet implemented in daemon mode. Please start daemon first with 'taskguild start'")
 	}
 }
 
@@ -90,8 +90,7 @@ func handleStartDaemon(addr string, port int) {
 	// Create daemon instance
 	d, err := daemon.New(config)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating daemon: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error creating daemon: %v", err)
 	}
 
 	// Setup context with signal notification for graceful shutdown
@@ -111,8 +110,7 @@ func handleStartDaemon(addr string, port int) {
 			fmt.Println("Daemon stopped gracefully")
 		} else {
 			// Actual error occurred
-			fmt.Fprintf(os.Stderr, "Error running daemon: %v\n", err)
-			os.Exit(1)
+			log.Fatalf("Error running daemon: %v", err)
 		}
 	}
 }
@@ -136,8 +134,7 @@ func handleAgentList() {
 	agentClient := createAgentClient()
 	agents, err := agentClient.ListAgents(ctx)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error listing agents: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error listing agents: %v", err)
 	}
 
 	if len(agents) == 0 {
@@ -182,8 +179,7 @@ func handleAgentStatus(agentID string) {
 	agentClient := createAgentClient()
 	agent, err := agentClient.GetAgentStatus(ctx, agentID)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting agent status: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error getting agent status: %v", err)
 	}
 
 	fmt.Printf("Agent: %s\n", agent.Id)
@@ -279,8 +275,7 @@ func handleTaskCreate(title, taskType string) {
 	taskClient := createTaskClient()
 	task, err := taskClient.CreateTask(ctx, title, "", taskType)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating task: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error creating task: %v", err)
 	}
 
 	fmt.Printf("Task created successfully:\n")
@@ -298,8 +293,7 @@ func handleTaskList() {
 	taskClient := createTaskClient()
 	tasks, err := taskClient.ListTasks(ctx)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error listing tasks: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error listing tasks: %v", err)
 	}
 
 	if len(tasks) == 0 {
@@ -338,16 +332,13 @@ func handleTaskUpdate(taskID, status string) {
 	// Convert status string to enum
 	statusEnum := getTaskStatusEnum(status)
 	if statusEnum == taskguildv1.TaskStatus_TASK_STATUS_UNSPECIFIED {
-		fmt.Fprintf(os.Stderr, "Error: Invalid status '%s'\n", status)
-		fmt.Fprintf(os.Stderr, "Valid statuses: CREATED, ANALYZING, DESIGNED, IN_PROGRESS, REVIEW_READY, QA_READY, CLOSED, CANCELLED\n")
-		os.Exit(1)
+		log.Fatalf("Error: Invalid status '%s'. Valid statuses: CREATED, ANALYZING, DESIGNED, IN_PROGRESS, REVIEW_READY, QA_READY, CLOSED, CANCELLED", status)
 	}
 
 	taskClient := createTaskClient()
 	task, err := taskClient.UpdateTask(ctx, taskID, statusEnum)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error updating task: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error updating task: %v", err)
 	}
 
 	fmt.Printf("Task %s updated successfully. New status: %s\n", task.Id, getTaskStatusString(task.Status))
@@ -360,8 +351,7 @@ func handleTaskClose(taskID string) {
 	taskClient := createTaskClient()
 	task, err := taskClient.CloseTask(ctx, taskID)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error closing task: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error closing task: %v", err)
 	}
 
 	fmt.Printf("Task %s closed successfully. Status: %s\n", task.Id, getTaskStatusString(task.Status))
@@ -374,8 +364,7 @@ func handleTaskShow(taskID string) {
 	taskClient := createTaskClient()
 	task, err := taskClient.GetTask(ctx, taskID)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting task: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error getting task: %v", err)
 	}
 
 	fmt.Printf("Task Details:\n")
