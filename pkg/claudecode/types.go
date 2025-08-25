@@ -9,10 +9,12 @@ const (
 	PermissionModeBypassPermissions PermissionMode = "bypassPermissions"
 )
 
-// McpServerConfig represents MCP server configuration
+// McpServerConfig represents MCP server configuration (stdio type)
 type McpServerConfig struct {
-	Transport []string               `json:"transport"`
-	Env       map[string]interface{} `json:"env,omitempty"`
+	Type    string                 `json:"type,omitempty"` // Optional, defaults to "stdio"
+	Command string                 `json:"command"`
+	Args    []string               `json:"args,omitempty"`
+	Env     map[string]interface{} `json:"env,omitempty"`
 }
 
 // ContentBlock is an interface for different types of content blocks

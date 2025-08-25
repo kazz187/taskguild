@@ -115,8 +115,10 @@ func NewAgentWithID(id, name, agentType string, taskService task.Service, eventB
 func (a *Agent) UpdateStatus(status Status) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
+	oldStatus := a.Status
 	a.Status = status
 	a.UpdatedAt = time.Now()
+	color.ColoredPrintf(a.ID, "status updated: %s -> %s\n", oldStatus, status)
 }
 
 func (a *Agent) GetStatus() Status {
@@ -330,6 +332,7 @@ func (a *Agent) run() {
 				a.mutex.Unlock()
 
 				// Execute the task
+				color.ColoredPrintf(a.ID, "starting task execution: %s\n", availableTasks.ID)
 				if err := a.executor.ExecuteTask(ctx, availableTasks); err != nil {
 					color.ColoredPrintf(a.ID, "error executing task %s: %v\n", availableTasks.ID, err)
 					a.UpdateStatus(StatusError)
@@ -338,15 +341,12 @@ func (a *Agent) run() {
 					a.UpdateStatus(StatusIdle)
 				}
 
-				// Release task assignment (both on success and error)
-				if err := a.taskService.ReleaseTask(availableTasks.ID, a.ID); err != nil {
-					color.ColoredPrintf(a.ID, "error releasing task %s: %v\n", availableTasks.ID, err)
-				}
-
-				// Clear local task assignment
+				// Note: Task status update is now handled by Claude via mcp-taskguild
+				// Just clear local task assignment
 				a.mutex.Lock()
 				a.TaskID = ""
 				a.mutex.Unlock()
+				color.ColoredPrintf(a.ID, "cleared local task assignment (status handled by Claude)\n")
 				continue
 			}
 		}

@@ -208,9 +208,10 @@ func (h *TaskServiceHandler) TryAcquireTask(ctx context.Context, req *connect.Re
 	}), nil
 }
 
-// ReleaseTask handles task release requests
+// ReleaseTask handles task release requests (deprecated - use CompleteTask)
 func (h *TaskServiceHandler) ReleaseTask(ctx context.Context, req *connect.Request[taskguildv1.ReleaseTaskRequest]) (*connect.Response[taskguildv1.ReleaseTaskResponse], error) {
-	err := h.service.ReleaseTask(req.Msg.Id, req.Msg.AgentId)
+	// Use CompleteTask with default CLOSED status for backward compatibility
+	err := h.service.CompleteTask(req.Msg.Id, req.Msg.AgentId, "CLOSED")
 	if err != nil {
 		// Return response with error message but don't fail the RPC
 		return connect.NewResponse(&taskguildv1.ReleaseTaskResponse{

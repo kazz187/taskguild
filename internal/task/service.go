@@ -199,13 +199,16 @@ func (s *ServiceImpl) TryAcquireTask(req *TryAcquireTaskRequest) (*Task, error) 
 	return task, nil
 }
 
-// ReleaseTask clears the task assignment (for task completion or error)
-func (s *ServiceImpl) ReleaseTask(taskID, agentID string) error {
+// CompleteTask updates task status and clears assignment after task completion
+func (s *ServiceImpl) CompleteTask(taskID, agentID, newStatus string) error {
 	if taskID == "" {
 		return fmt.Errorf("task ID cannot be empty")
 	}
 	if agentID == "" {
 		return fmt.Errorf("agent ID cannot be empty")
+	}
+	if newStatus == "" {
+		return fmt.Errorf("new status cannot be empty")
 	}
 
 	task, err := s.repository.GetByID(taskID)
@@ -213,18 +216,35 @@ func (s *ServiceImpl) ReleaseTask(taskID, agentID string) error {
 		return fmt.Errorf("failed to get task %s: %w", taskID, err)
 	}
 
-	// Only allow the assigned agent to release the task
+	// Only allow the assigned agent to complete the task
 	if task.AssignedTo != agentID {
 		return fmt.Errorf("task %s is not assigned to agent %s (assigned to: %s)",
 			taskID, agentID, task.AssignedTo)
 	}
 
-	// Clear assignment
+	// Store old status for event
+	oldStatus := task.Status
+
+	// Clear assignment and update status
 	task.AssignedTo = ""
+	task.Status = newStatus
 	task.UpdatedAt = time.Now()
 
 	if err := s.repository.Update(task); err != nil {
-		return fmt.Errorf("failed to release task: %w", err)
+		return fmt.Errorf("failed to complete task: %w", err)
+	}
+
+	// Publish status change event
+	if s.eventBus != nil && oldStatus != task.Status {
+		eventData := &event.TaskStatusChangedData{
+			TaskID:    task.ID,
+			OldStatus: oldStatus,
+			NewStatus: task.Status,
+			ChangedBy: agentID,
+			ChangedAt: time.Now(),
+			Reason:    fmt.Sprintf("Task completed by agent %s", agentID),
+		}
+		s.eventBus.Publish(context.Background(), "task-service", eventData)
 	}
 
 	return nil

@@ -1,11 +1,12 @@
 # TaskGuild Makefile
-.PHONY: build clean test lint fmt vet deps install run help all gen-proto
+.PHONY: build build-mcp clean test lint fmt vet deps install run help all gen-proto
 
 # Variables
 BINARY_NAME=taskguild
+MCP_BINARY_NAME=mcp-taskguild
 BUILD_DIR=bin
-CMD_DIR=cmd/taskguild
-MAIN_FILE=$(CMD_DIR)/main.go
+CMD_DIR=./cmd/taskguild
+MCP_CMD_DIR=./cmd/mcp-taskguild
 
 # Build info
 VERSION := $(shell git describe --tags --abbrev=0 2>/dev/null || echo "dev")
@@ -17,7 +18,7 @@ LDFLAGS := -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main
 BUILD_FLAGS := -trimpath $(LDFLAGS)
 
 # Default target
-all: fmt vet test build
+all: fmt vet test build build-mcp
 
 # Help target
 help: ## Show this help message
@@ -26,32 +27,44 @@ help: ## Show this help message
 	@echo "Available targets:"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-# Build the binary
+# Build the main binary
 build: ## Build the taskguild binary
 	@echo "Building $(BINARY_NAME)..."
 	@mkdir -p $(BUILD_DIR)
-	@go build $(BUILD_FLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_FILE)
+	@go build $(BUILD_FLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(CMD_DIR)
 	@echo "Built $(BUILD_DIR)/$(BINARY_NAME)"
+
+# Build the MCP server binary
+build-mcp: ## Build the mcp-taskguild binary
+	@echo "Building $(MCP_BINARY_NAME)..."
+	@mkdir -p $(BUILD_DIR)
+	@go build $(BUILD_FLAGS) -o $(BUILD_DIR)/$(MCP_BINARY_NAME) $(MCP_CMD_DIR)
+	@echo "Built $(BUILD_DIR)/$(MCP_BINARY_NAME)"
 
 # Build for multiple platforms
 build-all: ## Build for multiple platforms (Linux, macOS, Windows)
 	@echo "Building for multiple platforms..."
 	@mkdir -p $(BUILD_DIR)
 	
-	@echo "Building for Linux/amd64..."
-	@GOOS=linux GOARCH=amd64 go build $(BUILD_FLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 $(MAIN_FILE)
+	@echo "Building taskguild for Linux/amd64..."
+	@GOOS=linux GOARCH=amd64 go build $(BUILD_FLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 $(CMD_DIR)
+	@GOOS=linux GOARCH=amd64 go build $(BUILD_FLAGS) -o $(BUILD_DIR)/$(MCP_BINARY_NAME)-linux-amd64 $(MCP_CMD_DIR)
 	
-	@echo "Building for Linux/arm64..."
-	@GOOS=linux GOARCH=arm64 go build $(BUILD_FLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 $(MAIN_FILE)
+	@echo "Building taskguild for Linux/arm64..."
+	@GOOS=linux GOARCH=arm64 go build $(BUILD_FLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 $(CMD_DIR)
+	@GOOS=linux GOARCH=arm64 go build $(BUILD_FLAGS) -o $(BUILD_DIR)/$(MCP_BINARY_NAME)-linux-arm64 $(MCP_CMD_DIR)
 	
-	@echo "Building for macOS/amd64..."
-	@GOOS=darwin GOARCH=amd64 go build $(BUILD_FLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 $(MAIN_FILE)
+	@echo "Building taskguild for macOS/amd64..."
+	@GOOS=darwin GOARCH=amd64 go build $(BUILD_FLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 $(CMD_DIR)
+	@GOOS=darwin GOARCH=amd64 go build $(BUILD_FLAGS) -o $(BUILD_DIR)/$(MCP_BINARY_NAME)-darwin-amd64 $(MCP_CMD_DIR)
 	
-	@echo "Building for macOS/arm64..."
-	@GOOS=darwin GOARCH=arm64 go build $(BUILD_FLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 $(MAIN_FILE)
+	@echo "Building taskguild for macOS/arm64..."
+	@GOOS=darwin GOARCH=arm64 go build $(BUILD_FLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 $(CMD_DIR)
+	@GOOS=darwin GOARCH=arm64 go build $(BUILD_FLAGS) -o $(BUILD_DIR)/$(MCP_BINARY_NAME)-darwin-arm64 $(MCP_CMD_DIR)
 	
-	@echo "Building for Windows/amd64..."
-	@GOOS=windows GOARCH=amd64 go build $(BUILD_FLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe $(MAIN_FILE)
+	@echo "Building taskguild for Windows/amd64..."
+	@GOOS=windows GOARCH=amd64 go build $(BUILD_FLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe $(CMD_DIR)
+	@GOOS=windows GOARCH=amd64 go build $(BUILD_FLAGS) -o $(BUILD_DIR)/$(MCP_BINARY_NAME)-windows-amd64.exe $(MCP_CMD_DIR)
 	
 	@echo "Build complete. Binaries in $(BUILD_DIR)/"
 
@@ -94,14 +107,16 @@ lint: ## Run golangci-lint (install with: go install github.com/golangci/golangc
 	@echo "Running golangci-lint..."
 	@golangci-lint run
 
-# Install the binary
-install: build ## Install the binary to $GOPATH/bin
+# Install the binaries
+install: build build-mcp ## Install both binaries to $GOPATH/bin
 	@echo "Installing $(BINARY_NAME) to $$GOPATH/bin..."
-	@go install $(BUILD_FLAGS) $(MAIN_FILE)
+	@go install $(BUILD_FLAGS) $(CMD_DIR)
+	@echo "Installing $(MCP_BINARY_NAME) to $$GOPATH/bin..."
+	@go install $(BUILD_FLAGS) $(MCP_CMD_DIR)
 
 # Run the application
 run: ## Run the application with arguments (usage: make run ARGS="agent list")
-	@go run $(MAIN_FILE) $(ARGS)
+	@go run $(CMD_DIR) $(ARGS)
 
 # Clean build artifacts
 clean: ## Clean build artifacts
@@ -164,7 +179,7 @@ info: ## Show build information
 
 # Quick development build and run
 dev: fmt vet ## Quick development build and run (usage: make dev ARGS="agent list")
-	@go run $(MAIN_FILE) $(ARGS)
+	@go run $(CMD_DIR) $(ARGS)
 
 # Integration tests (placeholder)
 test-integration: ## Run integration tests
@@ -188,7 +203,7 @@ init-config: clean-config ## Initialize development configuration
 	@echo "Development configuration initialized"
 
 # Full development cycle
-dev-full: clean deps fmt vet test build init-config ## Full development cycle: clean, deps, format, vet, test, build, init
+dev-full: clean deps fmt vet test build build-mcp init-config ## Full development cycle: clean, deps, format, vet, test, build, init
 
 # Show current configuration
 show-config: build ## Show current taskguild configuration

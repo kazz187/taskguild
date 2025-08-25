@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -47,12 +48,18 @@ func (t *SubprocessCLITransport) Connect(ctx context.Context) error {
 	// Find CLI binary
 	cliPath, err := findCLI()
 	if err != nil {
+		log.Printf("[Claude Code Transport] Failed to find CLI: %v", err)
 		return err
 	}
+	log.Printf("[Claude Code Transport] Found CLI at: %s", cliPath)
 
 	// Build command
 	args := t.buildCommand()
 	t.cmd = exec.CommandContext(ctx, cliPath, args...)
+	log.Printf("[Claude Code Transport] Command: %s", cliPath)
+	for i, arg := range args {
+		log.Printf("[Claude Code Transport] Arg[%d]: %s", i, arg)
+	}
 
 	// Set environment
 	t.cmd.Env = append(os.Environ(), "CLAUDE_CODE_ENTRYPOINT=sdk-go")
@@ -60,28 +67,35 @@ func (t *SubprocessCLITransport) Connect(ctx context.Context) error {
 	// Set working directory if specified
 	if t.options.Cwd != nil {
 		t.cmd.Dir = *t.options.Cwd
+		log.Printf("[Claude Code Transport] Working directory: %s", *t.options.Cwd)
 	}
 
 	// Setup pipes
 	t.stdout, err = t.cmd.StdoutPipe()
 	if err != nil {
+		log.Printf("[Claude Code Transport] Failed to create stdout pipe: %v", err)
 		return fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
 
 	t.stderr, err = t.cmd.StderrPipe()
 	if err != nil {
+		log.Printf("[Claude Code Transport] Failed to create stderr pipe: %v", err)
 		return fmt.Errorf("failed to create stderr pipe: %w", err)
 	}
 
 	// Start the process
+	log.Printf("[Claude Code Transport] Starting CLI process...")
 	if err := t.cmd.Start(); err != nil {
+		log.Printf("[Claude Code Transport] Failed to start process: %v", err)
 		return NewCLIConnectionError(fmt.Sprintf("failed to start CLI process: %v", err))
 	}
+	log.Printf("[Claude Code Transport] CLI process started with PID: %d", t.cmd.Process.Pid)
 
 	// Start reading from stdout and stderr
 	t.wg.Add(2)
 	go t.readStdout()
 	go t.readStderr()
+	log.Printf("[Claude Code Transport] Started stdout/stderr readers")
 
 	return nil
 }
@@ -133,20 +147,27 @@ func (t *SubprocessCLITransport) Disconnect() error {
 // buildCommand constructs the CLI command arguments
 func (t *SubprocessCLITransport) buildCommand() []string {
 	args := []string{
+		"--print", // Use print mode for non-interactive
 		"--output-format", "stream-json",
 		"--verbose",
 	}
 
-	// Add prompt
-	args = append(args, "--prompt", t.prompt)
+	// Add MCP config early in the arguments (BEFORE other options)
+	if len(t.options.McpServers) > 0 {
+		mcpConfig := map[string]interface{}{
+			"mcpServers": t.options.McpServers,
+		}
+		configJSON, err := json.Marshal(mcpConfig)
+		if err == nil {
+			jsonStr := string(configJSON)
+			args = append(args, "--mcp-config", jsonStr)
+			log.Printf("[Claude Code Transport] Added MCP config early: %s", jsonStr)
+		}
+	}
 
 	// Add options
 	if t.options.Model != nil {
 		args = append(args, "--model", *t.options.Model)
-	}
-
-	if t.options.MaxTurns != nil {
-		args = append(args, "--max-turns", fmt.Sprintf("%d", *t.options.MaxTurns))
 	}
 
 	if t.options.Resume != nil {
@@ -157,50 +178,36 @@ func (t *SubprocessCLITransport) buildCommand() []string {
 		args = append(args, "--continue")
 	}
 
-	if t.options.SystemPrompt != nil {
-		args = append(args, "--system-prompt", *t.options.SystemPrompt)
-	}
-
 	if t.options.AppendSystemPrompt != nil {
 		args = append(args, "--append-system-prompt", *t.options.AppendSystemPrompt)
 	}
 
 	// Add allowed tools
-	for _, tool := range t.options.AllowedTools {
-		args = append(args, "--allow-tool", tool)
+	if len(t.options.AllowedTools) > 0 {
+		args = append(args, "--allowed-tools")
+		args = append(args, t.options.AllowedTools...)
 	}
 
 	// Add disallowed tools
-	for _, tool := range t.options.DisallowedTools {
-		args = append(args, "--disallow-tool", tool)
-	}
-
-	// Add MCP tools
-	for _, tool := range t.options.McpTools {
-		args = append(args, "--mcp-tool", tool)
+	if len(t.options.DisallowedTools) > 0 {
+		args = append(args, "--disallowed-tools")
+		args = append(args, t.options.DisallowedTools...)
 	}
 
 	// Add permission mode
 	if t.options.PermissionMode != nil {
 		switch *t.options.PermissionMode {
 		case PermissionModeAcceptEdits:
-			args = append(args, "--accept-edits")
+			args = append(args, "--permission-mode", "acceptEdits")
 		case PermissionModeBypassPermissions:
-			args = append(args, "--bypass-permissions")
+			args = append(args, "--permission-mode", "bypassPermissions")
 		}
 	}
 
-	if t.options.PermissionPromptToolName != nil {
-		args = append(args, "--permission-prompt-tool-name", *t.options.PermissionPromptToolName)
-	}
+	// MCP config is now added early in the arguments
 
-	args = append(args, "--max-thinking-tokens", fmt.Sprintf("%d", t.options.MaxThinkingTokens))
-
-	// Add MCP servers
-	for name, config := range t.options.McpServers {
-		configJSON, _ := json.Marshal(config)
-		args = append(args, "--mcp-server", fmt.Sprintf("%s=%s", name, string(configJSON)))
-	}
+	// Add prompt as the last argument
+	args = append(args, t.prompt)
 
 	return args
 }
@@ -208,13 +215,18 @@ func (t *SubprocessCLITransport) buildCommand() []string {
 // readStdout reads JSON messages from stdout
 func (t *SubprocessCLITransport) readStdout() {
 	defer t.wg.Done()
+	log.Printf("[Claude Code Transport] Started reading stdout")
 
 	scanner := bufio.NewScanner(t.stdout)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024) // 1MB max line size
 
+	lineCount := 0
 	for scanner.Scan() {
+		lineCount++
 		line := scanner.Text()
 		line = strings.TrimSpace(line)
+
+		log.Printf("[Claude Code Transport] Stdout line #%d: %s", lineCount, line)
 
 		if line == "" {
 			continue
@@ -222,21 +234,25 @@ func (t *SubprocessCLITransport) readStdout() {
 
 		var msg map[string]interface{}
 		if err := json.Unmarshal([]byte(line), &msg); err != nil {
-			// Log error but continue processing
+			log.Printf("[Claude Code Transport] Failed to parse JSON: %v, line: %s", err, line)
 			continue
 		}
 
+		log.Printf("[Claude Code Transport] Parsed message: %+v", msg)
+
 		select {
 		case t.messages <- msg:
+			log.Printf("[Claude Code Transport] Sent message to channel")
 		case <-time.After(time.Second):
-			// Timeout sending message, likely receiver is not reading
+			log.Printf("[Claude Code Transport] Timeout sending message, likely receiver is not reading")
 			return
 		}
 	}
 
+	log.Printf("[Claude Code Transport] Finished reading stdout, processed %d lines", lineCount)
+
 	if err := scanner.Err(); err != nil && err != io.EOF {
-		// Handle scanner error
-		// For now, we'll just return
+		log.Printf("[Claude Code Transport] Scanner error: %v", err)
 		return
 	}
 }
@@ -244,16 +260,18 @@ func (t *SubprocessCLITransport) readStdout() {
 // readStderr reads error messages from stderr
 func (t *SubprocessCLITransport) readStderr() {
 	defer t.wg.Done()
+	log.Printf("[Claude Code Transport] Started reading stderr")
 
-	// For now, we'll just consume stderr to prevent blocking
-	// In a production implementation, you might want to log these
-	buf := make([]byte, 4096)
-	for {
-		_, err := t.stderr.Read(buf)
-		if err != nil {
-			break
-		}
+	scanner := bufio.NewScanner(t.stderr)
+	for scanner.Scan() {
+		line := scanner.Text()
+		log.Printf("[Claude Code Transport] Stderr: %s", line)
 	}
+
+	if err := scanner.Err(); err != nil && err != io.EOF {
+		log.Printf("[Claude Code Transport] Stderr scanner error: %v", err)
+	}
+	log.Printf("[Claude Code Transport] Finished reading stderr")
 }
 
 // findCLI attempts to locate the Claude CLI binary

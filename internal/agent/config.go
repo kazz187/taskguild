@@ -11,22 +11,30 @@ import (
 )
 
 type AgentConfig struct {
-	Name         string         `yaml:"name"`
-	Type         string         `yaml:"type"`
-	Instructions string         `yaml:"instructions,omitempty"`
-	Triggers     []EventTrigger `yaml:"triggers"`
-	Scaling      *ScalingConfig `yaml:"scaling,omitempty"`
+	Name          string         `yaml:"name"`
+	Type          string         `yaml:"type"`
+	Instructions  string         `yaml:"instructions,omitempty"`
+	Triggers      []EventTrigger `yaml:"triggers"`
+	Scaling       *ScalingConfig `yaml:"scaling,omitempty"`
+	StatusOptions *StatusOptions `yaml:"status_options,omitempty"`
+}
+
+// StatusOptions defines the available status choices for task completion
+type StatusOptions struct {
+	Success []string `yaml:"success,omitempty"` // Available statuses when task completes successfully
+	Error   []string `yaml:"error,omitempty"`   // Available statuses when task fails
 }
 
 // IndividualAgentConfig represents a single agent's configuration file
 type IndividualAgentConfig struct {
-	Name         string         `yaml:"name"`
-	Type         string         `yaml:"type"`
-	Triggers     []EventTrigger `yaml:"triggers"`
-	Scaling      *ScalingConfig `yaml:"scaling,omitempty"`
-	Description  string         `yaml:"description,omitempty"`
-	Version      string         `yaml:"version,omitempty"`
-	Instructions string         `yaml:"instructions,omitempty"`
+	Name          string         `yaml:"name"`
+	Type          string         `yaml:"type"`
+	Triggers      []EventTrigger `yaml:"triggers"`
+	Scaling       *ScalingConfig `yaml:"scaling,omitempty"`
+	Description   string         `yaml:"description,omitempty"`
+	Version       string         `yaml:"version,omitempty"`
+	Instructions  string         `yaml:"instructions,omitempty"`
+	StatusOptions *StatusOptions `yaml:"status_options,omitempty"`
 }
 
 type Config struct {
@@ -103,10 +111,12 @@ func loadIndividualConfigs() (*Config, error) {
 		}
 
 		config.Agents = append(config.Agents, AgentConfig{
-			Name:     agentName,
-			Type:     agentConfig.Type,
-			Triggers: agentConfig.Triggers,
-			Scaling:  agentConfig.Scaling,
+			Name:          agentName,
+			Type:          agentConfig.Type,
+			Instructions:  agentConfig.Instructions,
+			Triggers:      agentConfig.Triggers,
+			Scaling:       agentConfig.Scaling,
+			StatusOptions: agentConfig.StatusOptions,
 		})
 	}
 
@@ -253,6 +263,15 @@ func createDefaultIndividualConfigs() error {
 			Type:        "claude-code",
 			Description: "Developer for implementing features",
 			Version:     "1.0",
+			Instructions: `## Core Responsibilities
+- Implement features based on design documents
+- Write comprehensive unit tests
+- Follow project coding standards
+
+## Implementation Principles
+- Write readable, maintainable code
+- Implement proper error handling
+- Follow Go best practices`,
 			Scaling: &ScalingConfig{
 				Min:  1,
 				Max:  3,
@@ -264,17 +283,35 @@ func createDefaultIndividualConfigs() error {
 					Condition: `task.type == "feature"`,
 				},
 			},
+			StatusOptions: &StatusOptions{
+				Success: []string{"REVIEW_READY", "QA_READY", "CLOSED"},
+				Error:   []string{"CREATED", "ANALYZING", "DESIGNED"},
+			},
 		},
 		{
 			Name:        "reviewer",
 			Type:        "claude-code",
 			Description: "Senior engineer for conducting thorough code reviews",
 			Version:     "1.0",
+			Instructions: `## Core Responsibilities
+- Review code for quality and adherence to standards
+- Provide constructive feedback
+- Ensure proper testing coverage
+
+## Review Criteria
+- Code readability and maintainability
+- Proper error handling
+- Security considerations
+- Performance implications`,
 			Triggers: []EventTrigger{
 				{
 					Event:     "task.status_changed",
-					Condition: `task.status == "REVIEW_READY"`,
+					Condition: `to_status == "REVIEW_READY"`,
 				},
+			},
+			StatusOptions: &StatusOptions{
+				Success: []string{"QA_READY", "CLOSED"},
+				Error:   []string{"IN_PROGRESS", "DESIGNED"},
 			},
 		},
 		{
@@ -282,11 +319,25 @@ func createDefaultIndividualConfigs() error {
 			Type:        "claude-code",
 			Description: "QA engineer for comprehensive testing",
 			Version:     "1.0",
+			Instructions: `## Core Responsibilities
+- Conduct comprehensive testing of implemented features
+- Validate functionality against requirements
+- Ensure system stability and performance
+
+## Testing Approach
+- Unit test validation
+- Integration testing
+- User acceptance testing
+- Performance testing`,
 			Triggers: []EventTrigger{
 				{
 					Event:     "task.status_changed",
-					Condition: `task.status == "QA_READY"`,
+					Condition: `to_status == "QA_READY"`,
 				},
+			},
+			StatusOptions: &StatusOptions{
+				Success: []string{"CLOSED"},
+				Error:   []string{"IN_PROGRESS", "REVIEW_READY"},
 			},
 		},
 	}
