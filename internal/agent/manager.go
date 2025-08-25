@@ -248,7 +248,7 @@ func (m *Manager) GetAvailableAgents() []*Agent {
 
 func (m *Manager) createAgentFromConfig(config AgentConfig) (*Agent, error) {
 	agentID := m.generateSequentialAgentID(config.Name)
-	agent, err := NewAgentWithID(agentID, config.Name, config.Type, m.taskService, m.eventBus, config)
+	agent, err := NewAgentWithID(agentID, config.Name, config.Type, m.taskService, m.eventBus, config, m.worktreeManager)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create agent: %w", err)
 	}

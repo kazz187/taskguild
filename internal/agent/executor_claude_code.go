@@ -45,9 +45,10 @@ func (e *ClaudeCodeExecutor) ExecuteTask(ctx context.Context, t *task.Task) erro
 
 	color.ColoredPrintf(e.AgentID, "[Claude Code] Created prompt (%d chars)\n", len(prompt))
 
-	// Create options with model and working directory
+	// Create options with model, working directory and permission mode
 	opts := &claudecode.ClaudeCodeOptions{
-		Model: stringPtr("claude-sonnet-4-20250514"),
+		Model:          stringPtr("claude-sonnet-4-20250514"),
+		PermissionMode: permissionModePtr(claudecode.PermissionModeAcceptEdits),
 		McpServers: map[string]claudecode.McpServerConfig{
 			"taskguild": {
 				Type:    "stdio",
@@ -165,6 +166,7 @@ Please use the mcp-taskguild tools to update the task status. Use the update_tas
 	opts := &claudecode.ClaudeCodeOptions{
 		Model:                stringPtr("claude-sonnet-4-20250514"),
 		ContinueConversation: true, // This enables --continue functionality
+		PermissionMode:       permissionModePtr(claudecode.PermissionModeAcceptEdits),
 		McpServers: map[string]claudecode.McpServerConfig{
 			"taskguild": {
 				Type:    "stdio",
@@ -239,9 +241,10 @@ func (e *ClaudeCodeExecutor) HandleEvent(ctx context.Context, eventType string, 
 	prompt := fmt.Sprintf("You are an AI agent named: %s\n\nEvent Type: %s\nEvent Data: %+v\n\nInstructions:\n%s\n\nPlease respond to this event appropriately.",
 		e.Config.Name, eventType, data, e.Config.Instructions)
 
-	// Create options with model and working directory
+	// Create options with model, working directory and permission mode
 	opts := &claudecode.ClaudeCodeOptions{
-		Model: stringPtr("claude-sonnet-4-20250514"),
+		Model:          stringPtr("claude-sonnet-4-20250514"),
+		PermissionMode: permissionModePtr(claudecode.PermissionModeAcceptEdits),
 	}
 
 	// Set working directory if we have a worktree
@@ -285,4 +288,9 @@ func (e *ClaudeCodeExecutor) Cleanup() error {
 	e.Ready = false
 	// Claude Code client doesn't need explicit cleanup
 	return nil
+}
+
+// permissionModePtr returns a pointer to a PermissionMode value
+func permissionModePtr(mode claudecode.PermissionMode) *claudecode.PermissionMode {
+	return &mode
 }

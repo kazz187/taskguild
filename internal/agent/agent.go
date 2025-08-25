@@ -15,6 +15,7 @@ import (
 	"github.com/kazz187/taskguild/internal/task"
 	"github.com/kazz187/taskguild/pkg/claudecode"
 	"github.com/kazz187/taskguild/pkg/color"
+	"github.com/kazz187/taskguild/pkg/worktree"
 )
 
 type Status string
@@ -65,15 +66,16 @@ type Agent struct {
 	UpdatedAt    time.Time      `yaml:"updated_at"`
 
 	// Runtime fields
-	ctx         context.Context
-	cancel      context.CancelFunc
-	mutex       sync.RWMutex
-	waitGroup   *conc.WaitGroup
-	executor    AgentExecutor
-	taskService task.Service
-	eventBus    *event.EventBus
-	eventChan   chan interface{}
-	config      AgentConfig
+	ctx             context.Context
+	cancel          context.CancelFunc
+	mutex           sync.RWMutex
+	waitGroup       *conc.WaitGroup
+	executor        AgentExecutor
+	taskService     task.Service
+	eventBus        *event.EventBus
+	eventChan       chan interface{}
+	config          AgentConfig
+	worktreeManager *worktree.Manager
 }
 
 func NewAgent(name, agentType string, taskService task.Service, eventBus *event.EventBus, config AgentConfig) (*Agent, error) {
@@ -81,10 +83,12 @@ func NewAgent(name, agentType string, taskService task.Service, eventBus *event.
 	// Generate a temporary ID using timestamp for backward compatibility
 	// This function is deprecated in favor of NewAgentWithID
 	id := fmt.Sprintf("%s-%d", name, now.UnixNano())
-	return NewAgentWithID(id, name, agentType, taskService, eventBus, config)
+	// Note: This deprecated function doesn't have access to worktree manager
+	// Callers should use NewAgentWithID directly
+	return NewAgentWithID(id, name, agentType, taskService, eventBus, config, nil)
 }
 
-func NewAgentWithID(id, name, agentType string, taskService task.Service, eventBus *event.EventBus, config AgentConfig) (*Agent, error) {
+func NewAgentWithID(id, name, agentType string, taskService task.Service, eventBus *event.EventBus, config AgentConfig, worktreeManager *worktree.Manager) (*Agent, error) {
 	now := time.Now()
 
 	// Create executor based on agent type
@@ -94,21 +98,22 @@ func NewAgentWithID(id, name, agentType string, taskService task.Service, eventB
 	}
 
 	return &Agent{
-		ID:           id,
-		Name:         name,
-		Type:         agentType,
-		Instructions: config.Instructions,
-		Triggers:     config.Triggers,
-		Scaling:      config.Scaling,
-		Status:       StatusIdle,
-		CreatedAt:    now,
-		UpdatedAt:    now,
-		waitGroup:    conc.NewWaitGroup(),
-		executor:     executor,
-		taskService:  taskService,
-		eventBus:     eventBus,
-		eventChan:    make(chan interface{}, 100),
-		config:       config,
+		ID:              id,
+		Name:            name,
+		Type:            agentType,
+		Instructions:    config.Instructions,
+		Triggers:        config.Triggers,
+		Scaling:         config.Scaling,
+		Status:          StatusIdle,
+		CreatedAt:       now,
+		UpdatedAt:       now,
+		waitGroup:       conc.NewWaitGroup(),
+		executor:        executor,
+		taskService:     taskService,
+		eventBus:        eventBus,
+		eventChan:       make(chan interface{}, 100),
+		config:          config,
+		worktreeManager: worktreeManager,
 	}, nil
 }
 
@@ -329,7 +334,46 @@ func (a *Agent) run() {
 				a.TaskID = availableTasks.ID
 				a.Status = StatusBusy
 				a.UpdatedAt = time.Now()
+
+				// Set and create worktree path from the task
+				if availableTasks.Worktree != "" {
+					a.WorktreePath = availableTasks.Worktree
+					color.ColoredPrintf(a.ID, "assigned worktree path: %s\n", a.WorktreePath)
+
+					// Create the worktree if we have a worktree manager
+					if a.worktreeManager != nil {
+						worktreePath, err := a.worktreeManager.CreateWorktree(availableTasks.ID, availableTasks.Branch)
+						if err != nil {
+							color.ColoredPrintf(a.ID, "error creating worktree: %v\n", err)
+							a.UpdatedAt = time.Now()
+							a.mutex.Unlock()
+							a.UpdateStatus(StatusError)
+							// Clear task assignment
+							a.mutex.Lock()
+							a.TaskID = ""
+							a.WorktreePath = ""
+							a.mutex.Unlock()
+							continue
+						}
+						a.WorktreePath = worktreePath
+						color.ColoredPrintf(a.ID, "created worktree at: %s\n", worktreePath)
+					}
+				} else {
+					color.ColoredPrintf(a.ID, "warning: task %s has no worktree path set\n", availableTasks.ID)
+				}
 				a.mutex.Unlock()
+
+				// Re-initialize executor with the task-specific worktree path
+				if err := a.executor.Initialize(ctx, a.ID, a.config, a.WorktreePath); err != nil {
+					color.ColoredPrintf(a.ID, "error re-initializing executor with worktree: %v\n", err)
+					a.UpdateStatus(StatusError)
+					// Clear task assignment
+					a.mutex.Lock()
+					a.TaskID = ""
+					a.WorktreePath = ""
+					a.mutex.Unlock()
+					continue
+				}
 
 				// Execute the task
 				color.ColoredPrintf(a.ID, "starting task execution: %s\n", availableTasks.ID)
@@ -345,6 +389,7 @@ func (a *Agent) run() {
 				// Just clear local task assignment
 				a.mutex.Lock()
 				a.TaskID = ""
+				a.WorktreePath = ""
 				a.mutex.Unlock()
 				color.ColoredPrintf(a.ID, "cleared local task assignment (status handled by Claude)\n")
 				continue
