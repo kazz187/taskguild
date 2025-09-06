@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
@@ -52,7 +53,7 @@ func TestEventBus_PublishSubscribeAsync(t *testing.T) {
 
 	// Start the event bus in background
 	go func() {
-		if err := eventBus.Start(ctx); err != nil && err != context.Canceled {
+		if err := eventBus.Start(ctx); err != nil && !errors.Is(err, context.Canceled) {
 			t.Errorf("Failed to start event bus: %v", err)
 		}
 	}()
@@ -114,7 +115,7 @@ func TestEventBus_MultipleSubscribersAsync(t *testing.T) {
 
 	// Start the event bus in background
 	go func() {
-		if err := eventBus.Start(ctx); err != nil && err != context.Canceled {
+		if err := eventBus.Start(ctx); err != nil && !errors.Is(err, context.Canceled) {
 			t.Errorf("Failed to start event bus: %v", err)
 		}
 	}()
