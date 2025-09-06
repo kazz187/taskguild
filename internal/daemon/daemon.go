@@ -169,3 +169,18 @@ func (d *Daemon) Start(ctx context.Context) error {
 
 	return nil
 }
+
+// TaskService returns the task service
+func (d *Daemon) TaskService() task.Service {
+	return d.taskService
+}
+
+// AgentManager returns the agent manager
+func (d *Daemon) AgentManager() *agent.Manager {
+	return d.agentManager
+}
+
+// EventBus returns the event bus
+func (d *Daemon) EventBus() *event.EventBus {
+	return d.eventBus
+}

@@ -38,7 +38,7 @@ type IndividualAgentConfig struct {
 }
 
 type Config struct {
-	Agents []AgentConfig `yaml:"agents"`
+	Agents []*AgentConfig `yaml:"agents"`
 }
 
 func LoadConfig(configPath string) (*Config, error) {
@@ -110,7 +110,7 @@ func loadIndividualConfigs() (*Config, error) {
 			agentName = filenameWithoutExt
 		}
 
-		config.Agents = append(config.Agents, AgentConfig{
+		config.Agents = append(config.Agents, &AgentConfig{
 			Name:          agentName,
 			Type:          agentConfig.Type,
 			Instructions:  agentConfig.Instructions,
@@ -207,7 +207,7 @@ func createDefaultConfig(configPath string) (*Config, error) {
 
 	// Fallback to unified config
 	config := &Config{
-		Agents: []AgentConfig{
+		Agents: []*AgentConfig{
 			{
 				Name: "developer",
 				Type: "claude-code",
@@ -389,14 +389,14 @@ func validateConfig(config *Config) error {
 func (c *Config) GetAgentConfig(name string) (*AgentConfig, bool) {
 	for _, agent := range c.Agents {
 		if agent.Name == name {
-			return &agent, true
+			return agent, true
 		}
 	}
 	return nil, false
 }
 
-func (c *Config) GetScalableAgents() []AgentConfig {
-	var scalable []AgentConfig
+func (c *Config) GetScalableAgents() []*AgentConfig {
+	var scalable []*AgentConfig
 	for _, agent := range c.Agents {
 		if agent.Scaling != nil && agent.Scaling.Auto {
 			scalable = append(scalable, agent)

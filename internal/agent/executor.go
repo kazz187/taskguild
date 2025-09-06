@@ -7,11 +7,8 @@ import (
 	"github.com/kazz187/taskguild/internal/task"
 )
 
-// AgentExecutor defines the interface for executing agent-specific logic
-type AgentExecutor interface {
-	// Initialize the executor with agent configuration
-	Initialize(ctx context.Context, agentID string, config AgentConfig, worktreePath string) error
-
+// Executor defines the interface for executing agent-specific logic
+type Executor interface {
 	// ExecuteTask Execute a task
 	ExecuteTask(ctx context.Context, task *task.Task) error
 
@@ -26,19 +23,19 @@ type AgentExecutor interface {
 }
 
 // NewExecutor ExecutorFactory creates the appropriate executor based on agent type
-func NewExecutor(agentType string) (AgentExecutor, error) {
-	switch agentType {
+func NewExecutor(id string, config *AgentConfig) (Executor, error) {
+	switch config.Type {
 	case "claude-code":
-		return NewClaudeCodeExecutor(), nil
+		return NewClaudeCodeExecutor(id, config), nil
 	default:
-		return nil, fmt.Errorf("unsupported agent type: %s", agentType)
+		return nil, fmt.Errorf("unsupported agent type: %s", config.Type)
 	}
 }
 
 // BaseExecutor provides common functionality for all executors
 type BaseExecutor struct {
 	AgentID      string
-	Config       AgentConfig
+	Config       *AgentConfig
 	WorktreePath string
 	Ready        bool
 }

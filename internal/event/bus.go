@@ -123,15 +123,24 @@ func (eb *EventBus) Publish(ctx context.Context, source string, data any) error 
 }
 
 // SubscribeAsync subscribes to events using watermill's message router
-func (eb *EventBus) SubscribeAsync(eventType EventType, handlerName string, handler func(msg *message.Message) error) error {
+func (eb *EventBus) SubscribeAsync(eventType EventType, handlerName string, handler func(msg *EventMessage) error) error {
 	// Wrap handler with timeout middleware
-	timeoutHandler := eb.withTimeout(handler, 15*time.Second)
+	//timeoutHandler := eb.withTimeout(handler, 15*time.Second)
+	//
+
+	h := func(msg *message.Message) error {
+		var eventMsg EventMessage
+		if err := json.Unmarshal(msg.Payload, &eventMsg); err != nil {
+			return fmt.Errorf("failed to unmarshal event: %w", err)
+		}
+		return handler(&eventMsg)
+	}
 
 	eb.router.AddNoPublisherHandler(
 		handlerName,
 		string(eventType),
 		eb.pubSub,
-		timeoutHandler,
+		h,
 	)
 
 	// If router is already running, start the new handler
@@ -145,6 +154,17 @@ func (eb *EventBus) SubscribeAsync(eventType EventType, handlerName string, hand
 	return nil
 }
 
+func (eb *EventBus) Unsubscribe(ctx context.Context, handlerName string) error {
+	handlers := eb.router.Handlers()
+	if _, ok := handlers[handlerName]; ok {
+		delete(handlers, handlerName)
+		if err := eb.router.RunHandlers(ctx); err != nil {
+			return fmt.Errorf("failed to restart handlers after unsubscribe: %w", err)
+		}
+	}
+	return nil
+}
+
 // isRunning checks if the router is running
 func (eb *EventBus) isRunning() bool {
 	select {
@@ -152,30 +172,6 @@ func (eb *EventBus) isRunning() bool {
 		return true
 	default:
 		return false
-	}
-}
-
-// withTimeout wraps a handler with timeout protection
-func (eb *EventBus) withTimeout(handler func(msg *message.Message) error, timeout time.Duration) func(msg *message.Message) error {
-	return func(msg *message.Message) error {
-		ctx, cancel := context.WithTimeout(msg.Context(), timeout)
-		defer cancel()
-
-		// Create a channel to receive the result
-		resultCh := make(chan error, 1)
-
-		// Run handler in a goroutine
-		go func() {
-			resultCh <- handler(msg)
-		}()
-
-		// Wait for either completion or timeout
-		select {
-		case err := <-resultCh:
-			return err
-		case <-ctx.Done():
-			return fmt.Errorf("handler timeout after %v for event type %s", timeout, msg.Metadata.Get("topic"))
-		}
 	}
 }
 
@@ -201,18 +197,12 @@ func PublishTyped[T any](eb *EventBus, ctx context.Context, event *Event[T]) err
 }
 
 // SubscribeTyped subscribes to typed events (helper function)
-func SubscribeTyped[T any](eb *EventBus, eventType EventType, handlerName string, handler EventHandler[T]) error {
-	return eb.SubscribeAsync(eventType, handlerName, func(msg *message.Message) error {
-		var eventMsg EventMessage
-		if err := json.Unmarshal(msg.Payload, &eventMsg); err != nil {
-			return fmt.Errorf("failed to unmarshal event message: %w", err)
-		}
-
-		event, err := FromMessage[T](&eventMsg)
+func SubscribeTyped[T any](eb *EventBus, ctx context.Context, eventType EventType, handlerName string, handler EventHandler[T]) error {
+	return eb.SubscribeAsync(eventType, handlerName, func(msg *EventMessage) error {
+		event, err := FromMessage[T](msg)
 		if err != nil {
 			return fmt.Errorf("failed to convert message to event: %w", err)
 		}
-
-		return handler(msg.Context(), event)
+		return handler(ctx, event)
 	})
 }

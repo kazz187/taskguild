@@ -150,7 +150,7 @@ func (m *Manager) performScaling() {
 		if config.Scaling != nil && config.Scaling.Auto {
 			if busyCount == totalCount && totalCount < config.Scaling.Max {
 				// Create a new agent
-				go func(cfg AgentConfig) {
+				go func(cfg *AgentConfig) {
 					m.mutex.Lock()
 					defer m.mutex.Unlock()
 
@@ -246,9 +246,9 @@ func (m *Manager) GetAvailableAgents() []*Agent {
 	return available
 }
 
-func (m *Manager) createAgentFromConfig(config AgentConfig) (*Agent, error) {
+func (m *Manager) createAgentFromConfig(config *AgentConfig) (*Agent, error) {
 	agentID := m.generateSequentialAgentID(config.Name)
-	agent, err := NewAgentWithID(agentID, config.Name, config.Type, m.taskService, m.eventBus, config, m.worktreeManager)
+	agent, err := NewAgent(agentID, config, m.taskService, m.eventBus, m.worktreeManager)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create agent: %w", err)
 	}

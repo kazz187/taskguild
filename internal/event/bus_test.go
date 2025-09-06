@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,17 +28,11 @@ func TestEventBus_PublishSubscribe(t *testing.T) {
 	var mu sync.Mutex
 
 	// Subscribe to events BEFORE starting
-	err = eb.SubscribeAsync(TaskCreated, "test_handler", func(msg *message.Message) error {
+	err = eb.SubscribeAsync(TaskCreated, "test_handler", func(msg *EventMessage) error {
 		mu.Lock()
 		defer mu.Unlock()
 
-		var eventMsg EventMessage
-		if err := json.Unmarshal(msg.Payload, &eventMsg); err != nil {
-			t.Errorf("Failed to unmarshal event message: %v", err)
-			return err
-		}
-
-		if err := json.Unmarshal(eventMsg.Data, &receivedData); err != nil {
+		if err := json.Unmarshal(msg.Data, &receivedData); err != nil {
 			t.Errorf("Failed to unmarshal event data: %v", err)
 			return err
 		}
@@ -85,14 +78,14 @@ func TestEventBus_MultipleSubscribers(t *testing.T) {
 	handled2 := make(chan bool, 1)
 
 	// Subscribe with first handler BEFORE starting
-	err = eb.SubscribeAsync(TaskCreated, "handler1", func(msg *message.Message) error {
+	err = eb.SubscribeAsync(TaskCreated, "handler1", func(msg *EventMessage) error {
 		handled1 <- true
 		return nil
 	})
 	require.NoError(t, err)
 
 	// Subscribe with second handler BEFORE starting
-	err = eb.SubscribeAsync(TaskCreated, "handler2", func(msg *message.Message) error {
+	err = eb.SubscribeAsync(TaskCreated, "handler2", func(msg *EventMessage) error {
 		handled2 <- true
 		return nil
 	})
@@ -138,8 +131,9 @@ func TestEventBus_TypedEvents(t *testing.T) {
 	var receivedEvent *Event[TaskCreatedData]
 
 	// Subscribe using typed subscription BEFORE starting
-	err = SubscribeTyped(eb, TaskCreated, "typed_handler", func(ctx context.Context, event *Event[TaskCreatedData]) error {
-		receivedEvent = event
+	//	err = SubscribeTyped(eb, TaskCreated, "typed_handler", func(event *Event[TaskCreatedData]) error {
+	err = SubscribeTyped(eb, ctx, TaskCreated, "typed_handler", func(ctx context.Context, msg *Event[TaskCreatedData]) error {
+		receivedEvent = msg
 		handled <- true
 		return nil
 	})
@@ -175,7 +169,7 @@ func TestEventBus_HandlerTimeout(t *testing.T) {
 	handlerCalled := make(chan bool, 1)
 
 	// Subscribe with a handler that takes too long BEFORE starting
-	err = eb.SubscribeAsync(TaskCreated, "slow_handler", func(msg *message.Message) error {
+	err = eb.SubscribeAsync(TaskCreated, "slow_handler", func(msg *EventMessage) error {
 		handlerCalled <- true
 		time.Sleep(20 * time.Second) // This should timeout after 15 seconds
 		return nil

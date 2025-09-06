@@ -8,12 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/sourcegraph/conc"
 
 	"github.com/kazz187/taskguild/internal/event"
 	"github.com/kazz187/taskguild/internal/task"
-	"github.com/kazz187/taskguild/pkg/claudecode"
 	"github.com/kazz187/taskguild/pkg/color"
 	"github.com/kazz187/taskguild/pkg/worktree"
 )
@@ -70,37 +68,26 @@ type Agent struct {
 	cancel          context.CancelFunc
 	mutex           sync.RWMutex
 	waitGroup       *conc.WaitGroup
-	executor        AgentExecutor
+	executor        Executor
 	taskService     task.Service
 	eventBus        *event.EventBus
 	eventChan       chan interface{}
-	config          AgentConfig
+	config          *AgentConfig
 	worktreeManager *worktree.Manager
 }
 
-func NewAgent(name, agentType string, taskService task.Service, eventBus *event.EventBus, config AgentConfig) (*Agent, error) {
-	now := time.Now()
-	// Generate a temporary ID using timestamp for backward compatibility
-	// This function is deprecated in favor of NewAgentWithID
-	id := fmt.Sprintf("%s-%d", name, now.UnixNano())
-	// Note: This deprecated function doesn't have access to worktree manager
-	// Callers should use NewAgentWithID directly
-	return NewAgentWithID(id, name, agentType, taskService, eventBus, config, nil)
-}
-
-func NewAgentWithID(id, name, agentType string, taskService task.Service, eventBus *event.EventBus, config AgentConfig, worktreeManager *worktree.Manager) (*Agent, error) {
+func NewAgent(id string, config *AgentConfig, taskService task.Service, eventBus *event.EventBus, worktreeManager *worktree.Manager) (*Agent, error) {
 	now := time.Now()
 
 	// Create executor based on agent type
-	executor, err := NewExecutor(agentType)
+	executor, err := NewExecutor(id, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create executor: %w", err)
 	}
-
 	return &Agent{
 		ID:              id,
-		Name:            name,
-		Type:            agentType,
+		Name:            config.Name,
+		Type:            config.Type,
 		Instructions:    config.Instructions,
 		Triggers:        config.Triggers,
 		Scaling:         config.Scaling,
@@ -120,6 +107,7 @@ func NewAgentWithID(id, name, agentType string, taskService task.Service, eventB
 func (a *Agent) UpdateStatus(status Status) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
+
 	oldStatus := a.Status
 	a.Status = status
 	a.UpdatedAt = time.Now()
@@ -132,45 +120,10 @@ func (a *Agent) GetStatus() Status {
 	return a.Status
 }
 
-func (a *Agent) AssignTask(taskID, worktreePath string) {
-	a.mutex.Lock()
-	defer a.mutex.Unlock()
-	a.TaskID = taskID
-	a.WorktreePath = worktreePath
-	a.UpdatedAt = time.Now()
-}
-
-func (a *Agent) ClearTask() {
-	a.mutex.Lock()
-	defer a.mutex.Unlock()
-	a.TaskID = ""
-	a.WorktreePath = ""
-	a.UpdatedAt = time.Now()
-}
-
 func (a *Agent) IsAvailable() bool {
 	a.mutex.RLock()
 	defer a.mutex.RUnlock()
 	return a.Status == StatusIdle
-}
-
-func (a *Agent) IsAssigned() bool {
-	a.mutex.RLock()
-	defer a.mutex.RUnlock()
-	return a.TaskID != ""
-}
-
-func (a *Agent) MatchesTrigger(eventName string, context map[string]interface{}) bool {
-	for _, trigger := range a.Triggers {
-		if trigger.Event == eventName {
-			if trigger.Condition != "" {
-				// Simple condition evaluation for common patterns
-				return a.evaluateCondition(trigger.Condition, context)
-			}
-			return true // No condition means always match for this event
-		}
-	}
-	return false
 }
 
 // evaluateCondition provides simple condition evaluation
@@ -245,41 +198,26 @@ func (a *Agent) Start(ctx context.Context) error {
 	}
 
 	a.ctx, a.cancel = context.WithCancel(ctx)
-	a.Status = StatusIdle
-	a.UpdatedAt = time.Now()
+	a.UpdateStatus(StatusIdle)
 
-	// Initialize executor
-	if err := a.executor.Initialize(ctx, a.ID, a.config, a.WorktreePath); err != nil {
-		return fmt.Errorf("failed to initialize executor: %w", err)
-	}
+	// Subscribe to all event types this agent is interested in
+	for _, trigger := range a.Triggers {
+		eventType := event.EventType(trigger.Event)
+		handlerName := fmt.Sprintf("%s-%s", a.ID, trigger.Event)
 
-	// Subscribe to events
-	if a.eventBus != nil {
-		// Subscribe to all event types this agent is interested in
-		for _, trigger := range a.Triggers {
-			eventType := event.EventType(trigger.Event)
-			handlerName := fmt.Sprintf("%s-%s", a.ID, trigger.Event)
-
-			// Subscribe using the event bus
-			err := a.eventBus.SubscribeAsync(eventType, handlerName, func(msg *message.Message) error {
-				// Parse the event message
-				var eventMsg event.EventMessage
-				if err := json.Unmarshal(msg.Payload, &eventMsg); err != nil {
-					return fmt.Errorf("failed to unmarshal event: %w", err)
-				}
-
-				// Forward to agent's event channel
-				select {
-				case a.eventChan <- eventMsg.Data:
-				case <-time.After(1 * time.Second):
-					// Timeout to avoid blocking
-				}
-				return nil
-			})
-
-			if err != nil {
-				return fmt.Errorf("failed to subscribe to event %s: %w", trigger.Event, err)
+		// Subscribe using the event bus
+		err := a.eventBus.SubscribeAsync(eventType, handlerName, func(msg *event.EventMessage) error {
+			// Forward to agent's event channel
+			select {
+			case a.eventChan <- msg.Data:
+			case <-a.ctx.Done():
+				return a.ctx.Err()
 			}
+			return nil
+		})
+
+		if err != nil {
+			return fmt.Errorf("failed to subscribe to event %s: %w", trigger.Event, err)
 		}
 	}
 
@@ -327,73 +265,59 @@ func (a *Agent) run() {
 		}
 
 		// Try to fetch a task
-		if a.taskService != nil {
-			availableTasks := a.fetchAvailableTask()
-			if availableTasks != nil {
-				a.mutex.Lock()
-				a.TaskID = availableTasks.ID
-				a.Status = StatusBusy
-				a.UpdatedAt = time.Now()
+		availableTasks := a.fetchAvailableTask()
+		if availableTasks != nil {
+			a.mutex.Lock()
+			a.TaskID = availableTasks.ID
+			a.Status = StatusBusy
+			a.UpdatedAt = time.Now()
 
-				// Set and create worktree path from the task
-				if availableTasks.Worktree != "" {
-					a.WorktreePath = availableTasks.Worktree
-					color.ColoredPrintf(a.ID, "assigned worktree path: %s\n", a.WorktreePath)
+			// Set and create worktree path from the task
+			if availableTasks.Worktree != "" {
+				a.WorktreePath = availableTasks.Worktree
+				color.ColoredPrintf(a.ID, "assigned worktree path: %s\n", a.WorktreePath)
 
-					// Create the worktree if we have a worktree manager
-					if a.worktreeManager != nil {
-						worktreePath, err := a.worktreeManager.CreateWorktree(availableTasks.ID, availableTasks.Branch)
-						if err != nil {
-							color.ColoredPrintf(a.ID, "error creating worktree: %v\n", err)
-							a.UpdatedAt = time.Now()
-							a.mutex.Unlock()
-							a.UpdateStatus(StatusError)
-							// Clear task assignment
-							a.mutex.Lock()
-							a.TaskID = ""
-							a.WorktreePath = ""
-							a.mutex.Unlock()
-							continue
-						}
-						a.WorktreePath = worktreePath
-						color.ColoredPrintf(a.ID, "created worktree at: %s\n", worktreePath)
+				// Create the worktree if we have a worktree manager
+				if a.worktreeManager != nil {
+					worktreePath, err := a.worktreeManager.CreateWorktree(availableTasks.ID, availableTasks.Branch)
+					if err != nil {
+						color.ColoredPrintf(a.ID, "error creating worktree: %v\n", err)
+						a.UpdatedAt = time.Now()
+						a.mutex.Unlock()
+						a.UpdateStatus(StatusError)
+						// Clear task assignment
+						a.mutex.Lock()
+						a.TaskID = ""
+						a.WorktreePath = ""
+						a.mutex.Unlock()
+						continue
 					}
-				} else {
-					color.ColoredPrintf(a.ID, "warning: task %s has no worktree path set\n", availableTasks.ID)
+					a.WorktreePath = worktreePath
+					color.ColoredPrintf(a.ID, "created worktree at: %s\n", worktreePath)
 				}
-				a.mutex.Unlock()
-
-				// Re-initialize executor with the task-specific worktree path
-				if err := a.executor.Initialize(ctx, a.ID, a.config, a.WorktreePath); err != nil {
-					color.ColoredPrintf(a.ID, "error re-initializing executor with worktree: %v\n", err)
-					a.UpdateStatus(StatusError)
-					// Clear task assignment
-					a.mutex.Lock()
-					a.TaskID = ""
-					a.WorktreePath = ""
-					a.mutex.Unlock()
-					continue
-				}
-
-				// Execute the task
-				color.ColoredPrintf(a.ID, "starting task execution: %s\n", availableTasks.ID)
-				if err := a.executor.ExecuteTask(ctx, availableTasks); err != nil {
-					color.ColoredPrintf(a.ID, "error executing task %s: %v\n", availableTasks.ID, err)
-					a.UpdateStatus(StatusError)
-				} else {
-					color.ColoredPrintf(a.ID, "completed task %s\n", availableTasks.ID)
-					a.UpdateStatus(StatusIdle)
-				}
-
-				// Note: Task status update is now handled by Claude via mcp-taskguild
-				// Just clear local task assignment
-				a.mutex.Lock()
-				a.TaskID = ""
-				a.WorktreePath = ""
-				a.mutex.Unlock()
-				color.ColoredPrintf(a.ID, "cleared local task assignment (status handled by Claude)\n")
-				continue
+			} else {
+				color.ColoredPrintf(a.ID, "warning: task %s has no worktree path set\n", availableTasks.ID)
 			}
+			a.mutex.Unlock()
+
+			// Execute the task
+			color.ColoredPrintf(a.ID, "starting task execution: %s\n", availableTasks.ID)
+			if err := a.executor.ExecuteTask(ctx, availableTasks); err != nil {
+				color.ColoredPrintf(a.ID, "error executing task %s: %v\n", availableTasks.ID, err)
+				a.UpdateStatus(StatusError)
+			} else {
+				color.ColoredPrintf(a.ID, "completed task %s\n", availableTasks.ID)
+				a.UpdateStatus(StatusIdle)
+			}
+
+			// Note: Task status update is now handled by Claude via mcp-taskguild
+			// Just clear local task assignment
+			a.mutex.Lock()
+			a.TaskID = ""
+			a.WorktreePath = ""
+			a.mutex.Unlock()
+			color.ColoredPrintf(a.ID, "cleared local task assignment (status handled by Claude)\n")
+			continue
 		}
 
 		// No task available, wait for events
@@ -546,68 +470,4 @@ func (a *Agent) matchesEventTrigger(trigger EventTrigger, eventData interface{})
 	}
 
 	return a.evaluateCondition(trigger.Condition, contextData)
-}
-
-func (a *Agent) executeTask(ctx context.Context, client claudecode.Client) {
-	// Check if this is a claude-code type agent
-	if a.Type != "claude-code" {
-		color.ColoredPrintf(a.ID, "type %s is not supported for task execution\n", a.Type)
-		a.UpdateStatus(StatusError)
-		return
-	}
-
-	// Create initial prompt based on task and instructions
-	prompt := fmt.Sprintf("You are an AI agent with role: %s\n\nTask ID: %s\n\nInstructions:\n%s\n\nPlease analyze the task and execute it.",
-		a.Name, a.TaskID, a.Instructions)
-
-	// Create options with model and working directory
-	opts := &claudecode.ClaudeCodeOptions{
-		Model: stringPtr("claude-sonnet-4-20250514"), // Use Claude Sonnet 4 which is balanced and suitable for coding
-	}
-
-	// Set working directory if we have a worktree
-	if a.WorktreePath != "" {
-		opts.Cwd = stringPtr(a.WorktreePath)
-	}
-
-	// Send query to Claude
-	messages, err := client.Query(ctx, prompt, opts)
-	if err != nil {
-		color.ColoredPrintf(a.ID, "error: %v\n", err)
-		a.UpdateStatus(StatusError)
-		return
-	}
-
-	// Process response messages
-	for msg := range messages {
-		switch m := msg.(type) {
-		case claudecode.UserMessage:
-			color.ColoredPrintf(a.ID, "user message: %s\n", m.Content)
-		case claudecode.AssistantMessage:
-			for _, content := range m.Content {
-				switch c := content.(type) {
-				case claudecode.TextBlock:
-					color.ColoredPrintf(a.ID, "response: %s\n", c.Text)
-				case claudecode.ToolUseBlock:
-					// TODO: Handle tool use blocks for actions that require approval
-					color.ColoredPrintf(a.ID, "tool use: %s\n", c.Name)
-				}
-			}
-		case claudecode.ResultMessage:
-			if m.IsError {
-				color.ColoredPrintln(a.ID, "execution error")
-				a.UpdateStatus(StatusError)
-				return
-			}
-			color.ColoredPrintln(a.ID, "execution completed")
-		}
-	}
-
-	// Mark task as completed
-	a.UpdateStatus(StatusIdle)
-}
-
-// Helper function to create string pointers
-func stringPtr(s string) *string {
-	return &s
 }
