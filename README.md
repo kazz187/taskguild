@@ -236,10 +236,10 @@ statuses:
 - ✅ 動的スケーリング機能
 - ✅ 承認フロー基盤
 - ✅ Claude Code Sub Agent対応
+- ✅ Claude Agent SDK統合
 
 ### 開発中
 
-- 🚧 Claude Code SDK統合
 - 🚧 Git worktree自動管理（go-git使用）
 - 🚧 ワークスペースTUI（bubbletea使用）
 - 🚧 エージェント間通信メカニズム

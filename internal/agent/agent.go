@@ -64,43 +64,43 @@ type Agent struct {
 	UpdatedAt    time.Time      `yaml:"updated_at"`
 
 	// Runtime fields
-	ctx             context.Context
-	cancel          context.CancelFunc
-	mutex           sync.RWMutex
-	waitGroup       *conc.WaitGroup
-	executor        Executor
+	ctx       context.Context
+	cancel    context.CancelFunc
+	mutex     sync.RWMutex
+	waitGroup *conc.WaitGroup
+	executor  Executor
+	eventChan chan interface{}
+	config    *AgentConfig
+
+	// Dependencies - injected during initialization
 	taskService     task.Service
 	eventBus        *event.EventBus
-	eventChan       chan interface{}
-	config          *AgentConfig
 	worktreeManager *worktree.Manager
 }
 
-func NewAgent(id string, config *AgentConfig, taskService task.Service, eventBus *event.EventBus, worktreeManager *worktree.Manager) (*Agent, error) {
+func NewAgent(id string, config *AgentConfig, factory ExecutorFactory) (*Agent, error) {
 	now := time.Now()
 
-	// Create executor based on agent type
-	executor, err := NewExecutor(id, config)
+	// Create executor using factory
+	executor, err := factory.CreateExecutor(config.Type)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create executor: %w", err)
 	}
+
 	return &Agent{
-		ID:              id,
-		Name:            config.Name,
-		Type:            config.Type,
-		Instructions:    config.Instructions,
-		Triggers:        config.Triggers,
-		Scaling:         config.Scaling,
-		Status:          StatusIdle,
-		CreatedAt:       now,
-		UpdatedAt:       now,
-		waitGroup:       conc.NewWaitGroup(),
-		executor:        executor,
-		taskService:     taskService,
-		eventBus:        eventBus,
-		eventChan:       make(chan interface{}, 100),
-		config:          config,
-		worktreeManager: worktreeManager,
+		ID:           id,
+		Name:         config.Name,
+		Type:         config.Type,
+		Instructions: config.Instructions,
+		Triggers:     config.Triggers,
+		Scaling:      config.Scaling,
+		Status:       StatusIdle,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+		waitGroup:    conc.NewWaitGroup(),
+		executor:     executor,
+		eventChan:    make(chan interface{}, 100),
+		config:       config,
 	}, nil
 }
 
@@ -124,6 +124,30 @@ func (a *Agent) IsAvailable() bool {
 	a.mutex.RLock()
 	defer a.mutex.RUnlock()
 	return a.Status == StatusIdle
+}
+
+// InitializeWithDependencies injects dependencies and initializes the executor
+func (a *Agent) InitializeWithDependencies(taskService task.Service, eventBus *event.EventBus, worktreeManager *worktree.Manager) error {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+
+	a.taskService = taskService
+	a.eventBus = eventBus
+	a.worktreeManager = worktreeManager
+
+	// Initialize executor with configuration
+	executorConfig := ExecutorConfig{
+		AgentID:         a.ID,
+		Name:            a.Name,
+		Instructions:    a.Instructions,
+		WorktreePath:    a.WorktreePath,
+		StatusOptions:   a.config.StatusOptions,
+		TaskService:     taskService,
+		EventBus:        eventBus,
+		WorktreeManager: worktreeManager,
+	}
+
+	return a.executor.Initialize(context.Background(), executorConfig)
 }
 
 // evaluateCondition provides simple condition evaluation
@@ -247,101 +271,43 @@ func (a *Agent) Stop() error {
 
 func (a *Agent) run() {
 	for {
-		// Check context
-		a.mutex.RLock()
-		ctx := a.ctx
-		a.mutex.RUnlock()
-
-		if ctx == nil {
-			color.ColoredPrintln(a.ID, "context is nil, stopping")
-			return
-		}
-
 		select {
-		case <-ctx.Done():
+		case <-a.ctx.Done():
 			color.ColoredPrintln(a.ID, "context cancelled, stopping")
 			return
+
 		default:
-		}
-
-		// Try to fetch a task
-		availableTasks := a.fetchAvailableTask()
-		if availableTasks != nil {
-			a.mutex.Lock()
-			a.TaskID = availableTasks.ID
-			a.Status = StatusBusy
-			a.UpdatedAt = time.Now()
-
-			// Set and create worktree path from the task
-			if availableTasks.Worktree != "" {
-				a.WorktreePath = availableTasks.Worktree
-				color.ColoredPrintf(a.ID, "assigned worktree path: %s\n", a.WorktreePath)
-
-				// Create the worktree if we have a worktree manager
-				if a.worktreeManager != nil {
-					worktreePath, err := a.worktreeManager.CreateWorktree(availableTasks.ID, availableTasks.Branch)
-					if err != nil {
-						color.ColoredPrintf(a.ID, "error creating worktree: %v\n", err)
-						a.UpdatedAt = time.Now()
-						a.mutex.Unlock()
-						a.UpdateStatus(StatusError)
-						// Clear task assignment
-						a.mutex.Lock()
-						a.TaskID = ""
-						a.WorktreePath = ""
-						a.mutex.Unlock()
-						continue
-					}
-					a.WorktreePath = worktreePath
-					color.ColoredPrintf(a.ID, "created worktree at: %s\n", worktreePath)
-				}
-			} else {
-				color.ColoredPrintf(a.ID, "warning: task %s has no worktree path set\n", availableTasks.ID)
-			}
-			a.mutex.Unlock()
-
-			// Execute the task
-			color.ColoredPrintf(a.ID, "starting task execution: %s\n", availableTasks.ID)
-			if err := a.executor.ExecuteTask(ctx, availableTasks); err != nil {
-				color.ColoredPrintf(a.ID, "error executing task %s: %v\n", availableTasks.ID, err)
-				a.UpdateStatus(StatusError)
-			} else {
-				color.ColoredPrintf(a.ID, "completed task %s\n", availableTasks.ID)
-				a.UpdateStatus(StatusIdle)
+			// Get next work item (task or event)
+			work := a.getNextWorkItem()
+			if work == nil {
+				// No work available, brief pause
+				time.Sleep(1 * time.Second)
+				continue
 			}
 
-			// Note: Task status update is now handled by Claude via mcp-taskguild
-			// Just clear local task assignment
-			a.mutex.Lock()
-			a.TaskID = ""
-			a.WorktreePath = ""
-			a.mutex.Unlock()
-			color.ColoredPrintf(a.ID, "cleared local task assignment (status handled by Claude)\n")
-			continue
-		}
-
-		// No task available, wait for events
-		select {
-		case <-ctx.Done():
-			color.ColoredPrintln(a.ID, "context cancelled during wait")
-			return
-		case eventData := <-a.eventChan:
-			// Check if this event matches our triggers
-			for _, trigger := range a.Triggers {
-				if a.matchesEventTrigger(trigger, eventData) {
-					a.UpdateStatus(StatusBusy)
-
-					// Handle the event
-					if err := a.executor.HandleEvent(ctx, trigger.Event, eventData); err != nil {
-						color.ColoredPrintf(a.ID, "error handling event %s: %v\n", trigger.Event, err)
-						a.UpdateStatus(StatusError)
-					} else {
-						color.ColoredPrintf(a.ID, "handled event %s\n", trigger.Event)
-						a.UpdateStatus(StatusIdle)
-					}
-					break
-				}
+			// Check if executor can handle this work
+			if !a.executor.CanExecute(work) {
+				continue
 			}
+
+			// Update status to busy
+			a.UpdateStatus(StatusBusy)
+
+			// Set task assignment
+			a.setTaskAssignment(work.Task)
+
+			// Execute the work
+			color.ColoredPrintf(a.ID, "starting work execution: %s\n", work.ID)
+			result, err := a.executor.Execute(a.ctx, work)
+
+			// Handle execution result
+			a.handleExecutionResult(work, result, err)
+
+			// Clear task assignment
+			a.clearTaskAssignment()
+
+			// Update status back to idle
+			a.UpdateStatus(StatusIdle)
 		}
 	}
 }
@@ -433,6 +399,131 @@ func (a *Agent) fetchAvailableTask() *task.Task {
 	}
 
 	return nil
+}
+
+// getNextWorkItem gets the next available work item (task or event-triggered task)
+func (a *Agent) getNextWorkItem() *WorkItem {
+	// First, try to get an available task
+	if task := a.fetchAvailableTask(); task != nil {
+		return &WorkItem{
+			ID:   task.ID,
+			Task: task,
+		}
+	}
+
+	// Then check for events (non-blocking)
+	select {
+	case eventData := <-a.eventChan:
+		// Check if this event matches our triggers and get appropriate task
+		for _, trigger := range a.Triggers {
+			if a.matchesEventTrigger(trigger, eventData) {
+				// For events, we might need to fetch the related task
+				// or create a work item based on the event
+				task := a.getTaskFromEvent(eventData)
+				if task != nil {
+					return &WorkItem{
+						ID:           generateWorkItemID(task.ID, trigger.Event),
+						Task:         task,
+						TriggerEvent: &EventData{Type: trigger.Event, Data: eventData},
+					}
+				}
+				break
+			}
+		}
+	default:
+		// No events available
+	}
+
+	return nil
+}
+
+// setTaskAssignment sets the task assignment for this agent
+func (a *Agent) setTaskAssignment(task *task.Task) {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+
+	a.TaskID = task.ID
+	a.UpdatedAt = time.Now()
+
+	// Handle worktree creation if needed
+	if task.Worktree != "" && a.worktreeManager != nil {
+		worktreePath, err := a.worktreeManager.CreateWorktree(task.ID, task.Branch)
+		if err != nil {
+			color.ColoredPrintf(a.ID, "error creating worktree: %v\n", err)
+			return
+		}
+		a.WorktreePath = worktreePath
+		color.ColoredPrintf(a.ID, "created worktree at: %s\n", worktreePath)
+	}
+}
+
+// clearTaskAssignment clears the task assignment
+func (a *Agent) clearTaskAssignment() {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+
+	a.TaskID = ""
+	a.WorktreePath = ""
+	a.UpdatedAt = time.Now()
+}
+
+// handleExecutionResult handles the result of work execution
+func (a *Agent) handleExecutionResult(work *WorkItem, result *ExecutionResult, err error) {
+	if err != nil {
+		color.ColoredPrintf(a.ID, "error executing work %s: %v\n", work.ID, err)
+		a.UpdateStatus(StatusError)
+		return
+	}
+
+	if result != nil && !result.Success {
+		color.ColoredPrintf(a.ID, "work execution failed %s: %s\n", work.ID, result.Message)
+		a.UpdateStatus(StatusError)
+		return
+	}
+
+	color.ColoredPrintf(a.ID, "completed work %s\n", work.ID)
+}
+
+// getTaskFromEvent extracts or fetches a task based on event data
+func (a *Agent) getTaskFromEvent(eventData interface{}) *task.Task {
+	// Extract task ID from event data
+	var taskID string
+
+	switch data := eventData.(type) {
+	case *event.TaskCreatedData:
+		taskID = data.TaskID
+	case *event.TaskStatusChangedData:
+		taskID = data.TaskID
+	default:
+		// Try to parse as JSON for unknown event types
+		if jsonData, ok := eventData.(json.RawMessage); ok {
+			var statusData event.TaskStatusChangedData
+			if err := json.Unmarshal(jsonData, &statusData); err == nil {
+				taskID = statusData.TaskID
+			}
+		}
+	}
+
+	if taskID == "" {
+		return nil
+	}
+
+	// Fetch the task
+	if a.taskService != nil {
+		task, err := a.taskService.GetTask(taskID)
+		if err != nil {
+			color.ColoredPrintf(a.ID, "failed to get task %s from event: %v\n", taskID, err)
+			return nil
+		}
+		return task
+	}
+
+	return nil
+}
+
+// generateWorkItemID generates a unique work item ID
+func generateWorkItemID(taskID, eventType string) string {
+	return fmt.Sprintf("%s-%s-%d", taskID, eventType, time.Now().Unix())
 }
 
 // matchesEventTrigger checks if an event matches a trigger

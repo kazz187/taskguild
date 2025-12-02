@@ -2,13 +2,10 @@ package event
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"time"
-
-	"github.com/ThreeDotsLabs/watermill/message"
 )
 
 // Hook represents an event hook configuration
@@ -102,12 +99,9 @@ func RegisterHooks(eventBus *EventBus, executor *HookExecutor) {
 	}
 
 	for _, eventType := range allEventTypes {
-		if err := eventBus.SubscribeAsync(eventType, fmt.Sprintf("hook-%s", eventType), func(msg *message.Message) error {
-			var eventMsg EventMessage
-			if err := json.Unmarshal(msg.Payload, &eventMsg); err != nil {
-				return err
-			}
-			return executor.Execute(msg.Context(), &eventMsg)
+		if err := eventBus.SubscribeAsync(eventType, fmt.Sprintf("hook-%s", eventType), func(eventMsg *EventMessage) error {
+			ctx := context.Background()
+			return executor.Execute(ctx, eventMsg)
 		}); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to subscribe to event %s: %v\n", eventType, err)
 			continue

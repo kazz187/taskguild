@@ -10,6 +10,7 @@ require (
 	connectrpc.com/connect v1.18.1
 	github.com/ThreeDotsLabs/watermill v1.4.7
 	github.com/alecthomas/kingpin/v2 v2.4.0
+	github.com/kazz187/claude-agent-sdk-go v0.0.2
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mattn/go-runewidth v0.0.16
 	github.com/modelcontextprotocol/go-sdk v0.2.0

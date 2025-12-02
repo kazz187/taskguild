@@ -10,8 +10,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/ThreeDotsLabs/watermill/message"
 )
 
 // EventLogger logs events to files
@@ -93,12 +91,9 @@ func RegisterEventLogger(eventBus *EventBus, logger *EventLogger) {
 	}
 
 	for _, eventType := range allEventTypes {
-		if err := eventBus.SubscribeAsync(eventType, fmt.Sprintf("logger-%s", eventType), func(msg *message.Message) error {
-			var eventMsg EventMessage
-			if err := json.Unmarshal(msg.Payload, &eventMsg); err != nil {
-				return err
-			}
-			if err := logger.LogEvent(msg.Context(), &eventMsg); err != nil {
+		if err := eventBus.SubscribeAsync(eventType, fmt.Sprintf("logger-%s", eventType), func(eventMsg *EventMessage) error {
+			ctx := context.Background()
+			if err := logger.LogEvent(ctx, eventMsg); err != nil {
 				log.Printf("Failed to log event %s: %v", eventMsg.ID, err)
 			}
 			return nil

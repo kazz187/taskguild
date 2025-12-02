@@ -18,6 +18,7 @@ import (
 type Manager struct {
 	agents          map[string]*Agent
 	config          *Config
+	factory         ExecutorFactory
 	eventBus        *event.EventBus
 	taskService     task.Service
 	worktreeManager *worktree.Manager
@@ -26,6 +27,9 @@ type Manager struct {
 	approvals       chan *ApprovalRequest
 	waitGroup       *conc.WaitGroup
 	agentSeqNum     map[string]map[int]bool // role -> {used numbers}
+
+	// Auto scaling
+	autoScaler *AutoScaler
 }
 
 type ApprovalRequest struct {
@@ -38,9 +42,12 @@ type ApprovalRequest struct {
 }
 
 func NewManager(config *Config, eventBus *event.EventBus, taskService task.Service, worktreeManager *worktree.Manager) *Manager {
-	return &Manager{
+	factory := NewDefaultExecutorFactory(taskService, eventBus, worktreeManager)
+
+	m := &Manager{
 		agents:          make(map[string]*Agent),
 		config:          config,
+		factory:         factory,
 		eventBus:        eventBus,
 		taskService:     taskService,
 		worktreeManager: worktreeManager,
@@ -48,6 +55,11 @@ func NewManager(config *Config, eventBus *event.EventBus, taskService task.Servi
 		waitGroup:       conc.NewWaitGroup(),
 		agentSeqNum:     make(map[string]map[int]bool),
 	}
+
+	// Create auto scaler with manager as registry
+	m.autoScaler = NewAutoScaler(config, factory, m)
+
+	return m
 }
 
 func (m *Manager) Start(ctx context.Context) error {
@@ -68,25 +80,20 @@ func (m *Manager) Start(ctx context.Context) error {
 		}
 
 		for i := 0; i < minAgents; i++ {
-			agent, err := m.createAgentFromConfig(agentConfig)
+			agent, err := m.CreateAgent(agentConfig)
 			if err != nil {
 				m.mutex.Unlock()
 				return fmt.Errorf("failed to create agent: %w", err)
-			}
-			m.agents[agent.ID] = agent
-
-			// Start the agent
-			if err := agent.Start(ctx); err != nil {
-				m.mutex.Unlock()
-				return fmt.Errorf("failed to start agent %s: %w", agent.ID, err)
 			}
 			color.ColoredPrintf(agent.ID, "Started (type: %s)\n", agent.Type)
 		}
 	}
 	m.mutex.Unlock()
 
-	// Start scaling monitor
-	m.waitGroup.Go(m.monitorAndScale)
+	// Start auto scaler
+	if err := m.autoScaler.Start(ctx); err != nil {
+		return fmt.Errorf("failed to start auto scaler: %w", err)
+	}
 
 	// Handle approvals
 	m.waitGroup.Go(m.handleApprovals)
@@ -97,102 +104,6 @@ func (m *Manager) Start(ctx context.Context) error {
 	})
 	m.waitGroup.Wait()
 	return nil
-}
-
-// monitorAndScale monitors agent status and scales up/down as needed
-func (m *Manager) monitorAndScale() {
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-m.ctx.Done():
-			return
-		case <-ticker.C:
-			m.performScaling()
-		}
-	}
-}
-
-// performScaling checks agent status and scales appropriately
-func (m *Manager) performScaling() {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-
-	// Group agents by name
-	agentsByName := make(map[string][]*Agent)
-	for _, agent := range m.agents {
-		agentsByName[agent.Name] = append(agentsByName[agent.Name], agent)
-	}
-
-	// Check each agent type
-	for _, config := range m.config.Agents {
-		agents := agentsByName[config.Name]
-		if len(agents) == 0 {
-			continue
-		}
-
-		// Count busy and idle agents
-		busyCount := 0
-		idleCount := 0
-		for _, agent := range agents {
-			switch agent.GetStatus() {
-			case StatusBusy:
-				busyCount++
-			case StatusIdle:
-				idleCount++
-			}
-		}
-
-		totalCount := len(agents)
-
-		// Scale up if all agents are busy and we haven't reached max
-		if config.Scaling != nil && config.Scaling.Auto {
-			if busyCount == totalCount && totalCount < config.Scaling.Max {
-				// Create a new agent
-				go func(cfg *AgentConfig) {
-					m.mutex.Lock()
-					defer m.mutex.Unlock()
-
-					newAgent, err := m.createAgentFromConfig(cfg)
-					if err != nil {
-						fmt.Printf("Failed to create new agent: %v\n", err)
-						return
-					}
-
-					m.agents[newAgent.ID] = newAgent
-					if err := newAgent.Start(m.ctx); err != nil {
-						color.ColoredPrintf(newAgent.ID, "Failed to start: %v\n", err)
-						delete(m.agents, newAgent.ID)
-						return
-					}
-					color.ColoredPrintf(newAgent.ID, "Scaled up: created (type: %s)\n", newAgent.Type)
-				}(config)
-			}
-
-			// Scale down if we have too many idle agents
-			if idleCount >= 2 && totalCount > config.Scaling.Min {
-				// Stop an idle agent
-				for _, agent := range agents {
-					if agent.GetStatus() == StatusIdle {
-						go func(a *Agent) {
-							m.mutex.Lock()
-							defer m.mutex.Unlock()
-
-							if err := a.Stop(); err != nil {
-								color.ColoredPrintf(a.ID, "Failed to stop: %v\n", err)
-								return
-							}
-							delete(m.agents, a.ID)
-							m.freeAgentSequenceNumber(a.Name, a.ID)
-							color.ColoredPrintln(a.ID, "Scaled down: stopped")
-						}(agent)
-						break
-					}
-				}
-			}
-		}
-	}
 }
 
 func (m *Manager) ListAgents() []*Agent {
@@ -246,15 +157,54 @@ func (m *Manager) GetAvailableAgents() []*Agent {
 	return available
 }
 
-func (m *Manager) createAgentFromConfig(config *AgentConfig) (*Agent, error) {
+// CreateAgent creates a new agent and starts it (implements AgentRegistry)
+func (m *Manager) CreateAgent(config *AgentConfig) (*Agent, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	agentID := m.generateSequentialAgentID(config.Name)
-	agent, err := NewAgent(agentID, config, m.taskService, m.eventBus, m.worktreeManager)
+	agent, err := NewAgent(agentID, config, m.factory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create agent: %w", err)
 	}
-	agent.Triggers = config.Triggers
-	agent.Scaling = config.Scaling
+
+	// Initialize with dependencies
+	if err := agent.InitializeWithDependencies(m.taskService, m.eventBus, m.worktreeManager); err != nil {
+		return nil, fmt.Errorf("failed to initialize agent: %w", err)
+	}
+
+	// Add to registry
+	m.agents[agent.ID] = agent
+
+	// Start the agent
+	if err := agent.Start(m.ctx); err != nil {
+		delete(m.agents, agent.ID)
+		return nil, fmt.Errorf("failed to start agent %s: %w", agent.ID, err)
+	}
+
 	return agent, nil
+}
+
+// RemoveAgent removes an agent and stops it (implements AgentRegistry)
+func (m *Manager) RemoveAgent(agentID string) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	agent, exists := m.agents[agentID]
+	if !exists {
+		return fmt.Errorf("agent %s not found", agentID)
+	}
+
+	// Stop the agent
+	if err := agent.Stop(); err != nil {
+		color.ColoredPrintf(agent.ID, "Error stopping: %v\n", err)
+	}
+
+	// Remove from registry
+	delete(m.agents, agentID)
+	m.freeAgentSequenceNumber(agentID, agent.Name)
+
+	return nil
 }
 
 func (m *Manager) handleApprovals() {
@@ -303,6 +253,13 @@ func (m *Manager) freeAgentSequenceNumber(agentID, role string) {
 
 func (m *Manager) cleanup() {
 	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	// Stop auto scaler
+	if m.autoScaler != nil {
+		m.autoScaler.Stop()
+	}
+
 	m.ctx = nil
 	close(m.approvals)
 
@@ -314,5 +271,4 @@ func (m *Manager) cleanup() {
 		}
 		m.freeAgentSequenceNumber(agent.ID, agent.Name)
 	}
-	m.mutex.Unlock()
 }
