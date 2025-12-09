@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 
@@ -13,8 +15,18 @@ import (
 )
 
 // ClaudeCodeExecutor implements the Executor interface for Claude Code
+// using persistent streaming connection for interactive communication
 type ClaudeCodeExecutor struct {
 	BaseExecutor
+
+	// Claude SDK client for persistent connection
+	client    *claudeagent.ClaudeSDKClient
+	clientMu  sync.RWMutex
+	connected bool
+
+	// Current task being executed (for permission context)
+	currentTaskID string
+	taskMu        sync.RWMutex
 }
 
 // NewClaudeCodeExecutor creates a new Claude Code executor
@@ -32,23 +44,115 @@ func (e *ClaudeCodeExecutor) Initialize(ctx context.Context, config ExecutorConf
 	return nil
 }
 
+// Connect establishes a persistent connection to Claude Code
+func (e *ClaudeCodeExecutor) Connect(ctx context.Context) error {
+	e.clientMu.Lock()
+	defer e.clientMu.Unlock()
+
+	if e.connected {
+		return nil // Already connected
+	}
+
+	// Build Claude Code options with permission callback
+	opts := e.buildClaudeOptions()
+
+	// Create SDK client
+	e.client = claudeagent.NewClaudeSDKClient(opts)
+
+	// Connect in streaming mode
+	if err := e.client.Connect(ctx); err != nil {
+		e.client = nil
+		return fmt.Errorf("failed to connect to Claude Code: %w", err)
+	}
+
+	e.connected = true
+	color.ColoredPrintln(e.Config.AgentID, "[Claude Code] Connected to Claude Code CLI (streaming mode)")
+
+	return nil
+}
+
+// Disconnect closes the persistent connection
+func (e *ClaudeCodeExecutor) Disconnect() error {
+	e.clientMu.Lock()
+	defer e.clientMu.Unlock()
+
+	if !e.connected || e.client == nil {
+		return nil
+	}
+
+	if err := e.client.Close(); err != nil {
+		color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Error closing connection: %v\n", err)
+	}
+
+	e.client = nil
+	e.connected = false
+	color.ColoredPrintln(e.Config.AgentID, "[Claude Code] Disconnected from Claude Code CLI")
+
+	return nil
+}
+
+// IsConnected returns true if the executor has an active connection
+func (e *ClaudeCodeExecutor) IsConnected() bool {
+	e.clientMu.RLock()
+	defer e.clientMu.RUnlock()
+	return e.connected
+}
+
 // Execute executes a work item using Claude Code
 func (e *ClaudeCodeExecutor) Execute(ctx context.Context, work *WorkItem) (*ExecutionResult, error) {
 	color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Starting work execution: %s\n", work.ID)
 
+	// Set current task for permission context
+	e.setCurrentTask(work.Task.ID)
+	defer e.clearCurrentTask()
+
+	// Ensure we have a connection
+	if !e.IsConnected() {
+		if err := e.Connect(ctx); err != nil {
+			return &ExecutionResult{
+				Success: false,
+				Error:   fmt.Errorf("failed to connect: %w", err),
+			}, nil
+		}
+	}
+
 	// Generate prompt based on work item
 	prompt := e.generatePrompt(work)
 
-	// Build Claude Code options
-	opts := e.buildClaudeOptions()
-
 	color.ColoredPrintln(e.Config.AgentID, "[Claude Code] Sending query to Claude Code CLI...")
 
-	// Send query to Claude using the new SDK
-	msgChan, errChan := claudeagent.RunQuery(ctx, prompt, opts)
+	e.clientMu.RLock()
+	client := e.client
+	e.clientMu.RUnlock()
+
+	if client == nil {
+		return &ExecutionResult{
+			Success: false,
+			Error:   fmt.Errorf("client not connected"),
+		}, nil
+	}
+
+	// Send query
+	if err := client.SendQuery(ctx, prompt); err != nil {
+		color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Query failed: %v\n", err)
+		return &ExecutionResult{
+			Success: false,
+			Error:   fmt.Errorf("failed to send query: %w", err),
+		}, nil
+	}
+
+	// Receive and process response
+	messages, err := client.ReceiveResponse(ctx)
+	if err != nil {
+		color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Error receiving response: %v\n", err)
+		return &ExecutionResult{
+			Success: false,
+			Error:   fmt.Errorf("failed to receive response: %w", err),
+		}, nil
+	}
 
 	// Process response messages
-	result := e.processMessages(msgChan, errChan)
+	result := e.processMessages(messages)
 
 	color.ColoredPrintln(e.Config.AgentID, "[Claude Code] Work execution completed")
 	return result, nil
@@ -62,8 +166,28 @@ func (e *ClaudeCodeExecutor) CanExecute(work *WorkItem) bool {
 
 // Cleanup releases resources
 func (e *ClaudeCodeExecutor) Cleanup() error {
-	// Claude Code client doesn't need explicit cleanup
-	return nil
+	return e.Disconnect()
+}
+
+// setCurrentTask sets the current task ID for permission context
+func (e *ClaudeCodeExecutor) setCurrentTask(taskID string) {
+	e.taskMu.Lock()
+	defer e.taskMu.Unlock()
+	e.currentTaskID = taskID
+}
+
+// clearCurrentTask clears the current task ID
+func (e *ClaudeCodeExecutor) clearCurrentTask() {
+	e.taskMu.Lock()
+	defer e.taskMu.Unlock()
+	e.currentTaskID = ""
+}
+
+// getCurrentTask returns the current task ID
+func (e *ClaudeCodeExecutor) getCurrentTask() string {
+	e.taskMu.RLock()
+	defer e.taskMu.RUnlock()
+	return e.currentTaskID
 }
 
 // generatePrompt creates a prompt based on the work item
@@ -128,14 +252,13 @@ Please proceed with implementing the task and remember to update the status at t
 	return prompt
 }
 
-// buildClaudeOptions builds Claude Code options
+// buildClaudeOptions builds Claude Code options with permission callback
 func (e *ClaudeCodeExecutor) buildClaudeOptions() *claudeagent.ClaudeAgentOptions {
 	// Get absolute path to MCP server binary
 	mcpServerPath := getMCPServerPath()
 
 	opts := &claudeagent.ClaudeAgentOptions{
-		Model:          "claude-sonnet-4-20250514",
-		PermissionMode: claudeagent.PermissionModeAcceptEdits,
+		Model: "claude-sonnet-4-20250514",
 		McpServers: map[string]claudeagent.McpServerConfig{
 			"taskguild": {
 				Type:    claudeagent.McpServerTypeStdio,
@@ -143,6 +266,15 @@ func (e *ClaudeCodeExecutor) buildClaudeOptions() *claudeagent.ClaudeAgentOption
 				Args:    []string{},
 			},
 		},
+	}
+
+	// Set up permission callback if permission channels are configured
+	if e.Config.PermissionRequestChan != nil && e.Config.PermissionResponseChan != nil {
+		opts.PermissionMode = claudeagent.PermissionModeDefault
+		opts.CanUseTool = e.createPermissionCallback()
+	} else {
+		// Fall back to auto-accept mode if no permission channels
+		opts.PermissionMode = claudeagent.PermissionModeAcceptEdits
 	}
 
 	// Set working directory if we have a worktree
@@ -154,82 +286,126 @@ func (e *ClaudeCodeExecutor) buildClaudeOptions() *claudeagent.ClaudeAgentOption
 	return opts
 }
 
+// createPermissionCallback creates a callback function for tool permission requests
+func (e *ClaudeCodeExecutor) createPermissionCallback() claudeagent.CanUseToolFunc {
+	return func(toolName string, input map[string]interface{}, permCtx claudeagent.ToolPermissionContext) (claudeagent.PermissionResult, error) {
+		taskID := e.getCurrentTask()
+
+		color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Permission requested for tool: %s\n", toolName)
+
+		// Create permission request
+		req := PermissionRequest{
+			ID:        fmt.Sprintf("%s-%s-%d", taskID, toolName, time.Now().UnixNano()),
+			ToolName:  toolName,
+			Input:     input,
+			TaskID:    taskID,
+			AgentID:   e.Config.AgentID,
+			Timestamp: time.Now().Unix(),
+		}
+
+		// Send request to permission channel
+		select {
+		case e.Config.PermissionRequestChan <- req:
+			// Request sent successfully
+		case <-permCtx.Signal.Done():
+			return claudeagent.PermissionResultDeny{
+				Behavior: "deny",
+				Message:  "Permission request cancelled",
+			}, nil
+		}
+
+		// Wait for response
+		select {
+		case resp := <-e.Config.PermissionResponseChan:
+			if resp.Allowed {
+				color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Permission GRANTED for %s\n", toolName)
+				result := claudeagent.PermissionResultAllow{
+					Behavior: "allow",
+				}
+				if resp.UpdatedInput != nil {
+					result.UpdatedInput = resp.UpdatedInput
+				}
+				return result, nil
+			}
+
+			color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Permission DENIED for %s: %s\n", toolName, resp.Message)
+			return claudeagent.PermissionResultDeny{
+				Behavior: "deny",
+				Message:  resp.Message,
+			}, nil
+
+		case <-permCtx.Signal.Done():
+			return claudeagent.PermissionResultDeny{
+				Behavior: "deny",
+				Message:  "Permission request cancelled",
+			}, nil
+		}
+	}
+}
+
 // processMessages processes Claude Code response messages
-func (e *ClaudeCodeExecutor) processMessages(msgChan <-chan claudeagent.Message, errChan <-chan error) *ExecutionResult {
+func (e *ClaudeCodeExecutor) processMessages(messages []claudeagent.Message) *ExecutionResult {
 	color.ColoredPrintln(e.Config.AgentID, "[Claude Code] Processing response messages...")
 
-	messageCount := 0
 	statusUpdated := false
 
-	for {
-		select {
-		case err, ok := <-errChan:
-			if ok && err != nil {
-				color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Error received: %v\n", err)
+	for i, msg := range messages {
+		color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Processing message #%d (type: %T)\n", i+1, msg)
+
+		switch m := msg.(type) {
+		case *claudeagent.UserMessage:
+			if content, ok := m.Content.(string); ok {
+				color.ColoredPrintf(e.Config.AgentID, "[Claude Code] User: %s\n", content)
+			}
+		case *claudeagent.AssistantMessage:
+			for _, content := range m.Content {
+				switch c := content.(type) {
+				case claudeagent.TextBlock:
+					color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Assistant: %s\n", c.Text)
+				case claudeagent.ToolUseBlock:
+					color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Tool Use: %s\n", c.Name)
+					if strings.Contains(c.Name, "taskguild_update_task") {
+						statusUpdated = true
+						color.ColoredPrintln(e.Config.AgentID, "[Claude Code] ✅ Task status updated via MCP")
+					}
+				}
+			}
+		case *claudeagent.ResultMessage:
+			if m.IsError {
+				color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Execution error received\n")
 				return &ExecutionResult{
 					Success: false,
-					Error:   fmt.Errorf("claude code execution error: %w", err),
+					Message: "Claude Code execution error",
+					Error:   fmt.Errorf("claude code execution error"),
 				}
 			}
-		case msg, ok := <-msgChan:
-			if !ok {
-				// Channel closed, processing complete
-				color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Finished processing %d messages\n", messageCount)
-
-				// If status wasn't updated via MCP, try fallback
-				if !statusUpdated {
-					color.ColoredPrintln(e.Config.AgentID, "[Claude Code] Status not updated via MCP, using fallback")
-					if err := e.updateStatusFallback(); err != nil {
-						color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Fallback status update failed: %v\n", err)
-						return &ExecutionResult{
-							Success: false,
-							Message: "Failed to update task status",
-							Error:   err,
-						}
-					}
-				}
-
-				return &ExecutionResult{
-					Success: true,
-					Message: "Claude Code execution completed successfully",
-				}
+			color.ColoredPrintln(e.Config.AgentID, "[Claude Code] Execution completed")
+			if m.TotalCostUSD != nil {
+				color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Total cost: $%.4f\n", *m.TotalCostUSD)
 			}
+		default:
+			color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Unknown message type: %T\n", msg)
+		}
+	}
 
-			messageCount++
-			color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Processing message #%d (type: %T)\n", messageCount, msg)
+	color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Finished processing %d messages\n", len(messages))
 
-			switch m := msg.(type) {
-			case *claudeagent.UserMessage:
-				if content, ok := m.Content.(string); ok {
-					color.ColoredPrintf(e.Config.AgentID, "[Claude Code] User: %s\n", content)
-				}
-			case *claudeagent.AssistantMessage:
-				for _, content := range m.Content {
-					switch c := content.(type) {
-					case claudeagent.TextBlock:
-						color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Assistant: %s\n", c.Text)
-					case claudeagent.ToolUseBlock:
-						color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Tool Use: %s\n", c.Name)
-						if strings.Contains(c.Name, "taskguild_update_task") {
-							statusUpdated = true
-							color.ColoredPrintln(e.Config.AgentID, "[Claude Code] ✅ Task status updated via MCP")
-						}
-					}
-				}
-			case *claudeagent.ResultMessage:
-				if m.IsError {
-					color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Execution error received\n")
-					return &ExecutionResult{
-						Success: false,
-						Message: "Claude Code execution error",
-						Error:   fmt.Errorf("claude code execution error"),
-					}
-				}
-				color.ColoredPrintln(e.Config.AgentID, "[Claude Code] Execution completed")
-			default:
-				color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Unknown message type: %T\n", msg)
+	// If status wasn't updated via MCP, try fallback
+	if !statusUpdated {
+		color.ColoredPrintln(e.Config.AgentID, "[Claude Code] Status not updated via MCP, using fallback")
+		if err := e.updateStatusFallback(); err != nil {
+			color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Fallback status update failed: %v\n", err)
+			return &ExecutionResult{
+				Success: false,
+				Message: "Failed to update task status",
+				Error:   err,
 			}
 		}
+	}
+
+	return &ExecutionResult{
+		Success: true,
+		Message: "Claude Code execution completed successfully",
 	}
 }
 
@@ -241,7 +417,7 @@ func (e *ClaudeCodeExecutor) updateStatusFallback() error {
 		color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Fallback status update to: %s\n", defaultStatus)
 
 		// Try to update via base executor's task service
-		return e.updateTaskStatus(context.Background(), e.Config.AgentID, defaultStatus)
+		return e.updateTaskStatus(context.Background(), e.getCurrentTask(), defaultStatus)
 	}
 
 	return nil

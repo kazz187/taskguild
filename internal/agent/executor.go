@@ -32,6 +32,24 @@ type ExecutionResult struct {
 	Error      error
 }
 
+// PermissionRequest represents a tool permission request from Claude
+type PermissionRequest struct {
+	ID        string                 // Unique request ID
+	ToolName  string                 // Tool being requested (e.g., "Bash", "Write", "Edit")
+	Input     map[string]interface{} // Tool input parameters
+	TaskID    string                 // Associated task ID
+	AgentID   string                 // Agent making the request
+	Timestamp int64                  // Request timestamp
+}
+
+// PermissionResponse represents the user's response to a permission request
+type PermissionResponse struct {
+	RequestID    string                 // Matching request ID
+	Allowed      bool                   // Whether the action is allowed
+	Message      string                 // Optional message (e.g., reason for denial)
+	UpdatedInput map[string]interface{} // Optional: modified input parameters
+}
+
 // ExecutorConfig holds configuration for executor initialization
 type ExecutorConfig struct {
 	AgentID       string
@@ -39,6 +57,10 @@ type ExecutorConfig struct {
 	Instructions  string
 	WorktreePath  string
 	StatusOptions *StatusOptions
+
+	// Permission handling
+	PermissionRequestChan  chan<- PermissionRequest  // Channel to send permission requests
+	PermissionResponseChan <-chan PermissionResponse // Channel to receive permission responses
 
 	// Dependency injection
 	TaskService     task.Service
@@ -50,6 +72,15 @@ type ExecutorConfig struct {
 type Executor interface {
 	// Initialize the executor with configuration
 	Initialize(ctx context.Context, config ExecutorConfig) error
+
+	// Connect establishes a persistent connection (for streaming executors)
+	Connect(ctx context.Context) error
+
+	// Disconnect closes the persistent connection
+	Disconnect() error
+
+	// IsConnected returns true if the executor has an active connection
+	IsConnected() bool
 
 	// Execute a work item (task or event)
 	Execute(ctx context.Context, work *WorkItem) (*ExecutionResult, error)
@@ -114,6 +145,21 @@ func (e *BaseExecutor) Initialize(ctx context.Context, config ExecutorConfig) er
 		// Worktree initialization logic can be added here if needed
 	}
 	return nil
+}
+
+// Connect is a no-op for base executor (override in streaming executors)
+func (e *BaseExecutor) Connect(ctx context.Context) error {
+	return nil
+}
+
+// Disconnect is a no-op for base executor (override in streaming executors)
+func (e *BaseExecutor) Disconnect() error {
+	return nil
+}
+
+// IsConnected returns false for base executor (override in streaming executors)
+func (e *BaseExecutor) IsConnected() bool {
+	return false
 }
 
 // updateTaskStatus is a helper method for updating task status

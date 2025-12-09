@@ -72,6 +72,10 @@ type Agent struct {
 	eventChan chan interface{}
 	config    *AgentConfig
 
+	// Permission handling channels
+	permissionRequestChan  chan PermissionRequest
+	permissionResponseChan chan PermissionResponse
+
 	// Dependencies - injected during initialization
 	taskService     task.Service
 	eventBus        *event.EventBus
@@ -88,19 +92,21 @@ func NewAgent(id string, config *AgentConfig, factory ExecutorFactory) (*Agent, 
 	}
 
 	return &Agent{
-		ID:           id,
-		Name:         config.Name,
-		Type:         config.Type,
-		Instructions: config.Instructions,
-		Triggers:     config.Triggers,
-		Scaling:      config.Scaling,
-		Status:       StatusIdle,
-		CreatedAt:    now,
-		UpdatedAt:    now,
-		waitGroup:    conc.NewWaitGroup(),
-		executor:     executor,
-		eventChan:    make(chan interface{}, 100),
-		config:       config,
+		ID:                     id,
+		Name:                   config.Name,
+		Type:                   config.Type,
+		Instructions:           config.Instructions,
+		Triggers:               config.Triggers,
+		Scaling:                config.Scaling,
+		Status:                 StatusIdle,
+		CreatedAt:              now,
+		UpdatedAt:              now,
+		waitGroup:              conc.NewWaitGroup(),
+		executor:               executor,
+		eventChan:              make(chan interface{}, 100),
+		config:                 config,
+		permissionRequestChan:  make(chan PermissionRequest, 10),
+		permissionResponseChan: make(chan PermissionResponse, 10),
 	}, nil
 }
 
@@ -126,6 +132,21 @@ func (a *Agent) IsAvailable() bool {
 	return a.Status == StatusIdle
 }
 
+// GetPermissionRequestChan returns the channel for receiving permission requests
+// This can be used by UI/CLI to handle permission requests from the executor
+func (a *Agent) GetPermissionRequestChan() <-chan PermissionRequest {
+	return a.permissionRequestChan
+}
+
+// SendPermissionResponse sends a permission response to the executor
+func (a *Agent) SendPermissionResponse(response PermissionResponse) {
+	select {
+	case a.permissionResponseChan <- response:
+	default:
+		color.ColoredPrintf(a.ID, "warning: permission response channel full, response dropped\n")
+	}
+}
+
 // InitializeWithDependencies injects dependencies and initializes the executor
 func (a *Agent) InitializeWithDependencies(taskService task.Service, eventBus *event.EventBus, worktreeManager *worktree.Manager) error {
 	a.mutex.Lock()
@@ -137,14 +158,16 @@ func (a *Agent) InitializeWithDependencies(taskService task.Service, eventBus *e
 
 	// Initialize executor with configuration
 	executorConfig := ExecutorConfig{
-		AgentID:         a.ID,
-		Name:            a.Name,
-		Instructions:    a.Instructions,
-		WorktreePath:    a.WorktreePath,
-		StatusOptions:   a.config.StatusOptions,
-		TaskService:     taskService,
-		EventBus:        eventBus,
-		WorktreeManager: worktreeManager,
+		AgentID:                a.ID,
+		Name:                   a.Name,
+		Instructions:           a.Instructions,
+		WorktreePath:           a.WorktreePath,
+		StatusOptions:          a.config.StatusOptions,
+		PermissionRequestChan:  a.permissionRequestChan,
+		PermissionResponseChan: a.permissionResponseChan,
+		TaskService:            taskService,
+		EventBus:               eventBus,
+		WorktreeManager:        worktreeManager,
 	}
 
 	return a.executor.Initialize(context.Background(), executorConfig)
@@ -222,7 +245,18 @@ func (a *Agent) Start(ctx context.Context) error {
 	}
 
 	a.ctx, a.cancel = context.WithCancel(ctx)
-	a.UpdateStatus(StatusIdle)
+
+	// Establish persistent connection to the executor (e.g., Claude Code)
+	if err := a.executor.Connect(a.ctx); err != nil {
+		a.cancel()
+		a.ctx = nil
+		a.cancel = nil
+		return fmt.Errorf("failed to connect executor: %w", err)
+	}
+
+	a.Status = StatusIdle
+	a.UpdatedAt = time.Now()
+	color.ColoredPrintf(a.ID, "started with persistent connection\n")
 
 	// Subscribe to all event types this agent is interested in
 	for _, trigger := range a.Triggers {
@@ -266,6 +300,16 @@ func (a *Agent) Stop() error {
 	// Wait for all goroutines to finish (outside of mutex lock to avoid deadlock)
 	a.waitGroup.Wait()
 
+	// Disconnect from the executor (close persistent connection)
+	if err := a.executor.Disconnect(); err != nil {
+		color.ColoredPrintf(a.ID, "error disconnecting executor: %v\n", err)
+	}
+
+	// Close permission channels
+	close(a.permissionRequestChan)
+	close(a.permissionResponseChan)
+
+	color.ColoredPrintf(a.ID, "stopped and disconnected\n")
 	return nil
 }
 
