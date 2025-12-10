@@ -37,13 +37,16 @@ func TestEventBus_PublishSubscribeAsync(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	eventBus := NewEventBus()
+	eventBus, err := NewEventBus()
+	if err != nil {
+		t.Fatalf("Failed to create event bus: %v", err)
+	}
 
 	// Channel to receive events
 	received := make(chan *Event[TaskCreatedData], 1)
 
 	// Subscribe to TaskCreated events using SubscribeTyped
-	err := SubscribeTyped(eventBus, ctx, TaskCreated, "test-handler", func(ctx context.Context, event *Event[TaskCreatedData]) error {
+	err = SubscribeTyped(eventBus, ctx, TaskCreated, "test-handler", func(ctx context.Context, event *Event[TaskCreatedData]) error {
 		received <- event
 		return nil
 	})
@@ -90,14 +93,17 @@ func TestEventBus_MultipleSubscribersAsync(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	eventBus := NewEventBus()
+	eventBus, err := NewEventBus()
+	if err != nil {
+		t.Fatalf("Failed to create event bus: %v", err)
+	}
 
 	// Channels to receive events
 	received1 := make(chan *Event[TaskStatusChangedData], 1)
 	received2 := make(chan *Event[TaskStatusChangedData], 1)
 
 	// Subscribe two handlers to the same event type using SubscribeTyped
-	err := SubscribeTyped(eventBus, ctx, TaskStatusChanged, "test-handler-1", func(ctx context.Context, event *Event[TaskStatusChangedData]) error {
+	err = SubscribeTyped(eventBus, ctx, TaskStatusChanged, "test-handler-1", func(ctx context.Context, event *Event[TaskStatusChangedData]) error {
 		received1 <- event
 		return nil
 	})

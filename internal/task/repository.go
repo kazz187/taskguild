@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"gopkg.in/yaml.v3"
 )
@@ -11,6 +12,7 @@ import (
 // YAMLRepository implements Repository interface with YAML file persistence
 type YAMLRepository struct {
 	filePath string
+	mutex    sync.RWMutex
 }
 
 // NewYAMLRepository creates a new YAML repository instance
@@ -27,6 +29,9 @@ type TaskData struct {
 
 // Create adds a new task to the YAML file
 func (r *YAMLRepository) Create(task *Task) error {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	data, err := r.loadData()
 	if err != nil {
 		return fmt.Errorf("failed to load task data: %w", err)
@@ -39,6 +44,9 @@ func (r *YAMLRepository) Create(task *Task) error {
 
 // GetByID retrieves a task by its ID
 func (r *YAMLRepository) GetByID(id string) (*Task, error) {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
 	data, err := r.loadData()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load task data: %w", err)
@@ -55,6 +63,9 @@ func (r *YAMLRepository) GetByID(id string) (*Task, error) {
 
 // GetAll retrieves all tasks
 func (r *YAMLRepository) GetAll() ([]*Task, error) {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
 	data, err := r.loadData()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load task data: %w", err)
@@ -65,6 +76,9 @@ func (r *YAMLRepository) GetAll() ([]*Task, error) {
 
 // Update modifies an existing task
 func (r *YAMLRepository) Update(task *Task) error {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	data, err := r.loadData()
 	if err != nil {
 		return fmt.Errorf("failed to load task data: %w", err)
@@ -82,6 +96,9 @@ func (r *YAMLRepository) Update(task *Task) error {
 
 // Delete removes a task by its ID
 func (r *YAMLRepository) Delete(id string) error {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	data, err := r.loadData()
 	if err != nil {
 		return fmt.Errorf("failed to load task data: %w", err)

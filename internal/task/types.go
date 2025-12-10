@@ -13,39 +13,27 @@ type CreateTaskRequest struct {
 // UpdateTaskRequest represents a request to update a task
 type UpdateTaskRequest struct {
 	ID          string            `json:"id"`
-	Status      Status            `json:"status"`
 	Description string            `json:"description"`
 	Metadata    map[string]string `json:"metadata"`
 }
 
-// TryAcquireTaskRequest represents a request to atomically acquire a task
+// TryAcquireProcessRequest represents a request to atomically acquire a process
 // using compare-and-swap semantics
-type TryAcquireTaskRequest struct {
-	ID             string `json:"id"`
-	ExpectedStatus Status `json:"expected_status"`
-	NewStatus      Status `json:"new_status"`
-	AgentID        string `json:"agent_id"`
+type TryAcquireProcessRequest struct {
+	TaskID      string `json:"task_id"`
+	ProcessName string `json:"process_name"`
+	AgentID     string `json:"agent_id"`
 }
 
-// Status represents task status
-type Status string
-
-const (
-	StatusCreated     Status = "CREATED"
-	StatusAnalyzing   Status = "ANALYZING"
-	StatusDesigned    Status = "DESIGNED"
-	StatusInProgress  Status = "IN_PROGRESS"
-	StatusReviewReady Status = "REVIEW_READY"
-	StatusQAReady     Status = "QA_READY"
-	StatusClosed      Status = "CLOSED"
-	StatusCancelled   Status = "CANCELLED"
-)
+// AvailableProcess represents a process that is available for execution
+type AvailableProcess struct {
+	TaskID      string `json:"task_id"`
+	ProcessName string `json:"process_name"`
+	Task        *Task  `json:"task"`
+}
 
 // UpdateTaskFields updates task with new values
 func (t *Task) Update(req *UpdateTaskRequest) {
-	if req.Status != "" {
-		t.Status = string(req.Status)
-	}
 	if req.Description != "" {
 		t.Description = req.Description
 	}

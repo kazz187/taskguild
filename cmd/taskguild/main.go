@@ -33,9 +33,9 @@ var (
 
 	listCmd = app.Command("list", "List all tasks")
 
-	updateCmd    = app.Command("update", "Update task status")
-	updateID     = updateCmd.Arg("id", "Task ID").Required().String()
-	updateStatus = updateCmd.Arg("status", "New status").Required().String()
+	updateCmd         = app.Command("update", "Update task description")
+	updateID          = updateCmd.Arg("id", "Task ID").Required().String()
+	updateDescription = updateCmd.Flag("description", "New description").String()
 
 	closeCmd = app.Command("close", "Close a task")
 	closeID  = closeCmd.Arg("id", "Task ID").Required().String()
@@ -71,7 +71,7 @@ func main() {
 	case listCmd.FullCommand():
 		handleTaskList()
 	case updateCmd.FullCommand():
-		handleTaskUpdate(*updateID, *updateStatus)
+		handleTaskUpdate(*updateID, *updateDescription)
 	case closeCmd.FullCommand():
 		handleTaskClose(*closeID)
 	case showCmd.FullCommand():
@@ -230,47 +230,18 @@ func getAgentStatusString(status taskguildv1.AgentStatus) string {
 
 func getTaskStatusString(status taskguildv1.TaskStatus) string {
 	switch status {
-	case taskguildv1.TaskStatus_TASK_STATUS_CREATED:
-		return "CREATED"
-	case taskguildv1.TaskStatus_TASK_STATUS_ANALYZING:
-		return "ANALYZING"
-	case taskguildv1.TaskStatus_TASK_STATUS_DESIGNED:
-		return "DESIGNED"
+	case taskguildv1.TaskStatus_TASK_STATUS_PENDING:
+		return "PENDING"
 	case taskguildv1.TaskStatus_TASK_STATUS_IN_PROGRESS:
 		return "IN_PROGRESS"
-	case taskguildv1.TaskStatus_TASK_STATUS_REVIEW_READY:
-		return "REVIEW_READY"
-	case taskguildv1.TaskStatus_TASK_STATUS_QA_READY:
-		return "QA_READY"
+	case taskguildv1.TaskStatus_TASK_STATUS_COMPLETED:
+		return "COMPLETED"
+	case taskguildv1.TaskStatus_TASK_STATUS_REJECTED:
+		return "REJECTED"
 	case taskguildv1.TaskStatus_TASK_STATUS_CLOSED:
 		return "CLOSED"
-	case taskguildv1.TaskStatus_TASK_STATUS_CANCELLED:
-		return "CANCELLED"
 	default:
 		return "UNSPECIFIED"
-	}
-}
-
-func getTaskStatusEnum(status string) taskguildv1.TaskStatus {
-	switch status {
-	case "CREATED":
-		return taskguildv1.TaskStatus_TASK_STATUS_CREATED
-	case "ANALYZING":
-		return taskguildv1.TaskStatus_TASK_STATUS_ANALYZING
-	case "DESIGNED":
-		return taskguildv1.TaskStatus_TASK_STATUS_DESIGNED
-	case "IN_PROGRESS":
-		return taskguildv1.TaskStatus_TASK_STATUS_IN_PROGRESS
-	case "REVIEW_READY":
-		return taskguildv1.TaskStatus_TASK_STATUS_REVIEW_READY
-	case "QA_READY":
-		return taskguildv1.TaskStatus_TASK_STATUS_QA_READY
-	case "CLOSED":
-		return taskguildv1.TaskStatus_TASK_STATUS_CLOSED
-	case "CANCELLED":
-		return taskguildv1.TaskStatus_TASK_STATUS_CANCELLED
-	default:
-		return taskguildv1.TaskStatus_TASK_STATUS_UNSPECIFIED
 	}
 }
 
@@ -331,23 +302,17 @@ func handleTaskList() {
 	}
 }
 
-func handleTaskUpdate(taskID, status string) {
+func handleTaskUpdate(taskID, description string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Convert status string to enum
-	statusEnum := getTaskStatusEnum(status)
-	if statusEnum == taskguildv1.TaskStatus_TASK_STATUS_UNSPECIFIED {
-		log.Fatalf("Error: Invalid status '%s'. Valid statuses: CREATED, ANALYZING, DESIGNED, IN_PROGRESS, REVIEW_READY, QA_READY, CLOSED, CANCELLED", status)
-	}
-
 	taskClient := createTaskClient()
-	task, err := taskClient.UpdateTask(ctx, taskID, statusEnum)
+	task, err := taskClient.UpdateTask(ctx, taskID, description, nil)
 	if err != nil {
 		log.Fatalf("Error updating task: %v", err)
 	}
 
-	fmt.Printf("Task %s updated successfully. New status: %s\n", task.Id, getTaskStatusString(task.Status))
+	fmt.Printf("Task %s updated successfully. Status: %s\n", task.Id, getTaskStatusString(task.Status))
 }
 
 func handleTaskClose(taskID string) {
@@ -381,8 +346,15 @@ func handleTaskShow(taskID string) {
 	}
 	fmt.Printf("Type: %s\n", task.Type)
 	fmt.Printf("Status: %s\n", getTaskStatusString(task.Status))
-	if task.AssignedTo != "" {
-		fmt.Printf("Assigned To: %s\n", task.AssignedTo)
+	if len(task.Processes) > 0 {
+		fmt.Printf("Processes:\n")
+		for name, state := range task.Processes {
+			fmt.Printf("  %s: %s", name, getProcessStatusString(state.Status))
+			if state.AssignedTo != "" {
+				fmt.Printf(" (assigned to: %s)", state.AssignedTo)
+			}
+			fmt.Printf("\n")
+		}
 	}
 	if len(task.Metadata) > 0 {
 		fmt.Printf("Metadata:\n")
@@ -392,4 +364,19 @@ func handleTaskShow(taskID string) {
 	}
 	fmt.Printf("Created At: %s\n", task.CreatedAt.AsTime().Format(time.RFC3339))
 	fmt.Printf("Updated At: %s\n", task.UpdatedAt.AsTime().Format(time.RFC3339))
+}
+
+func getProcessStatusString(status taskguildv1.ProcessStatus) string {
+	switch status {
+	case taskguildv1.ProcessStatus_PROCESS_STATUS_PENDING:
+		return "PENDING"
+	case taskguildv1.ProcessStatus_PROCESS_STATUS_IN_PROGRESS:
+		return "IN_PROGRESS"
+	case taskguildv1.ProcessStatus_PROCESS_STATUS_COMPLETED:
+		return "COMPLETED"
+	case taskguildv1.ProcessStatus_PROCESS_STATUS_REJECTED:
+		return "REJECTED"
+	default:
+		return "UNSPECIFIED"
+	}
 }

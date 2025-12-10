@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -47,10 +48,7 @@ func (h *TaskServiceHandler) CreateTask(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create task: %w", err))
 	}
 
-	protoTask, err := h.taskToProto(createdTask)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to convert task: %w", err))
-	}
+	protoTask := h.taskToProto(createdTask)
 
 	return connect.NewResponse(&taskguildv1.CreateTaskResponse{
 		Task: protoTask,
@@ -69,10 +67,7 @@ func (h *TaskServiceHandler) ListTasks(
 
 	protoTasks := make([]*taskguildv1.Task, 0, len(tasks))
 	for _, t := range tasks {
-		protoTask, err := h.taskToProto(t)
-		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to convert task: %w", err))
-		}
+		protoTask := h.taskToProto(t)
 		protoTasks = append(protoTasks, protoTask)
 	}
 
@@ -92,29 +87,20 @@ func (h *TaskServiceHandler) GetTask(
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("task not found: %w", err))
 	}
 
-	protoTask, err := h.taskToProto(taskObj)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to convert task: %w", err))
-	}
+	protoTask := h.taskToProto(taskObj)
 
 	return connect.NewResponse(&taskguildv1.GetTaskResponse{
 		Task: protoTask,
 	}), nil
 }
 
-// UpdateTask updates a task
+// UpdateTask updates a task metadata
 func (h *TaskServiceHandler) UpdateTask(
 	ctx context.Context,
 	req *connect.Request[taskguildv1.UpdateTaskRequest],
 ) (*connect.Response[taskguildv1.UpdateTaskResponse], error) {
-	status, err := h.protoToTaskStatus(req.Msg.Status)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid status: %w", err))
-	}
-
 	updateReq := &task.UpdateTaskRequest{
 		ID:          req.Msg.Id,
-		Status:      status,
 		Description: req.Msg.Description,
 		Metadata:    req.Msg.Metadata,
 	}
@@ -124,10 +110,7 @@ func (h *TaskServiceHandler) UpdateTask(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update task: %w", err))
 	}
 
-	protoTask, err := h.taskToProto(updatedTask)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to convert task: %w", err))
-	}
+	protoTask := h.taskToProto(updatedTask)
 
 	return connect.NewResponse(&taskguildv1.UpdateTaskResponse{
 		Task: protoTask,
@@ -144,94 +127,135 @@ func (h *TaskServiceHandler) CloseTask(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to close task: %w", err))
 	}
 
-	protoTask, err := h.taskToProto(closedTask)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to convert task: %w", err))
-	}
+	protoTask := h.taskToProto(closedTask)
 
 	return connect.NewResponse(&taskguildv1.CloseTaskResponse{
 		Task: protoTask,
 	}), nil
 }
 
-// TryAcquireTask handles atomic task acquisition requests
-func (h *TaskServiceHandler) TryAcquireTask(ctx context.Context, req *connect.Request[taskguildv1.TryAcquireTaskRequest]) (*connect.Response[taskguildv1.TryAcquireTaskResponse], error) {
-	// Convert proto request to internal type
-	expectedStatus, err := h.protoToTaskStatus(req.Msg.ExpectedStatus)
-	if err != nil {
-		return connect.NewResponse(&taskguildv1.TryAcquireTaskResponse{
-			Task:         nil,
-			Success:      false,
-			ErrorMessage: fmt.Sprintf("invalid expected status: %v", err),
-		}), nil
+// TryAcquireProcess handles atomic process acquisition
+func (h *TaskServiceHandler) TryAcquireProcess(ctx context.Context, req *connect.Request[taskguildv1.TryAcquireProcessRequest]) (*connect.Response[taskguildv1.TryAcquireProcessResponse], error) {
+	acquireReq := &task.TryAcquireProcessRequest{
+		TaskID:      req.Msg.TaskId,
+		ProcessName: req.Msg.ProcessName,
+		AgentID:     req.Msg.AgentId,
 	}
 
-	newStatus, err := h.protoToTaskStatus(req.Msg.NewStatus)
+	taskResult, err := h.service.TryAcquireProcess(acquireReq)
 	if err != nil {
-		return connect.NewResponse(&taskguildv1.TryAcquireTaskResponse{
-			Task:         nil,
-			Success:      false,
-			ErrorMessage: fmt.Sprintf("invalid new status: %v", err),
-		}), nil
-	}
-
-	acquireReq := &task.TryAcquireTaskRequest{
-		ID:             req.Msg.Id,
-		ExpectedStatus: expectedStatus,
-		NewStatus:      newStatus,
-		AgentID:        req.Msg.AgentId,
-	}
-
-	taskResult, err := h.service.TryAcquireTask(acquireReq)
-	if err != nil {
-		// Return response with error message but don't fail the RPC
-		return connect.NewResponse(&taskguildv1.TryAcquireTaskResponse{
+		return connect.NewResponse(&taskguildv1.TryAcquireProcessResponse{
 			Task:         nil,
 			Success:      false,
 			ErrorMessage: err.Error(),
 		}), nil
 	}
 
-	protoTask, err := h.taskToProto(taskResult)
-	if err != nil {
-		return connect.NewResponse(&taskguildv1.TryAcquireTaskResponse{
-			Task:         nil,
-			Success:      false,
-			ErrorMessage: fmt.Sprintf("failed to convert task to proto: %v", err),
-		}), nil
-	}
+	protoTask := h.taskToProto(taskResult)
 
-	return connect.NewResponse(&taskguildv1.TryAcquireTaskResponse{
+	return connect.NewResponse(&taskguildv1.TryAcquireProcessResponse{
 		Task:         protoTask,
 		Success:      true,
 		ErrorMessage: "",
 	}), nil
 }
 
-// ReleaseTask handles task release requests (deprecated - use CompleteTask)
-func (h *TaskServiceHandler) ReleaseTask(ctx context.Context, req *connect.Request[taskguildv1.ReleaseTaskRequest]) (*connect.Response[taskguildv1.ReleaseTaskResponse], error) {
-	// Use CompleteTask with default CLOSED status for backward compatibility
-	err := h.service.CompleteTask(req.Msg.Id, req.Msg.AgentId, "CLOSED")
+// CompleteProcess marks a process as completed
+func (h *TaskServiceHandler) CompleteProcess(ctx context.Context, req *connect.Request[taskguildv1.CompleteProcessRequest]) (*connect.Response[taskguildv1.CompleteProcessResponse], error) {
+	err := h.service.CompleteProcess(req.Msg.TaskId, req.Msg.ProcessName, req.Msg.AgentId)
 	if err != nil {
-		// Return response with error message but don't fail the RPC
-		return connect.NewResponse(&taskguildv1.ReleaseTaskResponse{
+		return connect.NewResponse(&taskguildv1.CompleteProcessResponse{
+			Task:         nil,
 			Success:      false,
 			ErrorMessage: err.Error(),
 		}), nil
 	}
 
-	return connect.NewResponse(&taskguildv1.ReleaseTaskResponse{
+	// Get updated task
+	taskResult, err := h.service.GetTask(req.Msg.TaskId)
+	if err != nil {
+		return connect.NewResponse(&taskguildv1.CompleteProcessResponse{
+			Task:         nil,
+			Success:      false,
+			ErrorMessage: fmt.Sprintf("process completed but failed to get task: %v", err),
+		}), nil
+	}
+
+	protoTask := h.taskToProto(taskResult)
+
+	return connect.NewResponse(&taskguildv1.CompleteProcessResponse{
+		Task:         protoTask,
 		Success:      true,
 		ErrorMessage: "",
 	}), nil
 }
 
+// RejectProcess marks a process as rejected and cascades reset to dependencies
+func (h *TaskServiceHandler) RejectProcess(ctx context.Context, req *connect.Request[taskguildv1.RejectProcessRequest]) (*connect.Response[taskguildv1.RejectProcessResponse], error) {
+	err := h.service.RejectProcess(req.Msg.TaskId, req.Msg.ProcessName, req.Msg.AgentId, req.Msg.Reason)
+	if err != nil {
+		return connect.NewResponse(&taskguildv1.RejectProcessResponse{
+			Task:           nil,
+			Success:        false,
+			ErrorMessage:   err.Error(),
+			ResetProcesses: nil,
+		}), nil
+	}
+
+	// Get updated task
+	taskResult, err := h.service.GetTask(req.Msg.TaskId)
+	if err != nil {
+		return connect.NewResponse(&taskguildv1.RejectProcessResponse{
+			Task:           nil,
+			Success:        false,
+			ErrorMessage:   fmt.Sprintf("process rejected but failed to get task: %v", err),
+			ResetProcesses: nil,
+		}), nil
+	}
+
+	protoTask := h.taskToProto(taskResult)
+
+	// Find reset processes (those that are now pending but were in progress/completed before)
+	resetProcesses := make([]string, 0)
+	for name, state := range taskResult.Processes {
+		if state.Status == task.ProcessStatusPending && name != req.Msg.ProcessName {
+			resetProcesses = append(resetProcesses, name)
+		}
+	}
+
+	return connect.NewResponse(&taskguildv1.RejectProcessResponse{
+		Task:           protoTask,
+		Success:        true,
+		ErrorMessage:   "",
+		ResetProcesses: resetProcesses,
+	}), nil
+}
+
 // Helper methods for conversion
 
-func (h *TaskServiceHandler) taskToProto(t *task.Task) (*taskguildv1.Task, error) {
-	status, err := h.taskStatusToProto(t.Status)
-	if err != nil {
-		return nil, err
+func (h *TaskServiceHandler) taskToProto(t *task.Task) *taskguildv1.Task {
+	// Convert overall status from process states
+	status := h.overallStatusToProto(t.GetOverallStatus())
+
+	// Build process status string for metadata
+	var processStatusParts []string
+	for name, state := range t.Processes {
+		processStatusParts = append(processStatusParts, fmt.Sprintf("%s:%s", name, state.Status))
+	}
+
+	// Merge process info into metadata
+	metadata := make(map[string]string)
+	if t.Metadata != nil {
+		for k, v := range t.Metadata {
+			metadata[k] = v
+		}
+	}
+	metadata["processes"] = strings.Join(processStatusParts, ",")
+
+	// Convert process states to proto
+	protoProcesses := make(map[string]*taskguildv1.ProcessState)
+	for name, state := range t.Processes {
+		protoProcesses[name] = h.processStateToProto(state)
 	}
 
 	return &taskguildv1.Task{
@@ -240,55 +264,45 @@ func (h *TaskServiceHandler) taskToProto(t *task.Task) (*taskguildv1.Task, error
 		Description: t.Description,
 		Status:      status,
 		Type:        t.Type,
-		AssignedTo:  t.AssignedTo,
 		CreatedAt:   timestamppb.New(t.CreatedAt),
 		UpdatedAt:   timestamppb.New(t.UpdatedAt),
-		Metadata:    t.Metadata,
-	}, nil
-}
-
-func (h *TaskServiceHandler) taskStatusToProto(status string) (taskguildv1.TaskStatus, error) {
-	switch status {
-	case string(task.StatusCreated):
-		return taskguildv1.TaskStatus_TASK_STATUS_CREATED, nil
-	case string(task.StatusAnalyzing):
-		return taskguildv1.TaskStatus_TASK_STATUS_ANALYZING, nil
-	case string(task.StatusDesigned):
-		return taskguildv1.TaskStatus_TASK_STATUS_DESIGNED, nil
-	case string(task.StatusInProgress):
-		return taskguildv1.TaskStatus_TASK_STATUS_IN_PROGRESS, nil
-	case string(task.StatusReviewReady):
-		return taskguildv1.TaskStatus_TASK_STATUS_REVIEW_READY, nil
-	case string(task.StatusQAReady):
-		return taskguildv1.TaskStatus_TASK_STATUS_QA_READY, nil
-	case string(task.StatusClosed):
-		return taskguildv1.TaskStatus_TASK_STATUS_CLOSED, nil
-	case string(task.StatusCancelled):
-		return taskguildv1.TaskStatus_TASK_STATUS_CANCELLED, nil
-	default:
-		return taskguildv1.TaskStatus_TASK_STATUS_UNSPECIFIED, fmt.Errorf("unknown task status: %s", status)
+		Metadata:    metadata,
+		Processes:   protoProcesses,
 	}
 }
 
-func (h *TaskServiceHandler) protoToTaskStatus(status taskguildv1.TaskStatus) (task.Status, error) {
+func (h *TaskServiceHandler) processStateToProto(state *task.ProcessState) *taskguildv1.ProcessState {
+	protoStatus := taskguildv1.ProcessStatus_PROCESS_STATUS_UNSPECIFIED
+	switch state.Status {
+	case task.ProcessStatusPending:
+		protoStatus = taskguildv1.ProcessStatus_PROCESS_STATUS_PENDING
+	case task.ProcessStatusInProgress:
+		protoStatus = taskguildv1.ProcessStatus_PROCESS_STATUS_IN_PROGRESS
+	case task.ProcessStatusCompleted:
+		protoStatus = taskguildv1.ProcessStatus_PROCESS_STATUS_COMPLETED
+	case task.ProcessStatusRejected:
+		protoStatus = taskguildv1.ProcessStatus_PROCESS_STATUS_REJECTED
+	}
+
+	return &taskguildv1.ProcessState{
+		Status:     protoStatus,
+		AssignedTo: state.AssignedTo,
+	}
+}
+
+func (h *TaskServiceHandler) overallStatusToProto(status string) taskguildv1.TaskStatus {
 	switch status {
-	case taskguildv1.TaskStatus_TASK_STATUS_CREATED:
-		return task.StatusCreated, nil
-	case taskguildv1.TaskStatus_TASK_STATUS_ANALYZING:
-		return task.StatusAnalyzing, nil
-	case taskguildv1.TaskStatus_TASK_STATUS_DESIGNED:
-		return task.StatusDesigned, nil
-	case taskguildv1.TaskStatus_TASK_STATUS_IN_PROGRESS:
-		return task.StatusInProgress, nil
-	case taskguildv1.TaskStatus_TASK_STATUS_REVIEW_READY:
-		return task.StatusReviewReady, nil
-	case taskguildv1.TaskStatus_TASK_STATUS_QA_READY:
-		return task.StatusQAReady, nil
-	case taskguildv1.TaskStatus_TASK_STATUS_CLOSED:
-		return task.StatusClosed, nil
-	case taskguildv1.TaskStatus_TASK_STATUS_CANCELLED:
-		return task.StatusCancelled, nil
+	case "CLOSED":
+		return taskguildv1.TaskStatus_TASK_STATUS_CLOSED
+	case "IN_PROGRESS":
+		return taskguildv1.TaskStatus_TASK_STATUS_IN_PROGRESS
+	case "PENDING":
+		return taskguildv1.TaskStatus_TASK_STATUS_PENDING
+	case "REJECTED":
+		return taskguildv1.TaskStatus_TASK_STATUS_REJECTED
+	case "COMPLETED":
+		return taskguildv1.TaskStatus_TASK_STATUS_COMPLETED
 	default:
-		return "", fmt.Errorf("unknown task status: %v", status)
+		return taskguildv1.TaskStatus_TASK_STATUS_UNSPECIFIED
 	}
 }

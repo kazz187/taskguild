@@ -70,11 +70,12 @@ func (c *TaskClient) GetTask(ctx context.Context, taskID string) (*taskguildv1.T
 	return resp.Msg.Task, nil
 }
 
-// UpdateTask updates a task
-func (c *TaskClient) UpdateTask(ctx context.Context, taskID string, status taskguildv1.TaskStatus) (*taskguildv1.Task, error) {
+// UpdateTask updates a task's description and metadata
+func (c *TaskClient) UpdateTask(ctx context.Context, taskID string, description string, metadata map[string]string) (*taskguildv1.Task, error) {
 	req := connect.NewRequest(&taskguildv1.UpdateTaskRequest{
-		Id:     taskID,
-		Status: status,
+		Id:          taskID,
+		Description: description,
+		Metadata:    metadata,
 	})
 
 	resp, err := c.client.UpdateTask(ctx, req)
@@ -83,6 +84,55 @@ func (c *TaskClient) UpdateTask(ctx context.Context, taskID string, status taskg
 	}
 
 	return resp.Msg.Task, nil
+}
+
+// TryAcquireProcess attempts to atomically acquire a process for an agent
+func (c *TaskClient) TryAcquireProcess(ctx context.Context, taskID, processName, agentID string) (*taskguildv1.Task, bool, error) {
+	req := connect.NewRequest(&taskguildv1.TryAcquireProcessRequest{
+		TaskId:      taskID,
+		ProcessName: processName,
+		AgentId:     agentID,
+	})
+
+	resp, err := c.client.TryAcquireProcess(ctx, req)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to try acquire process: %w", err)
+	}
+
+	return resp.Msg.Task, resp.Msg.Success, nil
+}
+
+// CompleteProcess marks a process as completed
+func (c *TaskClient) CompleteProcess(ctx context.Context, taskID, processName, agentID string) (*taskguildv1.Task, bool, error) {
+	req := connect.NewRequest(&taskguildv1.CompleteProcessRequest{
+		TaskId:      taskID,
+		ProcessName: processName,
+		AgentId:     agentID,
+	})
+
+	resp, err := c.client.CompleteProcess(ctx, req)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to complete process: %w", err)
+	}
+
+	return resp.Msg.Task, resp.Msg.Success, nil
+}
+
+// RejectProcess marks a process as rejected with cascade reset
+func (c *TaskClient) RejectProcess(ctx context.Context, taskID, processName, agentID, reason string) (*taskguildv1.Task, bool, []string, error) {
+	req := connect.NewRequest(&taskguildv1.RejectProcessRequest{
+		TaskId:      taskID,
+		ProcessName: processName,
+		AgentId:     agentID,
+		Reason:      reason,
+	})
+
+	resp, err := c.client.RejectProcess(ctx, req)
+	if err != nil {
+		return nil, false, nil, fmt.Errorf("failed to reject process: %w", err)
+	}
+
+	return resp.Msg.Task, resp.Msg.Success, resp.Msg.ResetProcesses, nil
 }
 
 // CloseTask closes a task

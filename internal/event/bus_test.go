@@ -16,8 +16,9 @@ func TestEventBus_PublishSubscribe(t *testing.T) {
 	defer cancel()
 
 	// Create event bus
-	eb := NewEventBus()
-	err := eb.Start(ctx)
+	eb, err := NewEventBus()
+	require.NoError(t, err)
+	err = eb.Start(ctx)
 	require.NoError(t, err)
 	defer eb.Stop()
 	<-eb.router.Running()
@@ -66,8 +67,9 @@ func TestEventBus_MultipleSubscribers(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	eb := NewEventBus()
-	err := eb.Start(ctx)
+	eb, err := NewEventBus()
+	require.NoError(t, err)
+	err = eb.Start(ctx)
 	require.NoError(t, err)
 	defer eb.Stop()
 
@@ -115,8 +117,9 @@ func TestEventBus_TypedEvents(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	eb := NewEventBus()
-	err := eb.Start(ctx)
+	eb, err := NewEventBus()
+	require.NoError(t, err)
+	err = eb.Start(ctx)
 	require.NoError(t, err)
 	defer eb.Stop()
 	<-eb.router.Running()
@@ -158,8 +161,9 @@ func TestEventBus_HandlerTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	eb := NewEventBus()
-	err := eb.Start(ctx)
+	eb, err := NewEventBus()
+	require.NoError(t, err)
+	err = eb.Start(ctx)
 	require.NoError(t, err)
 	defer eb.Stop()
 
@@ -193,13 +197,14 @@ func TestEventBus_HandlerTimeout(t *testing.T) {
 }
 
 func TestEventBus_StartStop(t *testing.T) {
-	eb := NewEventBus()
+	eb, err := NewEventBus()
+	require.NoError(t, err)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	// Start should succeed
-	err := eb.Start(ctx)
+	err = eb.Start(ctx)
 	require.NoError(t, err)
 
 	// Router should be running

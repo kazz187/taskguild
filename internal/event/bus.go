@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -28,7 +27,7 @@ type EventBus struct {
 type EventHandler[T any] func(ctx context.Context, event *Event[T]) error
 
 // NewEventBus creates a new event bus
-func NewEventBus() *EventBus {
+func NewEventBus() (*EventBus, error) {
 	logger := watermill.NopLogger{}
 
 	pubSub := gochannel.NewGoChannel(
@@ -42,14 +41,14 @@ func NewEventBus() *EventBus {
 		CloseTimeout: 5 * time.Second, // Allow time for handlers to complete gracefully
 	}, logger)
 	if err != nil {
-		log.Fatalf("failed to create router: %v", err)
+		return nil, fmt.Errorf("failed to create router: %w", err)
 	}
 
 	return &EventBus{
 		pubSub: pubSub,
 		router: router,
 		logger: logger,
-	}
+	}, nil
 }
 
 // Start starts the event bus

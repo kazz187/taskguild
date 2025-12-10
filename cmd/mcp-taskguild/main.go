@@ -95,6 +95,29 @@ func main() {
 		client.CloseTaskHandler,
 	)
 
+	// Process-related tools
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name:        "taskguild_complete_process",
+			Title:       "TaskGuild: Complete Process",
+			Description: "Mark a process as completed. Use this when you have successfully finished your assigned work on a task process (e.g., implement, review, qa).",
+			InputSchema: CompleteProcessInputSchema,
+		},
+		client.CompleteProcessHandler,
+	)
+
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name:        "taskguild_reject_process",
+			Title:       "TaskGuild: Reject Process",
+			Description: "Mark a process as rejected and reset its dependencies. Use this when the work needs to be redone (e.g., code review failed). This will cascade-reset dependent processes.",
+			InputSchema: RejectProcessInputSchema,
+		},
+		client.RejectProcessHandler,
+	)
+
 	if err := server.Run(ctx, mcp.NewStdioTransport()); err != nil {
 		logger.ErrorContext(ctx, "failed to run server", "error", err)
 		os.Exit(1)

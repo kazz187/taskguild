@@ -43,11 +43,15 @@ const (
 	TaskServiceUpdateTaskProcedure = "/taskguild.v1.TaskService/UpdateTask"
 	// TaskServiceCloseTaskProcedure is the fully-qualified name of the TaskService's CloseTask RPC.
 	TaskServiceCloseTaskProcedure = "/taskguild.v1.TaskService/CloseTask"
-	// TaskServiceTryAcquireTaskProcedure is the fully-qualified name of the TaskService's
-	// TryAcquireTask RPC.
-	TaskServiceTryAcquireTaskProcedure = "/taskguild.v1.TaskService/TryAcquireTask"
-	// TaskServiceReleaseTaskProcedure is the fully-qualified name of the TaskService's ReleaseTask RPC.
-	TaskServiceReleaseTaskProcedure = "/taskguild.v1.TaskService/ReleaseTask"
+	// TaskServiceTryAcquireProcessProcedure is the fully-qualified name of the TaskService's
+	// TryAcquireProcess RPC.
+	TaskServiceTryAcquireProcessProcedure = "/taskguild.v1.TaskService/TryAcquireProcess"
+	// TaskServiceCompleteProcessProcedure is the fully-qualified name of the TaskService's
+	// CompleteProcess RPC.
+	TaskServiceCompleteProcessProcedure = "/taskguild.v1.TaskService/CompleteProcess"
+	// TaskServiceRejectProcessProcedure is the fully-qualified name of the TaskService's RejectProcess
+	// RPC.
+	TaskServiceRejectProcessProcedure = "/taskguild.v1.TaskService/RejectProcess"
 )
 
 // TaskServiceClient is a client for the taskguild.v1.TaskService service.
@@ -58,14 +62,16 @@ type TaskServiceClient interface {
 	ListTasks(context.Context, *connect.Request[v1.ListTasksRequest]) (*connect.Response[v1.ListTasksResponse], error)
 	// Get task details
 	GetTask(context.Context, *connect.Request[v1.GetTaskRequest]) (*connect.Response[v1.GetTaskResponse], error)
-	// Update task status
+	// Update task metadata (description, metadata fields)
 	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.UpdateTaskResponse], error)
 	// Close a task
 	CloseTask(context.Context, *connect.Request[v1.CloseTaskRequest]) (*connect.Response[v1.CloseTaskResponse], error)
-	// Try to atomically acquire a task using compare-and-swap semantics
-	TryAcquireTask(context.Context, *connect.Request[v1.TryAcquireTaskRequest]) (*connect.Response[v1.TryAcquireTaskResponse], error)
-	// Release a task assignment
-	ReleaseTask(context.Context, *connect.Request[v1.ReleaseTaskRequest]) (*connect.Response[v1.ReleaseTaskResponse], error)
+	// Try to atomically acquire a process using compare-and-swap semantics
+	TryAcquireProcess(context.Context, *connect.Request[v1.TryAcquireProcessRequest]) (*connect.Response[v1.TryAcquireProcessResponse], error)
+	// Complete a process
+	CompleteProcess(context.Context, *connect.Request[v1.CompleteProcessRequest]) (*connect.Response[v1.CompleteProcessResponse], error)
+	// Reject a process and cascade-reset dependencies
+	RejectProcess(context.Context, *connect.Request[v1.RejectProcessRequest]) (*connect.Response[v1.RejectProcessResponse], error)
 }
 
 // NewTaskServiceClient constructs a client for the taskguild.v1.TaskService service. By default, it
@@ -109,16 +115,22 @@ func NewTaskServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(taskServiceMethods.ByName("CloseTask")),
 			connect.WithClientOptions(opts...),
 		),
-		tryAcquireTask: connect.NewClient[v1.TryAcquireTaskRequest, v1.TryAcquireTaskResponse](
+		tryAcquireProcess: connect.NewClient[v1.TryAcquireProcessRequest, v1.TryAcquireProcessResponse](
 			httpClient,
-			baseURL+TaskServiceTryAcquireTaskProcedure,
-			connect.WithSchema(taskServiceMethods.ByName("TryAcquireTask")),
+			baseURL+TaskServiceTryAcquireProcessProcedure,
+			connect.WithSchema(taskServiceMethods.ByName("TryAcquireProcess")),
 			connect.WithClientOptions(opts...),
 		),
-		releaseTask: connect.NewClient[v1.ReleaseTaskRequest, v1.ReleaseTaskResponse](
+		completeProcess: connect.NewClient[v1.CompleteProcessRequest, v1.CompleteProcessResponse](
 			httpClient,
-			baseURL+TaskServiceReleaseTaskProcedure,
-			connect.WithSchema(taskServiceMethods.ByName("ReleaseTask")),
+			baseURL+TaskServiceCompleteProcessProcedure,
+			connect.WithSchema(taskServiceMethods.ByName("CompleteProcess")),
+			connect.WithClientOptions(opts...),
+		),
+		rejectProcess: connect.NewClient[v1.RejectProcessRequest, v1.RejectProcessResponse](
+			httpClient,
+			baseURL+TaskServiceRejectProcessProcedure,
+			connect.WithSchema(taskServiceMethods.ByName("RejectProcess")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -126,13 +138,14 @@ func NewTaskServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // taskServiceClient implements TaskServiceClient.
 type taskServiceClient struct {
-	createTask     *connect.Client[v1.CreateTaskRequest, v1.CreateTaskResponse]
-	listTasks      *connect.Client[v1.ListTasksRequest, v1.ListTasksResponse]
-	getTask        *connect.Client[v1.GetTaskRequest, v1.GetTaskResponse]
-	updateTask     *connect.Client[v1.UpdateTaskRequest, v1.UpdateTaskResponse]
-	closeTask      *connect.Client[v1.CloseTaskRequest, v1.CloseTaskResponse]
-	tryAcquireTask *connect.Client[v1.TryAcquireTaskRequest, v1.TryAcquireTaskResponse]
-	releaseTask    *connect.Client[v1.ReleaseTaskRequest, v1.ReleaseTaskResponse]
+	createTask        *connect.Client[v1.CreateTaskRequest, v1.CreateTaskResponse]
+	listTasks         *connect.Client[v1.ListTasksRequest, v1.ListTasksResponse]
+	getTask           *connect.Client[v1.GetTaskRequest, v1.GetTaskResponse]
+	updateTask        *connect.Client[v1.UpdateTaskRequest, v1.UpdateTaskResponse]
+	closeTask         *connect.Client[v1.CloseTaskRequest, v1.CloseTaskResponse]
+	tryAcquireProcess *connect.Client[v1.TryAcquireProcessRequest, v1.TryAcquireProcessResponse]
+	completeProcess   *connect.Client[v1.CompleteProcessRequest, v1.CompleteProcessResponse]
+	rejectProcess     *connect.Client[v1.RejectProcessRequest, v1.RejectProcessResponse]
 }
 
 // CreateTask calls taskguild.v1.TaskService.CreateTask.
@@ -160,14 +173,19 @@ func (c *taskServiceClient) CloseTask(ctx context.Context, req *connect.Request[
 	return c.closeTask.CallUnary(ctx, req)
 }
 
-// TryAcquireTask calls taskguild.v1.TaskService.TryAcquireTask.
-func (c *taskServiceClient) TryAcquireTask(ctx context.Context, req *connect.Request[v1.TryAcquireTaskRequest]) (*connect.Response[v1.TryAcquireTaskResponse], error) {
-	return c.tryAcquireTask.CallUnary(ctx, req)
+// TryAcquireProcess calls taskguild.v1.TaskService.TryAcquireProcess.
+func (c *taskServiceClient) TryAcquireProcess(ctx context.Context, req *connect.Request[v1.TryAcquireProcessRequest]) (*connect.Response[v1.TryAcquireProcessResponse], error) {
+	return c.tryAcquireProcess.CallUnary(ctx, req)
 }
 
-// ReleaseTask calls taskguild.v1.TaskService.ReleaseTask.
-func (c *taskServiceClient) ReleaseTask(ctx context.Context, req *connect.Request[v1.ReleaseTaskRequest]) (*connect.Response[v1.ReleaseTaskResponse], error) {
-	return c.releaseTask.CallUnary(ctx, req)
+// CompleteProcess calls taskguild.v1.TaskService.CompleteProcess.
+func (c *taskServiceClient) CompleteProcess(ctx context.Context, req *connect.Request[v1.CompleteProcessRequest]) (*connect.Response[v1.CompleteProcessResponse], error) {
+	return c.completeProcess.CallUnary(ctx, req)
+}
+
+// RejectProcess calls taskguild.v1.TaskService.RejectProcess.
+func (c *taskServiceClient) RejectProcess(ctx context.Context, req *connect.Request[v1.RejectProcessRequest]) (*connect.Response[v1.RejectProcessResponse], error) {
+	return c.rejectProcess.CallUnary(ctx, req)
 }
 
 // TaskServiceHandler is an implementation of the taskguild.v1.TaskService service.
@@ -178,14 +196,16 @@ type TaskServiceHandler interface {
 	ListTasks(context.Context, *connect.Request[v1.ListTasksRequest]) (*connect.Response[v1.ListTasksResponse], error)
 	// Get task details
 	GetTask(context.Context, *connect.Request[v1.GetTaskRequest]) (*connect.Response[v1.GetTaskResponse], error)
-	// Update task status
+	// Update task metadata (description, metadata fields)
 	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.UpdateTaskResponse], error)
 	// Close a task
 	CloseTask(context.Context, *connect.Request[v1.CloseTaskRequest]) (*connect.Response[v1.CloseTaskResponse], error)
-	// Try to atomically acquire a task using compare-and-swap semantics
-	TryAcquireTask(context.Context, *connect.Request[v1.TryAcquireTaskRequest]) (*connect.Response[v1.TryAcquireTaskResponse], error)
-	// Release a task assignment
-	ReleaseTask(context.Context, *connect.Request[v1.ReleaseTaskRequest]) (*connect.Response[v1.ReleaseTaskResponse], error)
+	// Try to atomically acquire a process using compare-and-swap semantics
+	TryAcquireProcess(context.Context, *connect.Request[v1.TryAcquireProcessRequest]) (*connect.Response[v1.TryAcquireProcessResponse], error)
+	// Complete a process
+	CompleteProcess(context.Context, *connect.Request[v1.CompleteProcessRequest]) (*connect.Response[v1.CompleteProcessResponse], error)
+	// Reject a process and cascade-reset dependencies
+	RejectProcess(context.Context, *connect.Request[v1.RejectProcessRequest]) (*connect.Response[v1.RejectProcessResponse], error)
 }
 
 // NewTaskServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -225,16 +245,22 @@ func NewTaskServiceHandler(svc TaskServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(taskServiceMethods.ByName("CloseTask")),
 		connect.WithHandlerOptions(opts...),
 	)
-	taskServiceTryAcquireTaskHandler := connect.NewUnaryHandler(
-		TaskServiceTryAcquireTaskProcedure,
-		svc.TryAcquireTask,
-		connect.WithSchema(taskServiceMethods.ByName("TryAcquireTask")),
+	taskServiceTryAcquireProcessHandler := connect.NewUnaryHandler(
+		TaskServiceTryAcquireProcessProcedure,
+		svc.TryAcquireProcess,
+		connect.WithSchema(taskServiceMethods.ByName("TryAcquireProcess")),
 		connect.WithHandlerOptions(opts...),
 	)
-	taskServiceReleaseTaskHandler := connect.NewUnaryHandler(
-		TaskServiceReleaseTaskProcedure,
-		svc.ReleaseTask,
-		connect.WithSchema(taskServiceMethods.ByName("ReleaseTask")),
+	taskServiceCompleteProcessHandler := connect.NewUnaryHandler(
+		TaskServiceCompleteProcessProcedure,
+		svc.CompleteProcess,
+		connect.WithSchema(taskServiceMethods.ByName("CompleteProcess")),
+		connect.WithHandlerOptions(opts...),
+	)
+	taskServiceRejectProcessHandler := connect.NewUnaryHandler(
+		TaskServiceRejectProcessProcedure,
+		svc.RejectProcess,
+		connect.WithSchema(taskServiceMethods.ByName("RejectProcess")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/taskguild.v1.TaskService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -249,10 +275,12 @@ func NewTaskServiceHandler(svc TaskServiceHandler, opts ...connect.HandlerOption
 			taskServiceUpdateTaskHandler.ServeHTTP(w, r)
 		case TaskServiceCloseTaskProcedure:
 			taskServiceCloseTaskHandler.ServeHTTP(w, r)
-		case TaskServiceTryAcquireTaskProcedure:
-			taskServiceTryAcquireTaskHandler.ServeHTTP(w, r)
-		case TaskServiceReleaseTaskProcedure:
-			taskServiceReleaseTaskHandler.ServeHTTP(w, r)
+		case TaskServiceTryAcquireProcessProcedure:
+			taskServiceTryAcquireProcessHandler.ServeHTTP(w, r)
+		case TaskServiceCompleteProcessProcedure:
+			taskServiceCompleteProcessHandler.ServeHTTP(w, r)
+		case TaskServiceRejectProcessProcedure:
+			taskServiceRejectProcessHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -282,10 +310,14 @@ func (UnimplementedTaskServiceHandler) CloseTask(context.Context, *connect.Reque
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.CloseTask is not implemented"))
 }
 
-func (UnimplementedTaskServiceHandler) TryAcquireTask(context.Context, *connect.Request[v1.TryAcquireTaskRequest]) (*connect.Response[v1.TryAcquireTaskResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.TryAcquireTask is not implemented"))
+func (UnimplementedTaskServiceHandler) TryAcquireProcess(context.Context, *connect.Request[v1.TryAcquireProcessRequest]) (*connect.Response[v1.TryAcquireProcessResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.TryAcquireProcess is not implemented"))
 }
 
-func (UnimplementedTaskServiceHandler) ReleaseTask(context.Context, *connect.Request[v1.ReleaseTaskRequest]) (*connect.Response[v1.ReleaseTaskResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.ReleaseTask is not implemented"))
+func (UnimplementedTaskServiceHandler) CompleteProcess(context.Context, *connect.Request[v1.CompleteProcessRequest]) (*connect.Response[v1.CompleteProcessResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.CompleteProcess is not implemented"))
+}
+
+func (UnimplementedTaskServiceHandler) RejectProcess(context.Context, *connect.Request[v1.RejectProcessRequest]) (*connect.Response[v1.RejectProcessResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.RejectProcess is not implemented"))
 }

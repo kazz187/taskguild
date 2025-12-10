@@ -2,9 +2,7 @@ package agent
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -37,11 +35,6 @@ const (
 	ActionTaskCreate   Action = "task_create"
 )
 
-type EventTrigger struct {
-	Event     string `yaml:"event"`
-	Condition string `yaml:"condition"`
-}
-
 type ScalingConfig struct {
 	Min  int  `yaml:"min"`
 	Max  int  `yaml:"max"`
@@ -52,13 +45,14 @@ type Agent struct {
 	ID           string         `yaml:"id"`
 	Name         string         `yaml:"name"`
 	Type         string         `yaml:"type"`
+	Process      string         `yaml:"process"` // The process this agent handles
 	Description  string         `yaml:"description,omitempty"`
 	Version      string         `yaml:"version,omitempty"`
 	Instructions string         `yaml:"instructions,omitempty"`
-	Triggers     []EventTrigger `yaml:"triggers"`
 	Scaling      *ScalingConfig `yaml:"scaling,omitempty"`
 	Status       Status         `yaml:"status"`
 	TaskID       string         `yaml:"task_id,omitempty"`
+	ProcessName  string         `yaml:"process_name,omitempty"` // Currently executing process
 	WorktreePath string         `yaml:"worktree_path,omitempty"`
 	CreatedAt    time.Time      `yaml:"created_at"`
 	UpdatedAt    time.Time      `yaml:"updated_at"`
@@ -69,8 +63,11 @@ type Agent struct {
 	mutex     sync.RWMutex
 	waitGroup *conc.WaitGroup
 	executor  Executor
-	eventChan chan interface{}
 	config    *AgentConfig
+
+	// Process watcher for real-time status updates
+	processWatchChan <-chan task.ProcessChangeEvent
+	processWatchDone chan struct{}
 
 	// Permission handling channels
 	permissionRequestChan  chan PermissionRequest
@@ -95,16 +92,16 @@ func NewAgent(id string, config *AgentConfig, factory ExecutorFactory) (*Agent, 
 		ID:                     id,
 		Name:                   config.Name,
 		Type:                   config.Type,
+		Process:                config.Process,
 		Instructions:           config.Instructions,
-		Triggers:               config.Triggers,
 		Scaling:                config.Scaling,
 		Status:                 StatusIdle,
 		CreatedAt:              now,
 		UpdatedAt:              now,
 		waitGroup:              conc.NewWaitGroup(),
 		executor:               executor,
-		eventChan:              make(chan interface{}, 100),
 		config:                 config,
+		processWatchDone:       make(chan struct{}),
 		permissionRequestChan:  make(chan PermissionRequest, 10),
 		permissionResponseChan: make(chan PermissionResponse, 10),
 	}, nil
@@ -160,9 +157,9 @@ func (a *Agent) InitializeWithDependencies(taskService task.Service, eventBus *e
 	executorConfig := ExecutorConfig{
 		AgentID:                a.ID,
 		Name:                   a.Name,
+		Process:                a.Process,
 		Instructions:           a.Instructions,
 		WorktreePath:           a.WorktreePath,
-		StatusOptions:          a.config.StatusOptions,
 		PermissionRequestChan:  a.permissionRequestChan,
 		PermissionResponseChan: a.permissionResponseChan,
 		TaskService:            taskService,
@@ -171,69 +168,6 @@ func (a *Agent) InitializeWithDependencies(taskService task.Service, eventBus *e
 	}
 
 	return a.executor.Initialize(context.Background(), executorConfig)
-}
-
-// evaluateCondition provides simple condition evaluation
-func (a *Agent) evaluateCondition(condition string, context map[string]interface{}) bool {
-	// Handle OR conditions (||)
-	if strings.Contains(condition, "||") {
-		parts := strings.Split(condition, "||")
-		for _, part := range parts {
-			if a.evaluateSimpleCondition(strings.TrimSpace(part), context) {
-				return true
-			}
-		}
-		return false
-	}
-
-	// Handle AND conditions (&&)
-	if strings.Contains(condition, "&&") {
-		parts := strings.Split(condition, "&&")
-		for _, part := range parts {
-			if !a.evaluateSimpleCondition(strings.TrimSpace(part), context) {
-				return false
-			}
-		}
-		return true
-	}
-
-	// Single condition
-	return a.evaluateSimpleCondition(condition, context)
-}
-
-// evaluateSimpleCondition evaluates a single condition like: task.type == "feature"
-func (a *Agent) evaluateSimpleCondition(condition string, context map[string]interface{}) bool {
-	// Parse condition: variable == "value" or variable == value
-	if strings.Contains(condition, "==") {
-		parts := strings.SplitN(condition, "==", 2)
-		if len(parts) != 2 {
-			return false
-		}
-
-		variable := strings.TrimSpace(parts[0])
-		expectedValue := strings.TrimSpace(parts[1])
-
-		// Remove quotes from expected value if present
-		if (strings.HasPrefix(expectedValue, `"`) && strings.HasSuffix(expectedValue, `"`)) ||
-			(strings.HasPrefix(expectedValue, `'`) && strings.HasSuffix(expectedValue, `'`)) {
-			expectedValue = expectedValue[1 : len(expectedValue)-1]
-		}
-
-		// Get actual value from context
-		contextKey := strings.Replace(variable, "task.", "task_", 1)
-		contextKey = strings.Replace(contextKey, ".", "_", -1)
-
-		actualValue, exists := context[contextKey]
-		if !exists {
-			return false
-		}
-
-		// Convert to string for comparison
-		actualStr := fmt.Sprintf("%v", actualValue)
-		return actualStr == expectedValue
-	}
-
-	return false
 }
 
 func (a *Agent) Start(ctx context.Context) error {
@@ -256,28 +190,7 @@ func (a *Agent) Start(ctx context.Context) error {
 
 	a.Status = StatusIdle
 	a.UpdatedAt = time.Now()
-	color.ColoredPrintf(a.ID, "started with persistent connection\n")
-
-	// Subscribe to all event types this agent is interested in
-	for _, trigger := range a.Triggers {
-		eventType := event.EventType(trigger.Event)
-		handlerName := fmt.Sprintf("%s-%s", a.ID, trigger.Event)
-
-		// Subscribe using the event bus
-		err := a.eventBus.SubscribeAsync(eventType, handlerName, func(msg *event.EventMessage) error {
-			// Forward to agent's event channel
-			select {
-			case a.eventChan <- msg.Data:
-			case <-a.ctx.Done():
-				return a.ctx.Err()
-			}
-			return nil
-		})
-
-		if err != nil {
-			return fmt.Errorf("failed to subscribe to event %s: %w", trigger.Event, err)
-		}
-	}
+	color.ColoredPrintf(a.ID, "started with persistent connection (process: %s)\n", a.Process)
 
 	// Start agent goroutine using conc.WaitGroup for proper goroutine management
 	a.waitGroup.Go(a.run)
@@ -295,6 +208,12 @@ func (a *Agent) Stop() error {
 	}
 	a.Status = StatusStopped
 	a.UpdatedAt = time.Now()
+
+	// Signal process watcher to stop
+	select {
+	case a.processWatchDone <- struct{}{}:
+	default:
+	}
 	a.mutex.Unlock()
 
 	// Wait for all goroutines to finish (outside of mutex lock to avoid deadlock)
@@ -321,7 +240,7 @@ func (a *Agent) run() {
 			return
 
 		default:
-			// Get next work item (task or event)
+			// Get next work item (process to execute)
 			work := a.getNextWorkItem()
 			if work == nil {
 				// No work available, brief pause
@@ -338,14 +257,44 @@ func (a *Agent) run() {
 			a.UpdateStatus(StatusBusy)
 
 			// Set task assignment
-			a.setTaskAssignment(work.Task)
+			a.setTaskAssignment(work.Task, work.ProcessName)
+
+			// Start watching for process status changes
+			watchCtx, watchCancel := context.WithCancel(a.ctx)
+			abortChan := a.startProcessWatcher(watchCtx, work.Task.ID, work.ProcessName)
 
 			// Execute the work
-			color.ColoredPrintf(a.ID, "starting work execution: %s\n", work.ID)
-			result, err := a.executor.Execute(a.ctx, work)
+			color.ColoredPrintf(a.ID, "starting process execution: %s (task: %s)\n", work.ProcessName, work.Task.ID)
 
-			// Handle execution result
-			a.handleExecutionResult(work, result, err)
+			// Execute in a goroutine that can be aborted
+			resultChan := make(chan struct {
+				result *ExecutionResult
+				err    error
+			}, 1)
+
+			go func() {
+				result, err := a.executor.Execute(a.ctx, work)
+				resultChan <- struct {
+					result *ExecutionResult
+					err    error
+				}{result, err}
+			}()
+
+			// Wait for either completion or abort
+			select {
+			case r := <-resultChan:
+				// Normal completion
+				watchCancel()
+				a.handleExecutionResult(work, r.result, r.err)
+			case <-abortChan:
+				// Process was reset, abort execution
+				watchCancel()
+				color.ColoredPrintf(a.ID, "process %s was reset to pending, aborting execution\n", work.ProcessName)
+			case <-a.ctx.Done():
+				// Agent stopped
+				watchCancel()
+				color.ColoredPrintln(a.ID, "agent stopped during execution")
+			}
 
 			// Clear task assignment
 			a.clearTaskAssignment()
@@ -356,142 +305,116 @@ func (a *Agent) run() {
 	}
 }
 
-// fetchAvailableTask fetches an available task that matches this agent's capabilities
-func (a *Agent) fetchAvailableTask() *task.Task {
+// startProcessWatcher starts watching for process status changes
+// Returns a channel that will receive a signal if the process is reset to pending
+func (a *Agent) startProcessWatcher(ctx context.Context, taskID, processName string) <-chan struct{} {
+	abortChan := make(chan struct{}, 1)
+
 	if a.taskService == nil {
-		color.ColoredPrintln(a.ID, "task service is nil")
-		return nil
+		return abortChan
 	}
 
-	// Get all tasks
-	tasks, err := a.taskService.ListTasks()
-	if err != nil {
-		color.ColoredPrintf(a.ID, "error fetching tasks: %v\n", err)
-		return nil
-	}
+	watchChan := a.taskService.WatchProcess(taskID, processName)
 
-	// Find a task that needs work and matches our capabilities
-	for _, t := range tasks {
-		// Skip if task is already assigned to another agent or completed
-		if t.Status == "CLOSED" || t.Status == "CANCELLED" {
-			continue
-		}
+	go func() {
+		defer a.taskService.UnwatchProcess(taskID, processName, watchChan)
 
-		// Skip if task is already assigned to a different agent
-		if t.AssignedTo != "" && t.AssignedTo != a.ID {
-			continue
-		}
-
-		// Check if this task matches our triggers
-		for _, trigger := range a.Triggers {
-			var shouldAcquire bool
-			var expectedStatus task.Status
-			var newStatus task.Status
-
-			// For tasks in specific status, check if we have a trigger for status change
-			if trigger.Event == "task.status_changed" {
-				// Create context data that matches the event trigger condition
-				contextData := map[string]interface{}{
-					"task_id":    t.ID,
-					"task_type":  t.Type,
-					"to_status":  t.Status,
-					"new_status": t.Status,
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-a.processWatchDone:
+				return
+			case event, ok := <-watchChan:
+				if !ok {
+					return
 				}
-
-				if a.evaluateCondition(trigger.Condition, contextData) {
-					shouldAcquire = true
-					expectedStatus = task.Status(t.Status)
-					newStatus = "IN_PROGRESS"
+				// If process was reset to pending, signal abort
+				if event.NewStatus == task.ProcessStatusPending {
+					color.ColoredPrintf(a.ID, "process %s status changed to pending (changed by: %s)\n",
+						processName, event.ChangedBy)
+					select {
+					case abortChan <- struct{}{}:
+					default:
+					}
+					return
 				}
 			}
-
-			// For task.created events, check if task is recently created
-			if trigger.Event == "task.created" {
-				contextData := map[string]interface{}{
-					"task_id":   t.ID,
-					"task_type": t.Type,
-				}
-
-				if trigger.Condition == "" || a.evaluateCondition(trigger.Condition, contextData) {
-					shouldAcquire = true
-					expectedStatus = task.Status(t.Status)
-					newStatus = "IN_PROGRESS"
-				}
-			}
-
-			if shouldAcquire {
-				// Try to atomically acquire the task using compare-and-swap
-				acquireReq := &task.TryAcquireTaskRequest{
-					ID:             t.ID,
-					ExpectedStatus: expectedStatus,
-					NewStatus:      newStatus,
-					AgentID:        a.ID,
-				}
-
-				acquiredTask, err := a.taskService.TryAcquireTask(acquireReq)
-				if err != nil {
-					// Task was already acquired by another agent or status changed
-					// This is expected in concurrent scenarios, just continue to next task
-					continue
-				}
-
-				color.ColoredPrintf(a.ID, "successfully acquired task %s (status: %s -> %s)\n",
-					acquiredTask.ID, expectedStatus, newStatus)
-				return acquiredTask
-			}
 		}
-	}
+	}()
 
-	return nil
+	return abortChan
 }
 
-// getNextWorkItem gets the next available work item (task or event-triggered task)
-func (a *Agent) getNextWorkItem() *WorkItem {
-	// First, try to get an available task
-	if task := a.fetchAvailableTask(); task != nil {
-		return &WorkItem{
-			ID:   task.ID,
-			Task: task,
-		}
+// fetchAvailableProcess fetches an available process that this agent can work on
+func (a *Agent) fetchAvailableProcess() (*task.Task, string) {
+	if a.taskService == nil {
+		color.ColoredPrintln(a.ID, "task service is nil")
+		return nil, ""
 	}
 
-	// Then check for events (non-blocking)
-	select {
-	case eventData := <-a.eventChan:
-		// Check if this event matches our triggers and get appropriate task
-		for _, trigger := range a.Triggers {
-			if a.matchesEventTrigger(trigger, eventData) {
-				// For events, we might need to fetch the related task
-				// or create a work item based on the event
-				task := a.getTaskFromEvent(eventData)
-				if task != nil {
-					return &WorkItem{
-						ID:           generateWorkItemID(task.ID, trigger.Event),
-						Task:         task,
-						TriggerEvent: &EventData{Type: trigger.Event, Data: eventData},
-					}
-				}
-				break
-			}
+	if a.Process == "" {
+		color.ColoredPrintln(a.ID, "no process configured for this agent")
+		return nil, ""
+	}
+
+	// Get available processes for this agent's process type
+	available, err := a.taskService.GetAvailableProcesses(a.Process)
+	if err != nil {
+		color.ColoredPrintf(a.ID, "error fetching available processes: %v\n", err)
+		return nil, ""
+	}
+
+	// Try to acquire the first available process
+	for _, proc := range available {
+		acquireReq := &task.TryAcquireProcessRequest{
+			TaskID:      proc.TaskID,
+			ProcessName: proc.ProcessName,
+			AgentID:     a.ID,
 		}
-	default:
-		// No events available
+
+		acquiredTask, err := a.taskService.TryAcquireProcess(acquireReq)
+		if err != nil {
+			// Process was already acquired by another agent
+			// This is expected in concurrent scenarios, just continue to next
+			continue
+		}
+
+		color.ColoredPrintf(a.ID, "successfully acquired process %s for task %s\n",
+			proc.ProcessName, proc.TaskID)
+		return acquiredTask, proc.ProcessName
+	}
+
+	return nil, ""
+}
+
+// getNextWorkItem gets the next available work item (process to execute)
+func (a *Agent) getNextWorkItem() *WorkItem {
+	// Try to get an available process
+	t, processName := a.fetchAvailableProcess()
+	if t != nil {
+		return &WorkItem{
+			ID:          fmt.Sprintf("%s-%s", t.ID, processName),
+			Task:        t,
+			ProcessName: processName,
+		}
 	}
 
 	return nil
 }
 
 // setTaskAssignment sets the task assignment for this agent
-func (a *Agent) setTaskAssignment(task *task.Task) {
+func (a *Agent) setTaskAssignment(t *task.Task, processName string) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 
-	a.TaskID = task.ID
+	a.TaskID = t.ID
+	a.ProcessName = processName
 	a.UpdatedAt = time.Now()
 
 	// Handle worktree creation if needed
-	if task.Worktree != "" && a.worktreeManager != nil {
-		worktreePath, err := a.worktreeManager.CreateWorktree(task.ID, task.Branch)
+	if t.Worktree != "" && a.worktreeManager != nil {
+		worktreePath, err := a.worktreeManager.CreateWorktree(t.ID, t.Branch)
 		if err != nil {
 			color.ColoredPrintf(a.ID, "error creating worktree: %v\n", err)
 			return
@@ -507,6 +430,7 @@ func (a *Agent) clearTaskAssignment() {
 	defer a.mutex.Unlock()
 
 	a.TaskID = ""
+	a.ProcessName = ""
 	a.WorktreePath = ""
 	a.UpdatedAt = time.Now()
 }
@@ -514,95 +438,22 @@ func (a *Agent) clearTaskAssignment() {
 // handleExecutionResult handles the result of work execution
 func (a *Agent) handleExecutionResult(work *WorkItem, result *ExecutionResult, err error) {
 	if err != nil {
-		color.ColoredPrintf(a.ID, "error executing work %s: %v\n", work.ID, err)
+		color.ColoredPrintf(a.ID, "error executing process %s: %v\n", work.ProcessName, err)
 		a.UpdateStatus(StatusError)
 		return
 	}
 
 	if result != nil && !result.Success {
-		color.ColoredPrintf(a.ID, "work execution failed %s: %s\n", work.ID, result.Message)
+		color.ColoredPrintf(a.ID, "process execution failed %s: %s\n", work.ProcessName, result.Message)
+		// If execution failed, the executor should have called RejectProcess
 		a.UpdateStatus(StatusError)
 		return
 	}
 
-	color.ColoredPrintf(a.ID, "completed work %s\n", work.ID)
-}
-
-// getTaskFromEvent extracts or fetches a task based on event data
-func (a *Agent) getTaskFromEvent(eventData interface{}) *task.Task {
-	// Extract task ID from event data
-	var taskID string
-
-	switch data := eventData.(type) {
-	case *event.TaskCreatedData:
-		taskID = data.TaskID
-	case *event.TaskStatusChangedData:
-		taskID = data.TaskID
-	default:
-		// Try to parse as JSON for unknown event types
-		if jsonData, ok := eventData.(json.RawMessage); ok {
-			var statusData event.TaskStatusChangedData
-			if err := json.Unmarshal(jsonData, &statusData); err == nil {
-				taskID = statusData.TaskID
-			}
-		}
-	}
-
-	if taskID == "" {
-		return nil
-	}
-
-	// Fetch the task
-	if a.taskService != nil {
-		task, err := a.taskService.GetTask(taskID)
-		if err != nil {
-			color.ColoredPrintf(a.ID, "failed to get task %s from event: %v\n", taskID, err)
-			return nil
-		}
-		return task
-	}
-
-	return nil
+	color.ColoredPrintf(a.ID, "completed process %s for task %s\n", work.ProcessName, work.Task.ID)
 }
 
 // generateWorkItemID generates a unique work item ID
-func generateWorkItemID(taskID, eventType string) string {
-	return fmt.Sprintf("%s-%s-%d", taskID, eventType, time.Now().Unix())
-}
-
-// matchesEventTrigger checks if an event matches a trigger
-func (a *Agent) matchesEventTrigger(trigger EventTrigger, eventData interface{}) bool {
-	// Create context data from event
-	contextData := map[string]interface{}{
-		"event_data": eventData,
-	}
-
-	// Add specific fields based on event type
-	switch data := eventData.(type) {
-	case *event.TaskCreatedData:
-		contextData["task_id"] = data.TaskID
-		contextData["task_type"] = data.Type
-		contextData["task_title"] = data.Title
-	case *event.TaskStatusChangedData:
-		contextData["task_id"] = data.TaskID
-		contextData["old_status"] = data.OldStatus
-		contextData["new_status"] = data.NewStatus
-		contextData["from_status"] = data.OldStatus
-		contextData["to_status"] = data.NewStatus
-	default:
-		// Try to parse as JSON for unknown event types
-		if jsonData, ok := eventData.(json.RawMessage); ok {
-			// Try to unmarshal as TaskStatusChangedData
-			var statusData event.TaskStatusChangedData
-			if err := json.Unmarshal(jsonData, &statusData); err == nil {
-				contextData["task_id"] = statusData.TaskID
-				contextData["old_status"] = statusData.OldStatus
-				contextData["new_status"] = statusData.NewStatus
-				contextData["from_status"] = statusData.OldStatus
-				contextData["to_status"] = statusData.NewStatus
-			}
-		}
-	}
-
-	return a.evaluateCondition(trigger.Condition, contextData)
+func generateWorkItemID(taskID, processName string) string {
+	return fmt.Sprintf("%s-%s-%d", taskID, processName, time.Now().Unix())
 }

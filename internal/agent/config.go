@@ -2,7 +2,6 @@ package agent
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,30 +10,22 @@ import (
 )
 
 type AgentConfig struct {
-	Name          string         `yaml:"name"`
-	Type          string         `yaml:"type"`
-	Instructions  string         `yaml:"instructions,omitempty"`
-	Triggers      []EventTrigger `yaml:"triggers"`
-	Scaling       *ScalingConfig `yaml:"scaling,omitempty"`
-	StatusOptions *StatusOptions `yaml:"status_options,omitempty"`
-}
-
-// StatusOptions defines the available status choices for task completion
-type StatusOptions struct {
-	Success []string `yaml:"success,omitempty"` // Available statuses when task completes successfully
-	Error   []string `yaml:"error,omitempty"`   // Available statuses when task fails
+	Name         string         `yaml:"name"`
+	Type         string         `yaml:"type"`
+	Process      string         `yaml:"process"` // The process this agent handles (e.g., "implement", "review", "qa")
+	Instructions string         `yaml:"instructions,omitempty"`
+	Scaling      *ScalingConfig `yaml:"scaling,omitempty"`
 }
 
 // IndividualAgentConfig represents a single agent's configuration file
 type IndividualAgentConfig struct {
-	Name          string         `yaml:"name"`
-	Type          string         `yaml:"type"`
-	Triggers      []EventTrigger `yaml:"triggers"`
-	Scaling       *ScalingConfig `yaml:"scaling,omitempty"`
-	Description   string         `yaml:"description,omitempty"`
-	Version       string         `yaml:"version,omitempty"`
-	Instructions  string         `yaml:"instructions,omitempty"`
-	StatusOptions *StatusOptions `yaml:"status_options,omitempty"`
+	Name         string         `yaml:"name"`
+	Type         string         `yaml:"type"`
+	Process      string         `yaml:"process"` // The process this agent handles
+	Scaling      *ScalingConfig `yaml:"scaling,omitempty"`
+	Description  string         `yaml:"description,omitempty"`
+	Version      string         `yaml:"version,omitempty"`
+	Instructions string         `yaml:"instructions,omitempty"`
 }
 
 type Config struct {
@@ -57,7 +48,7 @@ func LoadConfig(configPath string) (*Config, error) {
 		return createDefaultConfig(configPath)
 	}
 
-	data, err := ioutil.ReadFile(configPath)
+	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
@@ -111,12 +102,11 @@ func loadIndividualConfigs() (*Config, error) {
 		}
 
 		config.Agents = append(config.Agents, &AgentConfig{
-			Name:          agentName,
-			Type:          agentConfig.Type,
-			Instructions:  agentConfig.Instructions,
-			Triggers:      agentConfig.Triggers,
-			Scaling:       agentConfig.Scaling,
-			StatusOptions: agentConfig.StatusOptions,
+			Name:         agentName,
+			Type:         agentConfig.Type,
+			Process:      agentConfig.Process,
+			Instructions: agentConfig.Instructions,
+			Scaling:      agentConfig.Scaling,
 		})
 	}
 
@@ -133,7 +123,7 @@ func loadIndividualConfigs() (*Config, error) {
 }
 
 func loadIndividualAgentConfig(configPath string) (*IndividualAgentConfig, error) {
-	data, err := ioutil.ReadFile(configPath)
+	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
@@ -164,7 +154,7 @@ func SaveIndividualAgentConfig(config *IndividualAgentConfig, agentsDir string) 
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	if err := ioutil.WriteFile(configPath, data, 0644); err != nil {
+	if err := os.WriteFile(configPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
@@ -187,7 +177,7 @@ func SaveConfig(config *Config, configPath string) error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	if err := ioutil.WriteFile(configPath, data, 0644); err != nil {
+	if err := os.WriteFile(configPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
@@ -209,38 +199,33 @@ func createDefaultConfig(configPath string) (*Config, error) {
 	config := &Config{
 		Agents: []*AgentConfig{
 			{
-				Name: "developer",
-				Type: "claude-code",
+				Name:    "developer",
+				Type:    "claude-code",
+				Process: "implement",
 				Scaling: &ScalingConfig{
 					Min:  1,
 					Max:  3,
 					Auto: true,
 				},
-				Triggers: []EventTrigger{
-					{
-						Event:     "task.created",
-						Condition: `task.type == "feature"`,
-					},
+			},
+			{
+				Name:    "reviewer",
+				Type:    "claude-code",
+				Process: "review",
+				Scaling: &ScalingConfig{
+					Min:  1,
+					Max:  2,
+					Auto: true,
 				},
 			},
 			{
-				Name: "reviewer",
-				Type: "claude-code",
-				Triggers: []EventTrigger{
-					{
-						Event:     "task.status_changed",
-						Condition: `task.status == "REVIEW_READY"`,
-					},
-				},
-			},
-			{
-				Name: "qa-validator",
-				Type: "claude-code",
-				Triggers: []EventTrigger{
-					{
-						Event:     "task.status_changed",
-						Condition: `task.status == "QA_READY"`,
-					},
+				Name:    "qa-validator",
+				Type:    "claude-code",
+				Process: "qa",
+				Scaling: &ScalingConfig{
+					Min:  1,
+					Max:  2,
+					Auto: true,
 				},
 			},
 		},
@@ -261,6 +246,7 @@ func createDefaultIndividualConfigs() error {
 		{
 			Name:        "developer",
 			Type:        "claude-code",
+			Process:     "implement",
 			Description: "Developer for implementing features",
 			Version:     "1.0",
 			Instructions: `## Core Responsibilities
@@ -277,20 +263,11 @@ func createDefaultIndividualConfigs() error {
 				Max:  3,
 				Auto: true,
 			},
-			Triggers: []EventTrigger{
-				{
-					Event:     "task.created",
-					Condition: `task.type == "feature"`,
-				},
-			},
-			StatusOptions: &StatusOptions{
-				Success: []string{"REVIEW_READY", "QA_READY", "CLOSED"},
-				Error:   []string{"CREATED", "ANALYZING", "DESIGNED"},
-			},
 		},
 		{
 			Name:        "reviewer",
 			Type:        "claude-code",
+			Process:     "review",
 			Description: "Senior engineer for conducting thorough code reviews",
 			Version:     "1.0",
 			Instructions: `## Core Responsibilities
@@ -303,20 +280,16 @@ func createDefaultIndividualConfigs() error {
 - Proper error handling
 - Security considerations
 - Performance implications`,
-			Triggers: []EventTrigger{
-				{
-					Event:     "task.status_changed",
-					Condition: `to_status == "REVIEW_READY"`,
-				},
-			},
-			StatusOptions: &StatusOptions{
-				Success: []string{"QA_READY", "CLOSED"},
-				Error:   []string{"IN_PROGRESS", "DESIGNED"},
+			Scaling: &ScalingConfig{
+				Min:  1,
+				Max:  2,
+				Auto: true,
 			},
 		},
 		{
 			Name:        "qa-validator",
 			Type:        "claude-code",
+			Process:     "qa",
 			Description: "QA engineer for comprehensive testing",
 			Version:     "1.0",
 			Instructions: `## Core Responsibilities
@@ -329,15 +302,10 @@ func createDefaultIndividualConfigs() error {
 - Integration testing
 - User acceptance testing
 - Performance testing`,
-			Triggers: []EventTrigger{
-				{
-					Event:     "task.status_changed",
-					Condition: `to_status == "QA_READY"`,
-				},
-			},
-			StatusOptions: &StatusOptions{
-				Success: []string{"CLOSED"},
-				Error:   []string{"IN_PROGRESS", "REVIEW_READY"},
+			Scaling: &ScalingConfig{
+				Min:  1,
+				Max:  2,
+				Auto: true,
 			},
 		},
 	}

@@ -10,24 +10,44 @@ option go_package = "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1;task
 service TaskService {
   // Create a new task
   rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
-  
+
   // List all tasks
   rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
-  
+
   // Get task details
   rpc GetTask(GetTaskRequest) returns (GetTaskResponse);
-  
-  // Update task status
+
+  // Update task metadata (description, metadata fields)
   rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse);
-  
+
   // Close a task
   rpc CloseTask(CloseTaskRequest) returns (CloseTaskResponse);
-  
-  // Try to atomically acquire a task using compare-and-swap semantics
-  rpc TryAcquireTask(TryAcquireTaskRequest) returns (TryAcquireTaskResponse);
-  
-  // Release a task assignment
-  rpc ReleaseTask(ReleaseTaskRequest) returns (ReleaseTaskResponse);
+
+  // Try to atomically acquire a process using compare-and-swap semantics
+  rpc TryAcquireProcess(TryAcquireProcessRequest) returns (TryAcquireProcessResponse);
+
+  // Complete a process
+  rpc CompleteProcess(CompleteProcessRequest) returns (CompleteProcessResponse);
+
+  // Reject a process and cascade-reset dependencies
+  rpc RejectProcess(RejectProcessRequest) returns (RejectProcessResponse);
+}
+
+// ProcessStatus represents the status of a process
+enum ProcessStatus {
+  PROCESS_STATUS_UNSPECIFIED = 0;
+  PROCESS_STATUS_PENDING = 1;
+  PROCESS_STATUS_IN_PROGRESS = 2;
+  PROCESS_STATUS_COMPLETED = 3;
+  PROCESS_STATUS_REJECTED = 4;
+}
+
+// ProcessState represents the state of a process within a task
+message ProcessState {
+  ProcessStatus status = 1;
+  string assigned_to = 2;
+  google.protobuf.Timestamp started_at = 3;
+  google.protobuf.Timestamp completed_at = 4;
 }
 
 // Task represents a task in the system
@@ -35,25 +55,22 @@ message Task {
   string id = 1;
   string title = 2;
   string description = 3;
-  TaskStatus status = 4;
+  TaskStatus status = 4;  // Overall status derived from processes
   string type = 5;
-  string assigned_to = 6;
-  google.protobuf.Timestamp created_at = 7;
-  google.protobuf.Timestamp updated_at = 8;
-  map<string, string> metadata = 9;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  map<string, string> metadata = 8;
+  map<string, ProcessState> processes = 9;  // Process states (implement, review, qa)
 }
 
-// TaskStatus represents the status of a task
+// TaskStatus represents the overall status of a task (derived from process states)
 enum TaskStatus {
   TASK_STATUS_UNSPECIFIED = 0;
-  TASK_STATUS_CREATED = 1;
-  TASK_STATUS_ANALYZING = 2;
-  TASK_STATUS_DESIGNED = 3;
-  TASK_STATUS_IN_PROGRESS = 4;
-  TASK_STATUS_REVIEW_READY = 5;
-  TASK_STATUS_QA_READY = 6;
-  TASK_STATUS_CLOSED = 7;
-  TASK_STATUS_CANCELLED = 8;
+  TASK_STATUS_PENDING = 1;      // All processes pending
+  TASK_STATUS_IN_PROGRESS = 2;  // At least one process in progress
+  TASK_STATUS_COMPLETED = 3;    // All processes completed
+  TASK_STATUS_REJECTED = 4;     // At least one process rejected
+  TASK_STATUS_CLOSED = 5;       // Task closed
 }
 
 // CreateTaskRequest represents a request to create a new task
@@ -93,12 +110,11 @@ message GetTaskResponse {
   Task task = 1;
 }
 
-// UpdateTaskRequest represents a request to update a task
+// UpdateTaskRequest represents a request to update a task (metadata only)
 message UpdateTaskRequest {
   string id = 1;
-  TaskStatus status = 2;
-  string description = 3;
-  map<string, string> metadata = 4;
+  string description = 2;
+  map<string, string> metadata = 3;
 }
 
 // UpdateTaskResponse represents the response from updating a task
@@ -117,29 +133,46 @@ message CloseTaskResponse {
   Task task = 1;
 }
 
-// TryAcquireTaskRequest represents a request to atomically acquire a task
-message TryAcquireTaskRequest {
-  string id = 1;
-  TaskStatus expected_status = 2;
-  TaskStatus new_status = 3;
-  string agent_id = 4;
+// TryAcquireProcessRequest represents a request to atomically acquire a process
+message TryAcquireProcessRequest {
+  string task_id = 1;
+  string process_name = 2;  // e.g., "implement", "review", "qa"
+  string agent_id = 3;
 }
 
-// TryAcquireTaskResponse represents the response from trying to acquire a task
-message TryAcquireTaskResponse {
+// TryAcquireProcessResponse represents the response from trying to acquire a process
+message TryAcquireProcessResponse {
   Task task = 1;
   bool success = 2;
   string error_message = 3;
 }
 
-// ReleaseTaskRequest represents a request to release a task assignment
-message ReleaseTaskRequest {
-  string id = 1;
-  string agent_id = 2;
+// CompleteProcessRequest represents a request to complete a process
+message CompleteProcessRequest {
+  string task_id = 1;
+  string process_name = 2;
+  string agent_id = 3;
 }
 
-// ReleaseTaskResponse represents the response from releasing a task
-message ReleaseTaskResponse {
-  bool success = 1;
-  string error_message = 2;
+// CompleteProcessResponse represents the response from completing a process
+message CompleteProcessResponse {
+  Task task = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+// RejectProcessRequest represents a request to reject a process
+message RejectProcessRequest {
+  string task_id = 1;
+  string process_name = 2;
+  string agent_id = 3;
+  string reason = 4;
+}
+
+// RejectProcessResponse represents the response from rejecting a process
+message RejectProcessResponse {
+  Task task = 1;
+  bool success = 2;
+  string error_message = 3;
+  repeated string reset_processes = 4;  // Processes that were reset due to cascade
 }

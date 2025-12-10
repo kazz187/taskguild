@@ -192,63 +192,55 @@ func (e *ClaudeCodeExecutor) getCurrentTask() string {
 
 // generatePrompt creates a prompt based on the work item
 func (e *ClaudeCodeExecutor) generatePrompt(work *WorkItem) string {
-	task := work.Task
+	t := work.Task
+	processName := work.ProcessName
 
-	// Get status options for the prompt
-	statusOptions := e.Config.StatusOptions
-	var availableStatusesText string
-	if statusOptions != nil {
-		var allStatuses []string
-		allStatuses = append(allStatuses, statusOptions.Success...)
-		if len(statusOptions.Error) > 0 {
-			allStatuses = append(allStatuses, statusOptions.Error...)
+	// Build process status summary
+	var processStatusText string
+	for name, state := range t.Processes {
+		processStatusText += fmt.Sprintf("  - %s: %s", name, state.Status)
+		if state.AssignedTo != "" {
+			processStatusText += fmt.Sprintf(" (assigned to: %s)", state.AssignedTo)
 		}
-		if len(allStatuses) > 0 {
-			availableStatusesText = fmt.Sprintf("\nAvailable status options for completion: %s", strings.Join(allStatuses, ", "))
-		}
+		processStatusText += "\n"
 	}
 
 	// Build base prompt
 	prompt := fmt.Sprintf(`You are an AI agent named: %s
+You are responsible for the "%s" process.
 
 Task ID: %s
 Task Title: %s
 Task Type: %s
-Task Status: %s
+Task Description: %s
+
+Process Status:
+%s
+You are currently working on the "%s" process.
 
 Instructions:
 %s
 
 Please analyze and execute this task.`,
-		e.Config.Name, task.ID, task.Title, task.Type, task.Status, e.Config.Instructions)
-
-	// Add trigger event information if present
-	if work.TriggerEvent != nil {
-		prompt += fmt.Sprintf(`
-
-This task was triggered by an event:
-Event Type: %s
-Event Data: %+v
-
-Please consider this event context when executing the task.`, work.TriggerEvent.Type, work.TriggerEvent.Data)
-	}
+		e.Config.Name, processName, t.ID, t.Title, t.Type, t.Description, processStatusText, processName, e.Config.Instructions)
 
 	// Add MCP tools information
 	prompt += fmt.Sprintf(`
 
 IMPORTANT: You have access to the taskguild MCP server with the following tools:
-- taskguild_update_task: Update task status
+- taskguild_complete_process: Mark a process as completed (use when work is done successfully)
+- taskguild_reject_process: Mark a process as rejected and reset dependencies (use when work failed and needs to be redone)
 - taskguild_get_task: Get task information
 - taskguild_list_tasks: List all tasks
 
-After you finish implementing this task, you MUST evaluate your work and update the task status using the taskguild_update_task MCP tool with:
-- id: "%s"
-- status: one of the available options%s
+When you finish your work on the "%s" process:
+- If successful: Use taskguild_complete_process with task_id="%s", process_name="%s"
+- If needs rework: Use taskguild_reject_process with task_id="%s", process_name="%s", and provide a reason
 
-Please proceed with implementing the task and remember to update the status at the end.`,
-		task.ID, availableStatusesText)
+Please proceed with executing the "%s" process and remember to complete or reject it at the end.`,
+		processName, t.ID, processName, t.ID, processName, processName)
 
-	color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Created prompt (%d chars)\n", len(prompt))
+	color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Created prompt for process %s (%d chars)\n", processName, len(prompt))
 	return prompt
 }
 
@@ -347,7 +339,8 @@ func (e *ClaudeCodeExecutor) createPermissionCallback() claudeagent.CanUseToolFu
 func (e *ClaudeCodeExecutor) processMessages(messages []claudeagent.Message) *ExecutionResult {
 	color.ColoredPrintln(e.Config.AgentID, "[Claude Code] Processing response messages...")
 
-	statusUpdated := false
+	processCompleted := false
+	processRejected := false
 
 	for i, msg := range messages {
 		color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Processing message #%d (type: %T)\n", i+1, msg)
@@ -364,9 +357,13 @@ func (e *ClaudeCodeExecutor) processMessages(messages []claudeagent.Message) *Ex
 					color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Assistant: %s\n", c.Text)
 				case claudeagent.ToolUseBlock:
 					color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Tool Use: %s\n", c.Name)
-					if strings.Contains(c.Name, "taskguild_update_task") {
-						statusUpdated = true
-						color.ColoredPrintln(e.Config.AgentID, "[Claude Code] ✅ Task status updated via MCP")
+					if strings.Contains(c.Name, "taskguild_complete_process") {
+						processCompleted = true
+						color.ColoredPrintln(e.Config.AgentID, "[Claude Code] ✅ Process completed via MCP")
+					}
+					if strings.Contains(c.Name, "taskguild_reject_process") {
+						processRejected = true
+						color.ColoredPrintln(e.Config.AgentID, "[Claude Code] ⚠️ Process rejected via MCP")
 					}
 				}
 			}
@@ -390,37 +387,23 @@ func (e *ClaudeCodeExecutor) processMessages(messages []claudeagent.Message) *Ex
 
 	color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Finished processing %d messages\n", len(messages))
 
-	// If status wasn't updated via MCP, try fallback
-	if !statusUpdated {
-		color.ColoredPrintln(e.Config.AgentID, "[Claude Code] Status not updated via MCP, using fallback")
-		if err := e.updateStatusFallback(); err != nil {
-			color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Fallback status update failed: %v\n", err)
-			return &ExecutionResult{
-				Success: false,
-				Message: "Failed to update task status",
-				Error:   err,
-			}
+	// Check if process status was updated
+	if processRejected {
+		return &ExecutionResult{
+			Success: false,
+			Message: "Process rejected - needs rework",
 		}
+	}
+
+	if !processCompleted {
+		color.ColoredPrintln(e.Config.AgentID, "[Claude Code] Warning: Process was not explicitly completed via MCP")
+		// We don't auto-complete here - the agent should use the MCP tool
 	}
 
 	return &ExecutionResult{
 		Success: true,
 		Message: "Claude Code execution completed successfully",
 	}
-}
-
-// updateStatusFallback updates task status as fallback when MCP didn't work
-func (e *ClaudeCodeExecutor) updateStatusFallback() error {
-	// Use the first success status if available
-	if e.Config.StatusOptions != nil && len(e.Config.StatusOptions.Success) > 0 {
-		defaultStatus := e.Config.StatusOptions.Success[0]
-		color.ColoredPrintf(e.Config.AgentID, "[Claude Code] Fallback status update to: %s\n", defaultStatus)
-
-		// Try to update via base executor's task service
-		return e.updateTaskStatus(context.Background(), e.getCurrentTask(), defaultStatus)
-	}
-
-	return nil
 }
 
 // getMCPServerPath returns the absolute path to the MCP TaskGuild server binary

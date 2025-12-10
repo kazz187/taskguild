@@ -99,12 +99,12 @@ func (h *AgentServiceHandler) agentToProto(a *agent.Agent) (*taskguildv1.Agent, 
 		return nil, err
 	}
 
-	// Convert triggers
-	protoTriggers := make([]*taskguildv1.EventTrigger, 0, len(a.Triggers))
-	for _, trigger := range a.Triggers {
+	// Create a single trigger for the process this agent handles
+	protoTriggers := make([]*taskguildv1.EventTrigger, 0, 1)
+	if a.Process != "" {
 		protoTriggers = append(protoTriggers, &taskguildv1.EventTrigger{
-			Event:     trigger.Event,
-			Condition: trigger.Condition,
+			Event:     "process",
+			Condition: a.Process,
 		})
 	}
 

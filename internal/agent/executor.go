@@ -9,18 +9,12 @@ import (
 	"github.com/kazz187/taskguild/pkg/worktree"
 )
 
-// WorkItem represents a unified work item (always a task, but may be triggered by events)
+// WorkItem represents a unified work item (task process to execute)
 type WorkItem struct {
-	ID           string
-	Task         *task.Task
-	TriggerEvent *EventData // Optional: event that triggered this work
-	Context      map[string]interface{}
-}
-
-// EventData wraps event information that triggered work
-type EventData struct {
-	Type string
-	Data interface{}
+	ID          string
+	Task        *task.Task
+	ProcessName string // The process being executed (e.g., "implement", "review", "qa")
+	Context     map[string]interface{}
 }
 
 // ExecutionResult represents the result of work execution
@@ -52,11 +46,11 @@ type PermissionResponse struct {
 
 // ExecutorConfig holds configuration for executor initialization
 type ExecutorConfig struct {
-	AgentID       string
-	Name          string
-	Instructions  string
-	WorktreePath  string
-	StatusOptions *StatusOptions
+	AgentID      string
+	Name         string
+	Process      string // The process type this executor handles
+	Instructions string
+	WorktreePath string
 
 	// Permission handling
 	PermissionRequestChan  chan<- PermissionRequest  // Channel to send permission requests
@@ -162,15 +156,18 @@ func (e *BaseExecutor) IsConnected() bool {
 	return false
 }
 
-// updateTaskStatus is a helper method for updating task status
-func (e *BaseExecutor) updateTaskStatus(ctx context.Context, taskID, status string) error {
+// completeProcess marks the current process as completed
+func (e *BaseExecutor) completeProcess(taskID, processName, agentID string) error {
 	if e.taskService != nil {
-		req := &task.UpdateTaskRequest{
-			ID:     taskID,
-			Status: task.Status(status),
-		}
-		_, err := e.taskService.UpdateTask(req)
-		return err
+		return e.taskService.CompleteProcess(taskID, processName, agentID)
+	}
+	return nil
+}
+
+// rejectProcess marks the current process as rejected
+func (e *BaseExecutor) rejectProcess(taskID, processName, agentID, reason string) error {
+	if e.taskService != nil {
+		return e.taskService.RejectProcess(taskID, processName, agentID, reason)
 	}
 	return nil
 }

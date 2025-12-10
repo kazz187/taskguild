@@ -27,7 +27,6 @@ type CreateTaskInput struct {
 
 type UpdateTaskInput struct {
 	ID          string            `json:"id"`
-	Status      string            `json:"status,omitempty"`
 	Description string            `json:"description,omitempty"`
 	Metadata    map[string]string `json:"metadata,omitempty"`
 }
@@ -37,14 +36,28 @@ type CloseTaskInput struct {
 	Reason string `json:"reason,omitempty"`
 }
 
+// Process-related input types
+type CompleteProcessInput struct {
+	TaskID      string `json:"task_id"`
+	ProcessName string `json:"process_name"`
+	AgentID     string `json:"agent_id"`
+}
+
+type RejectProcessInput struct {
+	TaskID      string `json:"task_id"`
+	ProcessName string `json:"process_name"`
+	AgentID     string `json:"agent_id"`
+	Reason      string `json:"reason,omitempty"`
+}
+
 // JSON Schema definitions for MCP tools
 var ListTasksInputSchema = &jsonschema.Schema{
 	Type: "object",
 	Properties: map[string]*jsonschema.Schema{
 		"statusFilter": {
 			Type:        "string",
-			Description: "Filter tasks by status (CREATED, ANALYZING, DESIGNED, IN_PROGRESS, REVIEW_READY, QA_READY, CLOSED, CANCELLED)",
-			Enum:        []interface{}{"CREATED", "ANALYZING", "DESIGNED", "IN_PROGRESS", "REVIEW_READY", "QA_READY", "CLOSED", "CANCELLED"},
+			Description: "Filter tasks by status (PENDING, IN_PROGRESS, COMPLETED, REJECTED, CLOSED)",
+			Enum:        []interface{}{"PENDING", "IN_PROGRESS", "COMPLETED", "REJECTED", "CLOSED"},
 		},
 		"typeFilter": {
 			Type:        "string",
@@ -111,11 +124,6 @@ var UpdateTaskInputSchema = &jsonschema.Schema{
 			Type:        "string",
 			Description: "Task ID to update",
 		},
-		"status": {
-			Type:        "string",
-			Description: "New task status",
-			Enum:        []interface{}{"CREATED", "ANALYZING", "DESIGNED", "IN_PROGRESS", "REVIEW_READY", "QA_READY", "CLOSED", "CANCELLED"},
-		},
 		"description": {
 			Type:        "string",
 			Description: "Updated task description",
@@ -143,6 +151,52 @@ var CloseTaskInputSchema = &jsonschema.Schema{
 		},
 	},
 	Required:             []string{"id"},
+	AdditionalProperties: boolSchema(false),
+}
+
+var CompleteProcessInputSchema = &jsonschema.Schema{
+	Type: "object",
+	Properties: map[string]*jsonschema.Schema{
+		"task_id": {
+			Type:        "string",
+			Description: "Task ID",
+		},
+		"process_name": {
+			Type:        "string",
+			Description: "Name of the process to complete (e.g., implement, review, qa)",
+			Enum:        []interface{}{"implement", "review", "qa"},
+		},
+		"agent_id": {
+			Type:        "string",
+			Description: "Agent ID that is completing the process",
+		},
+	},
+	Required:             []string{"task_id", "process_name", "agent_id"},
+	AdditionalProperties: boolSchema(false),
+}
+
+var RejectProcessInputSchema = &jsonschema.Schema{
+	Type: "object",
+	Properties: map[string]*jsonschema.Schema{
+		"task_id": {
+			Type:        "string",
+			Description: "Task ID",
+		},
+		"process_name": {
+			Type:        "string",
+			Description: "Name of the process to reject (e.g., implement, review, qa)",
+			Enum:        []interface{}{"implement", "review", "qa"},
+		},
+		"agent_id": {
+			Type:        "string",
+			Description: "Agent ID that is rejecting the process",
+		},
+		"reason": {
+			Type:        "string",
+			Description: "Reason for rejecting the process (e.g., code quality issues, missing tests)",
+		},
+	},
+	Required:             []string{"task_id", "process_name", "agent_id"},
 	AdditionalProperties: boolSchema(false),
 }
 

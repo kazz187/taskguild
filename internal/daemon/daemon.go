@@ -49,7 +49,10 @@ func New(config *Config) (*Daemon, error) {
 	}
 
 	// Initialize event bus
-	eventBus := event.NewEventBus()
+	eventBus, err := event.NewEventBus()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create event bus: %w", err)
+	}
 
 	// Initialize task service
 	taskRepo := task.NewYAMLRepository(".taskguild/task.yaml")
@@ -116,13 +119,17 @@ func (d *Daemon) Start(ctx context.Context) error {
 
 	fmt.Printf("TaskGuild daemon starting on %s\n", addr)
 
-	// Use pool for parallel execution with error cancellation and panic protection
-	p := pool.New().WithContext(ctx).WithCancelOnError()
-	ebCtx, ebCancel := context.WithCancel(context.Background())
+	// Create a derived context for event bus that will be cancelled when the parent context is done
+	ebCtx, ebCancel := context.WithCancel(ctx)
 	defer ebCancel()
+
+	// Start event bus first
 	if err := d.eventBus.Start(ebCtx); err != nil {
 		return fmt.Errorf("failed to start event bus: %w", err)
 	}
+
+	// Use pool for parallel execution with error cancellation and panic protection
+	p := pool.New().WithContext(ctx).WithCancelOnError()
 
 	// Start agentManager wrapped with SafeContext for panic protection
 	p.Go(panicerr.SafeContext(
@@ -159,10 +166,14 @@ func (d *Daemon) Start(ctx context.Context) error {
 
 	// Wait for all services to complete or for context cancellation
 	if err := p.Wait(); err != nil {
+		// Stop event bus before returning
+		if stopErr := d.eventBus.Stop(); stopErr != nil {
+			fmt.Printf("warning: failed to stop event bus: %v\n", stopErr)
+		}
 		return fmt.Errorf("daemon stopped with error: %w", err)
 	}
 
-	ebCancel()
+	// Stop event bus gracefully
 	if err := d.eventBus.Stop(); err != nil {
 		return fmt.Errorf("failed to stop event bus: %w", err)
 	}
