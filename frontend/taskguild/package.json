@@ -12,8 +12,14 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "^2.10.2",
+    "@connectrpc/connect": "^2.1.1",
+    "@connectrpc/connect-query": "^2.2.0",
+    "@connectrpc/connect-web": "^2.1.1",
+    "@taskguild/proto": "file:../../proto/gen/ts",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "^0.7.0",
+    "@tanstack/react-query": "^5.90.21",
     "@tanstack/react-router": "^1.132.0",
     "@tanstack/react-router-devtools": "^1.132.0",
     "@tanstack/router-plugin": "^1.132.0",
