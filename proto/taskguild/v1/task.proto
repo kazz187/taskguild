@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package taskguild.v1;
+
+import "google/protobuf/timestamp.proto";
+import "taskguild/v1/common.proto";
+
+service TaskService {
+  rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
+  rpc GetTask(GetTaskRequest) returns (GetTaskResponse);
+  rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
+  rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse);
+  rpc DeleteTask(DeleteTaskRequest) returns (DeleteTaskResponse);
+  rpc UpdateTaskStatus(UpdateTaskStatusRequest) returns (UpdateTaskStatusResponse);
+}
+
+message Task {
+  string id = 1;
+  string project_id = 2;
+  string workflow_id = 3;
+  string title = 4;
+  string description = 5;
+  string status_id = 6;          // current workflow status ID
+  string assigned_agent_id = 7;  // agent currently working on this
+  map<string, string> metadata = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message CreateTaskRequest {
+  string project_id = 1;
+  string workflow_id = 2;
+  string title = 3;
+  string description = 4;
+  map<string, string> metadata = 5;
+}
+message CreateTaskResponse {
+  Task task = 1;
+}
+
+message GetTaskRequest {
+  string id = 1;
+}
+message GetTaskResponse {
+  Task task = 1;
+}
+
+message ListTasksRequest {
+  string project_id = 1;
+  string workflow_id = 2;
+  string status_id = 3;
+  PaginationRequest pagination = 4;
+}
+message ListTasksResponse {
+  repeated Task tasks = 1;
+  PaginationResponse pagination = 2;
+}
+
+message UpdateTaskRequest {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  map<string, string> metadata = 4;
+}
+message UpdateTaskResponse {
+  Task task = 1;
+}
+
+message DeleteTaskRequest {
+  string id = 1;
+}
+message DeleteTaskResponse {}
+
+message UpdateTaskStatusRequest {
+  string id = 1;
+  string status_id = 2;
+}
+message UpdateTaskStatusResponse {
+  Task task = 1;
+}

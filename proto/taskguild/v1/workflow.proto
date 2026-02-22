@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package taskguild.v1;
+
+import "google/protobuf/timestamp.proto";
+import "taskguild/v1/common.proto";
+
+service WorkflowService {
+  rpc CreateWorkflow(CreateWorkflowRequest) returns (CreateWorkflowResponse);
+  rpc GetWorkflow(GetWorkflowRequest) returns (GetWorkflowResponse);
+  rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse);
+  rpc UpdateWorkflow(UpdateWorkflowRequest) returns (UpdateWorkflowResponse);
+  rpc DeleteWorkflow(DeleteWorkflowRequest) returns (DeleteWorkflowResponse);
+}
+
+// Workflow defines a project's task lifecycle with custom statuses and agent configurations.
+message Workflow {
+  string id = 1;
+  string project_id = 2;
+  string name = 3;
+  string description = 4;
+  repeated WorkflowStatus statuses = 5;
+  repeated AgentConfig agent_configs = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// WorkflowStatus defines a custom status in a workflow.
+message WorkflowStatus {
+  string id = 1;
+  string name = 2;
+  int32 order = 3;
+  bool is_initial = 4;
+  bool is_terminal = 5;
+  repeated string transitions_to = 6;  // IDs of statuses this can transition to
+}
+
+// AgentConfig defines how an agent should behave for a specific status.
+message AgentConfig {
+  string id = 1;
+  string workflow_status_id = 2;  // which status triggers this agent
+  string name = 3;
+  string description = 4;
+  string instructions = 5;        // system prompt / instructions for the agent
+  repeated string allowed_tools = 6;
+  bool use_worktree = 7;
+}
+
+message CreateWorkflowRequest {
+  string project_id = 1;
+  string name = 2;
+  string description = 3;
+  repeated WorkflowStatus statuses = 4;
+  repeated AgentConfig agent_configs = 5;
+}
+message CreateWorkflowResponse {
+  Workflow workflow = 1;
+}
+
+message GetWorkflowRequest {
+  string id = 1;
+}
+message GetWorkflowResponse {
+  Workflow workflow = 1;
+}
+
+message ListWorkflowsRequest {
+  string project_id = 1;
+  PaginationRequest pagination = 2;
+}
+message ListWorkflowsResponse {
+  repeated Workflow workflows = 1;
+  PaginationResponse pagination = 2;
+}
+
+message UpdateWorkflowRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  repeated WorkflowStatus statuses = 4;
+  repeated AgentConfig agent_configs = 5;
+}
+message UpdateWorkflowResponse {
+  Workflow workflow = 1;
+}
+
+message DeleteWorkflowRequest {
+  string id = 1;
+}
+message DeleteWorkflowResponse {}

@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package taskguild.v1;
+
+import "google/protobuf/timestamp.proto";
+import "taskguild/v1/common.proto";
+
+service ProjectService {
+  rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
+  rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
+  rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+  rpc UpdateProject(UpdateProjectRequest) returns (UpdateProjectResponse);
+  rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
+}
+
+message Project {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string repository_url = 4;
+  string default_branch = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message CreateProjectRequest {
+  string name = 1;
+  string description = 2;
+  string repository_url = 3;
+  string default_branch = 4;
+}
+message CreateProjectResponse {
+  Project project = 1;
+}
+
+message GetProjectRequest {
+  string id = 1;
+}
+message GetProjectResponse {
+  Project project = 1;
+}
+
+message ListProjectsRequest {
+  PaginationRequest pagination = 1;
+}
+message ListProjectsResponse {
+  repeated Project projects = 1;
+  PaginationResponse pagination = 2;
+}
+
+message UpdateProjectRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string repository_url = 4;
+  string default_branch = 5;
+}
+message UpdateProjectResponse {
+  Project project = 1;
+}
+
+message DeleteProjectRequest {
+  string id = 1;
+}
+message DeleteProjectResponse {}
