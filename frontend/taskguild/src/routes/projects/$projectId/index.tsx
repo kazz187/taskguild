@@ -1,0 +1,148 @@
+import { createFileRoute } from '@tanstack/react-router'
+import { useQuery } from '@connectrpc/connect-query'
+import { getProject } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
+import { listWorkflows } from '@taskguild/proto/taskguild/v1/workflow-WorkflowService_connectquery.ts'
+import type { Workflow } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
+import { TaskBoard } from '@/components/TaskBoard'
+import { WorkflowForm } from '@/components/WorkflowForm'
+import { useState, useEffect } from 'react'
+import { GitBranch, Plus, Settings } from 'lucide-react'
+
+type FormMode = { kind: 'create' } | { kind: 'edit'; workflow: Workflow }
+
+export const Route = createFileRoute('/projects/$projectId/')({
+  component: ProjectDetailPage,
+  validateSearch: (search: Record<string, unknown>): { workflowId?: string } => ({
+    workflowId: typeof search.workflowId === 'string' ? search.workflowId : undefined,
+  }),
+})
+
+function ProjectDetailPage() {
+  const { projectId } = Route.useParams()
+  const { workflowId } = Route.useSearch()
+  const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null)
+  const [formMode, setFormMode] = useState<FormMode | null>(null)
+
+  const { data: projectData } = useQuery(getProject, { id: projectId })
+  const { data: workflowsData, refetch: refetchWorkflows } = useQuery(listWorkflows, {
+    projectId,
+  })
+
+  const project = projectData?.project
+  const workflows = workflowsData?.workflows ?? []
+
+  // Select workflow from search params or auto-select first
+  useEffect(() => {
+    if (workflows.length === 0) return
+    if (workflowId) {
+      const target = workflows.find((w) => w.id === workflowId)
+      if (target) {
+        setSelectedWorkflow(target)
+        return
+      }
+    }
+    if (!selectedWorkflow) {
+      setSelectedWorkflow(workflows[0])
+    }
+  }, [workflows, workflowId])
+
+  const handleSaved = () => {
+    setFormMode(null)
+    refetchWorkflows().then(({ data }) => {
+      // Re-select the workflow if it was being edited
+      if (formMode?.kind === 'edit' && data) {
+        const updated = data.workflows.find((w) => w.id === formMode.workflow.id)
+        if (updated) setSelectedWorkflow(updated)
+      }
+    })
+  }
+
+  return (
+    <div className="flex flex-col h-screen">
+      {/* Header */}
+      <div className="shrink-0 border-b border-slate-800 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-white">
+              {project?.name ?? 'Loading...'}
+            </h1>
+            {project?.repositoryUrl && (
+              <p className="text-gray-500 text-xs mt-1 font-mono flex items-center gap-1">
+                <GitBranch className="w-3 h-3" />
+                {project.repositoryUrl}
+                {project.defaultBranch && ` (${project.defaultBranch})`}
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Workflow tabs */}
+            {workflows.length > 0 && (
+              <div className="flex gap-1 bg-slate-900 rounded-lg p-1">
+                {workflows.map((wf) => (
+                  <button
+                    key={wf.id}
+                    onClick={() => {
+                      setSelectedWorkflow(wf)
+                      setFormMode(null)
+                    }}
+                    className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                      selectedWorkflow?.id === wf.id && !formMode
+                        ? 'bg-slate-700 text-white'
+                        : 'text-gray-400 hover:text-gray-200'
+                    }`}
+                  >
+                    {wf.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {/* Edit button */}
+            {selectedWorkflow && !formMode && (
+              <button
+                onClick={() => setFormMode({ kind: 'edit', workflow: selectedWorkflow })}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                Edit
+              </button>
+            )}
+            <button
+              onClick={() => setFormMode({ kind: 'create' })}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              New Workflow
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      {formMode ? (
+        <WorkflowForm
+          projectId={projectId}
+          workflow={formMode.kind === 'edit' ? formMode.workflow : undefined}
+          onClose={() => setFormMode(null)}
+          onSaved={handleSaved}
+        />
+      ) : selectedWorkflow ? (
+        <TaskBoard
+          projectId={projectId}
+          workflow={selectedWorkflow}
+        />
+      ) : (
+        <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-4">
+          <p>No workflow found for this project.</p>
+          <button
+            onClick={() => setFormMode({ kind: 'create' })}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Create Workflow
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
