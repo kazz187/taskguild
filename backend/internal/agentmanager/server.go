@@ -2,6 +2,7 @@ package agentmanager
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"time"
 
@@ -149,6 +150,43 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		}
 	}
 
+	// Build enriched metadata with task info and available transitions.
+	enrichedMetadata := make(map[string]string)
+	for k, v := range t.Metadata {
+		enrichedMetadata[k] = v
+	}
+	enrichedMetadata["_task_title"] = t.Title
+	enrichedMetadata["_task_description"] = t.Description
+	enrichedMetadata["_current_status_id"] = t.StatusID
+
+	// Resolve current status name and available transitions from workflow.
+	statusMap := make(map[string]string) // id -> name
+	for _, st := range wf.Statuses {
+		statusMap[st.ID] = st.Name
+	}
+	if name, ok := statusMap[t.StatusID]; ok {
+		enrichedMetadata["_current_status_name"] = name
+	}
+	for _, st := range wf.Statuses {
+		if st.ID == t.StatusID {
+			type transitionEntry struct {
+				ID   string `json:"id"`
+				Name string `json:"name"`
+			}
+			var transitions []transitionEntry
+			for _, targetID := range st.TransitionsTo {
+				transitions = append(transitions, transitionEntry{
+					ID:   targetID,
+					Name: statusMap[targetID],
+				})
+			}
+			if b, err := json.Marshal(transitions); err == nil {
+				enrichedMetadata["_available_transitions"] = string(b)
+			}
+			break
+		}
+	}
+
 	// Publish agent assigned event.
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_AGENT_ASSIGNED,
@@ -172,7 +210,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		Success:       true,
 		Instructions:  instructions,
 		AgentConfigId: agentConfigID,
-		Metadata:      t.Metadata,
+		Metadata:      enrichedMetadata,
 	}), nil
 }
 

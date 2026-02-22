@@ -11,6 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.0
 	github.com/fatih/color v1.15.0
 	github.com/go-chi/chi/v5 v5.2.2
+	github.com/kazz187/claude-agent-sdk-go v0.0.5
 	github.com/kazz187/taskguild/proto/gen/go v0.0.0-00010101000000-000000000000
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/oklog/ulid/v2 v2.1.1
@@ -37,7 +38,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.14 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.6 // indirect
 	github.com/aws/smithy-go v1.24.0 // indirect
-	github.com/google/go-cmp v0.7.0 // indirect
+	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -48,3 +49,5 @@ require (
 )
 
 replace github.com/kazz187/taskguild/proto/gen/go => ../proto/gen/go
+
+replace github.com/kazz187/claude-agent-sdk-go => /Users/kazz/Dropbox/ghq/github.com/kazz187/claude-agent-sdk-go
