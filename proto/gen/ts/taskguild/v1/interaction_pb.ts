@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file taskguild/v1/interaction.proto.
  */
 export const file_taskguild_v1_interaction: GenFile = /*@__PURE__*/
-  fileDesc("Ch50YXNrZ3VpbGQvdjEvaW50ZXJhY3Rpb24ucHJvdG8SDHRhc2tndWlsZC52MSLkAgoLSW50ZXJhY3Rpb24SCgoCaWQYASABKAkSDwoHdGFza19pZBgCIAEoCRIQCghhZ2VudF9pZBgDIAEoCRIrCgR0eXBlGAQgASgOMh0udGFza2d1aWxkLnYxLkludGVyYWN0aW9uVHlwZRIvCgZzdGF0dXMYBSABKA4yHy50YXNrZ3VpbGQudjEuSW50ZXJhY3Rpb25TdGF0dXMSDQoFdGl0bGUYBiABKAkSEwoLZGVzY3JpcHRpb24YByABKAkSMAoHb3B0aW9ucxgIIAMoCzIfLnRhc2tndWlsZC52MS5JbnRlcmFjdGlvbk9wdGlvbhIQCghyZXNwb25zZRgJIAEoCRIuCgpjcmVhdGVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxyZXNwb25kZWRfYXQYCyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIkYKEUludGVyYWN0aW9uT3B0aW9uEg0KBWxhYmVsGAEgASgJEg0KBXZhbHVlGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJIkIKEEludGVyYWN0aW9uRXZlbnQSLgoLaW50ZXJhY3Rpb24YASABKAsyGS50YXNrZ3VpbGQudjEuSW50ZXJhY3Rpb24ilwEKF0xpc3RJbnRlcmFjdGlvbnNSZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkSNgoNc3RhdHVzX2ZpbHRlchgCIAEoDjIfLnRhc2tndWlsZC52MS5JbnRlcmFjdGlvblN0YXR1cxIzCgpwYWdpbmF0aW9uGAMgASgLMh8udGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXF1ZXN0IoEBChhMaXN0SW50ZXJhY3Rpb25zUmVzcG9uc2USLwoMaW50ZXJhY3Rpb25zGAEgAygLMhkudGFza2d1aWxkLnYxLkludGVyYWN0aW9uEjQKCnBhZ2luYXRpb24YAiABKAsyIC50YXNrZ3VpbGQudjEuUGFnaW5hdGlvblJlc3BvbnNlIjsKG1Jlc3BvbmRUb0ludGVyYWN0aW9uUmVxdWVzdBIKCgJpZBgBIAEoCRIQCghyZXNwb25zZRgCIAEoCSJOChxSZXNwb25kVG9JbnRlcmFjdGlvblJlc3BvbnNlEi4KC2ludGVyYWN0aW9uGAEgASgLMhkudGFza2d1aWxkLnYxLkludGVyYWN0aW9uIi8KHFN1YnNjcmliZUludGVyYWN0aW9uc1JlcXVlc3QSDwoHdGFza19pZBgBIAEoCSqeAQoPSW50ZXJhY3Rpb25UeXBlEiAKHElOVEVSQUNUSU9OX1RZUEVfVU5TUEVDSUZJRUQQABInCiNJTlRFUkFDVElPTl9UWVBFX1BFUk1JU1NJT05fUkVRVUVTVBABEh0KGUlOVEVSQUNUSU9OX1RZUEVfUVVFU1RJT04QAhIhCh1JTlRFUkFDVElPTl9UWVBFX05PVElGSUNBVElPThADKpkBChFJbnRlcmFjdGlvblN0YXR1cxIiCh5JTlRFUkFDVElPTl9TVEFUVVNfVU5TUEVDSUZJRUQQABIeChpJTlRFUkFDVElPTl9TVEFUVVNfUEVORElORxABEiAKHElOVEVSQUNUSU9OX1NUQVRVU19SRVNQT05ERUQQAhIeChpJTlRFUkFDVElPTl9TVEFUVVNfRVhQSVJFRBADMs0CChJJbnRlcmFjdGlvblNlcnZpY2USYQoQTGlzdEludGVyYWN0aW9ucxIlLnRhc2tndWlsZC52MS5MaXN0SW50ZXJhY3Rpb25zUmVxdWVzdBomLnRhc2tndWlsZC52MS5MaXN0SW50ZXJhY3Rpb25zUmVzcG9uc2USbQoUUmVzcG9uZFRvSW50ZXJhY3Rpb24SKS50YXNrZ3VpbGQudjEuUmVzcG9uZFRvSW50ZXJhY3Rpb25SZXF1ZXN0GioudGFza2d1aWxkLnYxLlJlc3BvbmRUb0ludGVyYWN0aW9uUmVzcG9uc2USZQoVU3Vic2NyaWJlSW50ZXJhY3Rpb25zEioudGFza2d1aWxkLnYxLlN1YnNjcmliZUludGVyYWN0aW9uc1JlcXVlc3QaHi50YXNrZ3VpbGQudjEuSW50ZXJhY3Rpb25FdmVudDABQrkBChBjb20udGFza2d1aWxkLnYxQhBJbnRlcmFjdGlvblByb3RvUAFaQmdpdGh1Yi5jb20va2F6ejE4Ny90YXNrZ3VpbGQvcHJvdG8vZ2VuL2dvL3Rhc2tndWlsZC92MTt0YXNrZ3VpbGR2MaICA1RYWKoCDFRhc2tndWlsZC5WMcoCDFRhc2tndWlsZFxWMeICGFRhc2tndWlsZFxWMVxHUEJNZXRhZGF0YeoCDVRhc2tndWlsZDo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_taskguild_v1_common]);
+  fileDesc("Ch50YXNrZ3VpbGQvdjEvaW50ZXJhY3Rpb24ucHJvdG8SDHRhc2tndWlsZC52MSLkAgoLSW50ZXJhY3Rpb24SCgoCaWQYASABKAkSDwoHdGFza19pZBgCIAEoCRIQCghhZ2VudF9pZBgDIAEoCRIrCgR0eXBlGAQgASgOMh0udGFza2d1aWxkLnYxLkludGVyYWN0aW9uVHlwZRIvCgZzdGF0dXMYBSABKA4yHy50YXNrZ3VpbGQudjEuSW50ZXJhY3Rpb25TdGF0dXMSDQoFdGl0bGUYBiABKAkSEwoLZGVzY3JpcHRpb24YByABKAkSMAoHb3B0aW9ucxgIIAMoCzIfLnRhc2tndWlsZC52MS5JbnRlcmFjdGlvbk9wdGlvbhIQCghyZXNwb25zZRgJIAEoCRIuCgpjcmVhdGVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxyZXNwb25kZWRfYXQYCyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIkYKEUludGVyYWN0aW9uT3B0aW9uEg0KBWxhYmVsGAEgASgJEg0KBXZhbHVlGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJIkIKEEludGVyYWN0aW9uRXZlbnQSLgoLaW50ZXJhY3Rpb24YASABKAsyGS50YXNrZ3VpbGQudjEuSW50ZXJhY3Rpb24ilwEKF0xpc3RJbnRlcmFjdGlvbnNSZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkSNgoNc3RhdHVzX2ZpbHRlchgCIAEoDjIfLnRhc2tndWlsZC52MS5JbnRlcmFjdGlvblN0YXR1cxIzCgpwYWdpbmF0aW9uGAMgASgLMh8udGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXF1ZXN0IoEBChhMaXN0SW50ZXJhY3Rpb25zUmVzcG9uc2USLwoMaW50ZXJhY3Rpb25zGAEgAygLMhkudGFza2d1aWxkLnYxLkludGVyYWN0aW9uEjQKCnBhZ2luYXRpb24YAiABKAsyIC50YXNrZ3VpbGQudjEuUGFnaW5hdGlvblJlc3BvbnNlIjsKG1Jlc3BvbmRUb0ludGVyYWN0aW9uUmVxdWVzdBIKCgJpZBgBIAEoCRIQCghyZXNwb25zZRgCIAEoCSJOChxSZXNwb25kVG9JbnRlcmFjdGlvblJlc3BvbnNlEi4KC2ludGVyYWN0aW9uGAEgASgLMhkudGFza2d1aWxkLnYxLkludGVyYWN0aW9uIjYKElNlbmRNZXNzYWdlUmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJEg8KB21lc3NhZ2UYAiABKAkiRQoTU2VuZE1lc3NhZ2VSZXNwb25zZRIuCgtpbnRlcmFjdGlvbhgBIAEoCzIZLnRhc2tndWlsZC52MS5JbnRlcmFjdGlvbiIvChxTdWJzY3JpYmVJbnRlcmFjdGlvbnNSZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkqwQEKD0ludGVyYWN0aW9uVHlwZRIgChxJTlRFUkFDVElPTl9UWVBFX1VOU1BFQ0lGSUVEEAASJwojSU5URVJBQ1RJT05fVFlQRV9QRVJNSVNTSU9OX1JFUVVFU1QQARIdChlJTlRFUkFDVElPTl9UWVBFX1FVRVNUSU9OEAISIQodSU5URVJBQ1RJT05fVFlQRV9OT1RJRklDQVRJT04QAxIhCh1JTlRFUkFDVElPTl9UWVBFX1VTRVJfTUVTU0FHRRAEKpkBChFJbnRlcmFjdGlvblN0YXR1cxIiCh5JTlRFUkFDVElPTl9TVEFUVVNfVU5TUEVDSUZJRUQQABIeChpJTlRFUkFDVElPTl9TVEFUVVNfUEVORElORxABEiAKHElOVEVSQUNUSU9OX1NUQVRVU19SRVNQT05ERUQQAhIeChpJTlRFUkFDVElPTl9TVEFUVVNfRVhQSVJFRBADMqEDChJJbnRlcmFjdGlvblNlcnZpY2USYQoQTGlzdEludGVyYWN0aW9ucxIlLnRhc2tndWlsZC52MS5MaXN0SW50ZXJhY3Rpb25zUmVxdWVzdBomLnRhc2tndWlsZC52MS5MaXN0SW50ZXJhY3Rpb25zUmVzcG9uc2USbQoUUmVzcG9uZFRvSW50ZXJhY3Rpb24SKS50YXNrZ3VpbGQudjEuUmVzcG9uZFRvSW50ZXJhY3Rpb25SZXF1ZXN0GioudGFza2d1aWxkLnYxLlJlc3BvbmRUb0ludGVyYWN0aW9uUmVzcG9uc2USUgoLU2VuZE1lc3NhZ2USIC50YXNrZ3VpbGQudjEuU2VuZE1lc3NhZ2VSZXF1ZXN0GiEudGFza2d1aWxkLnYxLlNlbmRNZXNzYWdlUmVzcG9uc2USZQoVU3Vic2NyaWJlSW50ZXJhY3Rpb25zEioudGFza2d1aWxkLnYxLlN1YnNjcmliZUludGVyYWN0aW9uc1JlcXVlc3QaHi50YXNrZ3VpbGQudjEuSW50ZXJhY3Rpb25FdmVudDABQrkBChBjb20udGFza2d1aWxkLnYxQhBJbnRlcmFjdGlvblByb3RvUAFaQmdpdGh1Yi5jb20va2F6ejE4Ny90YXNrZ3VpbGQvcHJvdG8vZ2VuL2dvL3Rhc2tndWlsZC92MTt0YXNrZ3VpbGR2MaICA1RYWKoCDFRhc2tndWlsZC5WMcoCDFRhc2tndWlsZFxWMeICGFRhc2tndWlsZFxWMVxHUEJNZXRhZGF0YeoCDVRhc2tndWlsZDo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_taskguild_v1_common]);
 
 /**
  * @generated from message taskguild.v1.Interaction
@@ -216,6 +216,45 @@ export const RespondToInteractionResponseSchema: GenMessage<RespondToInteraction
   messageDesc(file_taskguild_v1_interaction, 6);
 
 /**
+ * @generated from message taskguild.v1.SendMessageRequest
+ */
+export type SendMessageRequest = Message<"taskguild.v1.SendMessageRequest"> & {
+  /**
+   * @generated from field: string task_id = 1;
+   */
+  taskId: string;
+
+  /**
+   * @generated from field: string message = 2;
+   */
+  message: string;
+};
+
+/**
+ * Describes the message taskguild.v1.SendMessageRequest.
+ * Use `create(SendMessageRequestSchema)` to create a new message.
+ */
+export const SendMessageRequestSchema: GenMessage<SendMessageRequest> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_interaction, 7);
+
+/**
+ * @generated from message taskguild.v1.SendMessageResponse
+ */
+export type SendMessageResponse = Message<"taskguild.v1.SendMessageResponse"> & {
+  /**
+   * @generated from field: taskguild.v1.Interaction interaction = 1;
+   */
+  interaction?: Interaction;
+};
+
+/**
+ * Describes the message taskguild.v1.SendMessageResponse.
+ * Use `create(SendMessageResponseSchema)` to create a new message.
+ */
+export const SendMessageResponseSchema: GenMessage<SendMessageResponse> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_interaction, 8);
+
+/**
  * @generated from message taskguild.v1.SubscribeInteractionsRequest
  */
 export type SubscribeInteractionsRequest = Message<"taskguild.v1.SubscribeInteractionsRequest"> & {
@@ -230,7 +269,7 @@ export type SubscribeInteractionsRequest = Message<"taskguild.v1.SubscribeIntera
  * Use `create(SubscribeInteractionsRequestSchema)` to create a new message.
  */
 export const SubscribeInteractionsRequestSchema: GenMessage<SubscribeInteractionsRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_interaction, 7);
+  messageDesc(file_taskguild_v1_interaction, 9);
 
 /**
  * @generated from enum taskguild.v1.InteractionType
@@ -255,6 +294,11 @@ export enum InteractionType {
    * @generated from enum value: INTERACTION_TYPE_NOTIFICATION = 3;
    */
   NOTIFICATION = 3,
+
+  /**
+   * @generated from enum value: INTERACTION_TYPE_USER_MESSAGE = 4;
+   */
+  USER_MESSAGE = 4,
 }
 
 /**
@@ -313,6 +357,14 @@ export const InteractionService: GenService<{
     methodKind: "unary";
     input: typeof RespondToInteractionRequestSchema;
     output: typeof RespondToInteractionResponseSchema;
+  },
+  /**
+   * @generated from rpc taskguild.v1.InteractionService.SendMessage
+   */
+  sendMessage: {
+    methodKind: "unary";
+    input: typeof SendMessageRequestSchema;
+    output: typeof SendMessageResponseSchema;
   },
   /**
    * @generated from rpc taskguild.v1.InteractionService.SubscribeInteractions

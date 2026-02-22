@@ -51,6 +51,9 @@ const (
 	// AgentManagerServiceReportAgentStatusProcedure is the fully-qualified name of the
 	// AgentManagerService's ReportAgentStatus RPC.
 	AgentManagerServiceReportAgentStatusProcedure = "/taskguild.v1.AgentManagerService/ReportAgentStatus"
+	// AgentManagerServiceClaimTaskProcedure is the fully-qualified name of the AgentManagerService's
+	// ClaimTask RPC.
+	AgentManagerServiceClaimTaskProcedure = "/taskguild.v1.AgentManagerService/ClaimTask"
 )
 
 // AgentManagerServiceClient is a client for the taskguild.v1.AgentManagerService service.
@@ -67,6 +70,8 @@ type AgentManagerServiceClient interface {
 	GetInteractionResponse(context.Context, *connect.Request[v1.GetInteractionResponseRequest]) (*connect.Response[v1.GetInteractionResponseResponse], error)
 	// ReportAgentStatus reports the current status of an agent.
 	ReportAgentStatus(context.Context, *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error)
+	// ClaimTask allows an agent-manager to claim an available task.
+	ClaimTask(context.Context, *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error)
 }
 
 // NewAgentManagerServiceClient constructs a client for the taskguild.v1.AgentManagerService
@@ -116,6 +121,12 @@ func NewAgentManagerServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(agentManagerServiceMethods.ByName("ReportAgentStatus")),
 			connect.WithClientOptions(opts...),
 		),
+		claimTask: connect.NewClient[v1.ClaimTaskRequest, v1.ClaimTaskResponse](
+			httpClient,
+			baseURL+AgentManagerServiceClaimTaskProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("ClaimTask")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -127,6 +138,7 @@ type agentManagerServiceClient struct {
 	createInteraction      *connect.Client[v1.CreateInteractionRequest, v1.CreateInteractionResponse]
 	getInteractionResponse *connect.Client[v1.GetInteractionResponseRequest, v1.GetInteractionResponseResponse]
 	reportAgentStatus      *connect.Client[v1.ReportAgentStatusRequest, v1.ReportAgentStatusResponse]
+	claimTask              *connect.Client[v1.ClaimTaskRequest, v1.ClaimTaskResponse]
 }
 
 // Subscribe calls taskguild.v1.AgentManagerService.Subscribe.
@@ -159,6 +171,11 @@ func (c *agentManagerServiceClient) ReportAgentStatus(ctx context.Context, req *
 	return c.reportAgentStatus.CallUnary(ctx, req)
 }
 
+// ClaimTask calls taskguild.v1.AgentManagerService.ClaimTask.
+func (c *agentManagerServiceClient) ClaimTask(ctx context.Context, req *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error) {
+	return c.claimTask.CallUnary(ctx, req)
+}
+
 // AgentManagerServiceHandler is an implementation of the taskguild.v1.AgentManagerService service.
 type AgentManagerServiceHandler interface {
 	// Subscribe opens a server-stream for receiving commands from the backend.
@@ -173,6 +190,8 @@ type AgentManagerServiceHandler interface {
 	GetInteractionResponse(context.Context, *connect.Request[v1.GetInteractionResponseRequest]) (*connect.Response[v1.GetInteractionResponseResponse], error)
 	// ReportAgentStatus reports the current status of an agent.
 	ReportAgentStatus(context.Context, *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error)
+	// ClaimTask allows an agent-manager to claim an available task.
+	ClaimTask(context.Context, *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error)
 }
 
 // NewAgentManagerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -218,6 +237,12 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 		connect.WithSchema(agentManagerServiceMethods.ByName("ReportAgentStatus")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentManagerServiceClaimTaskHandler := connect.NewUnaryHandler(
+		AgentManagerServiceClaimTaskProcedure,
+		svc.ClaimTask,
+		connect.WithSchema(agentManagerServiceMethods.ByName("ClaimTask")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/taskguild.v1.AgentManagerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AgentManagerServiceSubscribeProcedure:
@@ -232,6 +257,8 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 			agentManagerServiceGetInteractionResponseHandler.ServeHTTP(w, r)
 		case AgentManagerServiceReportAgentStatusProcedure:
 			agentManagerServiceReportAgentStatusHandler.ServeHTTP(w, r)
+		case AgentManagerServiceClaimTaskProcedure:
+			agentManagerServiceClaimTaskHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -263,4 +290,8 @@ func (UnimplementedAgentManagerServiceHandler) GetInteractionResponse(context.Co
 
 func (UnimplementedAgentManagerServiceHandler) ReportAgentStatus(context.Context, *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportAgentStatus is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) ClaimTask(context.Context, *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ClaimTask is not implemented"))
 }

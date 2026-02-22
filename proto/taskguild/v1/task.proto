@@ -5,6 +5,13 @@ package taskguild.v1;
 import "google/protobuf/timestamp.proto";
 import "taskguild/v1/common.proto";
 
+enum TaskAssignmentStatus {
+  TASK_ASSIGNMENT_STATUS_UNSPECIFIED = 0;
+  TASK_ASSIGNMENT_STATUS_UNASSIGNED = 1;
+  TASK_ASSIGNMENT_STATUS_PENDING = 2;
+  TASK_ASSIGNMENT_STATUS_ASSIGNED = 3;
+}
+
 service TaskService {
   rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
   rpc GetTask(GetTaskRequest) returns (GetTaskResponse);
@@ -25,6 +32,7 @@ message Task {
   map<string, string> metadata = 8;
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
+  TaskAssignmentStatus assignment_status = 11;
 }
 
 message CreateTaskRequest {

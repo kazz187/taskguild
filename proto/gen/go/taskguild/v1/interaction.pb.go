@@ -29,6 +29,7 @@ const (
 	InteractionType_INTERACTION_TYPE_PERMISSION_REQUEST InteractionType = 1
 	InteractionType_INTERACTION_TYPE_QUESTION           InteractionType = 2
 	InteractionType_INTERACTION_TYPE_NOTIFICATION       InteractionType = 3
+	InteractionType_INTERACTION_TYPE_USER_MESSAGE       InteractionType = 4
 )
 
 // Enum value maps for InteractionType.
@@ -38,12 +39,14 @@ var (
 		1: "INTERACTION_TYPE_PERMISSION_REQUEST",
 		2: "INTERACTION_TYPE_QUESTION",
 		3: "INTERACTION_TYPE_NOTIFICATION",
+		4: "INTERACTION_TYPE_USER_MESSAGE",
 	}
 	InteractionType_value = map[string]int32{
 		"INTERACTION_TYPE_UNSPECIFIED":        0,
 		"INTERACTION_TYPE_PERMISSION_REQUEST": 1,
 		"INTERACTION_TYPE_QUESTION":           2,
 		"INTERACTION_TYPE_NOTIFICATION":       3,
+		"INTERACTION_TYPE_USER_MESSAGE":       4,
 	}
 )
 
@@ -562,6 +565,102 @@ func (x *RespondToInteractionResponse) GetInteraction() *Interaction {
 	return nil
 }
 
+type SendMessageRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SendMessageRequest) Reset() {
+	*x = SendMessageRequest{}
+	mi := &file_taskguild_v1_interaction_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SendMessageRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SendMessageRequest) ProtoMessage() {}
+
+func (x *SendMessageRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_interaction_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SendMessageRequest.ProtoReflect.Descriptor instead.
+func (*SendMessageRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_interaction_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *SendMessageRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+func (x *SendMessageRequest) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+type SendMessageResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Interaction   *Interaction           `protobuf:"bytes,1,opt,name=interaction,proto3" json:"interaction,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SendMessageResponse) Reset() {
+	*x = SendMessageResponse{}
+	mi := &file_taskguild_v1_interaction_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SendMessageResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SendMessageResponse) ProtoMessage() {}
+
+func (x *SendMessageResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_interaction_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SendMessageResponse.ProtoReflect.Descriptor instead.
+func (*SendMessageResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_interaction_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *SendMessageResponse) GetInteraction() *Interaction {
+	if x != nil {
+		return x.Interaction
+	}
+	return nil
+}
+
 type SubscribeInteractionsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
@@ -571,7 +670,7 @@ type SubscribeInteractionsRequest struct {
 
 func (x *SubscribeInteractionsRequest) Reset() {
 	*x = SubscribeInteractionsRequest{}
-	mi := &file_taskguild_v1_interaction_proto_msgTypes[7]
+	mi := &file_taskguild_v1_interaction_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -583,7 +682,7 @@ func (x *SubscribeInteractionsRequest) String() string {
 func (*SubscribeInteractionsRequest) ProtoMessage() {}
 
 func (x *SubscribeInteractionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_interaction_proto_msgTypes[7]
+	mi := &file_taskguild_v1_interaction_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -596,7 +695,7 @@ func (x *SubscribeInteractionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscribeInteractionsRequest.ProtoReflect.Descriptor instead.
 func (*SubscribeInteractionsRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_interaction_proto_rawDescGZIP(), []int{7}
+	return file_taskguild_v1_interaction_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SubscribeInteractionsRequest) GetTaskId() string {
@@ -646,22 +745,29 @@ const file_taskguild_v1_interaction_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bresponse\x18\x02 \x01(\tR\bresponse\"[\n" +
 	"\x1cRespondToInteractionResponse\x12;\n" +
+	"\vinteraction\x18\x01 \x01(\v2\x19.taskguild.v1.InteractionR\vinteraction\"G\n" +
+	"\x12SendMessageRequest\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"R\n" +
+	"\x13SendMessageResponse\x12;\n" +
 	"\vinteraction\x18\x01 \x01(\v2\x19.taskguild.v1.InteractionR\vinteraction\"7\n" +
 	"\x1cSubscribeInteractionsRequest\x12\x17\n" +
-	"\atask_id\x18\x01 \x01(\tR\x06taskId*\x9e\x01\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId*\xc1\x01\n" +
 	"\x0fInteractionType\x12 \n" +
 	"\x1cINTERACTION_TYPE_UNSPECIFIED\x10\x00\x12'\n" +
 	"#INTERACTION_TYPE_PERMISSION_REQUEST\x10\x01\x12\x1d\n" +
 	"\x19INTERACTION_TYPE_QUESTION\x10\x02\x12!\n" +
-	"\x1dINTERACTION_TYPE_NOTIFICATION\x10\x03*\x99\x01\n" +
+	"\x1dINTERACTION_TYPE_NOTIFICATION\x10\x03\x12!\n" +
+	"\x1dINTERACTION_TYPE_USER_MESSAGE\x10\x04*\x99\x01\n" +
 	"\x11InteractionStatus\x12\"\n" +
 	"\x1eINTERACTION_STATUS_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aINTERACTION_STATUS_PENDING\x10\x01\x12 \n" +
 	"\x1cINTERACTION_STATUS_RESPONDED\x10\x02\x12\x1e\n" +
-	"\x1aINTERACTION_STATUS_EXPIRED\x10\x032\xcd\x02\n" +
+	"\x1aINTERACTION_STATUS_EXPIRED\x10\x032\xa1\x03\n" +
 	"\x12InteractionService\x12a\n" +
 	"\x10ListInteractions\x12%.taskguild.v1.ListInteractionsRequest\x1a&.taskguild.v1.ListInteractionsResponse\x12m\n" +
-	"\x14RespondToInteraction\x12).taskguild.v1.RespondToInteractionRequest\x1a*.taskguild.v1.RespondToInteractionResponse\x12e\n" +
+	"\x14RespondToInteraction\x12).taskguild.v1.RespondToInteractionRequest\x1a*.taskguild.v1.RespondToInteractionResponse\x12R\n" +
+	"\vSendMessage\x12 .taskguild.v1.SendMessageRequest\x1a!.taskguild.v1.SendMessageResponse\x12e\n" +
 	"\x15SubscribeInteractions\x12*.taskguild.v1.SubscribeInteractionsRequest\x1a\x1e.taskguild.v1.InteractionEvent0\x01B\xb9\x01\n" +
 	"\x10com.taskguild.v1B\x10InteractionProtoP\x01ZBgithub.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
@@ -678,7 +784,7 @@ func file_taskguild_v1_interaction_proto_rawDescGZIP() []byte {
 }
 
 var file_taskguild_v1_interaction_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_taskguild_v1_interaction_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_taskguild_v1_interaction_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_taskguild_v1_interaction_proto_goTypes = []any{
 	(InteractionType)(0),                 // 0: taskguild.v1.InteractionType
 	(InteractionStatus)(0),               // 1: taskguild.v1.InteractionStatus
@@ -689,34 +795,39 @@ var file_taskguild_v1_interaction_proto_goTypes = []any{
 	(*ListInteractionsResponse)(nil),     // 6: taskguild.v1.ListInteractionsResponse
 	(*RespondToInteractionRequest)(nil),  // 7: taskguild.v1.RespondToInteractionRequest
 	(*RespondToInteractionResponse)(nil), // 8: taskguild.v1.RespondToInteractionResponse
-	(*SubscribeInteractionsRequest)(nil), // 9: taskguild.v1.SubscribeInteractionsRequest
-	(*timestamppb.Timestamp)(nil),        // 10: google.protobuf.Timestamp
-	(*PaginationRequest)(nil),            // 11: taskguild.v1.PaginationRequest
-	(*PaginationResponse)(nil),           // 12: taskguild.v1.PaginationResponse
+	(*SendMessageRequest)(nil),           // 9: taskguild.v1.SendMessageRequest
+	(*SendMessageResponse)(nil),          // 10: taskguild.v1.SendMessageResponse
+	(*SubscribeInteractionsRequest)(nil), // 11: taskguild.v1.SubscribeInteractionsRequest
+	(*timestamppb.Timestamp)(nil),        // 12: google.protobuf.Timestamp
+	(*PaginationRequest)(nil),            // 13: taskguild.v1.PaginationRequest
+	(*PaginationResponse)(nil),           // 14: taskguild.v1.PaginationResponse
 }
 var file_taskguild_v1_interaction_proto_depIdxs = []int32{
 	0,  // 0: taskguild.v1.Interaction.type:type_name -> taskguild.v1.InteractionType
 	1,  // 1: taskguild.v1.Interaction.status:type_name -> taskguild.v1.InteractionStatus
 	3,  // 2: taskguild.v1.Interaction.options:type_name -> taskguild.v1.InteractionOption
-	10, // 3: taskguild.v1.Interaction.created_at:type_name -> google.protobuf.Timestamp
-	10, // 4: taskguild.v1.Interaction.responded_at:type_name -> google.protobuf.Timestamp
+	12, // 3: taskguild.v1.Interaction.created_at:type_name -> google.protobuf.Timestamp
+	12, // 4: taskguild.v1.Interaction.responded_at:type_name -> google.protobuf.Timestamp
 	2,  // 5: taskguild.v1.InteractionEvent.interaction:type_name -> taskguild.v1.Interaction
 	1,  // 6: taskguild.v1.ListInteractionsRequest.status_filter:type_name -> taskguild.v1.InteractionStatus
-	11, // 7: taskguild.v1.ListInteractionsRequest.pagination:type_name -> taskguild.v1.PaginationRequest
+	13, // 7: taskguild.v1.ListInteractionsRequest.pagination:type_name -> taskguild.v1.PaginationRequest
 	2,  // 8: taskguild.v1.ListInteractionsResponse.interactions:type_name -> taskguild.v1.Interaction
-	12, // 9: taskguild.v1.ListInteractionsResponse.pagination:type_name -> taskguild.v1.PaginationResponse
+	14, // 9: taskguild.v1.ListInteractionsResponse.pagination:type_name -> taskguild.v1.PaginationResponse
 	2,  // 10: taskguild.v1.RespondToInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
-	5,  // 11: taskguild.v1.InteractionService.ListInteractions:input_type -> taskguild.v1.ListInteractionsRequest
-	7,  // 12: taskguild.v1.InteractionService.RespondToInteraction:input_type -> taskguild.v1.RespondToInteractionRequest
-	9,  // 13: taskguild.v1.InteractionService.SubscribeInteractions:input_type -> taskguild.v1.SubscribeInteractionsRequest
-	6,  // 14: taskguild.v1.InteractionService.ListInteractions:output_type -> taskguild.v1.ListInteractionsResponse
-	8,  // 15: taskguild.v1.InteractionService.RespondToInteraction:output_type -> taskguild.v1.RespondToInteractionResponse
-	4,  // 16: taskguild.v1.InteractionService.SubscribeInteractions:output_type -> taskguild.v1.InteractionEvent
-	14, // [14:17] is the sub-list for method output_type
-	11, // [11:14] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	2,  // 11: taskguild.v1.SendMessageResponse.interaction:type_name -> taskguild.v1.Interaction
+	5,  // 12: taskguild.v1.InteractionService.ListInteractions:input_type -> taskguild.v1.ListInteractionsRequest
+	7,  // 13: taskguild.v1.InteractionService.RespondToInteraction:input_type -> taskguild.v1.RespondToInteractionRequest
+	9,  // 14: taskguild.v1.InteractionService.SendMessage:input_type -> taskguild.v1.SendMessageRequest
+	11, // 15: taskguild.v1.InteractionService.SubscribeInteractions:input_type -> taskguild.v1.SubscribeInteractionsRequest
+	6,  // 16: taskguild.v1.InteractionService.ListInteractions:output_type -> taskguild.v1.ListInteractionsResponse
+	8,  // 17: taskguild.v1.InteractionService.RespondToInteraction:output_type -> taskguild.v1.RespondToInteractionResponse
+	10, // 18: taskguild.v1.InteractionService.SendMessage:output_type -> taskguild.v1.SendMessageResponse
+	4,  // 19: taskguild.v1.InteractionService.SubscribeInteractions:output_type -> taskguild.v1.InteractionEvent
+	16, // [16:20] is the sub-list for method output_type
+	12, // [12:16] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_interaction_proto_init() }
@@ -731,7 +842,7 @@ func file_taskguild_v1_interaction_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_interaction_proto_rawDesc), len(file_taskguild_v1_interaction_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   8,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

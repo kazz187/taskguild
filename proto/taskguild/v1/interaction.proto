@@ -8,6 +8,7 @@ import "taskguild/v1/common.proto";
 service InteractionService {
   rpc ListInteractions(ListInteractionsRequest) returns (ListInteractionsResponse);
   rpc RespondToInteraction(RespondToInteractionRequest) returns (RespondToInteractionResponse);
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
   rpc SubscribeInteractions(SubscribeInteractionsRequest) returns (stream InteractionEvent);
 }
 
@@ -16,6 +17,7 @@ enum InteractionType {
   INTERACTION_TYPE_PERMISSION_REQUEST = 1;
   INTERACTION_TYPE_QUESTION = 2;
   INTERACTION_TYPE_NOTIFICATION = 3;
+  INTERACTION_TYPE_USER_MESSAGE = 4;
 }
 
 enum InteractionStatus {
@@ -64,6 +66,14 @@ message RespondToInteractionRequest {
   string response = 2;
 }
 message RespondToInteractionResponse {
+  Interaction interaction = 1;
+}
+
+message SendMessageRequest {
+  string task_id = 1;
+  string message = 2;
+}
+message SendMessageResponse {
   Interaction interaction = 1;
 }
 

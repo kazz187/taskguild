@@ -39,6 +39,9 @@ const (
 	// InteractionServiceRespondToInteractionProcedure is the fully-qualified name of the
 	// InteractionService's RespondToInteraction RPC.
 	InteractionServiceRespondToInteractionProcedure = "/taskguild.v1.InteractionService/RespondToInteraction"
+	// InteractionServiceSendMessageProcedure is the fully-qualified name of the InteractionService's
+	// SendMessage RPC.
+	InteractionServiceSendMessageProcedure = "/taskguild.v1.InteractionService/SendMessage"
 	// InteractionServiceSubscribeInteractionsProcedure is the fully-qualified name of the
 	// InteractionService's SubscribeInteractions RPC.
 	InteractionServiceSubscribeInteractionsProcedure = "/taskguild.v1.InteractionService/SubscribeInteractions"
@@ -48,6 +51,7 @@ const (
 type InteractionServiceClient interface {
 	ListInteractions(context.Context, *connect.Request[v1.ListInteractionsRequest]) (*connect.Response[v1.ListInteractionsResponse], error)
 	RespondToInteraction(context.Context, *connect.Request[v1.RespondToInteractionRequest]) (*connect.Response[v1.RespondToInteractionResponse], error)
+	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
 	SubscribeInteractions(context.Context, *connect.Request[v1.SubscribeInteractionsRequest]) (*connect.ServerStreamForClient[v1.InteractionEvent], error)
 }
 
@@ -74,6 +78,12 @@ func NewInteractionServiceClient(httpClient connect.HTTPClient, baseURL string, 
 			connect.WithSchema(interactionServiceMethods.ByName("RespondToInteraction")),
 			connect.WithClientOptions(opts...),
 		),
+		sendMessage: connect.NewClient[v1.SendMessageRequest, v1.SendMessageResponse](
+			httpClient,
+			baseURL+InteractionServiceSendMessageProcedure,
+			connect.WithSchema(interactionServiceMethods.ByName("SendMessage")),
+			connect.WithClientOptions(opts...),
+		),
 		subscribeInteractions: connect.NewClient[v1.SubscribeInteractionsRequest, v1.InteractionEvent](
 			httpClient,
 			baseURL+InteractionServiceSubscribeInteractionsProcedure,
@@ -87,6 +97,7 @@ func NewInteractionServiceClient(httpClient connect.HTTPClient, baseURL string, 
 type interactionServiceClient struct {
 	listInteractions      *connect.Client[v1.ListInteractionsRequest, v1.ListInteractionsResponse]
 	respondToInteraction  *connect.Client[v1.RespondToInteractionRequest, v1.RespondToInteractionResponse]
+	sendMessage           *connect.Client[v1.SendMessageRequest, v1.SendMessageResponse]
 	subscribeInteractions *connect.Client[v1.SubscribeInteractionsRequest, v1.InteractionEvent]
 }
 
@@ -100,6 +111,11 @@ func (c *interactionServiceClient) RespondToInteraction(ctx context.Context, req
 	return c.respondToInteraction.CallUnary(ctx, req)
 }
 
+// SendMessage calls taskguild.v1.InteractionService.SendMessage.
+func (c *interactionServiceClient) SendMessage(ctx context.Context, req *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error) {
+	return c.sendMessage.CallUnary(ctx, req)
+}
+
 // SubscribeInteractions calls taskguild.v1.InteractionService.SubscribeInteractions.
 func (c *interactionServiceClient) SubscribeInteractions(ctx context.Context, req *connect.Request[v1.SubscribeInteractionsRequest]) (*connect.ServerStreamForClient[v1.InteractionEvent], error) {
 	return c.subscribeInteractions.CallServerStream(ctx, req)
@@ -109,6 +125,7 @@ func (c *interactionServiceClient) SubscribeInteractions(ctx context.Context, re
 type InteractionServiceHandler interface {
 	ListInteractions(context.Context, *connect.Request[v1.ListInteractionsRequest]) (*connect.Response[v1.ListInteractionsResponse], error)
 	RespondToInteraction(context.Context, *connect.Request[v1.RespondToInteractionRequest]) (*connect.Response[v1.RespondToInteractionResponse], error)
+	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
 	SubscribeInteractions(context.Context, *connect.Request[v1.SubscribeInteractionsRequest], *connect.ServerStream[v1.InteractionEvent]) error
 }
 
@@ -131,6 +148,12 @@ func NewInteractionServiceHandler(svc InteractionServiceHandler, opts ...connect
 		connect.WithSchema(interactionServiceMethods.ByName("RespondToInteraction")),
 		connect.WithHandlerOptions(opts...),
 	)
+	interactionServiceSendMessageHandler := connect.NewUnaryHandler(
+		InteractionServiceSendMessageProcedure,
+		svc.SendMessage,
+		connect.WithSchema(interactionServiceMethods.ByName("SendMessage")),
+		connect.WithHandlerOptions(opts...),
+	)
 	interactionServiceSubscribeInteractionsHandler := connect.NewServerStreamHandler(
 		InteractionServiceSubscribeInteractionsProcedure,
 		svc.SubscribeInteractions,
@@ -143,6 +166,8 @@ func NewInteractionServiceHandler(svc InteractionServiceHandler, opts ...connect
 			interactionServiceListInteractionsHandler.ServeHTTP(w, r)
 		case InteractionServiceRespondToInteractionProcedure:
 			interactionServiceRespondToInteractionHandler.ServeHTTP(w, r)
+		case InteractionServiceSendMessageProcedure:
+			interactionServiceSendMessageHandler.ServeHTTP(w, r)
 		case InteractionServiceSubscribeInteractionsProcedure:
 			interactionServiceSubscribeInteractionsHandler.ServeHTTP(w, r)
 		default:
@@ -160,6 +185,10 @@ func (UnimplementedInteractionServiceHandler) ListInteractions(context.Context, 
 
 func (UnimplementedInteractionServiceHandler) RespondToInteraction(context.Context, *connect.Request[v1.RespondToInteractionRequest]) (*connect.Response[v1.RespondToInteractionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.InteractionService.RespondToInteraction is not implemented"))
+}
+
+func (UnimplementedInteractionServiceHandler) SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.InteractionService.SendMessage is not implemented"))
 }
 
 func (UnimplementedInteractionServiceHandler) SubscribeInteractions(context.Context, *connect.Request[v1.SubscribeInteractionsRequest], *connect.ServerStream[v1.InteractionEvent]) error {

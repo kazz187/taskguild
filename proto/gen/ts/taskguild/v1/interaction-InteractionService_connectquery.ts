@@ -13,3 +13,8 @@ export const listInteractions = InteractionService.method.listInteractions;
  * @generated from rpc taskguild.v1.InteractionService.RespondToInteraction
  */
 export const respondToInteraction = InteractionService.method.respondToInteraction;
+
+/**
+ * @generated from rpc taskguild.v1.InteractionService.SendMessage
+ */
+export const sendMessage = InteractionService.method.sendMessage;

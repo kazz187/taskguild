@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"sync"
+	"time"
 
 	"gopkg.in/yaml.v3"
 
@@ -16,6 +18,7 @@ const tasksPrefix = "tasks"
 
 type YAMLRepository struct {
 	storage storage.Storage
+	claimMu sync.Mutex
 }
 
 func NewYAMLRepository(s storage.Storage) *YAMLRepository {
@@ -120,4 +123,27 @@ func (r *YAMLRepository) Delete(ctx context.Context, id string) error {
 		return cerr.WrapStorageDeleteError("task", err)
 	}
 	return nil
+}
+
+func (r *YAMLRepository) Claim(ctx context.Context, taskID, agentID string) (*task.Task, error) {
+	r.claimMu.Lock()
+	defer r.claimMu.Unlock()
+
+	t, err := r.Get(ctx, taskID)
+	if err != nil {
+		return nil, err
+	}
+
+	if t.AssignmentStatus != task.AssignmentStatusPending {
+		return nil, cerr.NewError(cerr.FailedPrecondition, "task is not pending assignment", nil)
+	}
+
+	t.AssignmentStatus = task.AssignmentStatusAssigned
+	t.AssignedAgentID = agentID
+	t.UpdatedAt = time.Now()
+
+	if err := r.Update(ctx, t); err != nil {
+		return nil, err
+	}
+	return t, nil
 }

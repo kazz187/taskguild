@@ -12,6 +12,7 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/eventbus"
 	"github.com/kazz187/taskguild/backend/internal/interaction"
 	"github.com/kazz187/taskguild/backend/internal/task"
+	"github.com/kazz187/taskguild/backend/internal/workflow"
 	"github.com/kazz187/taskguild/backend/pkg/cerr"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
@@ -22,14 +23,16 @@ var _ taskguildv1connect.AgentManagerServiceHandler = (*Server)(nil)
 type Server struct {
 	registry        *Registry
 	taskRepo        task.Repository
+	workflowRepo    workflow.Repository
 	interactionRepo interaction.Repository
 	eventBus        *eventbus.Bus
 }
 
-func NewServer(registry *Registry, taskRepo task.Repository, interactionRepo interaction.Repository, eventBus *eventbus.Bus) *Server {
+func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, interactionRepo interaction.Repository, eventBus *eventbus.Bus) *Server {
 	return &Server{
 		registry:        registry,
 		taskRepo:        taskRepo,
+		workflowRepo:    workflowRepo,
 		interactionRepo: interactionRepo,
 		eventBus:        eventBus,
 	}
@@ -80,8 +83,9 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 		return nil, err
 	}
 
-	// Clear assigned agent.
+	// Clear assigned agent and reset assignment status.
 	t.AssignedAgentID = ""
+	t.AssignmentStatus = task.AssignmentStatusUnassigned
 	t.UpdatedAt = time.Now()
 
 	// Store result summary in metadata.
@@ -112,6 +116,64 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 	)
 
 	return connect.NewResponse(&taskguildv1.ReportTaskResultResponse{}), nil
+}
+
+func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1.ClaimTaskRequest]) (*connect.Response[taskguildv1.ClaimTaskResponse], error) {
+	if req.Msg.TaskId == "" || req.Msg.AgentManagerId == "" {
+		return nil, cerr.NewError(cerr.InvalidArgument, "task_id and agent_manager_id are required", nil).ConnectError()
+	}
+
+	t, err := s.taskRepo.Claim(ctx, req.Msg.TaskId, req.Msg.AgentManagerId)
+	if err != nil {
+		if cerr.IsCode(err, cerr.FailedPrecondition) {
+			return connect.NewResponse(&taskguildv1.ClaimTaskResponse{
+				Success: false,
+			}), nil
+		}
+		return nil, cerr.ExtractConnectError(ctx, err)
+	}
+
+	// Find agent config for the task's current status.
+	wf, err := s.workflowRepo.Get(ctx, t.WorkflowID)
+	if err != nil {
+		return nil, cerr.ExtractConnectError(ctx, err)
+	}
+
+	var instructions string
+	var agentConfigID string
+	for _, cfg := range wf.AgentConfigs {
+		if cfg.WorkflowStatusID == t.StatusID {
+			instructions = cfg.Instructions
+			agentConfigID = cfg.ID
+			break
+		}
+	}
+
+	// Publish agent assigned event.
+	s.eventBus.PublishNew(
+		taskguildv1.EventType_EVENT_TYPE_AGENT_ASSIGNED,
+		t.ID,
+		"",
+		map[string]string{
+			"agent_manager_id": req.Msg.AgentManagerId,
+			"agent_config_id":  agentConfigID,
+			"project_id":       t.ProjectID,
+			"workflow_id":      t.WorkflowID,
+		},
+	)
+
+	slog.Info("agent claimed task",
+		"task_id", t.ID,
+		"agent_manager_id", req.Msg.AgentManagerId,
+		"agent_config_id", agentConfigID,
+	)
+
+	return connect.NewResponse(&taskguildv1.ClaimTaskResponse{
+		Success:       true,
+		Instructions:  instructions,
+		AgentConfigId: agentConfigID,
+		Metadata:      t.Metadata,
+	}), nil
 }
 
 func (s *Server) CreateInteraction(ctx context.Context, req *connect.Request[taskguildv1.CreateInteractionRequest]) (*connect.Response[taskguildv1.CreateInteractionResponse], error) {

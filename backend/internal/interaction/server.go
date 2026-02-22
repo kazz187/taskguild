@@ -6,9 +6,11 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/kazz187/taskguild/backend/internal/eventbus"
+	"github.com/kazz187/taskguild/backend/internal/task"
 	"github.com/kazz187/taskguild/backend/pkg/cerr"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
@@ -18,12 +20,14 @@ var _ taskguildv1connect.InteractionServiceHandler = (*Server)(nil)
 
 type Server struct {
 	repo     Repository
+	taskRepo task.Repository
 	eventBus *eventbus.Bus
 }
 
-func NewServer(repo Repository, eventBus *eventbus.Bus) *Server {
+func NewServer(repo Repository, taskRepo task.Repository, eventBus *eventbus.Bus) *Server {
 	return &Server{
 		repo:     repo,
+		taskRepo: taskRepo,
 		eventBus: eventBus,
 	}
 }
@@ -81,6 +85,46 @@ func (s *Server) RespondToInteraction(ctx context.Context, req *connect.Request[
 	)
 
 	return connect.NewResponse(&taskguildv1.RespondToInteractionResponse{
+		Interaction: toProto(inter),
+	}), nil
+}
+
+func (s *Server) SendMessage(ctx context.Context, req *connect.Request[taskguildv1.SendMessageRequest]) (*connect.Response[taskguildv1.SendMessageResponse], error) {
+	if req.Msg.TaskId == "" {
+		return nil, cerr.NewError(cerr.InvalidArgument, "task_id is required", nil).ConnectError()
+	}
+	if req.Msg.Message == "" {
+		return nil, cerr.NewError(cerr.InvalidArgument, "message is required", nil).ConnectError()
+	}
+
+	t, err := s.taskRepo.Get(ctx, req.Msg.TaskId)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	inter := &Interaction{
+		ID:          ulid.Make().String(),
+		TaskID:      req.Msg.TaskId,
+		Type:        TypeUserMessage,
+		Status:      StatusResponded,
+		Title:       req.Msg.Message,
+		CreatedAt:   now,
+		RespondedAt: &now,
+	}
+
+	if err := s.repo.Create(ctx, inter); err != nil {
+		return nil, err
+	}
+
+	s.eventBus.PublishNew(
+		taskguildv1.EventType_EVENT_TYPE_INTERACTION_CREATED,
+		inter.ID,
+		"",
+		map[string]string{"task_id": inter.TaskID, "project_id": t.ProjectID},
+	)
+
+	return connect.NewResponse(&taskguildv1.SendMessageResponse{
 		Interaction: toProto(inter),
 	}), nil
 }

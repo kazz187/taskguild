@@ -22,20 +22,73 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type TaskAssignmentStatus int32
+
+const (
+	TaskAssignmentStatus_TASK_ASSIGNMENT_STATUS_UNSPECIFIED TaskAssignmentStatus = 0
+	TaskAssignmentStatus_TASK_ASSIGNMENT_STATUS_UNASSIGNED  TaskAssignmentStatus = 1
+	TaskAssignmentStatus_TASK_ASSIGNMENT_STATUS_PENDING     TaskAssignmentStatus = 2
+	TaskAssignmentStatus_TASK_ASSIGNMENT_STATUS_ASSIGNED    TaskAssignmentStatus = 3
+)
+
+// Enum value maps for TaskAssignmentStatus.
+var (
+	TaskAssignmentStatus_name = map[int32]string{
+		0: "TASK_ASSIGNMENT_STATUS_UNSPECIFIED",
+		1: "TASK_ASSIGNMENT_STATUS_UNASSIGNED",
+		2: "TASK_ASSIGNMENT_STATUS_PENDING",
+		3: "TASK_ASSIGNMENT_STATUS_ASSIGNED",
+	}
+	TaskAssignmentStatus_value = map[string]int32{
+		"TASK_ASSIGNMENT_STATUS_UNSPECIFIED": 0,
+		"TASK_ASSIGNMENT_STATUS_UNASSIGNED":  1,
+		"TASK_ASSIGNMENT_STATUS_PENDING":     2,
+		"TASK_ASSIGNMENT_STATUS_ASSIGNED":    3,
+	}
+)
+
+func (x TaskAssignmentStatus) Enum() *TaskAssignmentStatus {
+	p := new(TaskAssignmentStatus)
+	*p = x
+	return p
+}
+
+func (x TaskAssignmentStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TaskAssignmentStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_taskguild_v1_task_proto_enumTypes[0].Descriptor()
+}
+
+func (TaskAssignmentStatus) Type() protoreflect.EnumType {
+	return &file_taskguild_v1_task_proto_enumTypes[0]
+}
+
+func (x TaskAssignmentStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TaskAssignmentStatus.Descriptor instead.
+func (TaskAssignmentStatus) EnumDescriptor() ([]byte, []int) {
+	return file_taskguild_v1_task_proto_rawDescGZIP(), []int{0}
+}
+
 type Task struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ProjectId       string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	WorkflowId      string                 `protobuf:"bytes,3,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
-	Title           string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
-	Description     string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
-	StatusId        string                 `protobuf:"bytes,6,opt,name=status_id,json=statusId,proto3" json:"status_id,omitempty"`                        // current workflow status ID
-	AssignedAgentId string                 `protobuf:"bytes,7,opt,name=assigned_agent_id,json=assignedAgentId,proto3" json:"assigned_agent_id,omitempty"` // agent currently working on this
-	Metadata        map[string]string      `protobuf:"bytes,8,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ProjectId        string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	WorkflowId       string                 `protobuf:"bytes,3,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	Title            string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
+	Description      string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	StatusId         string                 `protobuf:"bytes,6,opt,name=status_id,json=statusId,proto3" json:"status_id,omitempty"`                        // current workflow status ID
+	AssignedAgentId  string                 `protobuf:"bytes,7,opt,name=assigned_agent_id,json=assignedAgentId,proto3" json:"assigned_agent_id,omitempty"` // agent currently working on this
+	Metadata         map[string]string      `protobuf:"bytes,8,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	AssignmentStatus TaskAssignmentStatus   `protobuf:"varint,11,opt,name=assignment_status,json=assignmentStatus,proto3,enum=taskguild.v1.TaskAssignmentStatus" json:"assignment_status,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *Task) Reset() {
@@ -136,6 +189,13 @@ func (x *Task) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *Task) GetAssignmentStatus() TaskAssignmentStatus {
+	if x != nil {
+		return x.AssignmentStatus
+	}
+	return TaskAssignmentStatus_TASK_ASSIGNMENT_STATUS_UNSPECIFIED
 }
 
 type CreateTaskRequest struct {
@@ -758,7 +818,7 @@ var File_taskguild_v1_task_proto protoreflect.FileDescriptor
 
 const file_taskguild_v1_task_proto_rawDesc = "" +
 	"\n" +
-	"\x17taskguild/v1/task.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19taskguild/v1/common.proto\"\xc8\x03\n" +
+	"\x17taskguild/v1/task.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19taskguild/v1/common.proto\"\x99\x04\n" +
 	"\x04Task\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -774,7 +834,8 @@ const file_taskguild_v1_task_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x1a;\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12O\n" +
+	"\x11assignment_status\x18\v \x01(\x0e2\".taskguild.v1.TaskAssignmentStatusR\x10assignmentStatus\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x93\x02\n" +
@@ -826,7 +887,12 @@ const file_taskguild_v1_task_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tstatus_id\x18\x02 \x01(\tR\bstatusId\"B\n" +
 	"\x18UpdateTaskStatusResponse\x12&\n" +
-	"\x04task\x18\x01 \x01(\v2\x12.taskguild.v1.TaskR\x04task2\xf9\x03\n" +
+	"\x04task\x18\x01 \x01(\v2\x12.taskguild.v1.TaskR\x04task*\xae\x01\n" +
+	"\x14TaskAssignmentStatus\x12&\n" +
+	"\"TASK_ASSIGNMENT_STATUS_UNSPECIFIED\x10\x00\x12%\n" +
+	"!TASK_ASSIGNMENT_STATUS_UNASSIGNED\x10\x01\x12\"\n" +
+	"\x1eTASK_ASSIGNMENT_STATUS_PENDING\x10\x02\x12#\n" +
+	"\x1fTASK_ASSIGNMENT_STATUS_ASSIGNED\x10\x032\xf9\x03\n" +
 	"\vTaskService\x12O\n" +
 	"\n" +
 	"CreateTask\x12\x1f.taskguild.v1.CreateTaskRequest\x1a .taskguild.v1.CreateTaskResponse\x12F\n" +
@@ -851,58 +917,61 @@ func file_taskguild_v1_task_proto_rawDescGZIP() []byte {
 	return file_taskguild_v1_task_proto_rawDescData
 }
 
+var file_taskguild_v1_task_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_taskguild_v1_task_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_taskguild_v1_task_proto_goTypes = []any{
-	(*Task)(nil),                     // 0: taskguild.v1.Task
-	(*CreateTaskRequest)(nil),        // 1: taskguild.v1.CreateTaskRequest
-	(*CreateTaskResponse)(nil),       // 2: taskguild.v1.CreateTaskResponse
-	(*GetTaskRequest)(nil),           // 3: taskguild.v1.GetTaskRequest
-	(*GetTaskResponse)(nil),          // 4: taskguild.v1.GetTaskResponse
-	(*ListTasksRequest)(nil),         // 5: taskguild.v1.ListTasksRequest
-	(*ListTasksResponse)(nil),        // 6: taskguild.v1.ListTasksResponse
-	(*UpdateTaskRequest)(nil),        // 7: taskguild.v1.UpdateTaskRequest
-	(*UpdateTaskResponse)(nil),       // 8: taskguild.v1.UpdateTaskResponse
-	(*DeleteTaskRequest)(nil),        // 9: taskguild.v1.DeleteTaskRequest
-	(*DeleteTaskResponse)(nil),       // 10: taskguild.v1.DeleteTaskResponse
-	(*UpdateTaskStatusRequest)(nil),  // 11: taskguild.v1.UpdateTaskStatusRequest
-	(*UpdateTaskStatusResponse)(nil), // 12: taskguild.v1.UpdateTaskStatusResponse
-	nil,                              // 13: taskguild.v1.Task.MetadataEntry
-	nil,                              // 14: taskguild.v1.CreateTaskRequest.MetadataEntry
-	nil,                              // 15: taskguild.v1.UpdateTaskRequest.MetadataEntry
-	(*timestamppb.Timestamp)(nil),    // 16: google.protobuf.Timestamp
-	(*PaginationRequest)(nil),        // 17: taskguild.v1.PaginationRequest
-	(*PaginationResponse)(nil),       // 18: taskguild.v1.PaginationResponse
+	(TaskAssignmentStatus)(0),        // 0: taskguild.v1.TaskAssignmentStatus
+	(*Task)(nil),                     // 1: taskguild.v1.Task
+	(*CreateTaskRequest)(nil),        // 2: taskguild.v1.CreateTaskRequest
+	(*CreateTaskResponse)(nil),       // 3: taskguild.v1.CreateTaskResponse
+	(*GetTaskRequest)(nil),           // 4: taskguild.v1.GetTaskRequest
+	(*GetTaskResponse)(nil),          // 5: taskguild.v1.GetTaskResponse
+	(*ListTasksRequest)(nil),         // 6: taskguild.v1.ListTasksRequest
+	(*ListTasksResponse)(nil),        // 7: taskguild.v1.ListTasksResponse
+	(*UpdateTaskRequest)(nil),        // 8: taskguild.v1.UpdateTaskRequest
+	(*UpdateTaskResponse)(nil),       // 9: taskguild.v1.UpdateTaskResponse
+	(*DeleteTaskRequest)(nil),        // 10: taskguild.v1.DeleteTaskRequest
+	(*DeleteTaskResponse)(nil),       // 11: taskguild.v1.DeleteTaskResponse
+	(*UpdateTaskStatusRequest)(nil),  // 12: taskguild.v1.UpdateTaskStatusRequest
+	(*UpdateTaskStatusResponse)(nil), // 13: taskguild.v1.UpdateTaskStatusResponse
+	nil,                              // 14: taskguild.v1.Task.MetadataEntry
+	nil,                              // 15: taskguild.v1.CreateTaskRequest.MetadataEntry
+	nil,                              // 16: taskguild.v1.UpdateTaskRequest.MetadataEntry
+	(*timestamppb.Timestamp)(nil),    // 17: google.protobuf.Timestamp
+	(*PaginationRequest)(nil),        // 18: taskguild.v1.PaginationRequest
+	(*PaginationResponse)(nil),       // 19: taskguild.v1.PaginationResponse
 }
 var file_taskguild_v1_task_proto_depIdxs = []int32{
-	13, // 0: taskguild.v1.Task.metadata:type_name -> taskguild.v1.Task.MetadataEntry
-	16, // 1: taskguild.v1.Task.created_at:type_name -> google.protobuf.Timestamp
-	16, // 2: taskguild.v1.Task.updated_at:type_name -> google.protobuf.Timestamp
-	14, // 3: taskguild.v1.CreateTaskRequest.metadata:type_name -> taskguild.v1.CreateTaskRequest.MetadataEntry
-	0,  // 4: taskguild.v1.CreateTaskResponse.task:type_name -> taskguild.v1.Task
-	0,  // 5: taskguild.v1.GetTaskResponse.task:type_name -> taskguild.v1.Task
-	17, // 6: taskguild.v1.ListTasksRequest.pagination:type_name -> taskguild.v1.PaginationRequest
-	0,  // 7: taskguild.v1.ListTasksResponse.tasks:type_name -> taskguild.v1.Task
-	18, // 8: taskguild.v1.ListTasksResponse.pagination:type_name -> taskguild.v1.PaginationResponse
-	15, // 9: taskguild.v1.UpdateTaskRequest.metadata:type_name -> taskguild.v1.UpdateTaskRequest.MetadataEntry
-	0,  // 10: taskguild.v1.UpdateTaskResponse.task:type_name -> taskguild.v1.Task
-	0,  // 11: taskguild.v1.UpdateTaskStatusResponse.task:type_name -> taskguild.v1.Task
-	1,  // 12: taskguild.v1.TaskService.CreateTask:input_type -> taskguild.v1.CreateTaskRequest
-	3,  // 13: taskguild.v1.TaskService.GetTask:input_type -> taskguild.v1.GetTaskRequest
-	5,  // 14: taskguild.v1.TaskService.ListTasks:input_type -> taskguild.v1.ListTasksRequest
-	7,  // 15: taskguild.v1.TaskService.UpdateTask:input_type -> taskguild.v1.UpdateTaskRequest
-	9,  // 16: taskguild.v1.TaskService.DeleteTask:input_type -> taskguild.v1.DeleteTaskRequest
-	11, // 17: taskguild.v1.TaskService.UpdateTaskStatus:input_type -> taskguild.v1.UpdateTaskStatusRequest
-	2,  // 18: taskguild.v1.TaskService.CreateTask:output_type -> taskguild.v1.CreateTaskResponse
-	4,  // 19: taskguild.v1.TaskService.GetTask:output_type -> taskguild.v1.GetTaskResponse
-	6,  // 20: taskguild.v1.TaskService.ListTasks:output_type -> taskguild.v1.ListTasksResponse
-	8,  // 21: taskguild.v1.TaskService.UpdateTask:output_type -> taskguild.v1.UpdateTaskResponse
-	10, // 22: taskguild.v1.TaskService.DeleteTask:output_type -> taskguild.v1.DeleteTaskResponse
-	12, // 23: taskguild.v1.TaskService.UpdateTaskStatus:output_type -> taskguild.v1.UpdateTaskStatusResponse
-	18, // [18:24] is the sub-list for method output_type
-	12, // [12:18] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	14, // 0: taskguild.v1.Task.metadata:type_name -> taskguild.v1.Task.MetadataEntry
+	17, // 1: taskguild.v1.Task.created_at:type_name -> google.protobuf.Timestamp
+	17, // 2: taskguild.v1.Task.updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 3: taskguild.v1.Task.assignment_status:type_name -> taskguild.v1.TaskAssignmentStatus
+	15, // 4: taskguild.v1.CreateTaskRequest.metadata:type_name -> taskguild.v1.CreateTaskRequest.MetadataEntry
+	1,  // 5: taskguild.v1.CreateTaskResponse.task:type_name -> taskguild.v1.Task
+	1,  // 6: taskguild.v1.GetTaskResponse.task:type_name -> taskguild.v1.Task
+	18, // 7: taskguild.v1.ListTasksRequest.pagination:type_name -> taskguild.v1.PaginationRequest
+	1,  // 8: taskguild.v1.ListTasksResponse.tasks:type_name -> taskguild.v1.Task
+	19, // 9: taskguild.v1.ListTasksResponse.pagination:type_name -> taskguild.v1.PaginationResponse
+	16, // 10: taskguild.v1.UpdateTaskRequest.metadata:type_name -> taskguild.v1.UpdateTaskRequest.MetadataEntry
+	1,  // 11: taskguild.v1.UpdateTaskResponse.task:type_name -> taskguild.v1.Task
+	1,  // 12: taskguild.v1.UpdateTaskStatusResponse.task:type_name -> taskguild.v1.Task
+	2,  // 13: taskguild.v1.TaskService.CreateTask:input_type -> taskguild.v1.CreateTaskRequest
+	4,  // 14: taskguild.v1.TaskService.GetTask:input_type -> taskguild.v1.GetTaskRequest
+	6,  // 15: taskguild.v1.TaskService.ListTasks:input_type -> taskguild.v1.ListTasksRequest
+	8,  // 16: taskguild.v1.TaskService.UpdateTask:input_type -> taskguild.v1.UpdateTaskRequest
+	10, // 17: taskguild.v1.TaskService.DeleteTask:input_type -> taskguild.v1.DeleteTaskRequest
+	12, // 18: taskguild.v1.TaskService.UpdateTaskStatus:input_type -> taskguild.v1.UpdateTaskStatusRequest
+	3,  // 19: taskguild.v1.TaskService.CreateTask:output_type -> taskguild.v1.CreateTaskResponse
+	5,  // 20: taskguild.v1.TaskService.GetTask:output_type -> taskguild.v1.GetTaskResponse
+	7,  // 21: taskguild.v1.TaskService.ListTasks:output_type -> taskguild.v1.ListTasksResponse
+	9,  // 22: taskguild.v1.TaskService.UpdateTask:output_type -> taskguild.v1.UpdateTaskResponse
+	11, // 23: taskguild.v1.TaskService.DeleteTask:output_type -> taskguild.v1.DeleteTaskResponse
+	13, // 24: taskguild.v1.TaskService.UpdateTaskStatus:output_type -> taskguild.v1.UpdateTaskStatusResponse
+	19, // [19:25] is the sub-list for method output_type
+	13, // [13:19] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_task_proto_init() }
@@ -916,13 +985,14 @@ func file_taskguild_v1_task_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_task_proto_rawDesc), len(file_taskguild_v1_task_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_taskguild_v1_task_proto_goTypes,
 		DependencyIndexes: file_taskguild_v1_task_proto_depIdxs,
+		EnumInfos:         file_taskguild_v1_task_proto_enumTypes,
 		MessageInfos:      file_taskguild_v1_task_proto_msgTypes,
 	}.Build()
 	File_taskguild_v1_task_proto = out.File

@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/kazz187/taskguild/backend/internal/agentmanager"
+	"github.com/kazz187/taskguild/backend/internal/config"
 	"github.com/kazz187/taskguild/backend/internal/event"
 	"github.com/kazz187/taskguild/backend/internal/eventbus"
 	"github.com/kazz187/taskguild/backend/internal/interaction"
@@ -20,7 +21,6 @@ import (
 	taskrepo "github.com/kazz187/taskguild/backend/internal/task/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/workflow"
 	workflowrepo "github.com/kazz187/taskguild/backend/internal/workflow/repositoryimpl"
-	"github.com/kazz187/taskguild/backend/internal/config"
 	"github.com/kazz187/taskguild/backend/pkg/clog"
 	"github.com/kazz187/taskguild/backend/pkg/storage"
 
@@ -77,8 +77,8 @@ func main() {
 	projectServer := project.NewServer(projectRepo)
 	workflowServer := workflow.NewServer(workflowRepo)
 	taskServer := task.NewServer(taskRepo, workflowRepo, bus)
-	interactionServer := interaction.NewServer(interactionRepo, bus)
-	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, interactionRepo, bus)
+	interactionServer := interaction.NewServer(interactionRepo, taskRepo, bus)
+	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, interactionRepo, bus)
 	eventServer := event.NewServer(bus)
 
 	srv := server.NewServer(

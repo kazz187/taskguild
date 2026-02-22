@@ -185,6 +185,7 @@ type AgentCommand struct {
 	//	*AgentCommand_AssignTask
 	//	*AgentCommand_InteractionResponse
 	//	*AgentCommand_CancelTask
+	//	*AgentCommand_TaskAvailable
 	Command       isAgentCommand_Command `protobuf_oneof:"command"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -254,6 +255,15 @@ func (x *AgentCommand) GetCancelTask() *CancelTaskCommand {
 	return nil
 }
 
+func (x *AgentCommand) GetTaskAvailable() *TaskAvailableCommand {
+	if x != nil {
+		if x, ok := x.Command.(*AgentCommand_TaskAvailable); ok {
+			return x.TaskAvailable
+		}
+	}
+	return nil
+}
+
 type isAgentCommand_Command interface {
 	isAgentCommand_Command()
 }
@@ -270,11 +280,205 @@ type AgentCommand_CancelTask struct {
 	CancelTask *CancelTaskCommand `protobuf:"bytes,3,opt,name=cancel_task,json=cancelTask,proto3,oneof"`
 }
 
+type AgentCommand_TaskAvailable struct {
+	TaskAvailable *TaskAvailableCommand `protobuf:"bytes,4,opt,name=task_available,json=taskAvailable,proto3,oneof"`
+}
+
 func (*AgentCommand_AssignTask) isAgentCommand_Command() {}
 
 func (*AgentCommand_InteractionResponse) isAgentCommand_Command() {}
 
 func (*AgentCommand_CancelTask) isAgentCommand_Command() {}
+
+func (*AgentCommand_TaskAvailable) isAgentCommand_Command() {}
+
+type TaskAvailableCommand struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	AgentConfigId string                 `protobuf:"bytes,2,opt,name=agent_config_id,json=agentConfigId,proto3" json:"agent_config_id,omitempty"`
+	Title         string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	Metadata      map[string]string      `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TaskAvailableCommand) Reset() {
+	*x = TaskAvailableCommand{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TaskAvailableCommand) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TaskAvailableCommand) ProtoMessage() {}
+
+func (x *TaskAvailableCommand) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TaskAvailableCommand.ProtoReflect.Descriptor instead.
+func (*TaskAvailableCommand) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *TaskAvailableCommand) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+func (x *TaskAvailableCommand) GetAgentConfigId() string {
+	if x != nil {
+		return x.AgentConfigId
+	}
+	return ""
+}
+
+func (x *TaskAvailableCommand) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *TaskAvailableCommand) GetMetadata() map[string]string {
+	if x != nil {
+		return x.Metadata
+	}
+	return nil
+}
+
+type ClaimTaskRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	TaskId         string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	AgentManagerId string                 `protobuf:"bytes,2,opt,name=agent_manager_id,json=agentManagerId,proto3" json:"agent_manager_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ClaimTaskRequest) Reset() {
+	*x = ClaimTaskRequest{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClaimTaskRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClaimTaskRequest) ProtoMessage() {}
+
+func (x *ClaimTaskRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClaimTaskRequest.ProtoReflect.Descriptor instead.
+func (*ClaimTaskRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ClaimTaskRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+func (x *ClaimTaskRequest) GetAgentManagerId() string {
+	if x != nil {
+		return x.AgentManagerId
+	}
+	return ""
+}
+
+type ClaimTaskResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Instructions  string                 `protobuf:"bytes,2,opt,name=instructions,proto3" json:"instructions,omitempty"`
+	AgentConfigId string                 `protobuf:"bytes,3,opt,name=agent_config_id,json=agentConfigId,proto3" json:"agent_config_id,omitempty"`
+	Metadata      map[string]string      `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClaimTaskResponse) Reset() {
+	*x = ClaimTaskResponse{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClaimTaskResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClaimTaskResponse) ProtoMessage() {}
+
+func (x *ClaimTaskResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClaimTaskResponse.ProtoReflect.Descriptor instead.
+func (*ClaimTaskResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ClaimTaskResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *ClaimTaskResponse) GetInstructions() string {
+	if x != nil {
+		return x.Instructions
+	}
+	return ""
+}
+
+func (x *ClaimTaskResponse) GetAgentConfigId() string {
+	if x != nil {
+		return x.AgentConfigId
+	}
+	return ""
+}
+
+func (x *ClaimTaskResponse) GetMetadata() map[string]string {
+	if x != nil {
+		return x.Metadata
+	}
+	return nil
+}
 
 type AssignTaskCommand struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
@@ -289,7 +493,7 @@ type AssignTaskCommand struct {
 
 func (x *AssignTaskCommand) Reset() {
 	*x = AssignTaskCommand{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[2]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -301,7 +505,7 @@ func (x *AssignTaskCommand) String() string {
 func (*AssignTaskCommand) ProtoMessage() {}
 
 func (x *AssignTaskCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[2]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -314,7 +518,7 @@ func (x *AssignTaskCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssignTaskCommand.ProtoReflect.Descriptor instead.
 func (*AssignTaskCommand) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{2}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *AssignTaskCommand) GetTaskId() string {
@@ -362,7 +566,7 @@ type InteractionResponseCommand struct {
 
 func (x *InteractionResponseCommand) Reset() {
 	*x = InteractionResponseCommand{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[3]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -374,7 +578,7 @@ func (x *InteractionResponseCommand) String() string {
 func (*InteractionResponseCommand) ProtoMessage() {}
 
 func (x *InteractionResponseCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[3]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -387,7 +591,7 @@ func (x *InteractionResponseCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InteractionResponseCommand.ProtoReflect.Descriptor instead.
 func (*InteractionResponseCommand) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{3}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *InteractionResponseCommand) GetInteractionId() string {
@@ -414,7 +618,7 @@ type CancelTaskCommand struct {
 
 func (x *CancelTaskCommand) Reset() {
 	*x = CancelTaskCommand{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[4]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -426,7 +630,7 @@ func (x *CancelTaskCommand) String() string {
 func (*CancelTaskCommand) ProtoMessage() {}
 
 func (x *CancelTaskCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[4]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -439,7 +643,7 @@ func (x *CancelTaskCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelTaskCommand.ProtoReflect.Descriptor instead.
 func (*CancelTaskCommand) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{4}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *CancelTaskCommand) GetTaskId() string {
@@ -467,7 +671,7 @@ type HeartbeatRequest struct {
 
 func (x *HeartbeatRequest) Reset() {
 	*x = HeartbeatRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[5]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -479,7 +683,7 @@ func (x *HeartbeatRequest) String() string {
 func (*HeartbeatRequest) ProtoMessage() {}
 
 func (x *HeartbeatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[5]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -492,7 +696,7 @@ func (x *HeartbeatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeartbeatRequest.ProtoReflect.Descriptor instead.
 func (*HeartbeatRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{5}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *HeartbeatRequest) GetAgentManagerId() string {
@@ -524,7 +728,7 @@ type HeartbeatResponse struct {
 
 func (x *HeartbeatResponse) Reset() {
 	*x = HeartbeatResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[6]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -536,7 +740,7 @@ func (x *HeartbeatResponse) String() string {
 func (*HeartbeatResponse) ProtoMessage() {}
 
 func (x *HeartbeatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[6]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -549,7 +753,7 @@ func (x *HeartbeatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeartbeatResponse.ProtoReflect.Descriptor instead.
 func (*HeartbeatResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{6}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{9}
 }
 
 type ReportTaskResultRequest struct {
@@ -564,7 +768,7 @@ type ReportTaskResultRequest struct {
 
 func (x *ReportTaskResultRequest) Reset() {
 	*x = ReportTaskResultRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[7]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -576,7 +780,7 @@ func (x *ReportTaskResultRequest) String() string {
 func (*ReportTaskResultRequest) ProtoMessage() {}
 
 func (x *ReportTaskResultRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[7]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -589,7 +793,7 @@ func (x *ReportTaskResultRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportTaskResultRequest.ProtoReflect.Descriptor instead.
 func (*ReportTaskResultRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{7}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ReportTaskResultRequest) GetTaskId() string {
@@ -628,7 +832,7 @@ type ReportTaskResultResponse struct {
 
 func (x *ReportTaskResultResponse) Reset() {
 	*x = ReportTaskResultResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[8]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -640,7 +844,7 @@ func (x *ReportTaskResultResponse) String() string {
 func (*ReportTaskResultResponse) ProtoMessage() {}
 
 func (x *ReportTaskResultResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[8]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -653,7 +857,7 @@ func (x *ReportTaskResultResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportTaskResultResponse.ProtoReflect.Descriptor instead.
 func (*ReportTaskResultResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{8}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{11}
 }
 
 type CreateInteractionRequest struct {
@@ -670,7 +874,7 @@ type CreateInteractionRequest struct {
 
 func (x *CreateInteractionRequest) Reset() {
 	*x = CreateInteractionRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[9]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -682,7 +886,7 @@ func (x *CreateInteractionRequest) String() string {
 func (*CreateInteractionRequest) ProtoMessage() {}
 
 func (x *CreateInteractionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[9]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -695,7 +899,7 @@ func (x *CreateInteractionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateInteractionRequest.ProtoReflect.Descriptor instead.
 func (*CreateInteractionRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{9}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *CreateInteractionRequest) GetTaskId() string {
@@ -749,7 +953,7 @@ type CreateInteractionResponse struct {
 
 func (x *CreateInteractionResponse) Reset() {
 	*x = CreateInteractionResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[10]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -761,7 +965,7 @@ func (x *CreateInteractionResponse) String() string {
 func (*CreateInteractionResponse) ProtoMessage() {}
 
 func (x *CreateInteractionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[10]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -774,7 +978,7 @@ func (x *CreateInteractionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateInteractionResponse.ProtoReflect.Descriptor instead.
 func (*CreateInteractionResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{10}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CreateInteractionResponse) GetInteraction() *Interaction {
@@ -793,7 +997,7 @@ type GetInteractionResponseRequest struct {
 
 func (x *GetInteractionResponseRequest) Reset() {
 	*x = GetInteractionResponseRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[11]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -805,7 +1009,7 @@ func (x *GetInteractionResponseRequest) String() string {
 func (*GetInteractionResponseRequest) ProtoMessage() {}
 
 func (x *GetInteractionResponseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[11]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -818,7 +1022,7 @@ func (x *GetInteractionResponseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetInteractionResponseRequest.ProtoReflect.Descriptor instead.
 func (*GetInteractionResponseRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{11}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetInteractionResponseRequest) GetInteractionId() string {
@@ -837,7 +1041,7 @@ type GetInteractionResponseResponse struct {
 
 func (x *GetInteractionResponseResponse) Reset() {
 	*x = GetInteractionResponseResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[12]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -849,7 +1053,7 @@ func (x *GetInteractionResponseResponse) String() string {
 func (*GetInteractionResponseResponse) ProtoMessage() {}
 
 func (x *GetInteractionResponseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[12]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -862,7 +1066,7 @@ func (x *GetInteractionResponseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetInteractionResponseResponse.ProtoReflect.Descriptor instead.
 func (*GetInteractionResponseResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{12}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetInteractionResponseResponse) GetInteraction() *Interaction {
@@ -884,7 +1088,7 @@ type ReportAgentStatusRequest struct {
 
 func (x *ReportAgentStatusRequest) Reset() {
 	*x = ReportAgentStatusRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[13]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -896,7 +1100,7 @@ func (x *ReportAgentStatusRequest) String() string {
 func (*ReportAgentStatusRequest) ProtoMessage() {}
 
 func (x *ReportAgentStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[13]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -909,7 +1113,7 @@ func (x *ReportAgentStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportAgentStatusRequest.ProtoReflect.Descriptor instead.
 func (*ReportAgentStatusRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{13}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ReportAgentStatusRequest) GetAgentManagerId() string {
@@ -948,7 +1152,7 @@ type ReportAgentStatusResponse struct {
 
 func (x *ReportAgentStatusResponse) Reset() {
 	*x = ReportAgentStatusResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[14]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -960,7 +1164,7 @@ func (x *ReportAgentStatusResponse) String() string {
 func (*ReportAgentStatusResponse) ProtoMessage() {}
 
 func (x *ReportAgentStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[14]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -973,7 +1177,7 @@ func (x *ReportAgentStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportAgentStatusResponse.ProtoReflect.Descriptor instead.
 func (*ReportAgentStatusResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{14}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{17}
 }
 
 var File_taskguild_v1_agent_manager_proto protoreflect.FileDescriptor
@@ -983,14 +1187,34 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	" taskguild/v1/agent_manager.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1etaskguild/v1/interaction.proto\"z\n" +
 	"\x1cAgentManagerSubscribeRequest\x12(\n" +
 	"\x10agent_manager_id\x18\x01 \x01(\tR\x0eagentManagerId\x120\n" +
-	"\x14max_concurrent_tasks\x18\x02 \x01(\x05R\x12maxConcurrentTasks\"\x80\x02\n" +
+	"\x14max_concurrent_tasks\x18\x02 \x01(\x05R\x12maxConcurrentTasks\"\xcd\x02\n" +
 	"\fAgentCommand\x12B\n" +
 	"\vassign_task\x18\x01 \x01(\v2\x1f.taskguild.v1.AssignTaskCommandH\x00R\n" +
 	"assignTask\x12]\n" +
 	"\x14interaction_response\x18\x02 \x01(\v2(.taskguild.v1.InteractionResponseCommandH\x00R\x13interactionResponse\x12B\n" +
 	"\vcancel_task\x18\x03 \x01(\v2\x1f.taskguild.v1.CancelTaskCommandH\x00R\n" +
-	"cancelTaskB\t\n" +
-	"\acommand\"\xa9\x02\n" +
+	"cancelTask\x12K\n" +
+	"\x0etask_available\x18\x04 \x01(\v2\".taskguild.v1.TaskAvailableCommandH\x00R\rtaskAvailableB\t\n" +
+	"\acommand\"\xf8\x01\n" +
+	"\x14TaskAvailableCommand\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12&\n" +
+	"\x0fagent_config_id\x18\x02 \x01(\tR\ragentConfigId\x12\x14\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\x12L\n" +
+	"\bmetadata\x18\x04 \x03(\v20.taskguild.v1.TaskAvailableCommand.MetadataEntryR\bmetadata\x1a;\n" +
+	"\rMetadataEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"U\n" +
+	"\x10ClaimTaskRequest\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12(\n" +
+	"\x10agent_manager_id\x18\x02 \x01(\tR\x0eagentManagerId\"\x81\x02\n" +
+	"\x11ClaimTaskResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\"\n" +
+	"\finstructions\x18\x02 \x01(\tR\finstructions\x12&\n" +
+	"\x0fagent_config_id\x18\x03 \x01(\tR\ragentConfigId\x12I\n" +
+	"\bmetadata\x18\x04 \x03(\v2-.taskguild.v1.ClaimTaskResponse.MetadataEntryR\bmetadata\x1a;\n" +
+	"\rMetadataEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa9\x02\n" +
 	"\x11AssignTaskCommand\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12&\n" +
 	"\x0fagent_config_id\x18\x02 \x01(\tR\ragentConfigId\x12\"\n" +
@@ -1045,14 +1269,15 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\x11AGENT_STATUS_IDLE\x10\x01\x12\x18\n" +
 	"\x14AGENT_STATUS_RUNNING\x10\x02\x12\x18\n" +
 	"\x14AGENT_STATUS_WAITING\x10\x03\x12\x16\n" +
-	"\x12AGENT_STATUS_ERROR\x10\x042\xde\x04\n" +
+	"\x12AGENT_STATUS_ERROR\x10\x042\xac\x05\n" +
 	"\x13AgentManagerService\x12U\n" +
 	"\tSubscribe\x12*.taskguild.v1.AgentManagerSubscribeRequest\x1a\x1a.taskguild.v1.AgentCommand0\x01\x12L\n" +
 	"\tHeartbeat\x12\x1e.taskguild.v1.HeartbeatRequest\x1a\x1f.taskguild.v1.HeartbeatResponse\x12a\n" +
 	"\x10ReportTaskResult\x12%.taskguild.v1.ReportTaskResultRequest\x1a&.taskguild.v1.ReportTaskResultResponse\x12d\n" +
 	"\x11CreateInteraction\x12&.taskguild.v1.CreateInteractionRequest\x1a'.taskguild.v1.CreateInteractionResponse\x12s\n" +
 	"\x16GetInteractionResponse\x12+.taskguild.v1.GetInteractionResponseRequest\x1a,.taskguild.v1.GetInteractionResponseResponse\x12d\n" +
-	"\x11ReportAgentStatus\x12&.taskguild.v1.ReportAgentStatusRequest\x1a'.taskguild.v1.ReportAgentStatusResponseB\xba\x01\n" +
+	"\x11ReportAgentStatus\x12&.taskguild.v1.ReportAgentStatusRequest\x1a'.taskguild.v1.ReportAgentStatusResponse\x12L\n" +
+	"\tClaimTask\x12\x1e.taskguild.v1.ClaimTaskRequest\x1a\x1f.taskguild.v1.ClaimTaskResponseB\xba\x01\n" +
 	"\x10com.taskguild.v1B\x11AgentManagerProtoP\x01ZBgithub.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
@@ -1068,60 +1293,70 @@ func file_taskguild_v1_agent_manager_proto_rawDescGZIP() []byte {
 }
 
 var file_taskguild_v1_agent_manager_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_taskguild_v1_agent_manager_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_taskguild_v1_agent_manager_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_taskguild_v1_agent_manager_proto_goTypes = []any{
 	(TaskResultStatus)(0),                  // 0: taskguild.v1.TaskResultStatus
 	(AgentStatus)(0),                       // 1: taskguild.v1.AgentStatus
 	(*AgentManagerSubscribeRequest)(nil),   // 2: taskguild.v1.AgentManagerSubscribeRequest
 	(*AgentCommand)(nil),                   // 3: taskguild.v1.AgentCommand
-	(*AssignTaskCommand)(nil),              // 4: taskguild.v1.AssignTaskCommand
-	(*InteractionResponseCommand)(nil),     // 5: taskguild.v1.InteractionResponseCommand
-	(*CancelTaskCommand)(nil),              // 6: taskguild.v1.CancelTaskCommand
-	(*HeartbeatRequest)(nil),               // 7: taskguild.v1.HeartbeatRequest
-	(*HeartbeatResponse)(nil),              // 8: taskguild.v1.HeartbeatResponse
-	(*ReportTaskResultRequest)(nil),        // 9: taskguild.v1.ReportTaskResultRequest
-	(*ReportTaskResultResponse)(nil),       // 10: taskguild.v1.ReportTaskResultResponse
-	(*CreateInteractionRequest)(nil),       // 11: taskguild.v1.CreateInteractionRequest
-	(*CreateInteractionResponse)(nil),      // 12: taskguild.v1.CreateInteractionResponse
-	(*GetInteractionResponseRequest)(nil),  // 13: taskguild.v1.GetInteractionResponseRequest
-	(*GetInteractionResponseResponse)(nil), // 14: taskguild.v1.GetInteractionResponseResponse
-	(*ReportAgentStatusRequest)(nil),       // 15: taskguild.v1.ReportAgentStatusRequest
-	(*ReportAgentStatusResponse)(nil),      // 16: taskguild.v1.ReportAgentStatusResponse
-	nil,                                    // 17: taskguild.v1.AssignTaskCommand.MetadataEntry
-	(*timestamppb.Timestamp)(nil),          // 18: google.protobuf.Timestamp
-	(InteractionType)(0),                   // 19: taskguild.v1.InteractionType
-	(*InteractionOption)(nil),              // 20: taskguild.v1.InteractionOption
-	(*Interaction)(nil),                    // 21: taskguild.v1.Interaction
+	(*TaskAvailableCommand)(nil),           // 4: taskguild.v1.TaskAvailableCommand
+	(*ClaimTaskRequest)(nil),               // 5: taskguild.v1.ClaimTaskRequest
+	(*ClaimTaskResponse)(nil),              // 6: taskguild.v1.ClaimTaskResponse
+	(*AssignTaskCommand)(nil),              // 7: taskguild.v1.AssignTaskCommand
+	(*InteractionResponseCommand)(nil),     // 8: taskguild.v1.InteractionResponseCommand
+	(*CancelTaskCommand)(nil),              // 9: taskguild.v1.CancelTaskCommand
+	(*HeartbeatRequest)(nil),               // 10: taskguild.v1.HeartbeatRequest
+	(*HeartbeatResponse)(nil),              // 11: taskguild.v1.HeartbeatResponse
+	(*ReportTaskResultRequest)(nil),        // 12: taskguild.v1.ReportTaskResultRequest
+	(*ReportTaskResultResponse)(nil),       // 13: taskguild.v1.ReportTaskResultResponse
+	(*CreateInteractionRequest)(nil),       // 14: taskguild.v1.CreateInteractionRequest
+	(*CreateInteractionResponse)(nil),      // 15: taskguild.v1.CreateInteractionResponse
+	(*GetInteractionResponseRequest)(nil),  // 16: taskguild.v1.GetInteractionResponseRequest
+	(*GetInteractionResponseResponse)(nil), // 17: taskguild.v1.GetInteractionResponseResponse
+	(*ReportAgentStatusRequest)(nil),       // 18: taskguild.v1.ReportAgentStatusRequest
+	(*ReportAgentStatusResponse)(nil),      // 19: taskguild.v1.ReportAgentStatusResponse
+	nil,                                    // 20: taskguild.v1.TaskAvailableCommand.MetadataEntry
+	nil,                                    // 21: taskguild.v1.ClaimTaskResponse.MetadataEntry
+	nil,                                    // 22: taskguild.v1.AssignTaskCommand.MetadataEntry
+	(*timestamppb.Timestamp)(nil),          // 23: google.protobuf.Timestamp
+	(InteractionType)(0),                   // 24: taskguild.v1.InteractionType
+	(*InteractionOption)(nil),              // 25: taskguild.v1.InteractionOption
+	(*Interaction)(nil),                    // 26: taskguild.v1.Interaction
 }
 var file_taskguild_v1_agent_manager_proto_depIdxs = []int32{
-	4,  // 0: taskguild.v1.AgentCommand.assign_task:type_name -> taskguild.v1.AssignTaskCommand
-	5,  // 1: taskguild.v1.AgentCommand.interaction_response:type_name -> taskguild.v1.InteractionResponseCommand
-	6,  // 2: taskguild.v1.AgentCommand.cancel_task:type_name -> taskguild.v1.CancelTaskCommand
-	17, // 3: taskguild.v1.AssignTaskCommand.metadata:type_name -> taskguild.v1.AssignTaskCommand.MetadataEntry
-	18, // 4: taskguild.v1.HeartbeatRequest.timestamp:type_name -> google.protobuf.Timestamp
-	0,  // 5: taskguild.v1.ReportTaskResultRequest.status:type_name -> taskguild.v1.TaskResultStatus
-	19, // 6: taskguild.v1.CreateInteractionRequest.type:type_name -> taskguild.v1.InteractionType
-	20, // 7: taskguild.v1.CreateInteractionRequest.options:type_name -> taskguild.v1.InteractionOption
-	21, // 8: taskguild.v1.CreateInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
-	21, // 9: taskguild.v1.GetInteractionResponseResponse.interaction:type_name -> taskguild.v1.Interaction
-	1,  // 10: taskguild.v1.ReportAgentStatusRequest.status:type_name -> taskguild.v1.AgentStatus
-	2,  // 11: taskguild.v1.AgentManagerService.Subscribe:input_type -> taskguild.v1.AgentManagerSubscribeRequest
-	7,  // 12: taskguild.v1.AgentManagerService.Heartbeat:input_type -> taskguild.v1.HeartbeatRequest
-	9,  // 13: taskguild.v1.AgentManagerService.ReportTaskResult:input_type -> taskguild.v1.ReportTaskResultRequest
-	11, // 14: taskguild.v1.AgentManagerService.CreateInteraction:input_type -> taskguild.v1.CreateInteractionRequest
-	13, // 15: taskguild.v1.AgentManagerService.GetInteractionResponse:input_type -> taskguild.v1.GetInteractionResponseRequest
-	15, // 16: taskguild.v1.AgentManagerService.ReportAgentStatus:input_type -> taskguild.v1.ReportAgentStatusRequest
-	3,  // 17: taskguild.v1.AgentManagerService.Subscribe:output_type -> taskguild.v1.AgentCommand
-	8,  // 18: taskguild.v1.AgentManagerService.Heartbeat:output_type -> taskguild.v1.HeartbeatResponse
-	10, // 19: taskguild.v1.AgentManagerService.ReportTaskResult:output_type -> taskguild.v1.ReportTaskResultResponse
-	12, // 20: taskguild.v1.AgentManagerService.CreateInteraction:output_type -> taskguild.v1.CreateInteractionResponse
-	14, // 21: taskguild.v1.AgentManagerService.GetInteractionResponse:output_type -> taskguild.v1.GetInteractionResponseResponse
-	16, // 22: taskguild.v1.AgentManagerService.ReportAgentStatus:output_type -> taskguild.v1.ReportAgentStatusResponse
-	17, // [17:23] is the sub-list for method output_type
-	11, // [11:17] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	7,  // 0: taskguild.v1.AgentCommand.assign_task:type_name -> taskguild.v1.AssignTaskCommand
+	8,  // 1: taskguild.v1.AgentCommand.interaction_response:type_name -> taskguild.v1.InteractionResponseCommand
+	9,  // 2: taskguild.v1.AgentCommand.cancel_task:type_name -> taskguild.v1.CancelTaskCommand
+	4,  // 3: taskguild.v1.AgentCommand.task_available:type_name -> taskguild.v1.TaskAvailableCommand
+	20, // 4: taskguild.v1.TaskAvailableCommand.metadata:type_name -> taskguild.v1.TaskAvailableCommand.MetadataEntry
+	21, // 5: taskguild.v1.ClaimTaskResponse.metadata:type_name -> taskguild.v1.ClaimTaskResponse.MetadataEntry
+	22, // 6: taskguild.v1.AssignTaskCommand.metadata:type_name -> taskguild.v1.AssignTaskCommand.MetadataEntry
+	23, // 7: taskguild.v1.HeartbeatRequest.timestamp:type_name -> google.protobuf.Timestamp
+	0,  // 8: taskguild.v1.ReportTaskResultRequest.status:type_name -> taskguild.v1.TaskResultStatus
+	24, // 9: taskguild.v1.CreateInteractionRequest.type:type_name -> taskguild.v1.InteractionType
+	25, // 10: taskguild.v1.CreateInteractionRequest.options:type_name -> taskguild.v1.InteractionOption
+	26, // 11: taskguild.v1.CreateInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
+	26, // 12: taskguild.v1.GetInteractionResponseResponse.interaction:type_name -> taskguild.v1.Interaction
+	1,  // 13: taskguild.v1.ReportAgentStatusRequest.status:type_name -> taskguild.v1.AgentStatus
+	2,  // 14: taskguild.v1.AgentManagerService.Subscribe:input_type -> taskguild.v1.AgentManagerSubscribeRequest
+	10, // 15: taskguild.v1.AgentManagerService.Heartbeat:input_type -> taskguild.v1.HeartbeatRequest
+	12, // 16: taskguild.v1.AgentManagerService.ReportTaskResult:input_type -> taskguild.v1.ReportTaskResultRequest
+	14, // 17: taskguild.v1.AgentManagerService.CreateInteraction:input_type -> taskguild.v1.CreateInteractionRequest
+	16, // 18: taskguild.v1.AgentManagerService.GetInteractionResponse:input_type -> taskguild.v1.GetInteractionResponseRequest
+	18, // 19: taskguild.v1.AgentManagerService.ReportAgentStatus:input_type -> taskguild.v1.ReportAgentStatusRequest
+	5,  // 20: taskguild.v1.AgentManagerService.ClaimTask:input_type -> taskguild.v1.ClaimTaskRequest
+	3,  // 21: taskguild.v1.AgentManagerService.Subscribe:output_type -> taskguild.v1.AgentCommand
+	11, // 22: taskguild.v1.AgentManagerService.Heartbeat:output_type -> taskguild.v1.HeartbeatResponse
+	13, // 23: taskguild.v1.AgentManagerService.ReportTaskResult:output_type -> taskguild.v1.ReportTaskResultResponse
+	15, // 24: taskguild.v1.AgentManagerService.CreateInteraction:output_type -> taskguild.v1.CreateInteractionResponse
+	17, // 25: taskguild.v1.AgentManagerService.GetInteractionResponse:output_type -> taskguild.v1.GetInteractionResponseResponse
+	19, // 26: taskguild.v1.AgentManagerService.ReportAgentStatus:output_type -> taskguild.v1.ReportAgentStatusResponse
+	6,  // 27: taskguild.v1.AgentManagerService.ClaimTask:output_type -> taskguild.v1.ClaimTaskResponse
+	21, // [21:28] is the sub-list for method output_type
+	14, // [14:21] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_agent_manager_proto_init() }
@@ -1134,6 +1369,7 @@ func file_taskguild_v1_agent_manager_proto_init() {
 		(*AgentCommand_AssignTask)(nil),
 		(*AgentCommand_InteractionResponse)(nil),
 		(*AgentCommand_CancelTask)(nil),
+		(*AgentCommand_TaskAvailable)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1141,7 +1377,7 @@ func file_taskguild_v1_agent_manager_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_agent_manager_proto_rawDesc), len(file_taskguild_v1_agent_manager_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   16,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

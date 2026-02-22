@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/kazz187/taskguild/backend/internal/agentmanager"
 	"github.com/kazz187/taskguild/backend/internal/eventbus"
@@ -70,51 +71,29 @@ func (o *Orchestrator) handleTaskEvent(ctx context.Context, event *taskguildv1.E
 		return // no agent config for this status (terminal or manual)
 	}
 
-	agentManagerID, ok := o.registry.FindAvailable()
-	if !ok {
-		slog.Warn("orchestrator: no available agent-manager", "task_id", t.ID, "status_id", t.StatusID)
-		return
-	}
-
-	// Update task with assigned agent.
-	t.AssignedAgentID = agentManagerID
+	// Set assignment status to PENDING.
+	t.AssignmentStatus = task.AssignmentStatusPending
+	t.UpdatedAt = time.Now()
 	if err := o.taskRepo.Update(ctx, t); err != nil {
-		slog.Error("orchestrator: failed to update task", "task_id", t.ID, "error", err)
+		slog.Error("orchestrator: failed to update task assignment status", "task_id", t.ID, "error", err)
 		return
 	}
 
-	// Send assign command to the agent-manager.
+	// Broadcast TaskAvailableCommand to all connected agent-managers.
 	cmd := &taskguildv1.AgentCommand{
-		Command: &taskguildv1.AgentCommand_AssignTask{
-			AssignTask: &taskguildv1.AssignTaskCommand{
-				TaskId:       t.ID,
+		Command: &taskguildv1.AgentCommand_TaskAvailable{
+			TaskAvailable: &taskguildv1.TaskAvailableCommand{
+				TaskId:        t.ID,
 				AgentConfigId: agentCfg.ID,
-				Instructions: agentCfg.Instructions,
-				Metadata:     t.Metadata,
+				Title:         t.Title,
+				Metadata:      t.Metadata,
 			},
 		},
 	}
-	if !o.registry.SendCommand(agentManagerID, cmd) {
-		slog.Error("orchestrator: failed to send command to agent-manager", "agent_manager_id", agentManagerID, "task_id", t.ID)
-		return
-	}
+	o.registry.BroadcastCommand(cmd)
 
-	// Publish agent assigned event.
-	o.eventBus.PublishNew(
-		taskguildv1.EventType_EVENT_TYPE_AGENT_ASSIGNED,
-		t.ID,
-		"",
-		map[string]string{
-			"agent_manager_id": agentManagerID,
-			"agent_config_id":  agentCfg.ID,
-			"project_id":       t.ProjectID,
-			"workflow_id":      t.WorkflowID,
-		},
-	)
-
-	slog.Info("orchestrator: agent assigned",
+	slog.Info("orchestrator: task available broadcast",
 		"task_id", t.ID,
-		"agent_manager_id", agentManagerID,
 		"agent_config_id", agentCfg.ID,
 	)
 }

@@ -38,3 +38,10 @@ export const getInteractionResponse = AgentManagerService.method.getInteractionR
  * @generated from rpc taskguild.v1.AgentManagerService.ReportAgentStatus
  */
 export const reportAgentStatus = AgentManagerService.method.reportAgentStatus;
+
+/**
+ * ClaimTask allows an agent-manager to claim an available task.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.ClaimTask
+ */
+export const claimTask = AgentManagerService.method.claimTask;

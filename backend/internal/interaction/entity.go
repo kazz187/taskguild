@@ -9,6 +9,7 @@ const (
 	TypePermissionRequest InteractionType = 1
 	TypeQuestion          InteractionType = 2
 	TypeNotification      InteractionType = 3
+	TypeUserMessage       InteractionType = 4
 )
 
 type InteractionStatus int32

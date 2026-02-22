@@ -20,6 +20,8 @@ service AgentManagerService {
   rpc GetInteractionResponse(GetInteractionResponseRequest) returns (GetInteractionResponseResponse);
   // ReportAgentStatus reports the current status of an agent.
   rpc ReportAgentStatus(ReportAgentStatusRequest) returns (ReportAgentStatusResponse);
+  // ClaimTask allows an agent-manager to claim an available task.
+  rpc ClaimTask(ClaimTaskRequest) returns (ClaimTaskResponse);
 }
 
 message AgentManagerSubscribeRequest {
@@ -32,7 +34,27 @@ message AgentCommand {
     AssignTaskCommand assign_task = 1;
     InteractionResponseCommand interaction_response = 2;
     CancelTaskCommand cancel_task = 3;
+    TaskAvailableCommand task_available = 4;
   }
+}
+
+message TaskAvailableCommand {
+  string task_id = 1;
+  string agent_config_id = 2;
+  string title = 3;
+  map<string, string> metadata = 4;
+}
+
+message ClaimTaskRequest {
+  string task_id = 1;
+  string agent_manager_id = 2;
+}
+
+message ClaimTaskResponse {
+  bool success = 1;
+  string instructions = 2;
+  string agent_config_id = 3;
+  map<string, string> metadata = 4;
 }
 
 message AssignTaskCommand {

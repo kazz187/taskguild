@@ -52,15 +52,16 @@ func (s *Server) CreateTask(ctx context.Context, req *connect.Request[taskguildv
 
 	now := time.Now()
 	t := &Task{
-		ID:          ulid.Make().String(),
-		ProjectID:   req.Msg.ProjectId,
-		WorkflowID:  req.Msg.WorkflowId,
-		Title:       req.Msg.Title,
-		Description: req.Msg.Description,
-		StatusID:    initialStatusID,
-		Metadata:    req.Msg.Metadata,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:               ulid.Make().String(),
+		ProjectID:        req.Msg.ProjectId,
+		WorkflowID:       req.Msg.WorkflowId,
+		Title:            req.Msg.Title,
+		Description:      req.Msg.Description,
+		StatusID:         initialStatusID,
+		AssignmentStatus: AssignmentStatusUnassigned,
+		Metadata:         req.Msg.Metadata,
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 	if err := s.repo.Create(ctx, t); err != nil {
 		return nil, err
@@ -227,15 +228,29 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *connect.Request[task
 
 func toProto(t *Task) *taskguildv1.Task {
 	return &taskguildv1.Task{
-		Id:              t.ID,
-		ProjectId:       t.ProjectID,
-		WorkflowId:      t.WorkflowID,
-		Title:           t.Title,
-		Description:     t.Description,
-		StatusId:        t.StatusID,
-		AssignedAgentId: t.AssignedAgentID,
-		Metadata:        t.Metadata,
-		CreatedAt:       timestamppb.New(t.CreatedAt),
-		UpdatedAt:       timestamppb.New(t.UpdatedAt),
+		Id:               t.ID,
+		ProjectId:        t.ProjectID,
+		WorkflowId:       t.WorkflowID,
+		Title:            t.Title,
+		Description:      t.Description,
+		StatusId:         t.StatusID,
+		AssignedAgentId:  t.AssignedAgentID,
+		AssignmentStatus: assignmentStatusToProto(t.AssignmentStatus),
+		Metadata:         t.Metadata,
+		CreatedAt:        timestamppb.New(t.CreatedAt),
+		UpdatedAt:        timestamppb.New(t.UpdatedAt),
+	}
+}
+
+func assignmentStatusToProto(s AssignmentStatus) taskguildv1.TaskAssignmentStatus {
+	switch s {
+	case AssignmentStatusUnassigned:
+		return taskguildv1.TaskAssignmentStatus_TASK_ASSIGNMENT_STATUS_UNASSIGNED
+	case AssignmentStatusPending:
+		return taskguildv1.TaskAssignmentStatus_TASK_ASSIGNMENT_STATUS_PENDING
+	case AssignmentStatusAssigned:
+		return taskguildv1.TaskAssignmentStatus_TASK_ASSIGNMENT_STATUS_ASSIGNED
+	default:
+		return taskguildv1.TaskAssignmentStatus_TASK_ASSIGNMENT_STATUS_UNSPECIFIED
 	}
 }

@@ -8,4 +8,5 @@ type Repository interface {
 	List(ctx context.Context, projectID, workflowID, statusID string, limit, offset int) ([]*Task, int, error)
 	Update(ctx context.Context, t *Task) error
 	Delete(ctx context.Context, id string) error
+	Claim(ctx context.Context, taskID string, agentID string) (*Task, error)
 }
