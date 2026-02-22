@@ -40,7 +40,21 @@ func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[task
 		}
 		offset = req.Msg.Pagination.Offset
 	}
-	interactions, total, err := s.repo.List(ctx, req.Msg.TaskId, int(limit), int(offset))
+
+	// When project_id is provided, resolve to task IDs for filtering.
+	var taskIDs []string
+	if req.Msg.ProjectId != "" {
+		tasks, _, err := s.taskRepo.List(ctx, req.Msg.ProjectId, "", "", 0, 0)
+		if err != nil {
+			return nil, err
+		}
+		taskIDs = make([]string, len(tasks))
+		for i, t := range tasks {
+			taskIDs[i] = t.ID
+		}
+	}
+
+	interactions, total, err := s.repo.List(ctx, req.Msg.TaskId, taskIDs, int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}

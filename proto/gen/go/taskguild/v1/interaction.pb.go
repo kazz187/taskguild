@@ -362,6 +362,7 @@ type ListInteractionsRequest struct {
 	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	StatusFilter  InteractionStatus      `protobuf:"varint,2,opt,name=status_filter,json=statusFilter,proto3,enum=taskguild.v1.InteractionStatus" json:"status_filter,omitempty"`
 	Pagination    *PaginationRequest     `protobuf:"bytes,3,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -415,6 +416,13 @@ func (x *ListInteractionsRequest) GetPagination() *PaginationRequest {
 		return x.Pagination
 	}
 	return nil
+}
+
+func (x *ListInteractionsRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
 }
 
 type ListInteractionsResponse struct {
@@ -729,13 +737,15 @@ const file_taskguild_v1_interaction_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\"O\n" +
 	"\x10InteractionEvent\x12;\n" +
-	"\vinteraction\x18\x01 \x01(\v2\x19.taskguild.v1.InteractionR\vinteraction\"\xb9\x01\n" +
+	"\vinteraction\x18\x01 \x01(\v2\x19.taskguild.v1.InteractionR\vinteraction\"\xd8\x01\n" +
 	"\x17ListInteractionsRequest\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12D\n" +
 	"\rstatus_filter\x18\x02 \x01(\x0e2\x1f.taskguild.v1.InteractionStatusR\fstatusFilter\x12?\n" +
 	"\n" +
 	"pagination\x18\x03 \x01(\v2\x1f.taskguild.v1.PaginationRequestR\n" +
-	"pagination\"\x9b\x01\n" +
+	"pagination\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x04 \x01(\tR\tprojectId\"\x9b\x01\n" +
 	"\x18ListInteractionsResponse\x12=\n" +
 	"\finteractions\x18\x01 \x03(\v2\x19.taskguild.v1.InteractionR\finteractions\x12@\n" +
 	"\n" +

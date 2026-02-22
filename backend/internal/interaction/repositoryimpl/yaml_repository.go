@@ -56,13 +56,22 @@ func (r *YAMLRepository) Get(ctx context.Context, id string) (*interaction.Inter
 	return &i, nil
 }
 
-func (r *YAMLRepository) List(ctx context.Context, taskID string, limit, offset int) ([]*interaction.Interaction, int, error) {
+func (r *YAMLRepository) List(ctx context.Context, taskID string, taskIDs []string, limit, offset int) ([]*interaction.Interaction, int, error) {
 	paths, err := r.storage.List(ctx, interactionsPrefix)
 	if err != nil {
 		return nil, 0, cerr.WrapStorageReadError("interactions", err)
 	}
 
 	sort.Strings(paths)
+
+	// Build a set for fast lookup when filtering by multiple task IDs.
+	var taskIDSet map[string]struct{}
+	if len(taskIDs) > 0 {
+		taskIDSet = make(map[string]struct{}, len(taskIDs))
+		for _, id := range taskIDs {
+			taskIDSet[id] = struct{}{}
+		}
+	}
 
 	var all []*interaction.Interaction
 	for _, p := range paths {
@@ -76,6 +85,11 @@ func (r *YAMLRepository) List(ctx context.Context, taskID string, limit, offset 
 		}
 		if taskID != "" && i.TaskID != taskID {
 			continue
+		}
+		if taskIDSet != nil {
+			if _, ok := taskIDSet[i.TaskID]; !ok {
+				continue
+			}
 		}
 		all = append(all, &i)
 	}

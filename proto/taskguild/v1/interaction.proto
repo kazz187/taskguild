@@ -55,6 +55,7 @@ message ListInteractionsRequest {
   string task_id = 1;
   InteractionStatus status_filter = 2;
   PaginationRequest pagination = 3;
+  string project_id = 4;
 }
 message ListInteractionsResponse {
   repeated Interaction interactions = 1;
