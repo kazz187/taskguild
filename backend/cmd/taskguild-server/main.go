@@ -10,11 +10,16 @@ import (
 
 	"github.com/kazz187/taskguild/backend/internal/agentmanager"
 	"github.com/kazz187/taskguild/backend/internal/event"
+	"github.com/kazz187/taskguild/backend/internal/eventbus"
 	"github.com/kazz187/taskguild/backend/internal/interaction"
+	interactionrepo "github.com/kazz187/taskguild/backend/internal/interaction/repositoryimpl"
+	"github.com/kazz187/taskguild/backend/internal/orchestrator"
 	"github.com/kazz187/taskguild/backend/internal/project"
-	"github.com/kazz187/taskguild/backend/internal/project/repositoryimpl"
+	projectrepo "github.com/kazz187/taskguild/backend/internal/project/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/task"
+	taskrepo "github.com/kazz187/taskguild/backend/internal/task/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/workflow"
+	workflowrepo "github.com/kazz187/taskguild/backend/internal/workflow/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/config"
 	"github.com/kazz187/taskguild/backend/pkg/clog"
 	"github.com/kazz187/taskguild/backend/pkg/storage"
@@ -56,16 +61,25 @@ func main() {
 		}
 	}
 
+	// Setup event bus
+	bus := eventbus.New()
+
 	// Setup repositories
-	projectRepo := repositoryimpl.NewYAMLRepository(store)
+	projectRepo := projectrepo.NewYAMLRepository(store)
+	workflowRepo := workflowrepo.NewYAMLRepository(store)
+	taskRepo := taskrepo.NewYAMLRepository(store)
+	interactionRepo := interactionrepo.NewYAMLRepository(store)
+
+	// Setup agent-manager registry
+	agentManagerRegistry := agentmanager.NewRegistry()
 
 	// Setup servers
 	projectServer := project.NewServer(projectRepo)
-	workflowServer := workflow.NewServer()
-	taskServer := task.NewServer()
-	interactionServer := interaction.NewServer()
-	agentManagerServer := agentmanager.NewServer()
-	eventServer := event.NewServer()
+	workflowServer := workflow.NewServer(workflowRepo)
+	taskServer := task.NewServer(taskRepo, workflowRepo, bus)
+	interactionServer := interaction.NewServer(interactionRepo, bus)
+	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, interactionRepo, bus)
+	eventServer := event.NewServer(bus)
 
 	srv := server.NewServer(
 		env,
@@ -77,9 +91,14 @@ func main() {
 		eventServer,
 	)
 
+	// Setup orchestrator
+	orch := orchestrator.New(bus, taskRepo, workflowRepo, agentManagerRegistry)
+
 	// Graceful shutdown
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
+
+	go orch.Start(ctx)
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
