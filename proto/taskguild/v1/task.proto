@@ -33,6 +33,8 @@ message Task {
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
   TaskAssignmentStatus assignment_status = 11;
+  bool use_worktree = 12;
+  string permission_mode = 13;  // "default", "acceptEdits", "bypassPermissions"
 }
 
 message CreateTaskRequest {
@@ -41,6 +43,8 @@ message CreateTaskRequest {
   string title = 3;
   string description = 4;
   map<string, string> metadata = 5;
+  bool use_worktree = 6;
+  string permission_mode = 7;
 }
 message CreateTaskResponse {
   Task task = 1;
@@ -69,6 +73,8 @@ message UpdateTaskRequest {
   string title = 2;
   string description = 3;
   map<string, string> metadata = 4;
+  optional bool use_worktree = 5;
+  optional string permission_mode = 6;
 }
 message UpdateTaskResponse {
   Task task = 1;

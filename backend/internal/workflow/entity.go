@@ -29,6 +29,4 @@ type AgentConfig struct {
 	Description      string   `yaml:"description"`
 	Instructions     string   `yaml:"instructions"`
 	AllowedTools     []string `yaml:"allowed_tools"`
-	UseWorktree      bool     `yaml:"use_worktree"`
-	PermissionMode   string   `yaml:"permission_mode"`
 }

@@ -43,8 +43,6 @@ message AgentConfig {
   string description = 4;
   string instructions = 5;        // system prompt / instructions for the agent
   repeated string allowed_tools = 6;
-  bool use_worktree = 7;
-  string permission_mode = 8;  // "default", "acceptEdits", "bypassPermissions"
 }
 
 message CreateWorkflowRequest {

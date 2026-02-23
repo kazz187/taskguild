@@ -20,6 +20,8 @@ type Task struct {
 	AssignedAgentID  string            `yaml:"assigned_agent_id"`
 	AssignmentStatus AssignmentStatus  `yaml:"assignment_status"`
 	Metadata         map[string]string `yaml:"metadata"`
+	UseWorktree      bool              `yaml:"use_worktree"`
+	PermissionMode   string            `yaml:"permission_mode"`
 	CreatedAt        time.Time         `yaml:"created_at"`
 	UpdatedAt        time.Time         `yaml:"updated_at"`
 }

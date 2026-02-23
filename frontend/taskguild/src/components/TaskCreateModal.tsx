@@ -13,12 +13,14 @@ interface TaskCreateModalProps {
 export function TaskCreateModal({ projectId, workflowId, onCreated, onClose }: TaskCreateModalProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [permissionMode, setPermissionMode] = useState('')
+  const [useWorktree, setUseWorktree] = useState(false)
   const createMut = useMutation(createTask)
 
   const handleCreate = () => {
     if (!title.trim()) return
     createMut.mutate(
-      { projectId, workflowId, title: title.trim(), description, metadata: {} },
+      { projectId, workflowId, title: title.trim(), description, metadata: {}, permissionMode, useWorktree },
       {
         onSuccess: () => {
           onCreated()
@@ -59,6 +61,27 @@ export function TaskCreateModal({ projectId, workflowId, onCreated, onClose }: T
             className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500 min-h-[200px]"
             placeholder="Add description..."
           />
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Permission Mode</label>
+            <select
+              value={permissionMode}
+              onChange={(e) => setPermissionMode(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
+            >
+              <option value="">Default (ask for permission)</option>
+              <option value="acceptEdits">Accept Edits (auto-approve file changes)</option>
+              <option value="bypassPermissions">Bypass Permissions (auto-approve all)</option>
+            </select>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={useWorktree}
+              onChange={(e) => setUseWorktree(e.target.checked)}
+              className="accent-cyan-500"
+            />
+            Use Worktree (isolate changes in a git worktree)
+          </label>
         </div>
 
         {/* Footer */}
