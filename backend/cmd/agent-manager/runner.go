@@ -400,7 +400,8 @@ func handlePermissionRequest(
 	toolName string,
 	input map[string]any,
 ) (claudeagent.PermissionResult, error) {
-	description := fmt.Sprintf("Tool: %s\nInput: %v", toolName, input)
+	inputJSON, _ := json.MarshalIndent(input, "", "  ")
+	description := fmt.Sprintf("Tool: %s\nInput:\n%s", toolName, string(inputJSON))
 
 	resp, err := client.CreateInteraction(ctx, connect.NewRequest(&v1.CreateInteractionRequest{
 		TaskId:      taskID,

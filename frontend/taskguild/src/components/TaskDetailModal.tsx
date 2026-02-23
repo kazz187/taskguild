@@ -302,7 +302,7 @@ export function InteractionItem({
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-white">{interaction.title}</p>
           {interaction.description && (
-            <p className="text-xs text-gray-400 mt-1">{interaction.description}</p>
+            <pre className="text-xs text-gray-400 mt-1 whitespace-pre-wrap font-sans">{interaction.description}</pre>
           )}
 
           {isPendingStatus ? (
