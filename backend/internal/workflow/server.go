@@ -159,6 +159,7 @@ func agentConfigToProto(a AgentConfig) *taskguildv1.AgentConfig {
 		Instructions:     a.Instructions,
 		AllowedTools:     a.AllowedTools,
 		UseWorktree:      a.UseWorktree,
+		PermissionMode:   a.PermissionMode,
 	}
 }
 
@@ -190,5 +191,6 @@ func agentConfigFromProto(pa *taskguildv1.AgentConfig) AgentConfig {
 		Instructions:     pa.Instructions,
 		AllowedTools:     pa.AllowedTools,
 		UseWorktree:      pa.UseWorktree,
+		PermissionMode:   pa.PermissionMode,
 	}
 }

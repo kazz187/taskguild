@@ -218,6 +218,7 @@ type AgentConfig struct {
 	Instructions     string                 `protobuf:"bytes,5,opt,name=instructions,proto3" json:"instructions,omitempty"` // system prompt / instructions for the agent
 	AllowedTools     []string               `protobuf:"bytes,6,rep,name=allowed_tools,json=allowedTools,proto3" json:"allowed_tools,omitempty"`
 	UseWorktree      bool                   `protobuf:"varint,7,opt,name=use_worktree,json=useWorktree,proto3" json:"use_worktree,omitempty"`
+	PermissionMode   string                 `protobuf:"bytes,8,opt,name=permission_mode,json=permissionMode,proto3" json:"permission_mode,omitempty"` // "default", "acceptEdits", "bypassPermissions"
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -299,6 +300,13 @@ func (x *AgentConfig) GetUseWorktree() bool {
 		return x.UseWorktree
 	}
 	return false
+}
+
+func (x *AgentConfig) GetPermissionMode() string {
+	if x != nil {
+		return x.PermissionMode
+	}
+	return ""
 }
 
 type CreateWorkflowRequest struct {
@@ -838,7 +846,7 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"is_initial\x18\x04 \x01(\bR\tisInitial\x12\x1f\n" +
 	"\vis_terminal\x18\x05 \x01(\bR\n" +
 	"isTerminal\x12%\n" +
-	"\x0etransitions_to\x18\x06 \x03(\tR\rtransitionsTo\"\xed\x01\n" +
+	"\x0etransitions_to\x18\x06 \x03(\tR\rtransitionsTo\"\x96\x02\n" +
 	"\vAgentConfig\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
 	"\x12workflow_status_id\x18\x02 \x01(\tR\x10workflowStatusId\x12\x12\n" +
@@ -846,7 +854,8 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\"\n" +
 	"\finstructions\x18\x05 \x01(\tR\finstructions\x12#\n" +
 	"\rallowed_tools\x18\x06 \x03(\tR\fallowedTools\x12!\n" +
-	"\fuse_worktree\x18\a \x01(\bR\vuseWorktree\"\xe6\x01\n" +
+	"\fuse_worktree\x18\a \x01(\bR\vuseWorktree\x12'\n" +
+	"\x0fpermission_mode\x18\b \x01(\tR\x0epermissionMode\"\xe6\x01\n" +
 	"\x15CreateWorkflowRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x12\n" +

@@ -3,14 +3,14 @@ package workflow
 import "time"
 
 type Workflow struct {
-	ID           string         `yaml:"id"`
-	ProjectID    string         `yaml:"project_id"`
-	Name         string         `yaml:"name"`
-	Description  string         `yaml:"description"`
-	Statuses     []Status       `yaml:"statuses"`
-	AgentConfigs []AgentConfig  `yaml:"agent_configs"`
-	CreatedAt    time.Time      `yaml:"created_at"`
-	UpdatedAt    time.Time      `yaml:"updated_at"`
+	ID           string        `yaml:"id"`
+	ProjectID    string        `yaml:"project_id"`
+	Name         string        `yaml:"name"`
+	Description  string        `yaml:"description"`
+	Statuses     []Status      `yaml:"statuses"`
+	AgentConfigs []AgentConfig `yaml:"agent_configs"`
+	CreatedAt    time.Time     `yaml:"created_at"`
+	UpdatedAt    time.Time     `yaml:"updated_at"`
 }
 
 type Status struct {
@@ -30,4 +30,5 @@ type AgentConfig struct {
 	Instructions     string   `yaml:"instructions"`
 	AllowedTools     []string `yaml:"allowed_tools"`
 	UseWorktree      bool     `yaml:"use_worktree"`
+	PermissionMode   string   `yaml:"permission_mode"`
 }

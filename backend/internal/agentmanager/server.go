@@ -142,10 +142,14 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 
 	var instructions string
 	var agentConfigID string
+	var useWorktree bool
+	var permissionMode string
 	for _, cfg := range wf.AgentConfigs {
 		if cfg.WorkflowStatusID == t.StatusID {
 			instructions = cfg.Instructions
 			agentConfigID = cfg.ID
+			useWorktree = cfg.UseWorktree
+			permissionMode = cfg.PermissionMode
 			break
 		}
 	}
@@ -158,6 +162,12 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	enrichedMetadata["_task_title"] = t.Title
 	enrichedMetadata["_task_description"] = t.Description
 	enrichedMetadata["_current_status_id"] = t.StatusID
+	if useWorktree {
+		enrichedMetadata["_use_worktree"] = "true"
+	}
+	if permissionMode != "" {
+		enrichedMetadata["_permission_mode"] = permissionMode
+	}
 
 	// Resolve current status name and available transitions from workflow.
 	statusMap := make(map[string]string) // id -> name
