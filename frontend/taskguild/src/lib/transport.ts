@@ -1,16 +1,20 @@
 import { createConnectTransport } from "@connectrpc/connect-web"
+import type { Transport } from "@connectrpc/connect"
+import { type AppConfig, getEffectiveConfig } from "./config"
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3100"
-const API_KEY = import.meta.env.VITE_API_KEY ?? ""
+export function createAppTransport(config: AppConfig): Transport {
+  return createConnectTransport({
+    baseUrl: config.apiBaseUrl,
+    interceptors: [
+      (next) => async (req) => {
+        if (config.apiKey) {
+          req.header.set("X-API-Key", config.apiKey)
+        }
+        return next(req)
+      },
+    ],
+  })
+}
 
-export const transport = createConnectTransport({
-  baseUrl: API_BASE_URL,
-  interceptors: [
-    (next) => async (req) => {
-      if (API_KEY) {
-        req.header.set("X-API-Key", API_KEY)
-      }
-      return next(req)
-    },
-  ],
-})
+// Default transport for initial render (uses localStorage config or env defaults)
+export const transport = createAppTransport(getEffectiveConfig())

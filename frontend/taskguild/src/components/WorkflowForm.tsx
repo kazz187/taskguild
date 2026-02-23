@@ -21,6 +21,7 @@ interface AgentConfigDraft {
   name: string
   description: string
   instructions: string
+  permissionMode: string
 }
 
 let nextKey = 0
@@ -56,6 +57,7 @@ function workflowToDrafts(wf: Workflow) {
     name: a.name,
     description: a.description,
     instructions: a.instructions,
+    permissionMode: a.permissionMode ?? '',
   }))
 
   return { statusDrafts, agentDrafts }
@@ -153,7 +155,7 @@ export function WorkflowForm({
   const addAgentConfig = (statusKey: string) => {
     setAgentConfigs((prev) => [
       ...prev,
-      { key: genKey(), id: '', statusKey, name: '', description: '', instructions: '' },
+      { key: genKey(), id: '', statusKey, name: '', description: '', instructions: '', permissionMode: '' },
     ])
   }
 
@@ -190,6 +192,7 @@ export function WorkflowForm({
       instructions: a.instructions,
       allowedTools: [] as string[],
       useWorktree: false,
+      permissionMode: a.permissionMode,
     }))
 
     return { protoStatuses, protoAgentConfigs }
@@ -401,6 +404,18 @@ export function WorkflowForm({
                           className="w-full px-2 py-1 bg-slate-800 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-cyan-500 min-h-[60px]"
                           placeholder="Agent instructions / system prompt"
                         />
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Permission Mode</label>
+                          <select
+                            value={agentCfg.permissionMode}
+                            onChange={(e) => updateAgentConfig(agentCfg.key, { permissionMode: e.target.value })}
+                            className="w-full px-2 py-1 bg-slate-800 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-cyan-500"
+                          >
+                            <option value="">Default (ask for permission)</option>
+                            <option value="acceptEdits">Accept Edits (auto-approve file changes)</option>
+                            <option value="bypassPermissions">Bypass Permissions (auto-approve all)</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
                   ) : (
