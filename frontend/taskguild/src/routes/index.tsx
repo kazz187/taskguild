@@ -11,15 +11,15 @@ function ProjectsPage() {
   const [showForm, setShowForm] = useState(false)
 
   return (
-    <div className="p-8 max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">Projects</h1>
+    <div className="p-4 md:p-8 max-w-4xl">
+      <div className="flex items-center justify-between mb-4 md:mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-white">Projects</h1>
         <button
           onClick={() => setShowForm(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors"
         >
           <Plus className="w-4 h-4" />
-          New Project
+          <span className="hidden sm:inline">New Project</span>
         </button>
       </div>
 
@@ -42,34 +42,34 @@ function ProjectsPage() {
         <p className="text-gray-500">No projects found.</p>
       )}
 
-      <div className="grid gap-4">
+      <div className="grid gap-3 md:gap-4">
         {data?.projects.map((project) => (
           <Link
             key={project.id}
             to="/projects/$projectId"
             params={{ projectId: project.id }}
-            className="block bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-cyan-500/50 transition-all group"
+            className="block bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-5 hover:border-cyan-500/50 transition-all group active:bg-slate-800/50"
           >
             <div className="flex items-start justify-between">
-              <div className="flex items-start gap-3">
-                <Folder className="w-5 h-5 text-cyan-400 mt-0.5" />
-                <div>
-                  <h2 className="text-lg font-semibold text-white group-hover:text-cyan-400 transition-colors">
+              <div className="flex items-start gap-3 min-w-0 flex-1">
+                <Folder className="w-5 h-5 text-cyan-400 mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <h2 className="text-base md:text-lg font-semibold text-white group-hover:text-cyan-400 transition-colors">
                     {project.name}
                   </h2>
                   {project.description && (
-                    <p className="text-gray-400 text-sm mt-1">
+                    <p className="text-gray-400 text-sm mt-1 line-clamp-2">
                       {project.description}
                     </p>
                   )}
                   {project.repositoryUrl && (
-                    <p className="text-gray-500 text-xs mt-2 font-mono">
+                    <p className="text-gray-500 text-xs mt-2 font-mono truncate">
                       {project.repositoryUrl}
                     </p>
                   )}
                 </div>
               </div>
-              <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-cyan-400 transition-colors mt-1" />
+              <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-cyan-400 transition-colors mt-1 shrink-0" />
             </div>
           </Link>
         ))}
@@ -103,14 +103,14 @@ function CreateProjectForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6"
+      className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-5 mb-4 md:mb-6"
     >
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-white">New Project</h2>
         <button
           type="button"
           onClick={onClose}
-          className="text-gray-500 hover:text-gray-300 transition-colors"
+          className="text-gray-500 hover:text-gray-300 transition-colors p-1"
         >
           <X className="w-5 h-5" />
         </button>
@@ -138,7 +138,7 @@ function CreateProjectForm({
             placeholder="Project description"
           />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-sm text-gray-400 mb-1">Repository URL</label>
             <input

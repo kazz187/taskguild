@@ -242,23 +242,23 @@ export function WorkflowForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
+    <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 md:p-6">
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white">
+        <div className="flex items-center justify-between mb-4 md:mb-6">
+          <h2 className="text-lg md:text-xl font-bold text-white">
             {isEdit ? 'Edit Workflow' : 'Create Workflow'}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-300 transition-colors"
+            className="text-gray-500 hover:text-gray-300 transition-colors p-1"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Basic info */}
-        <div className="space-y-3 mb-8">
+        <div className="space-y-3 mb-6 md:mb-8">
           <div>
             <label className="block text-sm text-gray-400 mb-1">Name *</label>
             <input
@@ -283,7 +283,7 @@ export function WorkflowForm({
         </div>
 
         {/* Statuses */}
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">
               Statuses
@@ -305,9 +305,9 @@ export function WorkflowForm({
               return (
                 <div
                   key={s.key}
-                  className="bg-slate-900 border border-slate-800 rounded-lg p-4"
+                  className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4"
                 >
-                  <div className="flex items-center gap-3 mb-3">
+                  <div className="flex items-center gap-2 md:gap-3 mb-3">
                     <div className="flex flex-col -my-1">
                       <button
                         type="button"
@@ -331,41 +331,45 @@ export function WorkflowForm({
                       required
                       value={s.name}
                       onChange={(e) => updateStatus(s.key, { name: e.target.value })}
-                      className="flex-1 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-sm focus:outline-none focus:border-cyan-500"
+                      className="flex-1 min-w-0 px-2 md:px-3 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-sm focus:outline-none focus:border-cyan-500"
                       placeholder="Status name"
                     />
-                    <label className="flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={s.isInitial}
-                        onChange={(e) => updateStatus(s.key, { isInitial: e.target.checked })}
-                        className="accent-cyan-500"
-                      />
-                      Initial
-                    </label>
-                    <label className="flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={s.isTerminal}
-                        onChange={(e) => updateStatus(s.key, { isTerminal: e.target.checked })}
-                        className="accent-cyan-500"
-                      />
-                      Terminal
-                    </label>
-                    {statuses.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeStatus(s.key)}
-                        className="text-gray-600 hover:text-red-400 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <label className="flex items-center gap-1 text-xs text-gray-400 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={s.isInitial}
+                          onChange={(e) => updateStatus(s.key, { isInitial: e.target.checked })}
+                          className="accent-cyan-500"
+                        />
+                        <span className="hidden sm:inline">Initial</span>
+                        <span className="sm:hidden">I</span>
+                      </label>
+                      <label className="flex items-center gap-1 text-xs text-gray-400 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={s.isTerminal}
+                          onChange={(e) => updateStatus(s.key, { isTerminal: e.target.checked })}
+                          className="accent-cyan-500"
+                        />
+                        <span className="hidden sm:inline">Terminal</span>
+                        <span className="sm:hidden">T</span>
+                      </label>
+                      {statuses.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeStatus(s.key)}
+                          className="text-gray-600 hover:text-red-400 transition-colors p-1"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Transitions */}
                   <div className="mb-3">
-                    <span className="text-xs text-gray-500 mr-2">Transitions to:</span>
+                    <span className="text-xs text-gray-500 mr-2 block sm:inline mb-1 sm:mb-0">Transitions to:</span>
                     <div className="inline-flex gap-1 flex-wrap">
                       {statuses
                         .filter((other) => other.key !== s.key)
@@ -391,7 +395,7 @@ export function WorkflowForm({
 
                   {/* Agent Assignment (dropdown) */}
                   {!s.isTerminal && (
-                    <div className="bg-slate-800/50 border border-slate-700 rounded p-3 mt-2">
+                    <div className="bg-slate-800/50 border border-slate-700 rounded p-2.5 md:p-3 mt-2">
                       <div className="flex items-center gap-2 mb-2">
                         <Bot className="w-3.5 h-3.5 text-cyan-400" />
                         <span className="text-xs text-cyan-400">Assigned Agent</span>

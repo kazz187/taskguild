@@ -65,7 +65,7 @@ function ProjectChatPage() {
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
-      <div className="shrink-0 border-b border-slate-800 px-6 py-4">
+      <div className="shrink-0 border-b border-slate-800 px-4 py-3 md:px-6 md:py-4">
         <div className="flex items-center gap-3 text-sm text-gray-400 mb-1">
           <Link
             to="/projects/$projectId"
@@ -73,10 +73,11 @@ function ProjectChatPage() {
             className="hover:text-white transition-colors flex items-center gap-1"
           >
             <ArrowLeft className="w-4 h-4" />
-            {project?.name ?? 'Project'}
+            <span className="hidden sm:inline">{project?.name ?? 'Project'}</span>
+            <span className="sm:hidden">Back</span>
           </Link>
         </div>
-        <h1 className="text-xl font-bold text-white">Chat</h1>
+        <h1 className="text-lg md:text-xl font-bold text-white">Chat</h1>
         <p className="text-xs text-gray-500 mt-1">
           All interactions across {tasks.length} task{tasks.length !== 1 ? 's' : ''}
         </p>
@@ -84,7 +85,7 @@ function ProjectChatPage() {
 
       {/* Chat area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto px-6 py-6 space-y-3">
+        <div className="max-w-3xl mx-auto px-4 py-4 md:px-6 md:py-6 space-y-3">
           {interactions.length === 0 && (
             <p className="text-gray-500 text-sm text-center py-12">No interactions yet.</p>
           )}

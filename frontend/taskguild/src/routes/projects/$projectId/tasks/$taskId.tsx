@@ -108,23 +108,24 @@ function TaskDetailPage() {
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
-      <div className="shrink-0 border-b border-slate-800 px-6 py-4">
-        <div className="flex items-center gap-3 text-sm text-gray-400 mb-3">
+      <div className="shrink-0 border-b border-slate-800 px-4 py-3 md:px-6 md:py-4">
+        <div className="flex items-center gap-2 md:gap-3 text-sm text-gray-400 mb-2 md:mb-3">
           <Link
             to="/projects/$projectId"
             params={{ projectId }}
-            className="hover:text-white transition-colors flex items-center gap-1"
+            className="hover:text-white transition-colors flex items-center gap-1 shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
-            {project?.name ?? 'Project'}
+            <span className="hidden sm:inline">{project?.name ?? 'Project'}</span>
+            <span className="sm:hidden">Back</span>
           </Link>
           <span className="text-gray-600">/</span>
           <span className="text-gray-300 truncate">{task.title}</span>
         </div>
 
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 md:gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold text-white">{task.title}</h1>
+            <h1 className="text-lg md:text-xl font-bold text-white">{task.title}</h1>
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               {/* Status badge */}
               <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
@@ -169,13 +170,13 @@ function TaskDetailPage() {
                 )
               })}
 
-              <span className="text-[11px] text-gray-600 font-mono ml-auto">{task.id}</span>
+              <span className="text-[11px] text-gray-600 font-mono ml-auto hidden sm:inline">{task.id}</span>
             </div>
           </div>
 
           <button
             onClick={() => setShowEditModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors shrink-0 self-start"
           >
             <Pencil className="w-4 h-4" />
             Edit
@@ -185,10 +186,10 @@ function TaskDetailPage() {
 
       {/* Chat area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto px-6 py-6 space-y-4">
+        <div className="max-w-3xl mx-auto px-4 py-4 md:px-6 md:py-6 space-y-4">
           {/* Description card */}
           {task.description && (
-            <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Description</p>
               <p className="text-sm text-gray-300 whitespace-pre-wrap">{task.description}</p>
             </div>
@@ -198,8 +199,8 @@ function TaskDetailPage() {
           {metadataEntries.length > 0 && (
             <div className="bg-slate-900 border border-slate-800 rounded-lg divide-y divide-slate-800">
               {metadataEntries.map(([key, value]) => (
-                <div key={key} className="flex items-center gap-3 px-4 py-2.5">
-                  <span className="text-xs text-gray-500 font-mono w-40 shrink-0">{key}</span>
+                <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 px-3 py-2 md:px-4 md:py-2.5">
+                  <span className="text-xs text-gray-500 font-mono sm:w-40 shrink-0">{key}</span>
                   {key === 'pull_request_url' || key === 'pr_url' ? (
                     <a
                       href={value}
@@ -208,7 +209,7 @@ function TaskDetailPage() {
                       className="text-sm text-cyan-400 hover:text-cyan-300 flex items-center gap-1 truncate"
                     >
                       <ExternalLink className="w-3 h-3 shrink-0" />
-                      {value}
+                      <span className="truncate">{value}</span>
                     </a>
                   ) : key === 'worktree' ? (
                     <span className="text-sm text-gray-300 font-mono flex items-center gap-1">
@@ -265,4 +266,3 @@ function TaskDetailPage() {
     </div>
   )
 }
-
