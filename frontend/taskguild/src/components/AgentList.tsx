@@ -165,11 +165,11 @@ export function AgentList({ projectId }: { projectId: string }) {
   const mutation = formMode === 'create' ? createMut : updateMut
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6 max-w-4xl mx-auto">
+      <div className="flex items-center justify-between mb-4 md:mb-6">
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5 text-cyan-400" />
-          <h2 className="text-xl font-bold text-white">Agents</h2>
+          <h2 className="text-lg md:text-xl font-bold text-white">Agents</h2>
           <span className="text-xs text-gray-500 bg-slate-800 rounded-full px-2 py-0.5">
             {agents.length}
           </span>
@@ -178,18 +178,20 @@ export function AgentList({ projectId }: { projectId: string }) {
           <button
             onClick={handleSync}
             disabled={syncMut.isPending}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs md:text-sm md:px-3 text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors disabled:opacity-50"
             title="Sync agents from .claude/agents/ directory"
           >
             <RefreshCw className={`w-4 h-4 ${syncMut.isPending ? 'animate-spin' : ''}`} />
-            Sync from Repo
+            <span className="hidden sm:inline">Sync from Repo</span>
+            <span className="sm:hidden">Sync</span>
           </button>
           <button
             onClick={openCreate}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs md:text-sm md:px-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors"
           >
             <Plus className="w-4 h-4" />
-            New Agent
+            <span className="hidden sm:inline">New Agent</span>
+            <span className="sm:hidden">New</span>
           </button>
         </div>
       </div>
@@ -202,7 +204,7 @@ export function AgentList({ projectId }: { projectId: string }) {
 
       {/* Agent Form */}
       {formMode && (
-        <form onSubmit={handleSubmit} className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
+        <form onSubmit={handleSubmit} className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-5 mb-4 md:mb-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-white">
               {formMode === 'create' ? 'New Agent' : 'Edit Agent'}
@@ -214,7 +216,7 @@ export function AgentList({ projectId }: { projectId: string }) {
 
           <div className="space-y-4">
             {/* Name & Description row */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Name *</label>
                 <input
@@ -299,7 +301,7 @@ export function AgentList({ projectId }: { projectId: string }) {
             </div>
 
             {/* Model & Permission Mode row */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Model</label>
                 <select

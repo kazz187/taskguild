@@ -63,25 +63,27 @@ function ProjectDetailPage() {
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
-      <div className="shrink-0 border-b border-slate-800 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-white">
+      <div className="shrink-0 border-b border-slate-800 px-4 py-3 md:px-6 md:py-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-lg md:text-xl font-bold text-white truncate">
               {project?.name ?? 'Loading...'}
             </h1>
             {project?.repositoryUrl && (
-              <p className="text-gray-500 text-xs mt-1 font-mono flex items-center gap-1">
-                <GitBranch className="w-3 h-3" />
-                {project.repositoryUrl}
-                {project.defaultBranch && ` (${project.defaultBranch})`}
+              <p className="text-gray-500 text-xs mt-1 font-mono flex items-center gap-1 truncate">
+                <GitBranch className="w-3 h-3 shrink-0" />
+                <span className="truncate">
+                  {project.repositoryUrl}
+                  {project.defaultBranch && ` (${project.defaultBranch})`}
+                </span>
               </p>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto shrink-0">
             {/* Workflow tabs */}
             {workflows.length > 0 && (
-              <div className="flex gap-1 bg-slate-900 rounded-lg p-1">
+              <div className="flex gap-1 bg-slate-900 rounded-lg p-1 shrink-0">
                 {workflows.map((wf) => (
                   <button
                     key={wf.id}
@@ -89,7 +91,7 @@ function ProjectDetailPage() {
                       setSelectedWorkflow(wf)
                       setFormMode(null)
                     }}
-                    className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    className={`px-2.5 py-1.5 text-xs md:text-sm rounded-md transition-colors whitespace-nowrap ${
                       selectedWorkflow?.id === wf.id && !formMode
                         ? 'bg-slate-700 text-white'
                         : 'text-gray-400 hover:text-gray-200'
@@ -104,18 +106,18 @@ function ProjectDetailPage() {
             {selectedWorkflow && !formMode && (
               <button
                 onClick={() => setFormMode({ kind: 'edit', workflow: selectedWorkflow })}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs md:text-sm text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors shrink-0"
               >
                 <Settings className="w-4 h-4" />
-                Edit
+                <span className="hidden sm:inline">Edit</span>
               </button>
             )}
             <button
               onClick={() => setFormMode({ kind: 'create' })}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs md:text-sm bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors shrink-0"
             >
               <Plus className="w-4 h-4" />
-              New Workflow
+              <span className="hidden sm:inline">New Workflow</span>
             </button>
           </div>
         </div>
@@ -135,12 +137,12 @@ function ProjectDetailPage() {
           workflow={selectedWorkflow}
         />
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-6">
+        <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-6 p-4">
           <div className="text-center">
             <p className="text-lg font-medium text-gray-400 mb-1">Get started with your project</p>
             <p className="text-sm">Create agents and a workflow to begin managing tasks.</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-center gap-3">
             <Link
               to="/projects/$projectId/agents"
               params={{ projectId }}

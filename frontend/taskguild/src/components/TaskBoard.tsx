@@ -19,7 +19,7 @@ import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { TaskCard } from './TaskCard'
 import { TaskDetailModal } from './TaskDetailModal'
 import { TaskCreateModal } from './TaskCreateModal'
-import { Plus } from 'lucide-react'
+import { Plus, ChevronDown, ChevronRight } from 'lucide-react'
 
 interface TaskBoardProps {
   projectId: string
@@ -123,6 +123,21 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
     return new Set(currentStatus?.transitionsTo ?? [])
   }, [activeTask, statusById])
 
+  // Build transition targets for each status (for mobile transition buttons)
+  const transitionTargetsByStatus = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }[]>()
+    for (const s of sortedStatuses) {
+      const targets = (s.transitionsTo ?? [])
+        .map((toId) => {
+          const toStatus = statusById.get(toId)
+          return toStatus ? { id: toStatus.id, name: toStatus.name } : null
+        })
+        .filter((t): t is { id: string; name: string } => t !== null)
+      map.set(s.id, targets)
+    }
+    return map
+  }, [sortedStatuses, statusById])
+
   const handleDragStart = useCallback((event: DragStartEvent) => {
     lastDropWasSuccessful.current = false
     const task = event.active.data.current?.task as Task | undefined
@@ -180,14 +195,38 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
     [statusById, statusMut, refetch],
   )
 
+  // Handle mobile transition button tap
+  const handleMobileTransition = useCallback(
+    (taskId: string, targetStatusId: string) => {
+      // Optimistic update
+      setPendingMoves((prev) => new Map(prev).set(taskId, targetStatusId))
+
+      statusMut.mutate(
+        { id: taskId, statusId: targetStatusId },
+        {
+          onSettled: () => {
+            setPendingMoves((prev) => {
+              const next = new Map(prev)
+              next.delete(taskId)
+              return next
+            })
+            refetch()
+          },
+        },
+      )
+    },
+    [statusMut, refetch],
+  )
+
   return (
     <DndContext
       sensors={sensors}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex-1 overflow-x-auto p-6">
-        <div className="flex gap-4 h-full min-w-max">
+      <div className="flex-1 overflow-x-auto p-4 md:p-6">
+        {/* Desktop: horizontal flex; Mobile: vertical stack */}
+        <div className="flex flex-col md:flex-row gap-4 md:h-full md:min-w-max">
           {sortedStatuses.map((status) => (
             <StatusColumn
               key={status.id}
@@ -200,6 +239,8 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
               onCreated={() => refetch()}
               isDropTarget={allowedStatusIds.has(status.id)}
               isDragging={activeTask !== null}
+              transitionTargets={transitionTargetsByStatus.get(status.id) ?? []}
+              onTransition={handleMobileTransition}
             />
           ))}
         </div>
@@ -239,6 +280,8 @@ function StatusColumn({
   onCreated,
   isDropTarget,
   isDragging,
+  transitionTargets,
+  onTransition,
 }: {
   projectId: string
   workflowId: string
@@ -249,9 +292,12 @@ function StatusColumn({
   onCreated: () => void
   isDropTarget: boolean
   isDragging: boolean
+  transitionTargets: { id: string; name: string }[]
+  onTransition: (taskId: string, targetStatusId: string) => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.id })
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
 
   let borderClass = 'border-slate-800'
   if (isDragging && isDropTarget) {
@@ -261,19 +307,30 @@ function StatusColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`w-72 shrink-0 flex flex-col bg-slate-900/50 rounded-xl border transition-colors ${borderClass}`}
+      className={`md:w-72 md:shrink-0 flex flex-col bg-slate-900/50 rounded-xl border transition-colors ${borderClass}`}
     >
       {/* Column header */}
       <div className="px-4 py-3 border-b border-slate-800">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            {/* Mobile collapse toggle */}
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="md:hidden text-gray-500 hover:text-gray-300 transition-colors shrink-0"
+            >
+              {collapsed ? (
+                <ChevronRight className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
+            </button>
             <StatusDot status={status} />
             <h3 className="text-sm font-semibold text-white truncate">{status.name}</h3>
             <span className="text-xs text-gray-500 bg-slate-800 rounded-full px-2 py-0.5 shrink-0">
               {tasks.length}
             </span>
             {agentConfigName && (
-              <span className="text-[10px] text-cyan-400/70 bg-cyan-500/10 border border-cyan-500/20 rounded-full px-1.5 py-0.5 truncate shrink-0">
+              <span className="text-[10px] text-cyan-400/70 bg-cyan-500/10 border border-cyan-500/20 rounded-full px-1.5 py-0.5 truncate shrink-0 hidden sm:inline-block">
                 {agentConfigName}
               </span>
             )}
@@ -290,15 +347,23 @@ function StatusColumn({
         </div>
       </div>
 
-      {/* Task list */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-2">
-        {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} onEdit={onEdit} />
-        ))}
-        {tasks.length === 0 && (
-          <p className="text-center text-gray-600 text-xs py-4">No tasks</p>
-        )}
-      </div>
+      {/* Task list - collapsible on mobile */}
+      {!collapsed && (
+        <div className="flex-1 overflow-y-auto p-2 space-y-2 md:max-h-none max-h-[60vh]">
+          {tasks.map((task) => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              onEdit={onEdit}
+              transitionTargets={transitionTargets}
+              onTransition={onTransition}
+            />
+          ))}
+          {tasks.length === 0 && (
+            <p className="text-center text-gray-600 text-xs py-4">No tasks</p>
+          )}
+        </div>
+      )}
 
       {showCreateModal && (
         <TaskCreateModal

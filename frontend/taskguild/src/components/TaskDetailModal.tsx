@@ -125,7 +125,7 @@ export function TaskDetailModal({
 
   return (
     <ModalBackdrop onClose={onClose}>
-      <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl">
+      <div className="bg-slate-900 border border-slate-700 rounded-none md:rounded-xl w-full h-full md:h-auto md:max-w-2xl md:max-h-[85vh] flex flex-col shadow-2xl">
         {/* Header */}
         <div className="flex items-start justify-between px-4 pt-4 pb-1">
           <div className="flex-1 min-w-0 mr-3">
@@ -134,11 +134,11 @@ export function TaskDetailModal({
               value={titleDraft}
               onChange={(e) => setTitleDraft(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleSave() }}
-              className="w-full px-2 py-1 bg-slate-800 border border-slate-600 rounded text-white text-lg font-semibold focus:outline-none focus:border-cyan-500"
+              className="w-full px-2 py-1 bg-slate-800 border border-slate-600 rounded text-white text-base md:text-lg font-semibold focus:outline-none focus:border-cyan-500"
               placeholder="Task title..."
             />
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors shrink-0 mt-1">
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors shrink-0 mt-1 p-1">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -148,13 +148,13 @@ export function TaskDetailModal({
           <textarea
             value={descDraft}
             onChange={(e) => setDescDraft(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500 min-h-[200px]"
+            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500 min-h-[150px] md:min-h-[200px]"
             placeholder="Add description..."
           />
 
           {/* Agent settings */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div className="flex-1 w-full sm:w-auto">
               <label className="block text-xs text-gray-500 mb-1">Permission Mode</label>
               <select
                 value={permModeDraft}
@@ -166,7 +166,7 @@ export function TaskDetailModal({
                 <option value="bypassPermissions">Bypass Permissions (auto-approve all)</option>
               </select>
             </div>
-            <label className="flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer pt-4">
+            <label className="flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer sm:pt-4">
               <input
                 type="checkbox"
                 checked={worktreeDraft}
@@ -224,7 +224,7 @@ export function TaskDetailModal({
                 </button>
               )
             })}
-            <span className="text-[11px] text-gray-600 font-mono ml-auto">{task.id}</span>
+            <span className="text-[11px] text-gray-600 font-mono ml-auto hidden sm:inline">{task.id}</span>
           </div>
 
           {/* Interactions */}
@@ -250,7 +250,7 @@ export function TaskDetailModal({
           <button
             onClick={handleDelete}
             disabled={deleteMut.isPending}
-            className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-400 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-400 transition-colors disabled:opacity-50 p-1"
           >
             <Trash2 className="w-3.5 h-3.5" />
             Delete
@@ -279,7 +279,7 @@ export function TaskDetailModal({
 function ModalBackdrop({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-0 md:p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       {children}
@@ -324,7 +324,7 @@ export function InteractionItem({
                       key={opt.value}
                       onClick={() => onRespond(interaction.id, opt.value)}
                       disabled={isPending}
-                      className="px-3 py-1 text-xs bg-slate-700 border border-slate-600 rounded text-gray-200 hover:border-cyan-500/50 hover:text-white transition-colors disabled:opacity-50"
+                      className="px-3 py-1.5 text-xs bg-slate-700 border border-slate-600 rounded text-gray-200 hover:border-cyan-500/50 hover:text-white transition-colors disabled:opacity-50"
                       title={opt.description}
                     >
                       {opt.label}
@@ -337,13 +337,13 @@ export function InteractionItem({
                     value={freeText}
                     onChange={(e) => setFreeText(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && freeText.trim()) onRespond(interaction.id, freeText) }}
-                    className="flex-1 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-cyan-500"
+                    className="flex-1 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-cyan-500"
                     placeholder="Type your response..."
                   />
                   <button
                     onClick={() => { if (freeText.trim()) onRespond(interaction.id, freeText) }}
                     disabled={isPending || !freeText.trim()}
-                    className="px-2 py-1 text-xs bg-cyan-600 text-white rounded disabled:opacity-50"
+                    className="px-3 py-1.5 text-xs bg-cyan-600 text-white rounded disabled:opacity-50"
                   >
                     Send
                   </button>
