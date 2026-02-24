@@ -32,10 +32,10 @@ export function TaskCreateModal({ projectId, workflowId, onCreated, onClose }: T
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-0 md:p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl">
+      <div className="bg-slate-900 border border-slate-700 rounded-none md:rounded-xl w-full h-full md:h-auto md:max-w-2xl md:max-h-[85vh] flex flex-col shadow-2xl">
         {/* Header */}
         <div className="flex items-start justify-between px-4 pt-4 pb-1">
           <div className="flex-1 min-w-0 mr-3">
@@ -44,11 +44,11 @@ export function TaskCreateModal({ projectId, workflowId, onCreated, onClose }: T
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) handleCreate() }}
-              className="w-full px-2 py-1 bg-slate-800 border border-slate-600 rounded text-white text-lg font-semibold focus:outline-none focus:border-cyan-500"
+              className="w-full px-2 py-1 bg-slate-800 border border-slate-600 rounded text-white text-base md:text-lg font-semibold focus:outline-none focus:border-cyan-500"
               placeholder="Task title..."
             />
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors shrink-0 mt-1">
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors shrink-0 mt-1 p-1">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -58,7 +58,7 @@ export function TaskCreateModal({ projectId, workflowId, onCreated, onClose }: T
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500 min-h-[200px]"
+            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500 min-h-[150px] md:min-h-[200px]"
             placeholder="Add description..."
           />
           <div>
