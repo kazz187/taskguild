@@ -491,9 +491,9 @@ func buildClaudeOptions(
 		opts.Resume = sessionID
 	}
 
-	// Set --worktree flag when starting a fresh session (no resume) and worktree is enabled.
-	// This tells Claude CLI to create the worktree if it doesn't exist yet.
-	if sessionID == "" && metadata["_use_worktree"] == "true" && worktreeName != "" {
+	// Set --worktree flag whenever worktree is enabled. This ensures Claude CLI
+	// creates or enters the worktree on both fresh and resumed sessions.
+	if metadata["_use_worktree"] == "true" && worktreeName != "" {
 		opts.Worktree = &worktreeName
 	}
 
