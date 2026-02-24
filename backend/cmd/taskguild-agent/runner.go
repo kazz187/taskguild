@@ -138,7 +138,9 @@ type hookEntry struct {
 // executeHooks parses _hooks from metadata, filters by trigger, and runs each
 // hook sequentially via claudeagent.RunQuerySync. Failures are logged but do
 // not block the main task.
-func executeHooks(ctx context.Context, taskID string, trigger string, metadata map[string]string, workDir string) {
+// If taskClient is provided, hook results containing TASK_METADATA directives
+// will be used to update the task's metadata.
+func executeHooks(ctx context.Context, taskID string, trigger string, metadata map[string]string, workDir string, taskClient taskguildv1connect.TaskServiceClient) {
 	hooksJSON := metadata["_hooks"]
 	if hooksJSON == "" {
 		return
@@ -171,7 +173,7 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 		log.Printf("[task:%s] running hook %q (id=%s, skill=%s)", taskID, h.Name, h.ID, h.SkillID)
 
 		hookCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-		maxTurns := 3
+		maxTurns := 20
 		opts := &claudeagent.ClaudeAgentOptions{
 			SystemPrompt:   "You are executing a hook. Follow the instructions precisely.",
 			Cwd:            workDir,
@@ -192,6 +194,39 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 		}
 
 		log.Printf("[task:%s] hook %q completed successfully", taskID, h.Name)
+
+		// Parse TASK_METADATA directives from hook output and update the task.
+		if taskClient != nil && result.Result != nil {
+			applyHookMetadata(ctx, taskID, result.Result.Result, taskClient)
+		}
+	}
+}
+
+// taskMetadataRegex matches "TASK_METADATA: key=value" lines in hook output.
+var taskMetadataRegex = regexp.MustCompile(`(?m)^TASK_METADATA:\s*(\S+?)=(.+)$`)
+
+// applyHookMetadata extracts TASK_METADATA directives from hook output and
+// updates the task's metadata via the TaskService API.
+func applyHookMetadata(ctx context.Context, taskID string, output string, taskClient taskguildv1connect.TaskServiceClient) {
+	matches := taskMetadataRegex.FindAllStringSubmatch(output, -1)
+	if len(matches) == 0 {
+		return
+	}
+
+	meta := make(map[string]string)
+	for _, m := range matches {
+		key := strings.TrimSpace(m[1])
+		value := strings.TrimSpace(m[2])
+		meta[key] = value
+		log.Printf("[task:%s] hook metadata: %s=%s", taskID, key, value)
+	}
+
+	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
+		Id:       taskID,
+		Metadata: meta,
+	}))
+	if err != nil {
+		log.Printf("[task:%s] failed to update task metadata from hook: %v", taskID, err)
 	}
 }
 
@@ -208,11 +243,32 @@ func runTask(
 ) {
 	reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "starting task")
 
+	// Resolve worktree name: reuse persisted name or generate a new one.
+	worktreeName := metadata["worktree"]
+	if worktreeName == "" && metadata["_use_worktree"] == "true" {
+		worktreeName = generateWorktreeName(ctx, taskID, metadata["_task_title"], workDir)
+		saveWorktreeName(ctx, taskClient, taskID, worktreeName)
+	}
+
+	// resolveHookDir returns the worktree directory if it exists, otherwise workDir.
+	resolveHookDir := func() string {
+		if metadata["_use_worktree"] == "true" && worktreeName != "" {
+			wtDir := filepath.Join(workDir, ".claude", "worktrees", worktreeName)
+			if info, err := os.Stat(wtDir); err == nil && info.IsDir() {
+				return wtDir
+			}
+		}
+		return workDir
+	}
+
 	// Execute after_task_execution hooks when runTask exits (success or failure).
-	defer executeHooks(ctx, taskID, "after_task_execution", metadata, workDir)
+	// Use resolveHookDir so hooks run in the worktree if it exists.
+	defer func() {
+		executeHooks(ctx, taskID, "after_task_execution", metadata, resolveHookDir(), taskClient)
+	}()
 
 	// Execute before_task_execution hooks.
-	executeHooks(ctx, taskID, "before_task_execution", metadata, workDir)
+	executeHooks(ctx, taskID, "before_task_execution", metadata, workDir, taskClient)
 
 	// Start interaction stream listener for this task.
 	waiter := newInteractionWaiter()
@@ -221,13 +277,6 @@ func runTask(
 	sessionID := metadata["_session_id"]
 	prompt := buildUserPrompt(metadata)
 	hasTransitions := metadata["_available_transitions"] != ""
-
-	// Resolve worktree name: reuse persisted name or generate a new one.
-	worktreeName := metadata["worktree"]
-	if worktreeName == "" && metadata["_use_worktree"] == "true" {
-		worktreeName = generateWorktreeName(ctx, taskID, metadata["_task_title"], workDir)
-		saveWorktreeName(ctx, taskClient, taskID, worktreeName)
-	}
 
 	const maxResumeRetries = 2 // after this many consecutive resume failures, start fresh
 
@@ -334,7 +383,7 @@ func runTask(
 			wtDir := filepath.Join(workDir, ".claude", "worktrees", worktreeName)
 			if info, err := os.Stat(wtDir); err == nil && info.IsDir() {
 				worktreeHookFired = true
-				executeHooks(ctx, taskID, "after_worktree_creation", metadata, wtDir)
+				executeHooks(ctx, taskID, "after_worktree_creation", metadata, wtDir, taskClient)
 			}
 		}
 
