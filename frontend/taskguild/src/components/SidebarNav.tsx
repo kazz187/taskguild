@@ -24,7 +24,7 @@ export function SidebarNav() {
 function ProjectNode({ projectId, name }: { projectId: string; name: string }) {
   const matchRoute = useMatchRoute()
   const isActive = !!matchRoute({ to: '/projects/$projectId', params: { projectId }, fuzzy: true })
-  const [expanded, setExpanded] = useState(isActive)
+  const [expanded, setExpanded] = useState(true)
 
   return (
     <div>
@@ -85,23 +85,13 @@ function ProjectChildren({ projectId }: { projectId: string }) {
 }
 
 function WorkflowsNode({ projectId, workflows }: { projectId: string; workflows: { id: string; name: string }[] }) {
-  const [expanded, setExpanded] = useState(true)
-
   return (
     <div>
-      <button
-        onClick={() => setExpanded((e) => !e)}
-        className="w-full flex items-center gap-1.5 px-3 py-1 text-xs text-gray-400 hover:text-white hover:bg-slate-800/40 rounded-md transition-colors"
-      >
-        {expanded ? (
-          <ChevronDown className="w-3 h-3 shrink-0 text-gray-500" />
-        ) : (
-          <ChevronRight className="w-3 h-3 shrink-0 text-gray-500" />
-        )}
+      <div className="flex items-center gap-1.5 px-3 py-1 text-xs text-gray-400">
         <Workflow className="w-3 h-3 shrink-0" />
         <span>Workflows</span>
-      </button>
-      {expanded && workflows.length > 0 && (
+      </div>
+      {workflows.length > 0 && (
         <div className="ml-3 border-l border-slate-800 pl-2 space-y-0.5 py-0.5">
           {workflows.map((wf) => (
             <Link
