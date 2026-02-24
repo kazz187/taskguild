@@ -102,6 +102,11 @@ func main() {
 		cfg.ServerURL,
 		connect.WithInterceptors(interceptor),
 	)
+	interClient := taskguildv1connect.NewInteractionServiceClient(
+		httpClient,
+		cfg.ServerURL,
+		connect.WithInterceptors(interceptor),
+	)
 
 	// Task tracking
 	var (
@@ -124,7 +129,7 @@ func main() {
 			break
 		}
 
-		err := runSubscribeLoop(ctx, client, taskClient, cfg, &mu, activeTasks, &wg, sem)
+		err := runSubscribeLoop(ctx, client, taskClient, interClient, cfg, &mu, activeTasks, &wg, sem)
 		if ctx.Err() != nil {
 			break
 		}
@@ -154,6 +159,7 @@ func runSubscribeLoop(
 	ctx context.Context,
 	client taskguildv1connect.AgentManagerServiceClient,
 	taskClient taskguildv1connect.TaskServiceClient,
+	interClient taskguildv1connect.InteractionServiceClient,
 	cfg *config,
 	mu *sync.Mutex,
 	activeTasks map[string]context.CancelFunc,
@@ -179,6 +185,16 @@ func runSubscribeLoop(
 			taskAvail := c.TaskAvailable
 			taskID := taskAvail.GetTaskId()
 			log.Printf("task available: %s (title: %s)", taskID, taskAvail.GetTitle())
+
+			// Skip if this task is already running (prevents semaphore deadlock on re-assignment).
+			mu.Lock()
+			if prevCancel, ok := activeTasks[taskID]; ok {
+				mu.Unlock()
+				log.Printf("task %s already active, cancelling previous run and re-claiming", taskID)
+				prevCancel()
+			} else {
+				mu.Unlock()
+			}
 
 			// Try to claim the task
 			claimResp, err := client.ClaimTask(ctx, connect.NewRequest(&v1.ClaimTaskRequest{
@@ -221,7 +237,7 @@ func runSubscribeLoop(
 					taskCancel()
 				}()
 
-				runTask(taskCtx, client, taskClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir)
+				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir)
 			}(taskID)
 
 		case *v1.AgentCommand_CancelTask:
@@ -240,6 +256,16 @@ func runSubscribeLoop(
 			assignCmd := c.AssignTask
 			taskID := assignCmd.GetTaskId()
 			log.Printf("direct task assignment: %s", taskID)
+
+			// Cancel previous run if the same task is re-assigned.
+			mu.Lock()
+			if prevCancel, ok := activeTasks[taskID]; ok {
+				mu.Unlock()
+				log.Printf("task %s already active, cancelling previous run for re-assignment", taskID)
+				prevCancel()
+			} else {
+				mu.Unlock()
+			}
 
 			instructions := assignCmd.GetInstructions()
 			metadata := assignCmd.GetMetadata()
@@ -266,7 +292,7 @@ func runSubscribeLoop(
 					taskCancel()
 				}()
 
-				runTask(taskCtx, client, taskClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir)
+				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir)
 			}(taskID)
 
 		default:

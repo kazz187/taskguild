@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useMutation } from '@connectrpc/connect-query'
+import { useMutation, useQuery } from '@connectrpc/connect-query'
 import { createWorkflow, updateWorkflow } from '@taskguild/proto/taskguild/v1/workflow-WorkflowService_connectquery.ts'
+import { listAgents } from '@taskguild/proto/taskguild/v1/agent-AgentService_connectquery.ts'
 import type { Workflow } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { X, Plus, Trash2, Bot, ChevronUp, ChevronDown } from 'lucide-react'
 
@@ -12,6 +13,7 @@ interface StatusDraft {
   isInitial: boolean
   isTerminal: boolean
   transitionsTo: string[] // keys
+  agentId: string // reference to AgentDefinition
 }
 
 interface AgentConfigDraft {
@@ -41,12 +43,22 @@ function workflowToDrafts(wf: Workflow) {
       isInitial: s.isInitial,
       isTerminal: s.isTerminal,
       transitionsTo: [], // fill below
+      agentId: s.agentId ?? '',
     }
   })
   // Resolve transitions from IDs to keys
   for (const s of wf.statuses) {
     const draft = statusDrafts.find((d) => d.id === s.id)!
     draft.transitionsTo = s.transitionsTo.map((id) => idToKey.get(id)!).filter(Boolean)
+  }
+
+  // Legacy: if a status doesn't have agentId but has a matching AgentConfig, use it for display.
+  for (const cfg of wf.agentConfigs) {
+    const draft = statusDrafts.find((d) => d.id === cfg.workflowStatusId)
+    if (draft && !draft.agentId) {
+      // Legacy agent configs don't map to Agent entities, so leave agentId empty.
+      // They'll be shown as "Legacy" in the UI.
+    }
   }
 
   const agentDrafts: AgentConfigDraft[] = wf.agentConfigs.map((a) => ({
@@ -78,9 +90,9 @@ export function WorkflowForm({
     ? workflowToDrafts(workflow)
     : {
         statusDrafts: [
-          { key: genKey(), id: '', name: 'Open', order: 0, isInitial: true, isTerminal: false, transitionsTo: [] },
-          { key: genKey(), id: '', name: 'In Progress', order: 1, isInitial: false, isTerminal: false, transitionsTo: [] },
-          { key: genKey(), id: '', name: 'Done', order: 2, isInitial: false, isTerminal: true, transitionsTo: [] },
+          { key: genKey(), id: '', name: 'Open', order: 0, isInitial: true, isTerminal: false, transitionsTo: [], agentId: '' },
+          { key: genKey(), id: '', name: 'In Progress', order: 1, isInitial: false, isTerminal: false, transitionsTo: [], agentId: '' },
+          { key: genKey(), id: '', name: 'Done', order: 2, isInitial: false, isTerminal: true, transitionsTo: [], agentId: '' },
         ],
         agentDrafts: [],
       }
@@ -88,7 +100,11 @@ export function WorkflowForm({
   const [name, setName] = useState(workflow?.name ?? '')
   const [description, setDescription] = useState(workflow?.description ?? '')
   const [statuses, setStatuses] = useState<StatusDraft[]>(initial.statusDrafts)
-  const [agentConfigs, setAgentConfigs] = useState<AgentConfigDraft[]>(initial.agentDrafts)
+  const [agentConfigs] = useState<AgentConfigDraft[]>(initial.agentDrafts)
+
+  // Fetch available agents for the project.
+  const { data: agentsData } = useQuery(listAgents, { projectId })
+  const agents = agentsData?.agents ?? []
 
   const createMutation = useMutation(createWorkflow)
   const updateMutation = useMutation(updateWorkflow)
@@ -97,7 +113,7 @@ export function WorkflowForm({
   const addStatus = () => {
     setStatuses((prev) => [
       ...prev,
-      { key: genKey(), id: '', name: '', order: prev.length, isInitial: false, isTerminal: false, transitionsTo: [] },
+      { key: genKey(), id: '', name: '', order: prev.length, isInitial: false, isTerminal: false, transitionsTo: [], agentId: '' },
     ])
   }
 
@@ -111,7 +127,6 @@ export function WorkflowForm({
           transitionsTo: s.transitionsTo.filter((k) => k !== key),
         })),
     )
-    setAgentConfigs((prev) => prev.filter((a) => a.statusKey !== key))
   }
 
   const moveStatus = (index: number, direction: -1 | 1) => {
@@ -150,23 +165,6 @@ export function WorkflowForm({
     )
   }
 
-  const addAgentConfig = (statusKey: string) => {
-    setAgentConfigs((prev) => [
-      ...prev,
-      { key: genKey(), id: '', statusKey, name: '', description: '', instructions: '' },
-    ])
-  }
-
-  const removeAgentConfig = (key: string) => {
-    setAgentConfigs((prev) => prev.filter((a) => a.key !== key))
-  }
-
-  const updateAgentConfig = (key: string, patch: Partial<AgentConfigDraft>) => {
-    setAgentConfigs((prev) =>
-      prev.map((a) => (a.key === key ? { ...a, ...patch } : a)),
-    )
-  }
-
   const buildProtoPayload = () => {
     const keyToId = new Map<string, string>()
     statuses.forEach((s, i) => {
@@ -180,16 +178,27 @@ export function WorkflowForm({
       isInitial: s.isInitial,
       isTerminal: s.isTerminal,
       transitionsTo: s.transitionsTo.map((k) => keyToId.get(k)!).filter(Boolean),
+      agentId: s.agentId,
     }))
 
-    const protoAgentConfigs = agentConfigs.map((a, i) => ({
-      id: a.id || `agent-config-${i}`,
-      workflowStatusId: keyToId.get(a.statusKey)!,
-      name: a.name,
-      description: a.description,
-      instructions: a.instructions,
-      allowedTools: [] as string[],
-    }))
+    // Keep legacy agent configs for backward compatibility with existing statuses
+    // that don't have agentId set. Only include legacy configs for statuses without agentId.
+    const statusesWithAgentId = new Set(
+      statuses.filter(s => s.agentId).map(s => keyToId.get(s.key)!)
+    )
+    const protoAgentConfigs = agentConfigs
+      .filter(a => {
+        const statusId = keyToId.get(a.statusKey)
+        return statusId && !statusesWithAgentId.has(statusId)
+      })
+      .map((a, i) => ({
+        id: a.id || `agent-config-${i}`,
+        workflowStatusId: keyToId.get(a.statusKey)!,
+        name: a.name,
+        description: a.description,
+        instructions: a.instructions,
+        allowedTools: [] as string[],
+      }))
 
     return { protoStatuses, protoAgentConfigs }
   }
@@ -281,7 +290,9 @@ export function WorkflowForm({
           </div>
           <div className="space-y-3">
             {statuses.map((s, index) => {
-              const agentCfg = agentConfigs.find((a) => a.statusKey === s.key)
+              const selectedAgent = agents.find(a => a.id === s.agentId)
+              // Check for legacy agent config
+              const legacyAgent = agentConfigs.find(a => a.statusKey === s.key)
               return (
                 <div
                   key={s.key}
@@ -369,50 +380,47 @@ export function WorkflowForm({
                     </div>
                   </div>
 
-                  {/* Agent config */}
-                  {agentCfg ? (
+                  {/* Agent Assignment (dropdown) */}
+                  {!s.isTerminal && (
                     <div className="bg-slate-800/50 border border-slate-700 rounded p-3 mt-2">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-cyan-400 flex items-center gap-1">
-                          <Bot className="w-3.5 h-3.5" />
-                          Agent Config
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removeAgentConfig(agentCfg.key)}
-                          className="text-gray-600 hover:text-red-400 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Bot className="w-3.5 h-3.5 text-cyan-400" />
+                        <span className="text-xs text-cyan-400">Assigned Agent</span>
                       </div>
-                      <div className="space-y-2">
-                        <input
-                          type="text"
-                          required
-                          value={agentCfg.name}
-                          onChange={(e) => updateAgentConfig(agentCfg.key, { name: e.target.value })}
-                          className="w-full px-2 py-1 bg-slate-800 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-cyan-500"
-                          placeholder="Agent name (e.g. Code Reviewer)"
-                        />
-                        <textarea
-                          value={agentCfg.instructions}
-                          onChange={(e) => updateAgentConfig(agentCfg.key, { instructions: e.target.value })}
-                          className="w-full px-2 py-1 bg-slate-800 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-cyan-500 min-h-[60px]"
-                          placeholder="Agent instructions / system prompt"
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    !s.isTerminal && (
-                      <button
-                        type="button"
-                        onClick={() => addAgentConfig(s.key)}
-                        className="flex items-center gap-1 text-xs text-gray-500 hover:text-cyan-400 transition-colors mt-1"
+                      <select
+                        value={s.agentId}
+                        onChange={(e) => updateStatus(s.key, { agentId: e.target.value })}
+                        className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-cyan-500"
                       >
-                        <Bot className="w-3.5 h-3.5" />
-                        Add Agent Config
-                      </button>
-                    )
+                        <option value="">No agent (manual status)</option>
+                        {agents.map(agent => (
+                          <option key={agent.id} value={agent.id}>
+                            {agent.name} — {agent.description}
+                          </option>
+                        ))}
+                      </select>
+                      {selectedAgent && (
+                        <div className="mt-2 text-[11px] text-gray-500">
+                          <span className="text-gray-400">Model:</span> {selectedAgent.model || 'inherit'}
+                          {selectedAgent.tools.length > 0 && (
+                            <>
+                              {' · '}
+                              <span className="text-gray-400">Tools:</span> {selectedAgent.tools.join(', ')}
+                            </>
+                          )}
+                        </div>
+                      )}
+                      {!s.agentId && legacyAgent && (
+                        <div className="mt-2 text-[11px] text-amber-500/70">
+                          Legacy agent config: {legacyAgent.name} (will be preserved)
+                        </div>
+                      )}
+                      {agents.length === 0 && (
+                        <p className="mt-2 text-[11px] text-gray-600">
+                          No agents defined yet. Create agents in the Agents page first.
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               )

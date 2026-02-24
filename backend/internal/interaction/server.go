@@ -35,9 +35,7 @@ func NewServer(repo Repository, taskRepo task.Repository, eventBus *eventbus.Bus
 func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[taskguildv1.ListInteractionsRequest]) (*connect.Response[taskguildv1.ListInteractionsResponse], error) {
 	limit, offset := int32(50), int32(0)
 	if req.Msg.Pagination != nil {
-		if req.Msg.Pagination.Limit > 0 {
-			limit = req.Msg.Pagination.Limit
-		}
+		limit = req.Msg.Pagination.Limit // 0 means no limit
 		offset = req.Msg.Pagination.Offset
 	}
 

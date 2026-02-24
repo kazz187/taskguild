@@ -19,7 +19,7 @@ function ProjectChatPage() {
 
   const { data: projectData } = useQuery(getProject, { id: projectId })
   const { data: tasksData, refetch: refetchTasks } = useQuery(listTasks, { projectId })
-  const { data: interactionsData, refetch: refetchInteractions } = useQuery(listInteractions, { projectId })
+  const { data: interactionsData, refetch: refetchInteractions } = useQuery(listInteractions, { projectId, pagination: { limit: 0 } })
 
   const respondMut = useMutation(respondToInteraction)
 
@@ -41,11 +41,11 @@ function ProjectChatPage() {
     refetchInteractions()
   }, [refetchTasks, refetchInteractions])
 
-  useEventSubscription(
-    [EventType.TASK_CREATED, EventType.TASK_UPDATED, EventType.INTERACTION_CREATED, EventType.INTERACTION_RESPONDED],
-    projectId,
-    onEvent,
-  )
+  const eventTypes = useMemo(() => [
+    EventType.TASK_CREATED, EventType.TASK_UPDATED, EventType.INTERACTION_CREATED, EventType.INTERACTION_RESPONDED,
+  ], [])
+
+  useEventSubscription(eventTypes, projectId, onEvent)
 
   // Auto-scroll to bottom when new interactions arrive
   useEffect(() => {

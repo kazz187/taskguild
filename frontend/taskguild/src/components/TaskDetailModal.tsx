@@ -8,6 +8,7 @@ import { InteractionStatus, InteractionType } from '@taskguild/proto/taskguild/v
 import type { WorkflowStatus } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { X, Bot, Clock, Loader, Trash2, ArrowRight, MessageSquare, Shield, Bell } from 'lucide-react'
+import { MarkdownDescription } from './MarkdownDescription'
 
 interface TaskDetailModalProps {
   taskId: string
@@ -302,7 +303,7 @@ export function InteractionItem({
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-white">{interaction.title}</p>
           {interaction.description && (
-            <pre className="text-xs text-gray-400 mt-1 whitespace-pre-wrap font-sans">{interaction.description}</pre>
+            <MarkdownDescription content={interaction.description} className="mt-1" />
           )}
 
           {isPendingStatus ? (

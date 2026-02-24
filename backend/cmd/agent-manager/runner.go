@@ -6,8 +6,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
 	"strings"
+	"sync"
 	"time"
+	"unicode"
 
 	"connectrpc.com/connect"
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
@@ -30,10 +35,101 @@ const (
 	maxBackoff           = 5 * time.Minute
 )
 
+// interactionWaiter dispatches streamed interaction responses to waiting goroutines.
+// It buffers responses that arrive before a waiter registers (race condition between
+// CreateInteraction and Register).
+type interactionWaiter struct {
+	mu      sync.Mutex
+	waiters map[string]chan *v1.Interaction // interaction_id -> ch
+	pending map[string]*v1.Interaction      // arrived before Register()
+}
+
+func newInteractionWaiter() *interactionWaiter {
+	return &interactionWaiter{
+		waiters: make(map[string]chan *v1.Interaction),
+		pending: make(map[string]*v1.Interaction),
+	}
+}
+
+// Register returns a channel that will receive the responded interaction.
+// If a response already arrived (buffered in pending), it is sent immediately.
+func (w *interactionWaiter) Register(id string) <-chan *v1.Interaction {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	ch := make(chan *v1.Interaction, 1)
+	if inter, ok := w.pending[id]; ok {
+		ch <- inter
+		delete(w.pending, id)
+	} else {
+		w.waiters[id] = ch
+	}
+	return ch
+}
+
+// Unregister removes the waiter for the given interaction ID.
+func (w *interactionWaiter) Unregister(id string) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	delete(w.waiters, id)
+	delete(w.pending, id)
+}
+
+// Deliver is called by the stream listener. If a waiter exists, the interaction
+// is sent on the channel; otherwise it is buffered in pending.
+func (w *interactionWaiter) Deliver(inter *v1.Interaction) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	id := inter.GetId()
+	if ch, ok := w.waiters[id]; ok {
+		ch <- inter
+		delete(w.waiters, id)
+	} else {
+		w.pending[id] = inter
+	}
+}
+
+// runInteractionListener subscribes to interaction events for a task and delivers
+// responded interactions to the waiter. It returns when the stream ends or ctx is cancelled.
+func runInteractionListener(ctx context.Context, interClient taskguildv1connect.InteractionServiceClient, taskID string, waiter *interactionWaiter) {
+	stream, err := interClient.SubscribeInteractions(ctx, connect.NewRequest(&v1.SubscribeInteractionsRequest{
+		TaskId: taskID,
+	}))
+	if err != nil {
+		log.Printf("[task:%s] interaction stream error: %v", taskID, err)
+		return
+	}
+	defer stream.Close()
+
+	log.Printf("[task:%s] interaction stream connected", taskID)
+
+	for stream.Receive() {
+		event := stream.Msg()
+		inter := event.GetInteraction()
+		if inter == nil {
+			continue
+		}
+		switch inter.GetStatus() {
+		case v1.InteractionStatus_INTERACTION_STATUS_RESPONDED:
+			log.Printf("[task:%s] interaction %s responded via stream", taskID, inter.GetId())
+			waiter.Deliver(inter)
+		case v1.InteractionStatus_INTERACTION_STATUS_EXPIRED:
+			log.Printf("[task:%s] interaction %s expired via stream", taskID, inter.GetId())
+			waiter.Deliver(inter)
+		}
+	}
+
+	if err := stream.Err(); err != nil && ctx.Err() == nil {
+		log.Printf("[task:%s] interaction stream ended: %v", taskID, err)
+	}
+}
+
 func runTask(
 	ctx context.Context,
 	client taskguildv1connect.AgentManagerServiceClient,
 	taskClient taskguildv1connect.TaskServiceClient,
+	interClient taskguildv1connect.InteractionServiceClient,
 	agentManagerID string,
 	taskID string,
 	instructions string,
@@ -42,15 +138,28 @@ func runTask(
 ) {
 	reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "starting task")
 
+	// Start interaction stream listener for this task.
+	waiter := newInteractionWaiter()
+	go runInteractionListener(ctx, interClient, taskID, waiter)
+
 	sessionID := metadata["_session_id"]
 	prompt := buildUserPrompt(metadata)
 	hasTransitions := metadata["_available_transitions"] != ""
+
+	// Resolve worktree name: reuse persisted name or generate a new one.
+	worktreeName := metadata["_worktree_name"]
+	if worktreeName == "" && metadata["_use_worktree"] == "true" {
+		worktreeName = generateWorktreeName(taskID, metadata["_task_title"])
+		saveWorktreeName(ctx, taskClient, taskID, worktreeName)
+	}
+
+	const maxResumeRetries = 2 // after this many consecutive resume failures, start fresh
 
 	consecutiveErrors := 0
 	backoff := initialBackoff
 
 	for turn := 0; ; turn++ {
-		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, client, ctx, taskID, agentManagerID)
+		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, worktreeName, client, ctx, taskID, agentManagerID, waiter)
 
 		log.Printf("[task:%s] === Claude SDK Input (turn %d) ===", taskID, turn)
 		if turn == 0 {
@@ -102,6 +211,17 @@ func runTask(
 		if isError {
 			consecutiveErrors++
 			log.Printf("[task:%s] error (%d/%d): %s", taskID, consecutiveErrors, maxConsecutiveErrors, errMsg)
+
+			// If resume keeps failing, clear session and start fresh.
+			if sessionID != "" && consecutiveErrors >= maxResumeRetries {
+				log.Printf("[task:%s] resume failed %d times, clearing session to start fresh", taskID, consecutiveErrors)
+				sessionID = ""
+				consecutiveErrors = 0
+				backoff = initialBackoff
+				reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING,
+					"resume failed, restarting with fresh session")
+				continue
+			}
 
 			if consecutiveErrors >= maxConsecutiveErrors {
 				log.Printf("[task:%s] max consecutive errors reached, giving up", taskID)
@@ -157,7 +277,7 @@ func runTask(
 		log.Printf("[task:%s] waiting for user input (turn %d)", taskID, turn)
 		reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "waiting for user input")
 
-		userResponse, err := waitForUserResponse(ctx, client, taskID, agentManagerID, summary)
+		userResponse, err := waitForUserResponse(ctx, client, taskID, agentManagerID, summary, waiter)
 		if err != nil {
 			log.Printf("[task:%s] user response error: %v, completing task", taskID, err)
 			reportTaskResult(ctx, client, taskID, v1.TaskResultStatus_TASK_RESULT_STATUS_COMPLETED, summary, "")
@@ -176,10 +296,12 @@ func buildClaudeOptions(
 	workDir string,
 	metadata map[string]string,
 	sessionID string,
+	worktreeName string,
 	client taskguildv1connect.AgentManagerServiceClient,
 	ctx context.Context,
 	taskID string,
 	agentManagerID string,
+	waiter *interactionWaiter,
 ) *claudeagent.ClaudeAgentOptions {
 	// Permission mode from agent config (default if empty)
 	permMode := claudeagent.PermissionModeDefault
@@ -192,29 +314,74 @@ func buildClaudeOptions(
 		Cwd:            workDir,
 		PermissionMode: permMode,
 		CanUseTool: func(toolName string, input map[string]any, toolCtx claudeagent.ToolPermissionContext) (claudeagent.PermissionResult, error) {
-			return handlePermissionRequest(ctx, client, taskID, agentManagerID, toolName, input)
+			return handlePermissionRequest(ctx, client, taskID, agentManagerID, toolName, input, waiter, permMode)
 		},
 	}
 
-	if metadata["_use_worktree"] == "true" {
-		empty := ""
-		opts.Worktree = &empty
+	// Parse and pass sub-agents from metadata.
+	if subAgentsJSON := metadata["_sub_agents"]; subAgentsJSON != "" {
+		var subAgents map[string]*claudeagent.AgentDefinition
+		if err := json.Unmarshal([]byte(subAgentsJSON), &subAgents); err == nil && len(subAgents) > 0 {
+			opts.Agents = subAgents
+		}
 	}
 
 	if sessionID != "" {
 		opts.Resume = sessionID
+	} else if metadata["_use_worktree"] == "true" && worktreeName != "" {
+		// Only create a worktree on the first turn. On resume, the session
+		// state already knows the worktree directory.
+		opts.Worktree = &worktreeName
 	}
 
 	return opts
 }
 
-// waitForUserResponse creates a QUESTION interaction and polls until the user responds.
+var slugMultiHyphen = regexp.MustCompile(`-{2,}`)
+
+// generateWorktreeName creates a git-safe worktree/branch name from the task ID and title.
+// Format: {taskID first 6 chars}_{slugified title} (max 50 chars).
+func generateWorktreeName(taskID, title string) string {
+	prefix := strings.ToLower(taskID)
+	if len(prefix) > 6 {
+		prefix = prefix[:6]
+	}
+
+	// Slugify title: lowercase, keep alphanumeric, replace spaces/separators with hyphens.
+	var sb strings.Builder
+	prevHyphen := false
+	for _, r := range strings.ToLower(title) {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			sb.WriteRune(r)
+			prevHyphen = false
+		} else if !prevHyphen {
+			sb.WriteRune('-')
+			prevHyphen = true
+		}
+	}
+	slug := strings.Trim(sb.String(), "-")
+	slug = slugMultiHyphen.ReplaceAllString(slug, "-")
+
+	if slug == "" {
+		return prefix
+	}
+
+	name := prefix + "_" + slug
+	if len(name) > 50 {
+		name = name[:50]
+		name = strings.TrimRight(name, "-_")
+	}
+	return name
+}
+
+// waitForUserResponse creates a QUESTION interaction and waits for a response via the event stream.
 func waitForUserResponse(
 	ctx context.Context,
 	client taskguildv1connect.AgentManagerServiceClient,
 	taskID string,
 	agentManagerID string,
 	claudeOutput string,
+	waiter *interactionWaiter,
 ) (string, error) {
 	resp, err := client.CreateInteraction(ctx, connect.NewRequest(&v1.CreateInteractionRequest{
 		TaskId:      taskID,
@@ -230,33 +397,18 @@ func waitForUserResponse(
 	interactionID := resp.Msg.GetInteraction().GetId()
 	log.Printf("[task:%s] waiting for user response (interaction: %s)", taskID, interactionID)
 
-	ticker := time.NewTicker(2 * time.Second)
-	defer ticker.Stop()
+	ch := waiter.Register(interactionID)
+	defer waiter.Unregister(interactionID)
 
-	for {
-		select {
-		case <-ctx.Done():
-			return "", ctx.Err()
-		case <-ticker.C:
-			pollResp, err := client.GetInteractionResponse(ctx, connect.NewRequest(&v1.GetInteractionResponseRequest{
-				InteractionId: interactionID,
-			}))
-			if err != nil {
-				log.Printf("[task:%s] poll error for interaction %s: %v", taskID, interactionID, err)
-				continue
-			}
-
-			interaction := pollResp.Msg.GetInteraction()
-			if interaction.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_RESPONDED {
-				response := interaction.GetResponse()
-				log.Printf("[task:%s] user responded to interaction %s", taskID, interactionID)
-				return response, nil
-			}
-
-			if interaction.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
-				return "", fmt.Errorf("interaction expired")
-			}
+	select {
+	case <-ctx.Done():
+		return "", ctx.Err()
+	case inter := <-ch:
+		if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
+			return "", fmt.Errorf("interaction expired")
 		}
+		log.Printf("[task:%s] user responded to interaction %s", taskID, interactionID)
+		return inter.GetResponse(), nil
 	}
 }
 
@@ -392,6 +544,34 @@ func saveSessionID(ctx context.Context, taskClient taskguildv1connect.TaskServic
 	}
 }
 
+func saveWorktreeName(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, name string) {
+	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
+		Id:       taskID,
+		Metadata: map[string]string{"_worktree_name": name, "worktree": name},
+	}))
+	if err != nil {
+		log.Printf("[task:%s] failed to save worktree_name: %v", taskID, err)
+	} else {
+		log.Printf("[task:%s] worktree name: %s", taskID, name)
+	}
+}
+
+// readOnlyTools are always auto-allowed regardless of permission mode.
+var readOnlyTools = map[string]bool{
+	"Read":      true,
+	"Glob":      true,
+	"Grep":      true,
+	"WebSearch": true,
+	"WebFetch":  true,
+}
+
+// editTools are auto-allowed in acceptEdits and bypassPermissions modes.
+var editTools = map[string]bool{
+	"Edit":         true,
+	"Write":        true,
+	"NotebookEdit": true,
+}
+
 func handlePermissionRequest(
 	ctx context.Context,
 	client taskguildv1connect.AgentManagerServiceClient,
@@ -399,9 +579,28 @@ func handlePermissionRequest(
 	agentID string,
 	toolName string,
 	input map[string]any,
+	waiter *interactionWaiter,
+	permMode claudeagent.PermissionMode,
 ) (claudeagent.PermissionResult, error) {
-	inputJSON, _ := json.MarshalIndent(input, "", "  ")
-	description := fmt.Sprintf("Tool: %s\nInput:\n%s", toolName, string(inputJSON))
+	// bypassPermissions: allow everything
+	if permMode == claudeagent.PermissionModeBypassPermissions {
+		log.Printf("[task:%s] auto-allowing %s (bypassPermissions)", taskID, toolName)
+		return claudeagent.PermissionResultAllow{}, nil
+	}
+
+	// Read-only tools: always allowed
+	if readOnlyTools[toolName] {
+		log.Printf("[task:%s] auto-allowing read-only tool %s", taskID, toolName)
+		return claudeagent.PermissionResultAllow{}, nil
+	}
+
+	// Edit tools: allowed in acceptEdits mode
+	if editTools[toolName] && permMode == claudeagent.PermissionModeAcceptEdits {
+		log.Printf("[task:%s] auto-allowing edit tool %s (acceptEdits)", taskID, toolName)
+		return claudeagent.PermissionResultAllow{}, nil
+	}
+
+	description := formatToolDescription(toolName, input)
 
 	resp, err := client.CreateInteraction(ctx, connect.NewRequest(&v1.CreateInteractionRequest{
 		TaskId:      taskID,
@@ -421,39 +620,179 @@ func handlePermissionRequest(
 	interactionID := resp.Msg.GetInteraction().GetId()
 	log.Printf("[task:%s] waiting for permission response (interaction: %s, tool: %s)", taskID, interactionID, toolName)
 
-	// Poll for response
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
+	ch := waiter.Register(interactionID)
+	defer waiter.Unregister(interactionID)
 
-	for {
-		select {
-		case <-ctx.Done():
-			return claudeagent.PermissionResultDeny{Message: "context cancelled"}, nil
-		case <-ticker.C:
-			pollResp, err := client.GetInteractionResponse(ctx, connect.NewRequest(&v1.GetInteractionResponseRequest{
-				InteractionId: interactionID,
-			}))
-			if err != nil {
-				log.Printf("[task:%s] poll error for interaction %s: %v", taskID, interactionID, err)
-				continue
+	select {
+	case <-ctx.Done():
+		return claudeagent.PermissionResultDeny{Message: "context cancelled"}, nil
+	case inter := <-ch:
+		if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
+			log.Printf("[task:%s] permission request expired for %s", taskID, toolName)
+			return claudeagent.PermissionResultDeny{Message: "permission request expired"}, nil
+		}
+		if inter.GetResponse() == "allow" {
+			log.Printf("[task:%s] permission granted for %s", taskID, toolName)
+			return claudeagent.PermissionResultAllow{}, nil
+		}
+		log.Printf("[task:%s] permission denied for %s", taskID, toolName)
+		return claudeagent.PermissionResultDeny{Message: "user denied permission"}, nil
+	}
+}
+
+// inferLanguageFromPath returns a code-fence language tag based on file extension.
+func inferLanguageFromPath(path string) string {
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".go":
+		return "go"
+	case ".ts", ".tsx":
+		return "typescript"
+	case ".js", ".jsx":
+		return "javascript"
+	case ".py":
+		return "python"
+	case ".rs":
+		return "rust"
+	case ".rb":
+		return "ruby"
+	case ".java":
+		return "java"
+	case ".kt":
+		return "kotlin"
+	case ".sh", ".bash":
+		return "bash"
+	case ".sql":
+		return "sql"
+	case ".json":
+		return "json"
+	case ".yaml", ".yml":
+		return "yaml"
+	case ".toml":
+		return "toml"
+	case ".md":
+		return "markdown"
+	case ".html", ".htm":
+		return "html"
+	case ".css":
+		return "css"
+	case ".proto":
+		return "protobuf"
+	case ".dockerfile":
+		return "dockerfile"
+	default:
+		if strings.HasSuffix(path, "Dockerfile") {
+			return "dockerfile"
+		}
+		return ""
+	}
+}
+
+// formatToolDescription renders a structured markdown description for a tool invocation.
+func formatToolDescription(toolName string, input map[string]any) string {
+	str := func(key string) string {
+		if v, ok := input[key]; ok {
+			if s, ok := v.(string); ok {
+				return s
 			}
+		}
+		return ""
+	}
 
-			interaction := pollResp.Msg.GetInteraction()
-			if interaction.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_RESPONDED {
-				response := interaction.GetResponse()
-				if response == "allow" {
-					log.Printf("[task:%s] permission granted for %s", taskID, toolName)
-					return claudeagent.PermissionResultAllow{}, nil
-				}
-				log.Printf("[task:%s] permission denied for %s", taskID, toolName)
-				return claudeagent.PermissionResultDeny{Message: "user denied permission"}, nil
+	var sb strings.Builder
+
+	switch toolName {
+	case "Bash":
+		sb.WriteString("**Tool:** `Bash`\n")
+		if desc := str("description"); desc != "" {
+			sb.WriteString(fmt.Sprintf("**Description:** %s\n", desc))
+		}
+		if cmd := str("command"); cmd != "" {
+			sb.WriteString("\n```bash\n")
+			sb.WriteString(cmd)
+			sb.WriteString("\n```\n")
+		}
+
+	case "Edit":
+		sb.WriteString("**Tool:** `Edit`\n")
+		filePath := str("file_path")
+		if filePath != "" {
+			sb.WriteString(fmt.Sprintf("**File:** `%s`\n", filePath))
+		}
+		oldStr := str("old_string")
+		newStr := str("new_string")
+		if oldStr != "" || newStr != "" {
+			sb.WriteString("\n```diff\n")
+			for _, line := range strings.Split(oldStr, "\n") {
+				sb.WriteString("- ")
+				sb.WriteString(line)
+				sb.WriteString("\n")
 			}
+			for _, line := range strings.Split(newStr, "\n") {
+				sb.WriteString("+ ")
+				sb.WriteString(line)
+				sb.WriteString("\n")
+			}
+			sb.WriteString("```\n")
+		}
 
-			if interaction.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
-				return claudeagent.PermissionResultDeny{Message: "permission request expired"}, nil
+	case "Write":
+		sb.WriteString("**Tool:** `Write`\n")
+		filePath := str("file_path")
+		if filePath != "" {
+			sb.WriteString(fmt.Sprintf("**File:** `%s`\n", filePath))
+		}
+		if content := str("content"); content != "" {
+			lang := inferLanguageFromPath(filePath)
+			sb.WriteString(fmt.Sprintf("\n```%s\n", lang))
+			sb.WriteString(content)
+			sb.WriteString("\n```\n")
+		}
+
+	case "Read":
+		sb.WriteString("**Tool:** `Read`\n")
+		if filePath := str("file_path"); filePath != "" {
+			sb.WriteString(fmt.Sprintf("**File:** `%s`\n", filePath))
+		}
+
+	case "Glob":
+		sb.WriteString("**Tool:** `Glob`\n")
+		if pattern := str("pattern"); pattern != "" {
+			sb.WriteString(fmt.Sprintf("**Pattern:** `%s`\n", pattern))
+		}
+		if path := str("path"); path != "" {
+			sb.WriteString(fmt.Sprintf("**Path:** `%s`\n", path))
+		}
+
+	case "Grep":
+		sb.WriteString("**Tool:** `Grep`\n")
+		if pattern := str("pattern"); pattern != "" {
+			sb.WriteString(fmt.Sprintf("**Pattern:** `%s`\n", pattern))
+		}
+		if path := str("path"); path != "" {
+			sb.WriteString(fmt.Sprintf("**Path:** `%s`\n", path))
+		}
+
+	default:
+		sb.WriteString(fmt.Sprintf("**Tool:** `%s`\n", toolName))
+		// Render remaining keys sorted, with multiline values in code blocks.
+		keys := make([]string, 0, len(input))
+		for k := range input {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			v := input[k]
+			s := fmt.Sprintf("%v", v)
+			if strings.Contains(s, "\n") {
+				sb.WriteString(fmt.Sprintf("**%s:**\n\n```\n%s\n```\n", k, s))
+			} else {
+				sb.WriteString(fmt.Sprintf("**%s:** `%s`\n", k, s))
 			}
 		}
 	}
+
+	return sb.String()
 }
 
 func reportTaskResult(

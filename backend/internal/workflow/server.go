@@ -147,6 +147,7 @@ func statusToProto(s Status) *taskguildv1.WorkflowStatus {
 		IsInitial:     s.IsInitial,
 		IsTerminal:    s.IsTerminal,
 		TransitionsTo: s.TransitionsTo,
+		AgentId:       s.AgentID,
 	}
 }
 
@@ -173,6 +174,7 @@ func statusFromProto(ps *taskguildv1.WorkflowStatus) Status {
 		IsInitial:     ps.IsInitial,
 		IsTerminal:    ps.IsTerminal,
 		TransitionsTo: ps.TransitionsTo,
+		AgentID:       ps.AgentId,
 	}
 }
 

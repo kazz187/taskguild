@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package taskguild.v1;
+
+import "google/protobuf/timestamp.proto";
+import "taskguild/v1/common.proto";
+
+service AgentService {
+  rpc CreateAgent(CreateAgentRequest) returns (CreateAgentResponse);
+  rpc GetAgent(GetAgentRequest) returns (GetAgentResponse);
+  rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
+  rpc UpdateAgent(UpdateAgentRequest) returns (UpdateAgentResponse);
+  rpc DeleteAgent(DeleteAgentRequest) returns (DeleteAgentResponse);
+  // SyncAgentsFromDir scans the given directory for .claude/agents/*.md files
+  // and creates/updates agents for the specified project.
+  rpc SyncAgentsFromDir(SyncAgentsFromDirRequest) returns (SyncAgentsFromDirResponse);
+}
+
+// AgentDefinition defines a reusable agent that can be assigned to workflow statuses.
+// Fields align with the Claude Code sub-agent .md file format.
+message AgentDefinition {
+  string id = 1;
+  string project_id = 2;
+  string name = 3;                  // unique name (used as filename in .claude/agents/)
+  string description = 4;           // when to delegate to this agent
+  string prompt = 5;                // system prompt (body of the MD file)
+  repeated string tools = 6;        // allowed tools (e.g. Read, Glob, Grep, Bash)
+  string model = 7;                 // sonnet, opus, haiku, inherit
+  int32 max_turns = 8;              // max agentic turns
+  string permission_mode = 9;       // default, acceptEdits, bypassPermissions
+  string isolation = 10;            // "", "worktree"
+  bool is_synced = 11;              // true if synced from repository .claude/agents/ directory
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+message CreateAgentRequest {
+  string project_id = 1;
+  string name = 2;
+  string description = 3;
+  string prompt = 4;
+  repeated string tools = 5;
+  string model = 6;
+  int32 max_turns = 7;
+  string permission_mode = 8;
+  string isolation = 9;
+}
+message CreateAgentResponse {
+  AgentDefinition agent = 1;
+}
+
+message GetAgentRequest {
+  string id = 1;
+}
+message GetAgentResponse {
+  AgentDefinition agent = 1;
+}
+
+message ListAgentsRequest {
+  string project_id = 1;
+  PaginationRequest pagination = 2;
+}
+message ListAgentsResponse {
+  repeated AgentDefinition agents = 1;
+  PaginationResponse pagination = 2;
+}
+
+message UpdateAgentRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string prompt = 4;
+  repeated string tools = 5;
+  string model = 6;
+  int32 max_turns = 7;
+  string permission_mode = 8;
+  string isolation = 9;
+}
+message UpdateAgentResponse {
+  AgentDefinition agent = 1;
+}
+
+message DeleteAgentRequest {
+  string id = 1;
+}
+message DeleteAgentResponse {}
+
+message SyncAgentsFromDirRequest {
+  string project_id = 1;
+  string directory = 2;  // path to the repository root directory
+}
+message SyncAgentsFromDirResponse {
+  repeated AgentDefinition agents = 1;  // agents that were synced
+  int32 created = 2;
+  int32 updated = 3;
+}

@@ -9,4 +9,7 @@ type Repository interface {
 	Update(ctx context.Context, t *Task) error
 	Delete(ctx context.Context, id string) error
 	Claim(ctx context.Context, taskID string, agentID string) (*Task, error)
+	// ReleaseByAgent unassigns all tasks currently assigned to the given agent,
+	// resetting them to Pending so other agents can claim them.
+	ReleaseByAgent(ctx context.Context, agentID string) ([]*Task, error)
 }

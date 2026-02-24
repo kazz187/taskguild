@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectsProjectIdIndexRouteImport } from './routes/projects/$projectId/index'
 import { Route as ProjectsProjectIdChatRouteImport } from './routes/projects/$projectId/chat'
+import { Route as ProjectsProjectIdAgentsRouteImport } from './routes/projects/$projectId/agents'
 import { Route as ProjectsProjectIdTasksTaskIdRouteImport } from './routes/projects/$projectId/tasks/$taskId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -29,6 +30,11 @@ const ProjectsProjectIdChatRoute = ProjectsProjectIdChatRouteImport.update({
   path: '/projects/$projectId/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProjectsProjectIdAgentsRoute = ProjectsProjectIdAgentsRouteImport.update({
+  id: '/projects/$projectId/agents',
+  path: '/projects/$projectId/agents',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProjectsProjectIdTasksTaskIdRoute =
   ProjectsProjectIdTasksTaskIdRouteImport.update({
     id: '/projects/$projectId/tasks/$taskId',
@@ -38,12 +44,14 @@ const ProjectsProjectIdTasksTaskIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/projects/$projectId/agents': typeof ProjectsProjectIdAgentsRoute
   '/projects/$projectId/chat': typeof ProjectsProjectIdChatRoute
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/tasks/$taskId': typeof ProjectsProjectIdTasksTaskIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/projects/$projectId/agents': typeof ProjectsProjectIdAgentsRoute
   '/projects/$projectId/chat': typeof ProjectsProjectIdChatRoute
   '/projects/$projectId': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/tasks/$taskId': typeof ProjectsProjectIdTasksTaskIdRoute
@@ -51,6 +59,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/projects/$projectId/agents': typeof ProjectsProjectIdAgentsRoute
   '/projects/$projectId/chat': typeof ProjectsProjectIdChatRoute
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/tasks/$taskId': typeof ProjectsProjectIdTasksTaskIdRoute
@@ -59,18 +68,21 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/projects/$projectId/agents'
     | '/projects/$projectId/chat'
     | '/projects/$projectId/'
     | '/projects/$projectId/tasks/$taskId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/projects/$projectId/agents'
     | '/projects/$projectId/chat'
     | '/projects/$projectId'
     | '/projects/$projectId/tasks/$taskId'
   id:
     | '__root__'
     | '/'
+    | '/projects/$projectId/agents'
     | '/projects/$projectId/chat'
     | '/projects/$projectId/'
     | '/projects/$projectId/tasks/$taskId'
@@ -78,6 +90,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ProjectsProjectIdAgentsRoute: typeof ProjectsProjectIdAgentsRoute
   ProjectsProjectIdChatRoute: typeof ProjectsProjectIdChatRoute
   ProjectsProjectIdIndexRoute: typeof ProjectsProjectIdIndexRoute
   ProjectsProjectIdTasksTaskIdRoute: typeof ProjectsProjectIdTasksTaskIdRoute
@@ -106,6 +119,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/projects/$projectId/agents': {
+      id: '/projects/$projectId/agents'
+      path: '/projects/$projectId/agents'
+      fullPath: '/projects/$projectId/agents'
+      preLoaderRoute: typeof ProjectsProjectIdAgentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/projects/$projectId/tasks/$taskId': {
       id: '/projects/$projectId/tasks/$taskId'
       path: '/projects/$projectId/tasks/$taskId'
@@ -118,6 +138,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ProjectsProjectIdAgentsRoute: ProjectsProjectIdAgentsRoute,
   ProjectsProjectIdChatRoute: ProjectsProjectIdChatRoute,
   ProjectsProjectIdIndexRoute: ProjectsProjectIdIndexRoute,
   ProjectsProjectIdTasksTaskIdRoute: ProjectsProjectIdTasksTaskIdRoute,

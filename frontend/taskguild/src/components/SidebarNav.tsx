@@ -3,7 +3,7 @@ import { Link, useMatchRoute } from '@tanstack/react-router'
 import { useQuery } from '@connectrpc/connect-query'
 import { listProjects } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
 import { listWorkflows } from '@taskguild/proto/taskguild/v1/workflow-WorkflowService_connectquery.ts'
-import { ChevronRight, ChevronDown, MessageSquare } from 'lucide-react'
+import { ChevronRight, ChevronDown, MessageSquare, Bot } from 'lucide-react'
 
 export function SidebarNav() {
   const { data } = useQuery(listProjects, {})
@@ -64,6 +64,15 @@ function ProjectChildren({ projectId }: { projectId: string }) {
           {wf.name}
         </Link>
       ))}
+      <Link
+        to="/projects/$projectId/agents"
+        params={{ projectId }}
+        className="flex items-center gap-1.5 px-3 py-1 text-xs text-gray-400 hover:text-white hover:bg-slate-800/40 rounded-md transition-colors"
+        activeProps={{ className: 'flex items-center gap-1.5 px-3 py-1 text-xs text-white bg-slate-800 rounded-md' }}
+      >
+        <Bot className="w-3 h-3" />
+        Agents
+      </Link>
       <Link
         to="/projects/$projectId/chat"
         params={{ projectId }}

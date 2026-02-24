@@ -10,6 +10,7 @@ import (
 	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/kazz187/taskguild/backend/internal/agent"
 	"github.com/kazz187/taskguild/backend/internal/eventbus"
 	"github.com/kazz187/taskguild/backend/internal/interaction"
 	"github.com/kazz187/taskguild/backend/internal/task"
@@ -25,15 +26,17 @@ type Server struct {
 	registry        *Registry
 	taskRepo        task.Repository
 	workflowRepo    workflow.Repository
+	agentRepo       agent.Repository
 	interactionRepo interaction.Repository
 	eventBus        *eventbus.Bus
 }
 
-func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, interactionRepo interaction.Repository, eventBus *eventbus.Bus) *Server {
+func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, eventBus *eventbus.Bus) *Server {
 	return &Server{
 		registry:        registry,
 		taskRepo:        taskRepo,
 		workflowRepo:    workflowRepo,
+		agentRepo:       agentRepo,
 		interactionRepo: interactionRepo,
 		eventBus:        eventBus,
 	}
@@ -47,9 +50,15 @@ func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1
 
 	slog.Info("agent-manager connected", "agent_manager_id", agentManagerID, "max_concurrent_tasks", req.Msg.MaxConcurrentTasks)
 
+	// On (re-)connect, release any tasks still assigned to this agent.
+	// The agent starts fresh and does not retain tasks from a previous session.
+	s.releaseAgentTasks(ctx, agentManagerID)
+
 	commandCh := s.registry.Register(agentManagerID, req.Msg.MaxConcurrentTasks)
 	defer func() {
 		s.registry.Unregister(agentManagerID)
+		// On disconnect, release assigned tasks so other agents can pick them up.
+		s.releaseAgentTasks(context.Background(), agentManagerID)
 		slog.Info("agent-manager disconnected", "agent_manager_id", agentManagerID)
 	}()
 
@@ -65,6 +74,69 @@ func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1
 				return err
 			}
 		}
+	}
+}
+
+// releaseAgentTasks unassigns all tasks held by the given agent and
+// re-broadcasts them so other agents can pick them up.
+func (s *Server) releaseAgentTasks(ctx context.Context, agentManagerID string) {
+	released, err := s.taskRepo.ReleaseByAgent(ctx, agentManagerID)
+	if err != nil {
+		slog.Error("failed to release tasks for agent", "agent_manager_id", agentManagerID, "error", err)
+		return
+	}
+	for _, t := range released {
+		slog.Info("released task from agent",
+			"task_id", t.ID,
+			"agent_manager_id", agentManagerID,
+		)
+
+		// Look up agent config to build the broadcast command.
+		wf, err := s.workflowRepo.Get(ctx, t.WorkflowID)
+		if err != nil {
+			slog.Error("failed to get workflow for released task", "task_id", t.ID, "error", err)
+			continue
+		}
+		var agentConfigID string
+		// Try new approach: status-level agent_id.
+		for _, st := range wf.Statuses {
+			if st.ID == t.StatusID && st.AgentID != "" {
+				agentConfigID = st.AgentID
+				break
+			}
+		}
+		// Fall back to legacy AgentConfig list.
+		if agentConfigID == "" {
+			for _, cfg := range wf.AgentConfigs {
+				if cfg.WorkflowStatusID == t.StatusID {
+					agentConfigID = cfg.ID
+					break
+				}
+			}
+		}
+
+		// Broadcast so other connected agents can claim the task.
+		s.registry.BroadcastCommand(&taskguildv1.AgentCommand{
+			Command: &taskguildv1.AgentCommand_TaskAvailable{
+				TaskAvailable: &taskguildv1.TaskAvailableCommand{
+					TaskId:        t.ID,
+					AgentConfigId: agentConfigID,
+					Title:         t.Title,
+					Metadata:      t.Metadata,
+				},
+			},
+		})
+
+		s.eventBus.PublishNew(
+			taskguildv1.EventType_EVENT_TYPE_TASK_UPDATED,
+			t.ID,
+			"",
+			map[string]string{
+				"project_id":  t.ProjectID,
+				"workflow_id": t.WorkflowID,
+				"reason":      "agent_released",
+			},
+		)
 	}
 }
 
@@ -142,11 +214,33 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 
 	var instructions string
 	var agentConfigID string
-	for _, cfg := range wf.AgentConfigs {
-		if cfg.WorkflowStatusID == t.StatusID {
-			instructions = cfg.Instructions
-			agentConfigID = cfg.ID
+
+	// Try new approach: status-level agent_id referencing Agent entity.
+	var currentAgentID string
+	for _, st := range wf.Statuses {
+		if st.ID == t.StatusID && st.AgentID != "" {
+			currentAgentID = st.AgentID
 			break
+		}
+	}
+
+	if currentAgentID != "" {
+		// New approach: fetch Agent entity.
+		ag, err := s.agentRepo.Get(ctx, currentAgentID)
+		if err == nil {
+			instructions = ag.Prompt
+			agentConfigID = ag.ID
+		}
+	}
+
+	// Fall back to legacy AgentConfig list.
+	if instructions == "" {
+		for _, cfg := range wf.AgentConfigs {
+			if cfg.WorkflowStatusID == t.StatusID {
+				instructions = cfg.Instructions
+				agentConfigID = cfg.ID
+				break
+			}
 		}
 	}
 
@@ -190,6 +284,37 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 				enrichedMetadata["_available_transitions"] = string(b)
 			}
 			break
+		}
+	}
+
+	// Build sub-agents from project's Agent definitions.
+	// All agents in the project (except the current one) are passed as sub-agents.
+	if s.agentRepo != nil {
+		agents, _, err := s.agentRepo.List(ctx, t.ProjectID, 100, 0)
+		if err == nil && len(agents) > 0 {
+			type subAgentDef struct {
+				Description string   `json:"description"`
+				Prompt      string   `json:"prompt"`
+				Tools       []string `json:"tools,omitempty"`
+				Model       string   `json:"model,omitempty"`
+			}
+			subAgents := make(map[string]subAgentDef)
+			for _, ag := range agents {
+				if ag.ID == agentConfigID {
+					continue // skip the current agent
+				}
+				subAgents[ag.Name] = subAgentDef{
+					Description: ag.Description,
+					Prompt:      ag.Prompt,
+					Tools:       ag.Tools,
+					Model:       ag.Model,
+				}
+			}
+			if len(subAgents) > 0 {
+				if b, err := json.Marshal(subAgents); err == nil {
+					enrichedMetadata["_sub_agents"] = string(b)
+				}
+			}
 		}
 	}
 

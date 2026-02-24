@@ -125,6 +125,40 @@ func (r *YAMLRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
+func (r *YAMLRepository) ReleaseByAgent(ctx context.Context, agentID string) ([]*task.Task, error) {
+	r.claimMu.Lock()
+	defer r.claimMu.Unlock()
+
+	paths, err := r.storage.List(ctx, tasksPrefix)
+	if err != nil {
+		return nil, cerr.WrapStorageReadError("tasks", err)
+	}
+
+	var released []*task.Task
+	now := time.Now()
+	for _, p := range paths {
+		data, err := r.storage.Read(ctx, p)
+		if err != nil {
+			continue
+		}
+		var t task.Task
+		if err := yaml.Unmarshal(data, &t); err != nil {
+			continue
+		}
+		if t.AssignedAgentID != agentID || t.AssignmentStatus != task.AssignmentStatusAssigned {
+			continue
+		}
+		t.AssignedAgentID = ""
+		t.AssignmentStatus = task.AssignmentStatusPending
+		t.UpdatedAt = now
+		if err := r.Update(ctx, &t); err != nil {
+			continue
+		}
+		released = append(released, &t)
+	}
+	return released, nil
+}
+
 func (r *YAMLRepository) Claim(ctx context.Context, taskID, agentID string) (*task.Task, error) {
 	r.claimMu.Lock()
 	defer r.claimMu.Unlock()

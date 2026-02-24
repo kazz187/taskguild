@@ -20,6 +20,7 @@ type Status struct {
 	IsInitial     bool     `yaml:"is_initial"`
 	IsTerminal    bool     `yaml:"is_terminal"`
 	TransitionsTo []string `yaml:"transitions_to"`
+	AgentID       string   `yaml:"agent_id,omitempty"`
 }
 
 type AgentConfig struct {

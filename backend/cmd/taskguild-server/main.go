@@ -7,7 +7,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/kazz187/taskguild/backend/internal/agent"
+	agentrepo "github.com/kazz187/taskguild/backend/internal/agent/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/agentmanager"
 	"github.com/kazz187/taskguild/backend/internal/config"
 	"github.com/kazz187/taskguild/backend/internal/event"
@@ -69,6 +72,7 @@ func main() {
 	workflowRepo := workflowrepo.NewYAMLRepository(store)
 	taskRepo := taskrepo.NewYAMLRepository(store)
 	interactionRepo := interactionrepo.NewYAMLRepository(store)
+	agentRepo := agentrepo.NewYAMLRepository(store)
 
 	// Setup agent-manager registry
 	agentManagerRegistry := agentmanager.NewRegistry()
@@ -78,7 +82,8 @@ func main() {
 	workflowServer := workflow.NewServer(workflowRepo)
 	taskServer := task.NewServer(taskRepo, workflowRepo, bus)
 	interactionServer := interaction.NewServer(interactionRepo, taskRepo, bus)
-	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, interactionRepo, bus)
+	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, bus)
+	agentServer := agent.NewServer(agentRepo)
 	eventServer := event.NewServer(bus)
 
 	srv := server.NewServer(
@@ -88,6 +93,7 @@ func main() {
 		taskServer,
 		interactionServer,
 		agentManagerServer,
+		agentServer,
 		eventServer,
 	)
 
@@ -101,7 +107,7 @@ func main() {
 	go orch.Start(ctx)
 
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := srv.ListenAndServe(ctx); err != nil && err != http.ErrServerClosed {
 			slog.Error("server error", "error", err)
 			cancel()
 		}
@@ -109,7 +115,11 @@ func main() {
 
 	<-ctx.Done()
 	slog.Info("shutting down server")
-	if err := srv.Shutdown(context.Background()); err != nil {
+
+	// Give active connections time to finish after stream contexts are cancelled.
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("shutdown error", "error", err)
 	}
 }

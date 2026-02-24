@@ -13,6 +13,7 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
+	"github.com/kazz187/taskguild/backend/internal/agent"
 	"github.com/kazz187/taskguild/backend/internal/agentmanager"
 	"github.com/kazz187/taskguild/backend/internal/event"
 	"github.com/kazz187/taskguild/backend/internal/interaction"
@@ -33,6 +34,7 @@ type Server struct {
 	taskServer         *task.Server
 	interactionServer  *interaction.Server
 	agentManagerServer *agentmanager.Server
+	agentServer        *agent.Server
 	eventServer        *event.Server
 }
 
@@ -43,6 +45,7 @@ func NewServer(
 	taskServer *task.Server,
 	interactionServer *interaction.Server,
 	agentManagerServer *agentmanager.Server,
+	agentServer *agent.Server,
 	eventServer *event.Server,
 ) *Server {
 	return &Server{
@@ -52,11 +55,16 @@ func NewServer(
 		taskServer:         taskServer,
 		interactionServer:  interactionServer,
 		agentManagerServer: agentManagerServer,
+		agentServer:        agentServer,
 		eventServer:        eventServer,
 	}
 }
 
-func (s *Server) ListenAndServe() error {
+// ListenAndServe starts the HTTP server. The provided context is used as the
+// base context for all incoming requests via http.Server.BaseContext. When ctx
+// is cancelled (e.g. on shutdown signal), all streaming RPC contexts are also
+// cancelled, allowing the server to shut down without waiting for streams.
+func (s *Server) ListenAndServe(ctx context.Context) error {
 	r := chi.NewRouter()
 	r.Route("/api", func(r chi.Router) {
 		r.Use(
@@ -82,6 +90,7 @@ func (s *Server) ListenAndServe() error {
 	mux.Handle(taskguildv1connect.NewTaskServiceHandler(s.taskServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewInteractionServiceHandler(s.interactionServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewAgentManagerServiceHandler(s.agentManagerServer, handlerOpts))
+	mux.Handle(taskguildv1connect.NewAgentServiceHandler(s.agentServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewEventServiceHandler(s.eventServer, handlerOpts))
 
 	addr := net.JoinHostPort(s.env.HTTPHost, s.env.HTTPPort)
@@ -95,6 +104,7 @@ func (s *Server) ListenAndServe() error {
 			AllowedHeaders:   []string{"*"},
 			AllowCredentials: true,
 		}).Handler(s.apiKeyMiddleware(mux)), &http2.Server{}),
+		BaseContext: func(_ net.Listener) context.Context { return ctx },
 	}
 
 	return s.server.ListenAndServe()

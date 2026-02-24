@@ -132,6 +132,7 @@ type WorkflowStatus struct {
 	IsInitial     bool                   `protobuf:"varint,4,opt,name=is_initial,json=isInitial,proto3" json:"is_initial,omitempty"`
 	IsTerminal    bool                   `protobuf:"varint,5,opt,name=is_terminal,json=isTerminal,proto3" json:"is_terminal,omitempty"`
 	TransitionsTo []string               `protobuf:"bytes,6,rep,name=transitions_to,json=transitionsTo,proto3" json:"transitions_to,omitempty"` // IDs of statuses this can transition to
+	AgentId       string                 `protobuf:"bytes,7,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`                   // ID of the AgentDefinition assigned to this status
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -206,6 +207,13 @@ func (x *WorkflowStatus) GetTransitionsTo() []string {
 		return x.TransitionsTo
 	}
 	return nil
+}
+
+func (x *WorkflowStatus) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
 }
 
 // AgentConfig defines how an agent should behave for a specific status.
@@ -821,7 +829,7 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xb1\x01\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xcc\x01\n" +
 	"\x0eWorkflowStatus\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -830,7 +838,8 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"is_initial\x18\x04 \x01(\bR\tisInitial\x12\x1f\n" +
 	"\vis_terminal\x18\x05 \x01(\bR\n" +
 	"isTerminal\x12%\n" +
-	"\x0etransitions_to\x18\x06 \x03(\tR\rtransitionsTo\"\xca\x01\n" +
+	"\x0etransitions_to\x18\x06 \x03(\tR\rtransitionsTo\x12\x19\n" +
+	"\bagent_id\x18\a \x01(\tR\aagentId\"\xca\x01\n" +
 	"\vAgentConfig\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
 	"\x12workflow_status_id\x18\x02 \x01(\tR\x10workflowStatusId\x12\x12\n" +

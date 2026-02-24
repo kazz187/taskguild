@@ -10,6 +10,7 @@ import {
   CheckCircle,
   Timer,
 } from 'lucide-react'
+import { MarkdownDescription } from './MarkdownDescription'
 
 /* ─── Helpers ─── */
 
@@ -85,7 +86,7 @@ export function ChatBubble({
           </div>
           <p className="text-sm font-medium text-white">{interaction.title}</p>
           {interaction.description && (
-            <p className="text-xs text-gray-400 mt-1 whitespace-pre-wrap">{interaction.description}</p>
+            <MarkdownDescription content={interaction.description} className="mt-1" />
           )}
 
           {/* Inline action buttons for pending interactions */}

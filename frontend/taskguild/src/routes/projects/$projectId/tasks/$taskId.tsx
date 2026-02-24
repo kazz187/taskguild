@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { getTask, updateTaskStatus } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
@@ -34,7 +34,7 @@ function TaskDetailPage() {
   const { data: taskData, refetch: refetchTask } = useQuery(getTask, { id: taskId })
   const { data: projectData } = useQuery(getProject, { id: projectId })
   const { data: workflowsData } = useQuery(listWorkflows, { projectId })
-  const { data: interactionsData, refetch: refetchInteractions } = useQuery(listInteractions, { taskId })
+  const { data: interactionsData, refetch: refetchInteractions } = useQuery(listInteractions, { taskId, pagination: { limit: 0 } })
 
   const statusMut = useMutation(updateTaskStatus)
   const respondMut = useMutation(respondToInteraction)
@@ -57,11 +57,12 @@ function TaskDetailPage() {
     refetchInteractions()
   }, [refetchTask, refetchInteractions])
 
-  useEventSubscription(
-    [EventType.TASK_UPDATED, EventType.TASK_STATUS_CHANGED, EventType.AGENT_ASSIGNED, EventType.AGENT_STATUS_CHANGED, EventType.INTERACTION_CREATED, EventType.INTERACTION_RESPONDED],
-    projectId,
-    onEvent,
-  )
+  const eventTypes = useMemo(() => [
+    EventType.TASK_UPDATED, EventType.TASK_STATUS_CHANGED, EventType.AGENT_ASSIGNED,
+    EventType.AGENT_STATUS_CHANGED, EventType.INTERACTION_CREATED, EventType.INTERACTION_RESPONDED,
+  ], [])
+
+  useEventSubscription(eventTypes, projectId, onEvent)
 
   // Auto-scroll to bottom when new interactions arrive
   useEffect(() => {

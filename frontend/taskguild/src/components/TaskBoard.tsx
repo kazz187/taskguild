@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { listTasks, updateTaskStatus } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
+import { listAgents } from '@taskguild/proto/taskguild/v1/agent-AgentService_connectquery.ts'
 import type { Workflow, WorkflowStatus } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
@@ -68,13 +69,34 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
     return map
   }, [sortedStatuses])
 
+  // Fetch project agents to resolve agent names from status agent_id.
+  const { data: agentsData } = useQuery(listAgents, { projectId })
+  const projectAgents = agentsData?.agents ?? []
+
   const agentConfigByStatusId = useMemo(() => {
     const map = new Map<string, string>()
+    // Build agent ID -> name map for quick lookup.
+    const agentNameById = new Map<string, string>()
+    for (const ag of projectAgents) {
+      agentNameById.set(ag.id, ag.name)
+    }
+    // First, check status-level agent_id (new approach).
+    for (const st of workflow.statuses) {
+      if (st.agentId) {
+        const agentName = agentNameById.get(st.agentId)
+        if (agentName) {
+          map.set(st.id, agentName)
+        }
+      }
+    }
+    // Fall back to legacy AgentConfig list for statuses without agent_id.
     for (const cfg of workflow.agentConfigs) {
-      map.set(cfg.workflowStatusId, cfg.name)
+      if (!map.has(cfg.workflowStatusId)) {
+        map.set(cfg.workflowStatusId, cfg.name)
+      }
     }
     return map
-  }, [workflow.agentConfigs])
+  }, [workflow.agentConfigs, workflow.statuses, projectAgents])
 
   const tasksByStatus = useMemo(() => {
     const map = new Map<string, Task[]>()
