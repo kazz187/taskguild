@@ -20,6 +20,8 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/orchestrator"
 	"github.com/kazz187/taskguild/backend/internal/project"
 	projectrepo "github.com/kazz187/taskguild/backend/internal/project/repositoryimpl"
+	"github.com/kazz187/taskguild/backend/internal/pushnotification"
+	pushsubrepo "github.com/kazz187/taskguild/backend/internal/pushsubscription/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/skill"
 	skillrepo "github.com/kazz187/taskguild/backend/internal/skill/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/task"
@@ -98,6 +100,7 @@ func main() {
 	interactionRepo := interactionrepo.NewYAMLRepository(store)
 	agentRepo := agentrepo.NewYAMLRepository(store)
 	skillRepo := skillrepo.NewYAMLRepository(store)
+	pushSubRepo := pushsubrepo.NewYAMLRepository(store)
 
 	// Setup agent-manager registry
 	agentManagerRegistry := agentmanager.NewRegistry()
@@ -116,6 +119,12 @@ func main() {
 	skillServer := skill.NewServer(skillRepo)
 	eventServer := event.NewServer(bus)
 
+	// Setup push notification
+	vapidEnv := config.VAPIDEnvFromEnv(env)
+	pushSender := pushnotification.NewSender(vapidEnv, pushSubRepo)
+	pushNotificationServer := pushnotification.NewServer(vapidEnv, pushSubRepo, pushSender)
+	pushDispatcher := pushnotification.NewDispatcher(bus, interactionRepo, taskRepo, pushSender)
+
 	srv := server.NewServer(
 		env,
 		projectServer,
@@ -126,6 +135,7 @@ func main() {
 		agentServer,
 		skillServer,
 		eventServer,
+		pushNotificationServer,
 	)
 
 	// Setup orchestrator
@@ -136,6 +146,7 @@ func main() {
 	defer cancel()
 
 	go orch.Start(ctx)
+	go pushDispatcher.Start(ctx)
 
 	go func() {
 		if err := srv.ListenAndServe(ctx); err != nil && err != http.ErrServerClosed {

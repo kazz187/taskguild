@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package taskguild.v1;
+
+service PushNotificationService {
+  rpc GetVapidPublicKey(GetVapidPublicKeyRequest) returns (GetVapidPublicKeyResponse);
+  rpc RegisterPushSubscription(RegisterPushSubscriptionRequest) returns (RegisterPushSubscriptionResponse);
+  rpc UnregisterPushSubscription(UnregisterPushSubscriptionRequest) returns (UnregisterPushSubscriptionResponse);
+  rpc SendTestNotification(SendTestNotificationRequest) returns (SendTestNotificationResponse);
+}
+
+message GetVapidPublicKeyRequest {}
+message GetVapidPublicKeyResponse {
+  string public_key = 1;
+}
+
+message RegisterPushSubscriptionRequest {
+  string endpoint = 1;
+  string p256dh_key = 2;
+  string auth_key = 3;
+}
+message RegisterPushSubscriptionResponse {}
+
+message UnregisterPushSubscriptionRequest {
+  string endpoint = 1;
+}
+message UnregisterPushSubscriptionResponse {}
+
+message SendTestNotificationRequest {}
+message SendTestNotificationResponse {}

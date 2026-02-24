@@ -18,6 +18,7 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/event"
 	"github.com/kazz187/taskguild/backend/internal/interaction"
 	"github.com/kazz187/taskguild/backend/internal/project"
+	"github.com/kazz187/taskguild/backend/internal/pushnotification"
 	"github.com/kazz187/taskguild/backend/internal/skill"
 	"github.com/kazz187/taskguild/backend/internal/task"
 	"github.com/kazz187/taskguild/backend/internal/workflow"
@@ -28,16 +29,17 @@ import (
 )
 
 type Server struct {
-	server             *http.Server
-	env                *config.Env
-	projectServer      *project.Server
-	workflowServer     *workflow.Server
-	taskServer         *task.Server
-	interactionServer  *interaction.Server
-	agentManagerServer *agentmanager.Server
-	agentServer        *agent.Server
-	skillServer        *skill.Server
-	eventServer        *event.Server
+	server                 *http.Server
+	env                    *config.Env
+	projectServer          *project.Server
+	workflowServer         *workflow.Server
+	taskServer             *task.Server
+	interactionServer      *interaction.Server
+	agentManagerServer     *agentmanager.Server
+	agentServer            *agent.Server
+	skillServer            *skill.Server
+	eventServer            *event.Server
+	pushNotificationServer *pushnotification.Server
 }
 
 func NewServer(
@@ -50,17 +52,19 @@ func NewServer(
 	agentServer *agent.Server,
 	skillServer *skill.Server,
 	eventServer *event.Server,
+	pushNotificationServer *pushnotification.Server,
 ) *Server {
 	return &Server{
-		env:                env,
-		projectServer:      projectServer,
-		workflowServer:     workflowServer,
-		taskServer:         taskServer,
-		interactionServer:  interactionServer,
-		agentManagerServer: agentManagerServer,
-		agentServer:        agentServer,
-		skillServer:        skillServer,
-		eventServer:        eventServer,
+		env:                    env,
+		projectServer:          projectServer,
+		workflowServer:         workflowServer,
+		taskServer:             taskServer,
+		interactionServer:      interactionServer,
+		agentManagerServer:     agentManagerServer,
+		agentServer:            agentServer,
+		skillServer:            skillServer,
+		eventServer:            eventServer,
+		pushNotificationServer: pushNotificationServer,
 	}
 }
 
@@ -97,6 +101,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	mux.Handle(taskguildv1connect.NewAgentServiceHandler(s.agentServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewSkillServiceHandler(s.skillServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewEventServiceHandler(s.eventServer, handlerOpts))
+	mux.Handle(taskguildv1connect.NewPushNotificationServiceHandler(s.pushNotificationServer, handlerOpts))
 
 	addr := net.JoinHostPort(s.env.HTTPHost, s.env.HTTPPort)
 	slog.Info("starting server", "addr", addr)

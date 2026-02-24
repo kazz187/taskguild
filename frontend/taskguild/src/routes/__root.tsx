@@ -3,6 +3,7 @@ import { Link, Outlet, createRootRoute, useLocation } from '@tanstack/react-rout
 import { FolderKanban, Menu, X } from 'lucide-react'
 import { SidebarNav } from '@/components/SidebarNav'
 import { SidebarConfig } from '@/components/SidebarConfig'
+import { PushNotificationToggle } from '@/components/PushNotificationToggle'
 import { SetupScreen } from '@/components/SetupScreen'
 import { useConfig } from '@/components/ConfigProvider'
 
@@ -79,7 +80,8 @@ function RootComponent() {
             <nav className="flex-1 p-3 overflow-y-auto">
               <SidebarNav />
             </nav>
-            <div className="p-3 border-t border-slate-800">
+            <div className="p-3 border-t border-slate-800 space-y-1">
+              <PushNotificationToggle />
               <SidebarConfig />
             </div>
           </aside>
@@ -98,7 +100,8 @@ function RootComponent() {
         <nav className="flex-1 p-3 overflow-y-auto">
           <SidebarNav />
         </nav>
-        <div className="p-3 border-t border-slate-800">
+        <div className="p-3 border-t border-slate-800 space-y-1">
+          <PushNotificationToggle />
           <SidebarConfig />
         </div>
       </aside>

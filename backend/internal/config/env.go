@@ -24,9 +24,16 @@ type StorageEnv struct {
 	S3Region string `envconfig:"S3_REGION" default:"ap-northeast-1"`
 }
 
+type VAPIDEnv struct {
+	VAPIDPrivateKey string `envconfig:"VAPID_PRIVATE_KEY"`
+	VAPIDPublicKey  string `envconfig:"VAPID_PUBLIC_KEY"`
+	VAPIDContact    string `envconfig:"VAPID_CONTACT" default:"mailto:admin@taskguild.dev"`
+}
+
 type Env struct {
 	BaseEnv
 	StorageEnv
+	VAPIDEnv
 }
 
 const namespace = "TASKGUILD"
@@ -56,4 +63,8 @@ func BaseEnvFromEnv(env *Env) *BaseEnv {
 
 func StorageEnvFromEnv(env *Env) *StorageEnv {
 	return &env.StorageEnv
+}
+
+func VAPIDEnvFromEnv(env *Env) *VAPIDEnv {
+	return &env.VAPIDEnv
 }
