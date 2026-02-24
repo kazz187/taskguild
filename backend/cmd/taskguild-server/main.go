@@ -20,6 +20,8 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/orchestrator"
 	"github.com/kazz187/taskguild/backend/internal/project"
 	projectrepo "github.com/kazz187/taskguild/backend/internal/project/repositoryimpl"
+	"github.com/kazz187/taskguild/backend/internal/skill"
+	skillrepo "github.com/kazz187/taskguild/backend/internal/skill/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/task"
 	taskrepo "github.com/kazz187/taskguild/backend/internal/task/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/workflow"
@@ -95,6 +97,7 @@ func main() {
 	taskRepo := taskrepo.NewYAMLRepository(store)
 	interactionRepo := interactionrepo.NewYAMLRepository(store)
 	agentRepo := agentrepo.NewYAMLRepository(store)
+	skillRepo := skillrepo.NewYAMLRepository(store)
 
 	// Setup agent-manager registry
 	agentManagerRegistry := agentmanager.NewRegistry()
@@ -110,6 +113,7 @@ func main() {
 		projectRepo: projectRepo,
 	}
 	agentServer := agent.NewServer(agentRepo, agentChangeNotifier)
+	skillServer := skill.NewServer(skillRepo)
 	eventServer := event.NewServer(bus)
 
 	srv := server.NewServer(
@@ -120,6 +124,7 @@ func main() {
 		interactionServer,
 		agentManagerServer,
 		agentServer,
+		skillServer,
 		eventServer,
 	)
 
