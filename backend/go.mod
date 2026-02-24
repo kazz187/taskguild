@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.0
 	github.com/fatih/color v1.15.0
 	github.com/go-chi/chi/v5 v5.2.2
-	github.com/kazz187/claude-agent-sdk-go v0.0.5
+	github.com/kazz187/claude-agent-sdk-go v0.0.6
 	github.com/kazz187/taskguild/proto/gen/go v0.0.0-00010101000000-000000000000
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/oklog/ulid/v2 v2.1.1
@@ -49,5 +49,3 @@ require (
 )
 
 replace github.com/kazz187/taskguild/proto/gen/go => ../proto/gen/go
-
-replace github.com/kazz187/claude-agent-sdk-go => /Users/kazz/Dropbox/ghq/github.com/kazz187/claude-agent-sdk-go
