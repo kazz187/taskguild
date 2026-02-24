@@ -9,7 +9,9 @@
     "dev": "vite dev --port 3000",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "publish": "pnpm build && wrangler pages deploy dist --project-name taskguild",
+    "publish:preview": "pnpm build && wrangler pages deploy dist --project-name taskguild --branch preview"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.10.2",
@@ -42,6 +44,7 @@
     "typescript": "^5.7.2",
     "vite": "^7.1.7",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.0.5"
+    "vitest": "^3.0.5",
+    "wrangler": "^4.68.0"
   }
 }

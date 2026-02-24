@@ -57,16 +57,17 @@ export function SetupScreen() {
             </label>
             <input
               type="password"
+              required
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500 transition-colors"
-              placeholder="Optional"
+              placeholder="Enter your API key"
             />
           </div>
 
           <button
             type="submit"
-            disabled={!apiBaseUrl}
+            disabled={!apiBaseUrl || !apiKey}
             className="w-full py-2.5 text-sm font-medium bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
           >
             Connect

@@ -71,6 +71,7 @@ export function SidebarConfig() {
         </label>
         <input
           type="password"
+          required
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
           className="w-full px-2 py-1 bg-slate-800 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-cyan-500 transition-colors"
@@ -79,7 +80,7 @@ export function SidebarConfig() {
 
       <button
         type="submit"
-        disabled={!apiBaseUrl}
+        disabled={!apiBaseUrl || !apiKey}
         className="w-full py-1 text-xs font-medium bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white rounded transition-colors"
       >
         {saved ? 'Saved!' : 'Save'}
