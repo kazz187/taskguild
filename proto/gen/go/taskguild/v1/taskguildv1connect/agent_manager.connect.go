@@ -54,6 +54,9 @@ const (
 	// AgentManagerServiceClaimTaskProcedure is the fully-qualified name of the AgentManagerService's
 	// ClaimTask RPC.
 	AgentManagerServiceClaimTaskProcedure = "/taskguild.v1.AgentManagerService/ClaimTask"
+	// AgentManagerServiceSyncAgentsProcedure is the fully-qualified name of the AgentManagerService's
+	// SyncAgents RPC.
+	AgentManagerServiceSyncAgentsProcedure = "/taskguild.v1.AgentManagerService/SyncAgents"
 )
 
 // AgentManagerServiceClient is a client for the taskguild.v1.AgentManagerService service.
@@ -72,6 +75,9 @@ type AgentManagerServiceClient interface {
 	ReportAgentStatus(context.Context, *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error)
 	// ClaimTask allows an agent-manager to claim an available task.
 	ClaimTask(context.Context, *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error)
+	// SyncAgents returns all agent definitions for a project so the agent can
+	// write them as .claude/agents/*.md files locally.
+	SyncAgents(context.Context, *connect.Request[v1.SyncAgentsRequest]) (*connect.Response[v1.SyncAgentsResponse], error)
 }
 
 // NewAgentManagerServiceClient constructs a client for the taskguild.v1.AgentManagerService
@@ -127,6 +133,12 @@ func NewAgentManagerServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(agentManagerServiceMethods.ByName("ClaimTask")),
 			connect.WithClientOptions(opts...),
 		),
+		syncAgents: connect.NewClient[v1.SyncAgentsRequest, v1.SyncAgentsResponse](
+			httpClient,
+			baseURL+AgentManagerServiceSyncAgentsProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("SyncAgents")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -139,6 +151,7 @@ type agentManagerServiceClient struct {
 	getInteractionResponse *connect.Client[v1.GetInteractionResponseRequest, v1.GetInteractionResponseResponse]
 	reportAgentStatus      *connect.Client[v1.ReportAgentStatusRequest, v1.ReportAgentStatusResponse]
 	claimTask              *connect.Client[v1.ClaimTaskRequest, v1.ClaimTaskResponse]
+	syncAgents             *connect.Client[v1.SyncAgentsRequest, v1.SyncAgentsResponse]
 }
 
 // Subscribe calls taskguild.v1.AgentManagerService.Subscribe.
@@ -176,6 +189,11 @@ func (c *agentManagerServiceClient) ClaimTask(ctx context.Context, req *connect.
 	return c.claimTask.CallUnary(ctx, req)
 }
 
+// SyncAgents calls taskguild.v1.AgentManagerService.SyncAgents.
+func (c *agentManagerServiceClient) SyncAgents(ctx context.Context, req *connect.Request[v1.SyncAgentsRequest]) (*connect.Response[v1.SyncAgentsResponse], error) {
+	return c.syncAgents.CallUnary(ctx, req)
+}
+
 // AgentManagerServiceHandler is an implementation of the taskguild.v1.AgentManagerService service.
 type AgentManagerServiceHandler interface {
 	// Subscribe opens a server-stream for receiving commands from the backend.
@@ -192,6 +210,9 @@ type AgentManagerServiceHandler interface {
 	ReportAgentStatus(context.Context, *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error)
 	// ClaimTask allows an agent-manager to claim an available task.
 	ClaimTask(context.Context, *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error)
+	// SyncAgents returns all agent definitions for a project so the agent can
+	// write them as .claude/agents/*.md files locally.
+	SyncAgents(context.Context, *connect.Request[v1.SyncAgentsRequest]) (*connect.Response[v1.SyncAgentsResponse], error)
 }
 
 // NewAgentManagerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -243,6 +264,12 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 		connect.WithSchema(agentManagerServiceMethods.ByName("ClaimTask")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentManagerServiceSyncAgentsHandler := connect.NewUnaryHandler(
+		AgentManagerServiceSyncAgentsProcedure,
+		svc.SyncAgents,
+		connect.WithSchema(agentManagerServiceMethods.ByName("SyncAgents")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/taskguild.v1.AgentManagerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AgentManagerServiceSubscribeProcedure:
@@ -259,6 +286,8 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 			agentManagerServiceReportAgentStatusHandler.ServeHTTP(w, r)
 		case AgentManagerServiceClaimTaskProcedure:
 			agentManagerServiceClaimTaskHandler.ServeHTTP(w, r)
+		case AgentManagerServiceSyncAgentsProcedure:
+			agentManagerServiceSyncAgentsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -294,4 +323,8 @@ func (UnimplementedAgentManagerServiceHandler) ReportAgentStatus(context.Context
 
 func (UnimplementedAgentManagerServiceHandler) ClaimTask(context.Context, *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ClaimTask is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) SyncAgents(context.Context, *connect.Request[v1.SyncAgentsRequest]) (*connect.Response[v1.SyncAgentsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.SyncAgents is not implemented"))
 }

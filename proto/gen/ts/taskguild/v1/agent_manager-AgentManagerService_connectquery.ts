@@ -45,3 +45,11 @@ export const reportAgentStatus = AgentManagerService.method.reportAgentStatus;
  * @generated from rpc taskguild.v1.AgentManagerService.ClaimTask
  */
 export const claimTask = AgentManagerService.method.claimTask;
+
+/**
+ * SyncAgents returns all agent definitions for a project so the agent can
+ * write them as .claude/agents/*.md files locally.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.SyncAgents
+ */
+export const syncAgents = AgentManagerService.method.syncAgents;

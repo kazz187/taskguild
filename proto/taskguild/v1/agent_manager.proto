@@ -3,6 +3,7 @@ syntax = "proto3";
 package taskguild.v1;
 
 import "google/protobuf/timestamp.proto";
+import "taskguild/v1/agent.proto";
 import "taskguild/v1/interaction.proto";
 
 // AgentManagerService is the bidirectional communication channel between
@@ -22,6 +23,9 @@ service AgentManagerService {
   rpc ReportAgentStatus(ReportAgentStatusRequest) returns (ReportAgentStatusResponse);
   // ClaimTask allows an agent-manager to claim an available task.
   rpc ClaimTask(ClaimTaskRequest) returns (ClaimTaskResponse);
+  // SyncAgents returns all agent definitions for a project so the agent can
+  // write them as .claude/agents/*.md files locally.
+  rpc SyncAgents(SyncAgentsRequest) returns (SyncAgentsResponse);
 }
 
 message AgentManagerSubscribeRequest {
@@ -36,8 +40,12 @@ message AgentCommand {
     InteractionResponseCommand interaction_response = 2;
     CancelTaskCommand cancel_task = 3;
     TaskAvailableCommand task_available = 4;
+    SyncAgentsCommand sync_agents = 5;
   }
 }
+
+// SyncAgentsCommand tells the agent to re-sync its local .claude/agents/*.md files.
+message SyncAgentsCommand {}
 
 message TaskAvailableCommand {
   string task_id = 1;
@@ -131,3 +139,10 @@ message ReportAgentStatusRequest {
   string message = 4;
 }
 message ReportAgentStatusResponse {}
+
+message SyncAgentsRequest {
+  string project_name = 1;
+}
+message SyncAgentsResponse {
+  repeated AgentDefinition agents = 1;
+}
