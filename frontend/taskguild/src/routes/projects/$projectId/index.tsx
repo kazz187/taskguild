@@ -6,7 +6,9 @@ import type { Workflow } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { TaskBoard } from '@/components/TaskBoard'
 import { WorkflowForm } from '@/components/WorkflowForm'
 import { useState, useEffect } from 'react'
-import { GitBranch, Plus, Settings } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { listAgents } from '@taskguild/proto/taskguild/v1/agent-AgentService_connectquery.ts'
+import { GitBranch, Plus, Settings, Bot } from 'lucide-react'
 
 type FormMode = { kind: 'create' } | { kind: 'edit'; workflow: Workflow }
 
@@ -27,6 +29,7 @@ function ProjectDetailPage() {
   const { data: workflowsData, refetch: refetchWorkflows } = useQuery(listWorkflows, {
     projectId,
   })
+  const { data: agentsData } = useQuery(listAgents, { projectId })
 
   const project = projectData?.project
   const workflows = workflowsData?.workflows ?? []
@@ -132,15 +135,30 @@ function ProjectDetailPage() {
           workflow={selectedWorkflow}
         />
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-4">
-          <p>No workflow found for this project.</p>
-          <button
-            onClick={() => setFormMode({ kind: 'create' })}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Create Workflow
-          </button>
+        <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-6">
+          <div className="text-center">
+            <p className="text-lg font-medium text-gray-400 mb-1">Get started with your project</p>
+            <p className="text-sm">Create agents and a workflow to begin managing tasks.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/projects/$projectId/agents"
+              params={{ projectId }}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm border border-slate-700 hover:border-slate-600 text-gray-300 hover:text-white rounded-lg transition-colors"
+            >
+              <Bot className="w-4 h-4" />
+              {(agentsData?.agents?.length ?? 0) > 0
+                ? `Agents (${agentsData!.agents.length})`
+                : 'Create Agents'}
+            </Link>
+            <button
+              onClick={() => setFormMode({ kind: 'create' })}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Create Workflow
+            </button>
+          </div>
         </div>
       )}
     </div>

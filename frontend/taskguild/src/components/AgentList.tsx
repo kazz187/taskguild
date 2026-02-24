@@ -61,11 +61,11 @@ function agentToForm(a: AgentDefinition): AgentFormData {
     name: a.name,
     description: a.description,
     prompt: a.prompt,
-    tools: [...a.tools],
-    disallowedTools: [...a.disallowedTools],
+    tools: [...(a.tools ?? [])],
+    disallowedTools: [...(a.disallowedTools ?? [])],
     model: a.model,
     permissionMode: a.permissionMode,
-    skills: [...a.skills],
+    skills: [...(a.skills ?? [])],
     memory: a.memory,
   }
 }
@@ -434,7 +434,7 @@ export function AgentList({ projectId }: { projectId: string }) {
                     )}
                   </div>
                   <p className="text-xs text-gray-400 mb-2">{agent.description}</p>
-                  {agent.tools.length > 0 && (
+                  {agent.tools?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-1">
                       {agent.tools.map(tool => (
                         <span key={tool} className="text-[10px] px-1.5 py-0.5 bg-slate-800 text-gray-500 rounded">
@@ -443,7 +443,7 @@ export function AgentList({ projectId }: { projectId: string }) {
                       ))}
                     </div>
                   )}
-                  {agent.disallowedTools.length > 0 && (
+                  {agent.disallowedTools?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-1">
                       {agent.disallowedTools.map(tool => (
                         <span key={tool} className="text-[10px] px-1.5 py-0.5 bg-red-500/10 text-red-400 rounded">
@@ -452,7 +452,7 @@ export function AgentList({ projectId }: { projectId: string }) {
                       ))}
                     </div>
                   )}
-                  {agent.skills.length > 0 && (
+                  {agent.skills?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-1">
                       {agent.skills.map(skill => (
                         <span key={skill} className="text-[10px] px-1.5 py-0.5 bg-purple-500/10 text-purple-400 rounded">
