@@ -36,24 +36,24 @@ const (
 	// AgentManagerServiceSubscribeProcedure is the fully-qualified name of the AgentManagerService's
 	// Subscribe RPC.
 	AgentManagerServiceSubscribeProcedure = "/taskguild.v1.AgentManagerService/Subscribe"
-	// AgentManagerServiceHeartbeatProcedure is the fully-qualified name of the AgentManagerService's
-	// Heartbeat RPC.
-	AgentManagerServiceHeartbeatProcedure = "/taskguild.v1.AgentManagerService/Heartbeat"
+	// AgentManagerServiceClaimTaskProcedure is the fully-qualified name of the AgentManagerService's
+	// ClaimTask RPC.
+	AgentManagerServiceClaimTaskProcedure = "/taskguild.v1.AgentManagerService/ClaimTask"
 	// AgentManagerServiceReportTaskResultProcedure is the fully-qualified name of the
 	// AgentManagerService's ReportTaskResult RPC.
 	AgentManagerServiceReportTaskResultProcedure = "/taskguild.v1.AgentManagerService/ReportTaskResult"
+	// AgentManagerServiceReportAgentStatusProcedure is the fully-qualified name of the
+	// AgentManagerService's ReportAgentStatus RPC.
+	AgentManagerServiceReportAgentStatusProcedure = "/taskguild.v1.AgentManagerService/ReportAgentStatus"
+	// AgentManagerServiceHeartbeatProcedure is the fully-qualified name of the AgentManagerService's
+	// Heartbeat RPC.
+	AgentManagerServiceHeartbeatProcedure = "/taskguild.v1.AgentManagerService/Heartbeat"
 	// AgentManagerServiceCreateInteractionProcedure is the fully-qualified name of the
 	// AgentManagerService's CreateInteraction RPC.
 	AgentManagerServiceCreateInteractionProcedure = "/taskguild.v1.AgentManagerService/CreateInteraction"
 	// AgentManagerServiceGetInteractionResponseProcedure is the fully-qualified name of the
 	// AgentManagerService's GetInteractionResponse RPC.
 	AgentManagerServiceGetInteractionResponseProcedure = "/taskguild.v1.AgentManagerService/GetInteractionResponse"
-	// AgentManagerServiceReportAgentStatusProcedure is the fully-qualified name of the
-	// AgentManagerService's ReportAgentStatus RPC.
-	AgentManagerServiceReportAgentStatusProcedure = "/taskguild.v1.AgentManagerService/ReportAgentStatus"
-	// AgentManagerServiceClaimTaskProcedure is the fully-qualified name of the AgentManagerService's
-	// ClaimTask RPC.
-	AgentManagerServiceClaimTaskProcedure = "/taskguild.v1.AgentManagerService/ClaimTask"
 	// AgentManagerServiceSyncAgentsProcedure is the fully-qualified name of the AgentManagerService's
 	// SyncAgents RPC.
 	AgentManagerServiceSyncAgentsProcedure = "/taskguild.v1.AgentManagerService/SyncAgents"
@@ -63,18 +63,18 @@ const (
 type AgentManagerServiceClient interface {
 	// Subscribe opens a server-stream for receiving commands from the backend.
 	Subscribe(context.Context, *connect.Request[v1.AgentManagerSubscribeRequest]) (*connect.ServerStreamForClient[v1.AgentCommand], error)
-	// Heartbeat sends periodic health signals from the agent-manager.
-	Heartbeat(context.Context, *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error)
+	// ClaimTask allows an agent-manager to claim an available task.
+	ClaimTask(context.Context, *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error)
 	// ReportTaskResult reports the outcome of a task execution.
 	ReportTaskResult(context.Context, *connect.Request[v1.ReportTaskResultRequest]) (*connect.Response[v1.ReportTaskResultResponse], error)
+	// ReportAgentStatus reports the current status of an agent.
+	ReportAgentStatus(context.Context, *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error)
+	// Heartbeat sends periodic health signals from the agent-manager.
+	Heartbeat(context.Context, *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error)
 	// CreateInteraction creates a new interaction request from an agent.
 	CreateInteraction(context.Context, *connect.Request[v1.CreateInteractionRequest]) (*connect.Response[v1.CreateInteractionResponse], error)
 	// GetInteractionResponse polls for a user's response to an interaction.
 	GetInteractionResponse(context.Context, *connect.Request[v1.GetInteractionResponseRequest]) (*connect.Response[v1.GetInteractionResponseResponse], error)
-	// ReportAgentStatus reports the current status of an agent.
-	ReportAgentStatus(context.Context, *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error)
-	// ClaimTask allows an agent-manager to claim an available task.
-	ClaimTask(context.Context, *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error)
 	// SyncAgents returns all agent definitions for a project so the agent can
 	// write them as .claude/agents/*.md files locally.
 	SyncAgents(context.Context, *connect.Request[v1.SyncAgentsRequest]) (*connect.Response[v1.SyncAgentsResponse], error)
@@ -97,16 +97,28 @@ func NewAgentManagerServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(agentManagerServiceMethods.ByName("Subscribe")),
 			connect.WithClientOptions(opts...),
 		),
-		heartbeat: connect.NewClient[v1.HeartbeatRequest, v1.HeartbeatResponse](
+		claimTask: connect.NewClient[v1.ClaimTaskRequest, v1.ClaimTaskResponse](
 			httpClient,
-			baseURL+AgentManagerServiceHeartbeatProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("Heartbeat")),
+			baseURL+AgentManagerServiceClaimTaskProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("ClaimTask")),
 			connect.WithClientOptions(opts...),
 		),
 		reportTaskResult: connect.NewClient[v1.ReportTaskResultRequest, v1.ReportTaskResultResponse](
 			httpClient,
 			baseURL+AgentManagerServiceReportTaskResultProcedure,
 			connect.WithSchema(agentManagerServiceMethods.ByName("ReportTaskResult")),
+			connect.WithClientOptions(opts...),
+		),
+		reportAgentStatus: connect.NewClient[v1.ReportAgentStatusRequest, v1.ReportAgentStatusResponse](
+			httpClient,
+			baseURL+AgentManagerServiceReportAgentStatusProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("ReportAgentStatus")),
+			connect.WithClientOptions(opts...),
+		),
+		heartbeat: connect.NewClient[v1.HeartbeatRequest, v1.HeartbeatResponse](
+			httpClient,
+			baseURL+AgentManagerServiceHeartbeatProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("Heartbeat")),
 			connect.WithClientOptions(opts...),
 		),
 		createInteraction: connect.NewClient[v1.CreateInteractionRequest, v1.CreateInteractionResponse](
@@ -121,18 +133,6 @@ func NewAgentManagerServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(agentManagerServiceMethods.ByName("GetInteractionResponse")),
 			connect.WithClientOptions(opts...),
 		),
-		reportAgentStatus: connect.NewClient[v1.ReportAgentStatusRequest, v1.ReportAgentStatusResponse](
-			httpClient,
-			baseURL+AgentManagerServiceReportAgentStatusProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("ReportAgentStatus")),
-			connect.WithClientOptions(opts...),
-		),
-		claimTask: connect.NewClient[v1.ClaimTaskRequest, v1.ClaimTaskResponse](
-			httpClient,
-			baseURL+AgentManagerServiceClaimTaskProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("ClaimTask")),
-			connect.WithClientOptions(opts...),
-		),
 		syncAgents: connect.NewClient[v1.SyncAgentsRequest, v1.SyncAgentsResponse](
 			httpClient,
 			baseURL+AgentManagerServiceSyncAgentsProcedure,
@@ -145,12 +145,12 @@ func NewAgentManagerServiceClient(httpClient connect.HTTPClient, baseURL string,
 // agentManagerServiceClient implements AgentManagerServiceClient.
 type agentManagerServiceClient struct {
 	subscribe              *connect.Client[v1.AgentManagerSubscribeRequest, v1.AgentCommand]
-	heartbeat              *connect.Client[v1.HeartbeatRequest, v1.HeartbeatResponse]
+	claimTask              *connect.Client[v1.ClaimTaskRequest, v1.ClaimTaskResponse]
 	reportTaskResult       *connect.Client[v1.ReportTaskResultRequest, v1.ReportTaskResultResponse]
+	reportAgentStatus      *connect.Client[v1.ReportAgentStatusRequest, v1.ReportAgentStatusResponse]
+	heartbeat              *connect.Client[v1.HeartbeatRequest, v1.HeartbeatResponse]
 	createInteraction      *connect.Client[v1.CreateInteractionRequest, v1.CreateInteractionResponse]
 	getInteractionResponse *connect.Client[v1.GetInteractionResponseRequest, v1.GetInteractionResponseResponse]
-	reportAgentStatus      *connect.Client[v1.ReportAgentStatusRequest, v1.ReportAgentStatusResponse]
-	claimTask              *connect.Client[v1.ClaimTaskRequest, v1.ClaimTaskResponse]
 	syncAgents             *connect.Client[v1.SyncAgentsRequest, v1.SyncAgentsResponse]
 }
 
@@ -159,14 +159,24 @@ func (c *agentManagerServiceClient) Subscribe(ctx context.Context, req *connect.
 	return c.subscribe.CallServerStream(ctx, req)
 }
 
-// Heartbeat calls taskguild.v1.AgentManagerService.Heartbeat.
-func (c *agentManagerServiceClient) Heartbeat(ctx context.Context, req *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error) {
-	return c.heartbeat.CallUnary(ctx, req)
+// ClaimTask calls taskguild.v1.AgentManagerService.ClaimTask.
+func (c *agentManagerServiceClient) ClaimTask(ctx context.Context, req *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error) {
+	return c.claimTask.CallUnary(ctx, req)
 }
 
 // ReportTaskResult calls taskguild.v1.AgentManagerService.ReportTaskResult.
 func (c *agentManagerServiceClient) ReportTaskResult(ctx context.Context, req *connect.Request[v1.ReportTaskResultRequest]) (*connect.Response[v1.ReportTaskResultResponse], error) {
 	return c.reportTaskResult.CallUnary(ctx, req)
+}
+
+// ReportAgentStatus calls taskguild.v1.AgentManagerService.ReportAgentStatus.
+func (c *agentManagerServiceClient) ReportAgentStatus(ctx context.Context, req *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error) {
+	return c.reportAgentStatus.CallUnary(ctx, req)
+}
+
+// Heartbeat calls taskguild.v1.AgentManagerService.Heartbeat.
+func (c *agentManagerServiceClient) Heartbeat(ctx context.Context, req *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error) {
+	return c.heartbeat.CallUnary(ctx, req)
 }
 
 // CreateInteraction calls taskguild.v1.AgentManagerService.CreateInteraction.
@@ -179,16 +189,6 @@ func (c *agentManagerServiceClient) GetInteractionResponse(ctx context.Context, 
 	return c.getInteractionResponse.CallUnary(ctx, req)
 }
 
-// ReportAgentStatus calls taskguild.v1.AgentManagerService.ReportAgentStatus.
-func (c *agentManagerServiceClient) ReportAgentStatus(ctx context.Context, req *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error) {
-	return c.reportAgentStatus.CallUnary(ctx, req)
-}
-
-// ClaimTask calls taskguild.v1.AgentManagerService.ClaimTask.
-func (c *agentManagerServiceClient) ClaimTask(ctx context.Context, req *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error) {
-	return c.claimTask.CallUnary(ctx, req)
-}
-
 // SyncAgents calls taskguild.v1.AgentManagerService.SyncAgents.
 func (c *agentManagerServiceClient) SyncAgents(ctx context.Context, req *connect.Request[v1.SyncAgentsRequest]) (*connect.Response[v1.SyncAgentsResponse], error) {
 	return c.syncAgents.CallUnary(ctx, req)
@@ -198,18 +198,18 @@ func (c *agentManagerServiceClient) SyncAgents(ctx context.Context, req *connect
 type AgentManagerServiceHandler interface {
 	// Subscribe opens a server-stream for receiving commands from the backend.
 	Subscribe(context.Context, *connect.Request[v1.AgentManagerSubscribeRequest], *connect.ServerStream[v1.AgentCommand]) error
-	// Heartbeat sends periodic health signals from the agent-manager.
-	Heartbeat(context.Context, *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error)
+	// ClaimTask allows an agent-manager to claim an available task.
+	ClaimTask(context.Context, *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error)
 	// ReportTaskResult reports the outcome of a task execution.
 	ReportTaskResult(context.Context, *connect.Request[v1.ReportTaskResultRequest]) (*connect.Response[v1.ReportTaskResultResponse], error)
+	// ReportAgentStatus reports the current status of an agent.
+	ReportAgentStatus(context.Context, *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error)
+	// Heartbeat sends periodic health signals from the agent-manager.
+	Heartbeat(context.Context, *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error)
 	// CreateInteraction creates a new interaction request from an agent.
 	CreateInteraction(context.Context, *connect.Request[v1.CreateInteractionRequest]) (*connect.Response[v1.CreateInteractionResponse], error)
 	// GetInteractionResponse polls for a user's response to an interaction.
 	GetInteractionResponse(context.Context, *connect.Request[v1.GetInteractionResponseRequest]) (*connect.Response[v1.GetInteractionResponseResponse], error)
-	// ReportAgentStatus reports the current status of an agent.
-	ReportAgentStatus(context.Context, *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error)
-	// ClaimTask allows an agent-manager to claim an available task.
-	ClaimTask(context.Context, *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error)
 	// SyncAgents returns all agent definitions for a project so the agent can
 	// write them as .claude/agents/*.md files locally.
 	SyncAgents(context.Context, *connect.Request[v1.SyncAgentsRequest]) (*connect.Response[v1.SyncAgentsResponse], error)
@@ -228,16 +228,28 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 		connect.WithSchema(agentManagerServiceMethods.ByName("Subscribe")),
 		connect.WithHandlerOptions(opts...),
 	)
-	agentManagerServiceHeartbeatHandler := connect.NewUnaryHandler(
-		AgentManagerServiceHeartbeatProcedure,
-		svc.Heartbeat,
-		connect.WithSchema(agentManagerServiceMethods.ByName("Heartbeat")),
+	agentManagerServiceClaimTaskHandler := connect.NewUnaryHandler(
+		AgentManagerServiceClaimTaskProcedure,
+		svc.ClaimTask,
+		connect.WithSchema(agentManagerServiceMethods.ByName("ClaimTask")),
 		connect.WithHandlerOptions(opts...),
 	)
 	agentManagerServiceReportTaskResultHandler := connect.NewUnaryHandler(
 		AgentManagerServiceReportTaskResultProcedure,
 		svc.ReportTaskResult,
 		connect.WithSchema(agentManagerServiceMethods.ByName("ReportTaskResult")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentManagerServiceReportAgentStatusHandler := connect.NewUnaryHandler(
+		AgentManagerServiceReportAgentStatusProcedure,
+		svc.ReportAgentStatus,
+		connect.WithSchema(agentManagerServiceMethods.ByName("ReportAgentStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentManagerServiceHeartbeatHandler := connect.NewUnaryHandler(
+		AgentManagerServiceHeartbeatProcedure,
+		svc.Heartbeat,
+		connect.WithSchema(agentManagerServiceMethods.ByName("Heartbeat")),
 		connect.WithHandlerOptions(opts...),
 	)
 	agentManagerServiceCreateInteractionHandler := connect.NewUnaryHandler(
@@ -252,18 +264,6 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 		connect.WithSchema(agentManagerServiceMethods.ByName("GetInteractionResponse")),
 		connect.WithHandlerOptions(opts...),
 	)
-	agentManagerServiceReportAgentStatusHandler := connect.NewUnaryHandler(
-		AgentManagerServiceReportAgentStatusProcedure,
-		svc.ReportAgentStatus,
-		connect.WithSchema(agentManagerServiceMethods.ByName("ReportAgentStatus")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceClaimTaskHandler := connect.NewUnaryHandler(
-		AgentManagerServiceClaimTaskProcedure,
-		svc.ClaimTask,
-		connect.WithSchema(agentManagerServiceMethods.ByName("ClaimTask")),
-		connect.WithHandlerOptions(opts...),
-	)
 	agentManagerServiceSyncAgentsHandler := connect.NewUnaryHandler(
 		AgentManagerServiceSyncAgentsProcedure,
 		svc.SyncAgents,
@@ -274,18 +274,18 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 		switch r.URL.Path {
 		case AgentManagerServiceSubscribeProcedure:
 			agentManagerServiceSubscribeHandler.ServeHTTP(w, r)
-		case AgentManagerServiceHeartbeatProcedure:
-			agentManagerServiceHeartbeatHandler.ServeHTTP(w, r)
+		case AgentManagerServiceClaimTaskProcedure:
+			agentManagerServiceClaimTaskHandler.ServeHTTP(w, r)
 		case AgentManagerServiceReportTaskResultProcedure:
 			agentManagerServiceReportTaskResultHandler.ServeHTTP(w, r)
+		case AgentManagerServiceReportAgentStatusProcedure:
+			agentManagerServiceReportAgentStatusHandler.ServeHTTP(w, r)
+		case AgentManagerServiceHeartbeatProcedure:
+			agentManagerServiceHeartbeatHandler.ServeHTTP(w, r)
 		case AgentManagerServiceCreateInteractionProcedure:
 			agentManagerServiceCreateInteractionHandler.ServeHTTP(w, r)
 		case AgentManagerServiceGetInteractionResponseProcedure:
 			agentManagerServiceGetInteractionResponseHandler.ServeHTTP(w, r)
-		case AgentManagerServiceReportAgentStatusProcedure:
-			agentManagerServiceReportAgentStatusHandler.ServeHTTP(w, r)
-		case AgentManagerServiceClaimTaskProcedure:
-			agentManagerServiceClaimTaskHandler.ServeHTTP(w, r)
 		case AgentManagerServiceSyncAgentsProcedure:
 			agentManagerServiceSyncAgentsHandler.ServeHTTP(w, r)
 		default:
@@ -301,12 +301,20 @@ func (UnimplementedAgentManagerServiceHandler) Subscribe(context.Context, *conne
 	return connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.Subscribe is not implemented"))
 }
 
-func (UnimplementedAgentManagerServiceHandler) Heartbeat(context.Context, *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.Heartbeat is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) ClaimTask(context.Context, *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ClaimTask is not implemented"))
 }
 
 func (UnimplementedAgentManagerServiceHandler) ReportTaskResult(context.Context, *connect.Request[v1.ReportTaskResultRequest]) (*connect.Response[v1.ReportTaskResultResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportTaskResult is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) ReportAgentStatus(context.Context, *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportAgentStatus is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) Heartbeat(context.Context, *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.Heartbeat is not implemented"))
 }
 
 func (UnimplementedAgentManagerServiceHandler) CreateInteraction(context.Context, *connect.Request[v1.CreateInteractionRequest]) (*connect.Response[v1.CreateInteractionResponse], error) {
@@ -315,14 +323,6 @@ func (UnimplementedAgentManagerServiceHandler) CreateInteraction(context.Context
 
 func (UnimplementedAgentManagerServiceHandler) GetInteractionResponse(context.Context, *connect.Request[v1.GetInteractionResponseRequest]) (*connect.Response[v1.GetInteractionResponseResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.GetInteractionResponse is not implemented"))
-}
-
-func (UnimplementedAgentManagerServiceHandler) ReportAgentStatus(context.Context, *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportAgentStatus is not implemented"))
-}
-
-func (UnimplementedAgentManagerServiceHandler) ClaimTask(context.Context, *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ClaimTask is not implemented"))
 }
 
 func (UnimplementedAgentManagerServiceHandler) SyncAgents(context.Context, *connect.Request[v1.SyncAgentsRequest]) (*connect.Response[v1.SyncAgentsResponse], error) {

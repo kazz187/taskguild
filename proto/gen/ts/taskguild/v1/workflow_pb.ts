@@ -23,6 +23,8 @@ export const file_taskguild_v1_workflow: GenFile = /*@__PURE__*/
  */
 export type Workflow = Message<"taskguild.v1.Workflow"> & {
   /**
+   * identity
+   *
    * @generated from field: string id = 1;
    */
   id: string;
@@ -33,6 +35,8 @@ export type Workflow = Message<"taskguild.v1.Workflow"> & {
   projectId: string;
 
   /**
+   * content
+   *
    * @generated from field: string name = 3;
    */
   name: string;
@@ -43,6 +47,8 @@ export type Workflow = Message<"taskguild.v1.Workflow"> & {
   description: string;
 
   /**
+   * configuration
+   *
    * @generated from field: repeated taskguild.v1.WorkflowStatus statuses = 5;
    */
   statuses: WorkflowStatus[];
@@ -53,6 +59,8 @@ export type Workflow = Message<"taskguild.v1.Workflow"> & {
   agentConfigs: AgentConfig[];
 
   /**
+   * timestamps
+   *
    * @generated from field: google.protobuf.Timestamp created_at = 7;
    */
   createdAt?: Timestamp;
@@ -92,6 +100,8 @@ export type WorkflowStatus = Message<"taskguild.v1.WorkflowStatus"> & {
   order: number;
 
   /**
+   * status flags
+   *
    * @generated from field: bool is_initial = 4;
    */
   isInitial: boolean;
@@ -102,6 +112,8 @@ export type WorkflowStatus = Message<"taskguild.v1.WorkflowStatus"> & {
   isTerminal: boolean;
 
   /**
+   * transitions & agent
+   *
    * IDs of statuses this can transition to
    *
    * @generated from field: repeated string transitions_to = 6;
@@ -142,6 +154,8 @@ export type AgentConfig = Message<"taskguild.v1.AgentConfig"> & {
   workflowStatusId: string;
 
   /**
+   * content
+   *
    * @generated from field: string name = 3;
    */
   name: string;
@@ -159,6 +173,8 @@ export type AgentConfig = Message<"taskguild.v1.AgentConfig"> & {
   instructions: string;
 
   /**
+   * tool access
+   *
    * @generated from field: repeated string allowed_tools = 6;
    */
   allowedTools: string[];
@@ -181,6 +197,8 @@ export type CreateWorkflowRequest = Message<"taskguild.v1.CreateWorkflowRequest"
   projectId: string;
 
   /**
+   * content
+   *
    * @generated from field: string name = 2;
    */
   name: string;
@@ -191,6 +209,8 @@ export type CreateWorkflowRequest = Message<"taskguild.v1.CreateWorkflowRequest"
   description: string;
 
   /**
+   * configuration
+   *
    * @generated from field: repeated taskguild.v1.WorkflowStatus statuses = 4;
    */
   statuses: WorkflowStatus[];
@@ -313,6 +333,8 @@ export type UpdateWorkflowRequest = Message<"taskguild.v1.UpdateWorkflowRequest"
   id: string;
 
   /**
+   * content
+   *
    * @generated from field: string name = 2;
    */
   name: string;
@@ -323,6 +345,8 @@ export type UpdateWorkflowRequest = Message<"taskguild.v1.UpdateWorkflowRequest"
   description: string;
 
   /**
+   * configuration
+   *
    * @generated from field: repeated taskguild.v1.WorkflowStatus statuses = 4;
    */
   statuses: WorkflowStatus[];

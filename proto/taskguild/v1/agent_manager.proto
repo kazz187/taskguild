@@ -11,57 +11,46 @@ import "taskguild/v1/interaction.proto";
 service AgentManagerService {
   // Subscribe opens a server-stream for receiving commands from the backend.
   rpc Subscribe(AgentManagerSubscribeRequest) returns (stream AgentCommand);
-  // Heartbeat sends periodic health signals from the agent-manager.
-  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  // ClaimTask allows an agent-manager to claim an available task.
+  rpc ClaimTask(ClaimTaskRequest) returns (ClaimTaskResponse);
   // ReportTaskResult reports the outcome of a task execution.
   rpc ReportTaskResult(ReportTaskResultRequest) returns (ReportTaskResultResponse);
+  // ReportAgentStatus reports the current status of an agent.
+  rpc ReportAgentStatus(ReportAgentStatusRequest) returns (ReportAgentStatusResponse);
+  // Heartbeat sends periodic health signals from the agent-manager.
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
   // CreateInteraction creates a new interaction request from an agent.
   rpc CreateInteraction(CreateInteractionRequest) returns (CreateInteractionResponse);
   // GetInteractionResponse polls for a user's response to an interaction.
   rpc GetInteractionResponse(GetInteractionResponseRequest) returns (GetInteractionResponseResponse);
-  // ReportAgentStatus reports the current status of an agent.
-  rpc ReportAgentStatus(ReportAgentStatusRequest) returns (ReportAgentStatusResponse);
-  // ClaimTask allows an agent-manager to claim an available task.
-  rpc ClaimTask(ClaimTaskRequest) returns (ClaimTaskResponse);
   // SyncAgents returns all agent definitions for a project so the agent can
   // write them as .claude/agents/*.md files locally.
   rpc SyncAgents(SyncAgentsRequest) returns (SyncAgentsResponse);
 }
 
+// --- Subscribe stream ---
+
 message AgentManagerSubscribeRequest {
   string agent_manager_id = 1;
-  int32 max_concurrent_tasks = 2;
-  string project_name = 3;
+  string project_name = 2;
+  int32 max_concurrent_tasks = 3;
 }
 
 message AgentCommand {
   oneof command {
-    AssignTaskCommand assign_task = 1;
-    InteractionResponseCommand interaction_response = 2;
+    TaskAvailableCommand task_available = 1;
+    AssignTaskCommand assign_task = 2;
     CancelTaskCommand cancel_task = 3;
-    TaskAvailableCommand task_available = 4;
+    InteractionResponseCommand interaction_response = 4;
     SyncAgentsCommand sync_agents = 5;
   }
 }
 
-// SyncAgentsCommand tells the agent to re-sync its local .claude/agents/*.md files.
-message SyncAgentsCommand {}
+// --- Commands ---
 
 message TaskAvailableCommand {
   string task_id = 1;
-  string agent_config_id = 2;
-  string title = 3;
-  map<string, string> metadata = 4;
-}
-
-message ClaimTaskRequest {
-  string task_id = 1;
-  string agent_manager_id = 2;
-}
-
-message ClaimTaskResponse {
-  bool success = 1;
-  string instructions = 2;
+  string title = 2;
   string agent_config_id = 3;
   map<string, string> metadata = 4;
 }
@@ -74,22 +63,31 @@ message AssignTaskCommand {
   map<string, string> metadata = 5;
 }
 
-message InteractionResponseCommand {
-  string interaction_id = 1;
-  string response = 2;
-}
-
 message CancelTaskCommand {
   string task_id = 1;
   string reason = 2;
 }
 
-message HeartbeatRequest {
-  string agent_manager_id = 1;
-  int32 active_tasks = 2;
-  google.protobuf.Timestamp timestamp = 3;
+message InteractionResponseCommand {
+  string interaction_id = 1;
+  string response = 2;
 }
-message HeartbeatResponse {}
+
+// SyncAgentsCommand tells the agent to re-sync its local .claude/agents/*.md files.
+message SyncAgentsCommand {}
+
+// --- Task lifecycle ---
+
+message ClaimTaskRequest {
+  string task_id = 1;
+  string agent_manager_id = 2;
+}
+message ClaimTaskResponse {
+  bool success = 1;
+  string agent_config_id = 2;
+  string instructions = 3;
+  map<string, string> metadata = 4;
+}
 
 enum TaskResultStatus {
   TASK_RESULT_STATUS_UNSPECIFIED = 0;
@@ -104,6 +102,35 @@ message ReportTaskResultRequest {
   string error_message = 4;
 }
 message ReportTaskResultResponse {}
+
+// --- Agent status ---
+
+enum AgentStatus {
+  AGENT_STATUS_UNSPECIFIED = 0;
+  AGENT_STATUS_IDLE = 1;
+  AGENT_STATUS_RUNNING = 2;
+  AGENT_STATUS_WAITING = 3;
+  AGENT_STATUS_ERROR = 4;
+}
+
+message ReportAgentStatusRequest {
+  string agent_manager_id = 1;
+  string task_id = 2;
+  AgentStatus status = 3;
+  string message = 4;
+}
+message ReportAgentStatusResponse {}
+
+// --- Heartbeat ---
+
+message HeartbeatRequest {
+  string agent_manager_id = 1;
+  int32 active_tasks = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+message HeartbeatResponse {}
+
+// --- Interactions ---
 
 message CreateInteractionRequest {
   string task_id = 1;
@@ -124,21 +151,7 @@ message GetInteractionResponseResponse {
   Interaction interaction = 1;
 }
 
-enum AgentStatus {
-  AGENT_STATUS_UNSPECIFIED = 0;
-  AGENT_STATUS_IDLE = 1;
-  AGENT_STATUS_RUNNING = 2;
-  AGENT_STATUS_WAITING = 3;
-  AGENT_STATUS_ERROR = 4;
-}
-
-message ReportAgentStatusRequest {
-  string agent_manager_id = 1;
-  string task_id = 2;
-  AgentStatus status = 3;
-  string message = 4;
-}
-message ReportAgentStatusResponse {}
+// --- Agent sync ---
 
 message SyncAgentsRequest {
   string project_name = 1;

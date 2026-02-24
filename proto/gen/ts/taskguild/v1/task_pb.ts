@@ -14,13 +14,15 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file taskguild/v1/task.proto.
  */
 export const file_taskguild_v1_task: GenFile = /*@__PURE__*/
-  fileDesc("Chd0YXNrZ3VpbGQvdjEvdGFzay5wcm90bxIMdGFza2d1aWxkLnYxIsADCgRUYXNrEgoKAmlkGAEgASgJEhIKCnByb2plY3RfaWQYAiABKAkSEwoLd29ya2Zsb3dfaWQYAyABKAkSDQoFdGl0bGUYBCABKAkSEwoLZGVzY3JpcHRpb24YBSABKAkSEQoJc3RhdHVzX2lkGAYgASgJEhkKEWFzc2lnbmVkX2FnZW50X2lkGAcgASgJEjIKCG1ldGFkYXRhGAggAygLMiAudGFza2d1aWxkLnYxLlRhc2suTWV0YWRhdGFFbnRyeRIuCgpjcmVhdGVkX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBI9ChFhc3NpZ25tZW50X3N0YXR1cxgLIAEoDjIiLnRhc2tndWlsZC52MS5UYXNrQXNzaWdubWVudFN0YXR1cxIUCgx1c2Vfd29ya3RyZWUYDCABKAgSFwoPcGVybWlzc2lvbl9tb2RlGA0gASgJGi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASKBAgoRQ3JlYXRlVGFza1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRITCgt3b3JrZmxvd19pZBgCIAEoCRINCgV0aXRsZRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRI/CghtZXRhZGF0YRgFIAMoCzItLnRhc2tndWlsZC52MS5DcmVhdGVUYXNrUmVxdWVzdC5NZXRhZGF0YUVudHJ5EhQKDHVzZV93b3JrdHJlZRgGIAEoCBIXCg9wZXJtaXNzaW9uX21vZGUYByABKAkaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIjYKEkNyZWF0ZVRhc2tSZXNwb25zZRIgCgR0YXNrGAEgASgLMhIudGFza2d1aWxkLnYxLlRhc2siHAoOR2V0VGFza1JlcXVlc3QSCgoCaWQYASABKAkiMwoPR2V0VGFza1Jlc3BvbnNlEiAKBHRhc2sYASABKAsyEi50YXNrZ3VpbGQudjEuVGFzayKDAQoQTGlzdFRhc2tzUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhMKC3dvcmtmbG93X2lkGAIgASgJEhEKCXN0YXR1c19pZBgDIAEoCRIzCgpwYWdpbmF0aW9uGAQgASgLMh8udGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXF1ZXN0ImwKEUxpc3RUYXNrc1Jlc3BvbnNlEiEKBXRhc2tzGAEgAygLMhIudGFza2d1aWxkLnYxLlRhc2sSNAoKcGFnaW5hdGlvbhgCIAEoCzIgLnRhc2tndWlsZC52MS5QYWdpbmF0aW9uUmVzcG9uc2UikwIKEVVwZGF0ZVRhc2tSZXF1ZXN0EgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEj8KCG1ldGFkYXRhGAQgAygLMi0udGFza2d1aWxkLnYxLlVwZGF0ZVRhc2tSZXF1ZXN0Lk1ldGFkYXRhRW50cnkSGQoMdXNlX3dvcmt0cmVlGAUgASgISACIAQESHAoPcGVybWlzc2lvbl9tb2RlGAYgASgJSAGIAQEaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBQg8KDV91c2Vfd29ya3RyZWVCEgoQX3Blcm1pc3Npb25fbW9kZSI2ChJVcGRhdGVUYXNrUmVzcG9uc2USIAoEdGFzaxgBIAEoCzISLnRhc2tndWlsZC52MS5UYXNrIh8KEURlbGV0ZVRhc2tSZXF1ZXN0EgoKAmlkGAEgASgJIhQKEkRlbGV0ZVRhc2tSZXNwb25zZSI4ChdVcGRhdGVUYXNrU3RhdHVzUmVxdWVzdBIKCgJpZBgBIAEoCRIRCglzdGF0dXNfaWQYAiABKAkiPAoYVXBkYXRlVGFza1N0YXR1c1Jlc3BvbnNlEiAKBHRhc2sYASABKAsyEi50YXNrZ3VpbGQudjEuVGFzayquAQoUVGFza0Fzc2lnbm1lbnRTdGF0dXMSJgoiVEFTS19BU1NJR05NRU5UX1NUQVRVU19VTlNQRUNJRklFRBAAEiUKIVRBU0tfQVNTSUdOTUVOVF9TVEFUVVNfVU5BU1NJR05FRBABEiIKHlRBU0tfQVNTSUdOTUVOVF9TVEFUVVNfUEVORElORxACEiMKH1RBU0tfQVNTSUdOTUVOVF9TVEFUVVNfQVNTSUdORUQQAzL5AwoLVGFza1NlcnZpY2USTwoKQ3JlYXRlVGFzaxIfLnRhc2tndWlsZC52MS5DcmVhdGVUYXNrUmVxdWVzdBogLnRhc2tndWlsZC52MS5DcmVhdGVUYXNrUmVzcG9uc2USRgoHR2V0VGFzaxIcLnRhc2tndWlsZC52MS5HZXRUYXNrUmVxdWVzdBodLnRhc2tndWlsZC52MS5HZXRUYXNrUmVzcG9uc2USTAoJTGlzdFRhc2tzEh4udGFza2d1aWxkLnYxLkxpc3RUYXNrc1JlcXVlc3QaHy50YXNrZ3VpbGQudjEuTGlzdFRhc2tzUmVzcG9uc2USTwoKVXBkYXRlVGFzaxIfLnRhc2tndWlsZC52MS5VcGRhdGVUYXNrUmVxdWVzdBogLnRhc2tndWlsZC52MS5VcGRhdGVUYXNrUmVzcG9uc2USTwoKRGVsZXRlVGFzaxIfLnRhc2tndWlsZC52MS5EZWxldGVUYXNrUmVxdWVzdBogLnRhc2tndWlsZC52MS5EZWxldGVUYXNrUmVzcG9uc2USYQoQVXBkYXRlVGFza1N0YXR1cxIlLnRhc2tndWlsZC52MS5VcGRhdGVUYXNrU3RhdHVzUmVxdWVzdBomLnRhc2tndWlsZC52MS5VcGRhdGVUYXNrU3RhdHVzUmVzcG9uc2VCsgEKEGNvbS50YXNrZ3VpbGQudjFCCVRhc2tQcm90b1ABWkJnaXRodWIuY29tL2thenoxODcvdGFza2d1aWxkL3Byb3RvL2dlbi9nby90YXNrZ3VpbGQvdjE7dGFza2d1aWxkdjGiAgNUWFiqAgxUYXNrZ3VpbGQuVjHKAgxUYXNrZ3VpbGRcVjHiAhhUYXNrZ3VpbGRcVjFcR1BCTWV0YWRhdGHqAg1UYXNrZ3VpbGQ6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_taskguild_v1_common]);
+  fileDesc("Chd0YXNrZ3VpbGQvdjEvdGFzay5wcm90bxIMdGFza2d1aWxkLnYxIsADCgRUYXNrEgoKAmlkGAEgASgJEhIKCnByb2plY3RfaWQYAiABKAkSEwoLd29ya2Zsb3dfaWQYAyABKAkSDQoFdGl0bGUYBCABKAkSEwoLZGVzY3JpcHRpb24YBSABKAkSEQoJc3RhdHVzX2lkGAYgASgJEj0KEWFzc2lnbm1lbnRfc3RhdHVzGAcgASgOMiIudGFza2d1aWxkLnYxLlRhc2tBc3NpZ25tZW50U3RhdHVzEhkKEWFzc2lnbmVkX2FnZW50X2lkGAggASgJEhQKDHVzZV93b3JrdHJlZRgJIAEoCBIXCg9wZXJtaXNzaW9uX21vZGUYCiABKAkSMgoIbWV0YWRhdGEYCyADKAsyIC50YXNrZ3VpbGQudjEuVGFzay5NZXRhZGF0YUVudHJ5Ei4KCmNyZWF0ZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wGi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASKBAgoRQ3JlYXRlVGFza1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRITCgt3b3JrZmxvd19pZBgCIAEoCRINCgV0aXRsZRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIUCgx1c2Vfd29ya3RyZWUYBSABKAgSFwoPcGVybWlzc2lvbl9tb2RlGAYgASgJEj8KCG1ldGFkYXRhGAcgAygLMi0udGFza2d1aWxkLnYxLkNyZWF0ZVRhc2tSZXF1ZXN0Lk1ldGFkYXRhRW50cnkaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIjYKEkNyZWF0ZVRhc2tSZXNwb25zZRIgCgR0YXNrGAEgASgLMhIudGFza2d1aWxkLnYxLlRhc2siHAoOR2V0VGFza1JlcXVlc3QSCgoCaWQYASABKAkiMwoPR2V0VGFza1Jlc3BvbnNlEiAKBHRhc2sYASABKAsyEi50YXNrZ3VpbGQudjEuVGFzayKDAQoQTGlzdFRhc2tzUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhMKC3dvcmtmbG93X2lkGAIgASgJEhEKCXN0YXR1c19pZBgDIAEoCRIzCgpwYWdpbmF0aW9uGAQgASgLMh8udGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXF1ZXN0ImwKEUxpc3RUYXNrc1Jlc3BvbnNlEiEKBXRhc2tzGAEgAygLMhIudGFza2d1aWxkLnYxLlRhc2sSNAoKcGFnaW5hdGlvbhgCIAEoCzIgLnRhc2tndWlsZC52MS5QYWdpbmF0aW9uUmVzcG9uc2UikwIKEVVwZGF0ZVRhc2tSZXF1ZXN0EgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEhkKDHVzZV93b3JrdHJlZRgEIAEoCEgAiAEBEhwKD3Blcm1pc3Npb25fbW9kZRgFIAEoCUgBiAEBEj8KCG1ldGFkYXRhGAYgAygLMi0udGFza2d1aWxkLnYxLlVwZGF0ZVRhc2tSZXF1ZXN0Lk1ldGFkYXRhRW50cnkaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBQg8KDV91c2Vfd29ya3RyZWVCEgoQX3Blcm1pc3Npb25fbW9kZSI2ChJVcGRhdGVUYXNrUmVzcG9uc2USIAoEdGFzaxgBIAEoCzISLnRhc2tndWlsZC52MS5UYXNrIh8KEURlbGV0ZVRhc2tSZXF1ZXN0EgoKAmlkGAEgASgJIhQKEkRlbGV0ZVRhc2tSZXNwb25zZSI4ChdVcGRhdGVUYXNrU3RhdHVzUmVxdWVzdBIKCgJpZBgBIAEoCRIRCglzdGF0dXNfaWQYAiABKAkiPAoYVXBkYXRlVGFza1N0YXR1c1Jlc3BvbnNlEiAKBHRhc2sYASABKAsyEi50YXNrZ3VpbGQudjEuVGFzayquAQoUVGFza0Fzc2lnbm1lbnRTdGF0dXMSJgoiVEFTS19BU1NJR05NRU5UX1NUQVRVU19VTlNQRUNJRklFRBAAEiUKIVRBU0tfQVNTSUdOTUVOVF9TVEFUVVNfVU5BU1NJR05FRBABEiIKHlRBU0tfQVNTSUdOTUVOVF9TVEFUVVNfUEVORElORxACEiMKH1RBU0tfQVNTSUdOTUVOVF9TVEFUVVNfQVNTSUdORUQQAzL5AwoLVGFza1NlcnZpY2USTwoKQ3JlYXRlVGFzaxIfLnRhc2tndWlsZC52MS5DcmVhdGVUYXNrUmVxdWVzdBogLnRhc2tndWlsZC52MS5DcmVhdGVUYXNrUmVzcG9uc2USRgoHR2V0VGFzaxIcLnRhc2tndWlsZC52MS5HZXRUYXNrUmVxdWVzdBodLnRhc2tndWlsZC52MS5HZXRUYXNrUmVzcG9uc2USTAoJTGlzdFRhc2tzEh4udGFza2d1aWxkLnYxLkxpc3RUYXNrc1JlcXVlc3QaHy50YXNrZ3VpbGQudjEuTGlzdFRhc2tzUmVzcG9uc2USTwoKVXBkYXRlVGFzaxIfLnRhc2tndWlsZC52MS5VcGRhdGVUYXNrUmVxdWVzdBogLnRhc2tndWlsZC52MS5VcGRhdGVUYXNrUmVzcG9uc2USTwoKRGVsZXRlVGFzaxIfLnRhc2tndWlsZC52MS5EZWxldGVUYXNrUmVxdWVzdBogLnRhc2tndWlsZC52MS5EZWxldGVUYXNrUmVzcG9uc2USYQoQVXBkYXRlVGFza1N0YXR1cxIlLnRhc2tndWlsZC52MS5VcGRhdGVUYXNrU3RhdHVzUmVxdWVzdBomLnRhc2tndWlsZC52MS5VcGRhdGVUYXNrU3RhdHVzUmVzcG9uc2VCsgEKEGNvbS50YXNrZ3VpbGQudjFCCVRhc2tQcm90b1ABWkJnaXRodWIuY29tL2thenoxODcvdGFza2d1aWxkL3Byb3RvL2dlbi9nby90YXNrZ3VpbGQvdjE7dGFza2d1aWxkdjGiAgNUWFiqAgxUYXNrZ3VpbGQuVjHKAgxUYXNrZ3VpbGRcVjHiAhhUYXNrZ3VpbGRcVjFcR1BCTWV0YWRhdGHqAg1UYXNrZ3VpbGQ6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_taskguild_v1_common]);
 
 /**
  * @generated from message taskguild.v1.Task
  */
 export type Task = Message<"taskguild.v1.Task"> & {
   /**
+   * identity
+   *
    * @generated from field: string id = 1;
    */
   id: string;
@@ -36,6 +38,8 @@ export type Task = Message<"taskguild.v1.Task"> & {
   workflowId: string;
 
   /**
+   * content
+   *
    * @generated from field: string title = 4;
    */
   title: string;
@@ -46,6 +50,8 @@ export type Task = Message<"taskguild.v1.Task"> & {
   description: string;
 
   /**
+   * status & assignment
+   *
    * current workflow status ID
    *
    * @generated from field: string status_id = 6;
@@ -53,43 +59,47 @@ export type Task = Message<"taskguild.v1.Task"> & {
   statusId: string;
 
   /**
-   * agent currently working on this
-   *
-   * @generated from field: string assigned_agent_id = 7;
-   */
-  assignedAgentId: string;
-
-  /**
-   * @generated from field: map<string, string> metadata = 8;
-   */
-  metadata: { [key: string]: string };
-
-  /**
-   * @generated from field: google.protobuf.Timestamp created_at = 9;
-   */
-  createdAt?: Timestamp;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp updated_at = 10;
-   */
-  updatedAt?: Timestamp;
-
-  /**
-   * @generated from field: taskguild.v1.TaskAssignmentStatus assignment_status = 11;
+   * @generated from field: taskguild.v1.TaskAssignmentStatus assignment_status = 7;
    */
   assignmentStatus: TaskAssignmentStatus;
 
   /**
-   * @generated from field: bool use_worktree = 12;
+   * agent currently working on this
+   *
+   * @generated from field: string assigned_agent_id = 8;
+   */
+  assignedAgentId: string;
+
+  /**
+   * execution options
+   *
+   * @generated from field: bool use_worktree = 9;
    */
   useWorktree: boolean;
 
   /**
-   * "default", "acceptEdits", "bypassPermissions"
+   * default, acceptEdits, bypassPermissions
    *
-   * @generated from field: string permission_mode = 13;
+   * @generated from field: string permission_mode = 10;
    */
   permissionMode: string;
+
+  /**
+   * metadata
+   *
+   * @generated from field: map<string, string> metadata = 11;
+   */
+  metadata: { [key: string]: string };
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 12;
+   */
+  createdAt?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 13;
+   */
+  updatedAt?: Timestamp;
 };
 
 /**
@@ -104,6 +114,8 @@ export const TaskSchema: GenMessage<Task> = /*@__PURE__*/
  */
 export type CreateTaskRequest = Message<"taskguild.v1.CreateTaskRequest"> & {
   /**
+   * identity
+   *
    * @generated from field: string project_id = 1;
    */
   projectId: string;
@@ -114,6 +126,8 @@ export type CreateTaskRequest = Message<"taskguild.v1.CreateTaskRequest"> & {
   workflowId: string;
 
   /**
+   * content
+   *
    * @generated from field: string title = 3;
    */
   title: string;
@@ -124,19 +138,23 @@ export type CreateTaskRequest = Message<"taskguild.v1.CreateTaskRequest"> & {
   description: string;
 
   /**
-   * @generated from field: map<string, string> metadata = 5;
-   */
-  metadata: { [key: string]: string };
-
-  /**
-   * @generated from field: bool use_worktree = 6;
+   * execution options
+   *
+   * @generated from field: bool use_worktree = 5;
    */
   useWorktree: boolean;
 
   /**
-   * @generated from field: string permission_mode = 7;
+   * @generated from field: string permission_mode = 6;
    */
   permissionMode: string;
+
+  /**
+   * metadata
+   *
+   * @generated from field: map<string, string> metadata = 7;
+   */
+  metadata: { [key: string]: string };
 };
 
 /**
@@ -202,6 +220,8 @@ export const GetTaskResponseSchema: GenMessage<GetTaskResponse> = /*@__PURE__*/
  */
 export type ListTasksRequest = Message<"taskguild.v1.ListTasksRequest"> & {
   /**
+   * filters
+   *
    * @generated from field: string project_id = 1;
    */
   projectId: string;
@@ -261,6 +281,8 @@ export type UpdateTaskRequest = Message<"taskguild.v1.UpdateTaskRequest"> & {
   id: string;
 
   /**
+   * content
+   *
    * @generated from field: string title = 2;
    */
   title: string;
@@ -271,19 +293,23 @@ export type UpdateTaskRequest = Message<"taskguild.v1.UpdateTaskRequest"> & {
   description: string;
 
   /**
-   * @generated from field: map<string, string> metadata = 4;
-   */
-  metadata: { [key: string]: string };
-
-  /**
-   * @generated from field: optional bool use_worktree = 5;
+   * execution options
+   *
+   * @generated from field: optional bool use_worktree = 4;
    */
   useWorktree?: boolean;
 
   /**
-   * @generated from field: optional string permission_mode = 6;
+   * @generated from field: optional string permission_mode = 5;
    */
   permissionMode?: string;
+
+  /**
+   * metadata
+   *
+   * @generated from field: map<string, string> metadata = 6;
+   */
+  metadata: { [key: string]: string };
 };
 
 /**

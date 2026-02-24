@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file taskguild/v1/agent.proto.
  */
 export const file_taskguild_v1_agent: GenFile = /*@__PURE__*/
-  fileDesc("Chh0YXNrZ3VpbGQvdjEvYWdlbnQucHJvdG8SDHRhc2tndWlsZC52MSK0AgoPQWdlbnREZWZpbml0aW9uEgoKAmlkGAEgASgJEhIKCnByb2plY3RfaWQYAiABKAkSDAoEbmFtZRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIOCgZwcm9tcHQYBSABKAkSDQoFdG9vbHMYBiADKAkSDQoFbW9kZWwYByABKAkSEQoJbWF4X3R1cm5zGAggASgFEhcKD3Blcm1pc3Npb25fbW9kZRgJIAEoCRIRCglpc29sYXRpb24YCiABKAkSEQoJaXNfc3luY2VkGAsgASgIEi4KCmNyZWF0ZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIrgBChJDcmVhdGVBZ2VudFJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEg4KBnByb21wdBgEIAEoCRINCgV0b29scxgFIAMoCRINCgVtb2RlbBgGIAEoCRIRCgltYXhfdHVybnMYByABKAUSFwoPcGVybWlzc2lvbl9tb2RlGAggASgJEhEKCWlzb2xhdGlvbhgJIAEoCSJDChNDcmVhdGVBZ2VudFJlc3BvbnNlEiwKBWFnZW50GAEgASgLMh0udGFza2d1aWxkLnYxLkFnZW50RGVmaW5pdGlvbiIdCg9HZXRBZ2VudFJlcXVlc3QSCgoCaWQYASABKAkiQAoQR2V0QWdlbnRSZXNwb25zZRIsCgVhZ2VudBgBIAEoCzIdLnRhc2tndWlsZC52MS5BZ2VudERlZmluaXRpb24iXAoRTGlzdEFnZW50c1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIzCgpwYWdpbmF0aW9uGAIgASgLMh8udGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXF1ZXN0InkKEkxpc3RBZ2VudHNSZXNwb25zZRItCgZhZ2VudHMYASADKAsyHS50YXNrZ3VpbGQudjEuQWdlbnREZWZpbml0aW9uEjQKCnBhZ2luYXRpb24YAiABKAsyIC50YXNrZ3VpbGQudjEuUGFnaW5hdGlvblJlc3BvbnNlIrABChJVcGRhdGVBZ2VudFJlcXVlc3QSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIOCgZwcm9tcHQYBCABKAkSDQoFdG9vbHMYBSADKAkSDQoFbW9kZWwYBiABKAkSEQoJbWF4X3R1cm5zGAcgASgFEhcKD3Blcm1pc3Npb25fbW9kZRgIIAEoCRIRCglpc29sYXRpb24YCSABKAkiQwoTVXBkYXRlQWdlbnRSZXNwb25zZRIsCgVhZ2VudBgBIAEoCzIdLnRhc2tndWlsZC52MS5BZ2VudERlZmluaXRpb24iIAoSRGVsZXRlQWdlbnRSZXF1ZXN0EgoKAmlkGAEgASgJIhUKE0RlbGV0ZUFnZW50UmVzcG9uc2UiQQoYU3luY0FnZW50c0Zyb21EaXJSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSEQoJZGlyZWN0b3J5GAIgASgJImwKGVN5bmNBZ2VudHNGcm9tRGlyUmVzcG9uc2USLQoGYWdlbnRzGAEgAygLMh0udGFza2d1aWxkLnYxLkFnZW50RGVmaW5pdGlvbhIPCgdjcmVhdGVkGAIgASgFEg8KB3VwZGF0ZWQYAyABKAUyjAQKDEFnZW50U2VydmljZRJSCgtDcmVhdGVBZ2VudBIgLnRhc2tndWlsZC52MS5DcmVhdGVBZ2VudFJlcXVlc3QaIS50YXNrZ3VpbGQudjEuQ3JlYXRlQWdlbnRSZXNwb25zZRJJCghHZXRBZ2VudBIdLnRhc2tndWlsZC52MS5HZXRBZ2VudFJlcXVlc3QaHi50YXNrZ3VpbGQudjEuR2V0QWdlbnRSZXNwb25zZRJPCgpMaXN0QWdlbnRzEh8udGFza2d1aWxkLnYxLkxpc3RBZ2VudHNSZXF1ZXN0GiAudGFza2d1aWxkLnYxLkxpc3RBZ2VudHNSZXNwb25zZRJSCgtVcGRhdGVBZ2VudBIgLnRhc2tndWlsZC52MS5VcGRhdGVBZ2VudFJlcXVlc3QaIS50YXNrZ3VpbGQudjEuVXBkYXRlQWdlbnRSZXNwb25zZRJSCgtEZWxldGVBZ2VudBIgLnRhc2tndWlsZC52MS5EZWxldGVBZ2VudFJlcXVlc3QaIS50YXNrZ3VpbGQudjEuRGVsZXRlQWdlbnRSZXNwb25zZRJkChFTeW5jQWdlbnRzRnJvbURpchImLnRhc2tndWlsZC52MS5TeW5jQWdlbnRzRnJvbURpclJlcXVlc3QaJy50YXNrZ3VpbGQudjEuU3luY0FnZW50c0Zyb21EaXJSZXNwb25zZUKzAQoQY29tLnRhc2tndWlsZC52MUIKQWdlbnRQcm90b1ABWkJnaXRodWIuY29tL2thenoxODcvdGFza2d1aWxkL3Byb3RvL2dlbi9nby90YXNrZ3VpbGQvdjE7dGFza2d1aWxkdjGiAgNUWFiqAgxUYXNrZ3VpbGQuVjHKAgxUYXNrZ3VpbGRcVjHiAhhUYXNrZ3VpbGRcVjFcR1BCTWV0YWRhdGHqAg1UYXNrZ3VpbGQ6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_taskguild_v1_common]);
+  fileDesc("Chh0YXNrZ3VpbGQvdjEvYWdlbnQucHJvdG8SDHRhc2tndWlsZC52MSLIAgoPQWdlbnREZWZpbml0aW9uEgoKAmlkGAEgASgJEhIKCnByb2plY3RfaWQYAiABKAkSDAoEbmFtZRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIOCgZwcm9tcHQYBSABKAkSDQoFdG9vbHMYBiADKAkSGAoQZGlzYWxsb3dlZF90b29scxgHIAMoCRINCgVtb2RlbBgIIAEoCRIXCg9wZXJtaXNzaW9uX21vZGUYCSABKAkSDgoGc2tpbGxzGAogAygJEg4KBm1lbW9yeRgLIAEoCRIRCglpc19zeW5jZWQYDCABKAgSLgoKY3JlYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgOIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAizAEKEkNyZWF0ZUFnZW50UmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEgwKBG5hbWUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSDgoGcHJvbXB0GAQgASgJEg0KBXRvb2xzGAUgAygJEhgKEGRpc2FsbG93ZWRfdG9vbHMYBiADKAkSDQoFbW9kZWwYByABKAkSFwoPcGVybWlzc2lvbl9tb2RlGAggASgJEg4KBnNraWxscxgJIAMoCRIOCgZtZW1vcnkYCiABKAkiQwoTQ3JlYXRlQWdlbnRSZXNwb25zZRIsCgVhZ2VudBgBIAEoCzIdLnRhc2tndWlsZC52MS5BZ2VudERlZmluaXRpb24iHQoPR2V0QWdlbnRSZXF1ZXN0EgoKAmlkGAEgASgJIkAKEEdldEFnZW50UmVzcG9uc2USLAoFYWdlbnQYASABKAsyHS50YXNrZ3VpbGQudjEuQWdlbnREZWZpbml0aW9uIlwKEUxpc3RBZ2VudHNSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSMwoKcGFnaW5hdGlvbhgCIAEoCzIfLnRhc2tndWlsZC52MS5QYWdpbmF0aW9uUmVxdWVzdCJ5ChJMaXN0QWdlbnRzUmVzcG9uc2USLQoGYWdlbnRzGAEgAygLMh0udGFza2d1aWxkLnYxLkFnZW50RGVmaW5pdGlvbhI0CgpwYWdpbmF0aW9uGAIgASgLMiAudGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXNwb25zZSLEAQoSVXBkYXRlQWdlbnRSZXF1ZXN0EgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSDgoGcHJvbXB0GAQgASgJEg0KBXRvb2xzGAUgAygJEhgKEGRpc2FsbG93ZWRfdG9vbHMYBiADKAkSDQoFbW9kZWwYByABKAkSFwoPcGVybWlzc2lvbl9tb2RlGAggASgJEg4KBnNraWxscxgJIAMoCRIOCgZtZW1vcnkYCiABKAkiQwoTVXBkYXRlQWdlbnRSZXNwb25zZRIsCgVhZ2VudBgBIAEoCzIdLnRhc2tndWlsZC52MS5BZ2VudERlZmluaXRpb24iIAoSRGVsZXRlQWdlbnRSZXF1ZXN0EgoKAmlkGAEgASgJIhUKE0RlbGV0ZUFnZW50UmVzcG9uc2UiQQoYU3luY0FnZW50c0Zyb21EaXJSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSEQoJZGlyZWN0b3J5GAIgASgJImwKGVN5bmNBZ2VudHNGcm9tRGlyUmVzcG9uc2USLQoGYWdlbnRzGAEgAygLMh0udGFza2d1aWxkLnYxLkFnZW50RGVmaW5pdGlvbhIPCgdjcmVhdGVkGAIgASgFEg8KB3VwZGF0ZWQYAyABKAUyjAQKDEFnZW50U2VydmljZRJSCgtDcmVhdGVBZ2VudBIgLnRhc2tndWlsZC52MS5DcmVhdGVBZ2VudFJlcXVlc3QaIS50YXNrZ3VpbGQudjEuQ3JlYXRlQWdlbnRSZXNwb25zZRJJCghHZXRBZ2VudBIdLnRhc2tndWlsZC52MS5HZXRBZ2VudFJlcXVlc3QaHi50YXNrZ3VpbGQudjEuR2V0QWdlbnRSZXNwb25zZRJPCgpMaXN0QWdlbnRzEh8udGFza2d1aWxkLnYxLkxpc3RBZ2VudHNSZXF1ZXN0GiAudGFza2d1aWxkLnYxLkxpc3RBZ2VudHNSZXNwb25zZRJSCgtVcGRhdGVBZ2VudBIgLnRhc2tndWlsZC52MS5VcGRhdGVBZ2VudFJlcXVlc3QaIS50YXNrZ3VpbGQudjEuVXBkYXRlQWdlbnRSZXNwb25zZRJSCgtEZWxldGVBZ2VudBIgLnRhc2tndWlsZC52MS5EZWxldGVBZ2VudFJlcXVlc3QaIS50YXNrZ3VpbGQudjEuRGVsZXRlQWdlbnRSZXNwb25zZRJkChFTeW5jQWdlbnRzRnJvbURpchImLnRhc2tndWlsZC52MS5TeW5jQWdlbnRzRnJvbURpclJlcXVlc3QaJy50YXNrZ3VpbGQudjEuU3luY0FnZW50c0Zyb21EaXJSZXNwb25zZUKzAQoQY29tLnRhc2tndWlsZC52MUIKQWdlbnRQcm90b1ABWkJnaXRodWIuY29tL2thenoxODcvdGFza2d1aWxkL3Byb3RvL2dlbi9nby90YXNrZ3VpbGQvdjE7dGFza2d1aWxkdjGiAgNUWFiqAgxUYXNrZ3VpbGQuVjHKAgxUYXNrZ3VpbGRcVjHiAhhUYXNrZ3VpbGRcVjFcR1BCTWV0YWRhdGHqAg1UYXNrZ3VpbGQ6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_taskguild_v1_common]);
 
 /**
  * AgentDefinition defines a reusable agent that can be assigned to workflow statuses.
@@ -24,6 +24,8 @@ export const file_taskguild_v1_agent: GenFile = /*@__PURE__*/
  */
 export type AgentDefinition = Message<"taskguild.v1.AgentDefinition"> & {
   /**
+   * identity
+   *
    * @generated from field: string id = 1;
    */
   id: string;
@@ -55,6 +57,8 @@ export type AgentDefinition = Message<"taskguild.v1.AgentDefinition"> & {
   prompt: string;
 
   /**
+   * tool access
+   *
    * allowed tools (e.g. Read, Glob, Grep, Bash)
    *
    * @generated from field: repeated string tools = 6;
@@ -62,47 +66,60 @@ export type AgentDefinition = Message<"taskguild.v1.AgentDefinition"> & {
   tools: string[];
 
   /**
+   * tools to deny from inherited list
+   *
+   * @generated from field: repeated string disallowed_tools = 7;
+   */
+  disallowedTools: string[];
+
+  /**
+   * model & permissions
+   *
    * sonnet, opus, haiku, inherit
    *
-   * @generated from field: string model = 7;
+   * @generated from field: string model = 8;
    */
   model: string;
 
   /**
-   * max agentic turns
-   *
-   * @generated from field: int32 max_turns = 8;
-   */
-  maxTurns: number;
-
-  /**
-   * default, acceptEdits, bypassPermissions
+   * default, acceptEdits, dontAsk, bypassPermissions, plan
    *
    * @generated from field: string permission_mode = 9;
    */
   permissionMode: string;
 
   /**
-   * "", "worktree"
+   * extensions
    *
-   * @generated from field: string isolation = 10;
+   * skills to preload into agent context
+   *
+   * @generated from field: repeated string skills = 10;
    */
-  isolation: string;
+  skills: string[];
 
   /**
+   * persistent memory scope: user, project, local
+   *
+   * @generated from field: string memory = 11;
+   */
+  memory: string;
+
+  /**
+   * metadata
+   *
    * true if synced from repository .claude/agents/ directory
    *
-   * @generated from field: bool is_synced = 11;
+   * @generated from field: bool is_synced = 12;
    */
   isSynced: boolean;
 
   /**
-   * @generated from field: google.protobuf.Timestamp created_at = 12;
+   * @generated from field: google.protobuf.Timestamp created_at = 13;
    */
   createdAt?: Timestamp;
 
   /**
-   * @generated from field: google.protobuf.Timestamp updated_at = 13;
+   * @generated from field: google.protobuf.Timestamp updated_at = 14;
    */
   updatedAt?: Timestamp;
 };
@@ -124,6 +141,8 @@ export type CreateAgentRequest = Message<"taskguild.v1.CreateAgentRequest"> & {
   projectId: string;
 
   /**
+   * identity
+   *
    * @generated from field: string name = 2;
    */
   name: string;
@@ -134,24 +153,30 @@ export type CreateAgentRequest = Message<"taskguild.v1.CreateAgentRequest"> & {
   description: string;
 
   /**
+   * system prompt
+   *
    * @generated from field: string prompt = 4;
    */
   prompt: string;
 
   /**
+   * tool access
+   *
    * @generated from field: repeated string tools = 5;
    */
   tools: string[];
 
   /**
-   * @generated from field: string model = 6;
+   * @generated from field: repeated string disallowed_tools = 6;
    */
-  model: string;
+  disallowedTools: string[];
 
   /**
-   * @generated from field: int32 max_turns = 7;
+   * model & permissions
+   *
+   * @generated from field: string model = 7;
    */
-  maxTurns: number;
+  model: string;
 
   /**
    * @generated from field: string permission_mode = 8;
@@ -159,9 +184,16 @@ export type CreateAgentRequest = Message<"taskguild.v1.CreateAgentRequest"> & {
   permissionMode: string;
 
   /**
-   * @generated from field: string isolation = 9;
+   * extensions
+   *
+   * @generated from field: repeated string skills = 9;
    */
-  isolation: string;
+  skills: string[];
+
+  /**
+   * @generated from field: string memory = 10;
+   */
+  memory: string;
 };
 
 /**
@@ -276,6 +308,8 @@ export type UpdateAgentRequest = Message<"taskguild.v1.UpdateAgentRequest"> & {
   id: string;
 
   /**
+   * identity
+   *
    * @generated from field: string name = 2;
    */
   name: string;
@@ -286,24 +320,30 @@ export type UpdateAgentRequest = Message<"taskguild.v1.UpdateAgentRequest"> & {
   description: string;
 
   /**
+   * system prompt
+   *
    * @generated from field: string prompt = 4;
    */
   prompt: string;
 
   /**
+   * tool access
+   *
    * @generated from field: repeated string tools = 5;
    */
   tools: string[];
 
   /**
-   * @generated from field: string model = 6;
+   * @generated from field: repeated string disallowed_tools = 6;
    */
-  model: string;
+  disallowedTools: string[];
 
   /**
-   * @generated from field: int32 max_turns = 7;
+   * model & permissions
+   *
+   * @generated from field: string model = 7;
    */
-  maxTurns: number;
+  model: string;
 
   /**
    * @generated from field: string permission_mode = 8;
@@ -311,9 +351,16 @@ export type UpdateAgentRequest = Message<"taskguild.v1.UpdateAgentRequest"> & {
   permissionMode: string;
 
   /**
-   * @generated from field: string isolation = 9;
+   * extensions
+   *
+   * @generated from field: repeated string skills = 9;
    */
-  isolation: string;
+  skills: string[];
+
+  /**
+   * @generated from field: string memory = 10;
+   */
+  memory: string;
 };
 
 /**

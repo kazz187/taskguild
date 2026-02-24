@@ -22,29 +22,45 @@ service TaskService {
 }
 
 message Task {
+  // identity
   string id = 1;
   string project_id = 2;
   string workflow_id = 3;
+
+  // content
   string title = 4;
   string description = 5;
-  string status_id = 6;          // current workflow status ID
-  string assigned_agent_id = 7;  // agent currently working on this
-  map<string, string> metadata = 8;
-  google.protobuf.Timestamp created_at = 9;
-  google.protobuf.Timestamp updated_at = 10;
-  TaskAssignmentStatus assignment_status = 11;
-  bool use_worktree = 12;
-  string permission_mode = 13;  // "default", "acceptEdits", "bypassPermissions"
+
+  // status & assignment
+  string status_id = 6;                         // current workflow status ID
+  TaskAssignmentStatus assignment_status = 7;
+  string assigned_agent_id = 8;                  // agent currently working on this
+
+  // execution options
+  bool use_worktree = 9;
+  string permission_mode = 10;                   // default, acceptEdits, bypassPermissions
+
+  // metadata
+  map<string, string> metadata = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
 }
 
 message CreateTaskRequest {
+  // identity
   string project_id = 1;
   string workflow_id = 2;
+
+  // content
   string title = 3;
   string description = 4;
-  map<string, string> metadata = 5;
-  bool use_worktree = 6;
-  string permission_mode = 7;
+
+  // execution options
+  bool use_worktree = 5;
+  string permission_mode = 6;
+
+  // metadata
+  map<string, string> metadata = 7;
 }
 message CreateTaskResponse {
   Task task = 1;
@@ -58,9 +74,11 @@ message GetTaskResponse {
 }
 
 message ListTasksRequest {
+  // filters
   string project_id = 1;
   string workflow_id = 2;
   string status_id = 3;
+
   PaginationRequest pagination = 4;
 }
 message ListTasksResponse {
@@ -70,11 +88,17 @@ message ListTasksResponse {
 
 message UpdateTaskRequest {
   string id = 1;
+
+  // content
   string title = 2;
   string description = 3;
-  map<string, string> metadata = 4;
-  optional bool use_worktree = 5;
-  optional string permission_mode = 6;
+
+  // execution options
+  optional bool use_worktree = 4;
+  optional string permission_mode = 5;
+
+  // metadata
+  map<string, string> metadata = 6;
 }
 message UpdateTaskResponse {
   Task task = 1;

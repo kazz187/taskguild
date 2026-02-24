@@ -5,11 +5,11 @@
 import { AgentManagerService } from "./agent_manager_pb.ts";
 
 /**
- * Heartbeat sends periodic health signals from the agent-manager.
+ * ClaimTask allows an agent-manager to claim an available task.
  *
- * @generated from rpc taskguild.v1.AgentManagerService.Heartbeat
+ * @generated from rpc taskguild.v1.AgentManagerService.ClaimTask
  */
-export const heartbeat = AgentManagerService.method.heartbeat;
+export const claimTask = AgentManagerService.method.claimTask;
 
 /**
  * ReportTaskResult reports the outcome of a task execution.
@@ -17,6 +17,20 @@ export const heartbeat = AgentManagerService.method.heartbeat;
  * @generated from rpc taskguild.v1.AgentManagerService.ReportTaskResult
  */
 export const reportTaskResult = AgentManagerService.method.reportTaskResult;
+
+/**
+ * ReportAgentStatus reports the current status of an agent.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.ReportAgentStatus
+ */
+export const reportAgentStatus = AgentManagerService.method.reportAgentStatus;
+
+/**
+ * Heartbeat sends periodic health signals from the agent-manager.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.Heartbeat
+ */
+export const heartbeat = AgentManagerService.method.heartbeat;
 
 /**
  * CreateInteraction creates a new interaction request from an agent.
@@ -31,20 +45,6 @@ export const createInteraction = AgentManagerService.method.createInteraction;
  * @generated from rpc taskguild.v1.AgentManagerService.GetInteractionResponse
  */
 export const getInteractionResponse = AgentManagerService.method.getInteractionResponse;
-
-/**
- * ReportAgentStatus reports the current status of an agent.
- *
- * @generated from rpc taskguild.v1.AgentManagerService.ReportAgentStatus
- */
-export const reportAgentStatus = AgentManagerService.method.reportAgentStatus;
-
-/**
- * ClaimTask allows an agent-manager to claim an available task.
- *
- * @generated from rpc taskguild.v1.AgentManagerService.ClaimTask
- */
-export const claimTask = AgentManagerService.method.claimTask;
 
 /**
  * SyncAgents returns all agent definitions for a project so the agent can

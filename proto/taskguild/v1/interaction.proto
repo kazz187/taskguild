@@ -28,15 +28,22 @@ enum InteractionStatus {
 }
 
 message Interaction {
+  // identity
   string id = 1;
   string task_id = 2;
   string agent_id = 3;
+
+  // type & status
   InteractionType type = 4;
   InteractionStatus status = 5;
+
+  // content
   string title = 6;
   string description = 7;
   repeated InteractionOption options = 8;
   string response = 9;
+
+  // timestamps
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp responded_at = 11;
 }
@@ -52,10 +59,12 @@ message InteractionEvent {
 }
 
 message ListInteractionsRequest {
-  string task_id = 1;
-  InteractionStatus status_filter = 2;
-  PaginationRequest pagination = 3;
-  string project_id = 4;
+  // filters
+  string project_id = 1;
+  string task_id = 2;
+  InteractionStatus status_filter = 3;
+
+  PaginationRequest pagination = 4;
 }
 message ListInteractionsResponse {
   repeated Interaction interactions = 1;

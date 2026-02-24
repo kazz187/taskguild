@@ -19,31 +19,54 @@ service AgentService {
 // AgentDefinition defines a reusable agent that can be assigned to workflow statuses.
 // Fields align with the Claude Code sub-agent .md file format.
 message AgentDefinition {
+  // identity
   string id = 1;
   string project_id = 2;
-  string name = 3;                  // unique name (used as filename in .claude/agents/)
-  string description = 4;           // when to delegate to this agent
-  string prompt = 5;                // system prompt (body of the MD file)
-  repeated string tools = 6;        // allowed tools (e.g. Read, Glob, Grep, Bash)
-  string model = 7;                 // sonnet, opus, haiku, inherit
-  int32 max_turns = 8;              // max agentic turns
-  string permission_mode = 9;       // default, acceptEdits, bypassPermissions
-  string isolation = 10;            // "", "worktree"
-  bool is_synced = 11;              // true if synced from repository .claude/agents/ directory
-  google.protobuf.Timestamp created_at = 12;
-  google.protobuf.Timestamp updated_at = 13;
+  string name = 3;                       // unique name (used as filename in .claude/agents/)
+  string description = 4;                // when to delegate to this agent
+
+  // system prompt (body of the MD file)
+  string prompt = 5;
+
+  // tool access
+  repeated string tools = 6;             // allowed tools (e.g. Read, Glob, Grep, Bash)
+  repeated string disallowed_tools = 7;  // tools to deny from inherited list
+
+  // model & permissions
+  string model = 8;                      // sonnet, opus, haiku, inherit
+  string permission_mode = 9;            // default, acceptEdits, dontAsk, bypassPermissions, plan
+
+  // extensions
+  repeated string skills = 10;           // skills to preload into agent context
+  string memory = 11;                    // persistent memory scope: user, project, local
+
+  // metadata
+  bool is_synced = 12;                   // true if synced from repository .claude/agents/ directory
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
 }
 
 message CreateAgentRequest {
   string project_id = 1;
+
+  // identity
   string name = 2;
   string description = 3;
+
+  // system prompt
   string prompt = 4;
+
+  // tool access
   repeated string tools = 5;
-  string model = 6;
-  int32 max_turns = 7;
+  repeated string disallowed_tools = 6;
+
+  // model & permissions
+  string model = 7;
   string permission_mode = 8;
-  string isolation = 9;
+
+  // extensions
+  repeated string skills = 9;
+  string memory = 10;
 }
 message CreateAgentResponse {
   AgentDefinition agent = 1;
@@ -67,14 +90,25 @@ message ListAgentsResponse {
 
 message UpdateAgentRequest {
   string id = 1;
+
+  // identity
   string name = 2;
   string description = 3;
+
+  // system prompt
   string prompt = 4;
+
+  // tool access
   repeated string tools = 5;
-  string model = 6;
-  int32 max_turns = 7;
+  repeated string disallowed_tools = 6;
+
+  // model & permissions
+  string model = 7;
   string permission_mode = 8;
-  string isolation = 9;
+
+  // extensions
+  repeated string skills = 9;
+  string memory = 10;
 }
 message UpdateAgentResponse {
   AgentDefinition agent = 1;

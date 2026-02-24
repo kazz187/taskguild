@@ -75,22 +75,27 @@ func (TaskAssignmentStatus) EnumDescriptor() ([]byte, []int) {
 }
 
 type Task struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ProjectId        string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	WorkflowId       string                 `protobuf:"bytes,3,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
-	Title            string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
-	Description      string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
-	StatusId         string                 `protobuf:"bytes,6,opt,name=status_id,json=statusId,proto3" json:"status_id,omitempty"`                        // current workflow status ID
-	AssignedAgentId  string                 `protobuf:"bytes,7,opt,name=assigned_agent_id,json=assignedAgentId,proto3" json:"assigned_agent_id,omitempty"` // agent currently working on this
-	Metadata         map[string]string      `protobuf:"bytes,8,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	AssignmentStatus TaskAssignmentStatus   `protobuf:"varint,11,opt,name=assignment_status,json=assignmentStatus,proto3,enum=taskguild.v1.TaskAssignmentStatus" json:"assignment_status,omitempty"`
-	UseWorktree      bool                   `protobuf:"varint,12,opt,name=use_worktree,json=useWorktree,proto3" json:"use_worktree,omitempty"`
-	PermissionMode   string                 `protobuf:"bytes,13,opt,name=permission_mode,json=permissionMode,proto3" json:"permission_mode,omitempty"` // "default", "acceptEdits", "bypassPermissions"
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// identity
+	Id         string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ProjectId  string `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	WorkflowId string `protobuf:"bytes,3,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	// content
+	Title       string `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
+	Description string `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	// status & assignment
+	StatusId         string               `protobuf:"bytes,6,opt,name=status_id,json=statusId,proto3" json:"status_id,omitempty"` // current workflow status ID
+	AssignmentStatus TaskAssignmentStatus `protobuf:"varint,7,opt,name=assignment_status,json=assignmentStatus,proto3,enum=taskguild.v1.TaskAssignmentStatus" json:"assignment_status,omitempty"`
+	AssignedAgentId  string               `protobuf:"bytes,8,opt,name=assigned_agent_id,json=assignedAgentId,proto3" json:"assigned_agent_id,omitempty"` // agent currently working on this
+	// execution options
+	UseWorktree    bool   `protobuf:"varint,9,opt,name=use_worktree,json=useWorktree,proto3" json:"use_worktree,omitempty"`
+	PermissionMode string `protobuf:"bytes,10,opt,name=permission_mode,json=permissionMode,proto3" json:"permission_mode,omitempty"` // default, acceptEdits, bypassPermissions
+	// metadata
+	Metadata      map[string]string      `protobuf:"bytes,11,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Task) Reset() {
@@ -165,9 +170,30 @@ func (x *Task) GetStatusId() string {
 	return ""
 }
 
+func (x *Task) GetAssignmentStatus() TaskAssignmentStatus {
+	if x != nil {
+		return x.AssignmentStatus
+	}
+	return TaskAssignmentStatus_TASK_ASSIGNMENT_STATUS_UNSPECIFIED
+}
+
 func (x *Task) GetAssignedAgentId() string {
 	if x != nil {
 		return x.AssignedAgentId
+	}
+	return ""
+}
+
+func (x *Task) GetUseWorktree() bool {
+	if x != nil {
+		return x.UseWorktree
+	}
+	return false
+}
+
+func (x *Task) GetPermissionMode() string {
+	if x != nil {
+		return x.PermissionMode
 	}
 	return ""
 }
@@ -193,38 +219,21 @@ func (x *Task) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *Task) GetAssignmentStatus() TaskAssignmentStatus {
-	if x != nil {
-		return x.AssignmentStatus
-	}
-	return TaskAssignmentStatus_TASK_ASSIGNMENT_STATUS_UNSPECIFIED
-}
-
-func (x *Task) GetUseWorktree() bool {
-	if x != nil {
-		return x.UseWorktree
-	}
-	return false
-}
-
-func (x *Task) GetPermissionMode() string {
-	if x != nil {
-		return x.PermissionMode
-	}
-	return ""
-}
-
 type CreateTaskRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId      string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	WorkflowId     string                 `protobuf:"bytes,2,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
-	Title          string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
-	Description    string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	Metadata       map[string]string      `protobuf:"bytes,5,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	UseWorktree    bool                   `protobuf:"varint,6,opt,name=use_worktree,json=useWorktree,proto3" json:"use_worktree,omitempty"`
-	PermissionMode string                 `protobuf:"bytes,7,opt,name=permission_mode,json=permissionMode,proto3" json:"permission_mode,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// identity
+	ProjectId  string `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	WorkflowId string `protobuf:"bytes,2,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	// content
+	Title       string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	// execution options
+	UseWorktree    bool   `protobuf:"varint,5,opt,name=use_worktree,json=useWorktree,proto3" json:"use_worktree,omitempty"`
+	PermissionMode string `protobuf:"bytes,6,opt,name=permission_mode,json=permissionMode,proto3" json:"permission_mode,omitempty"`
+	// metadata
+	Metadata      map[string]string `protobuf:"bytes,7,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateTaskRequest) Reset() {
@@ -285,13 +294,6 @@ func (x *CreateTaskRequest) GetDescription() string {
 	return ""
 }
 
-func (x *CreateTaskRequest) GetMetadata() map[string]string {
-	if x != nil {
-		return x.Metadata
-	}
-	return nil
-}
-
 func (x *CreateTaskRequest) GetUseWorktree() bool {
 	if x != nil {
 		return x.UseWorktree
@@ -304,6 +306,13 @@ func (x *CreateTaskRequest) GetPermissionMode() string {
 		return x.PermissionMode
 	}
 	return ""
+}
+
+func (x *CreateTaskRequest) GetMetadata() map[string]string {
+	if x != nil {
+		return x.Metadata
+	}
+	return nil
 }
 
 type CreateTaskResponse struct {
@@ -439,11 +448,12 @@ func (x *GetTaskResponse) GetTask() *Task {
 }
 
 type ListTasksRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	WorkflowId    string                 `protobuf:"bytes,2,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
-	StatusId      string                 `protobuf:"bytes,3,opt,name=status_id,json=statusId,proto3" json:"status_id,omitempty"`
-	Pagination    *PaginationRequest     `protobuf:"bytes,4,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// filters
+	ProjectId     string             `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	WorkflowId    string             `protobuf:"bytes,2,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	StatusId      string             `protobuf:"bytes,3,opt,name=status_id,json=statusId,proto3" json:"status_id,omitempty"`
+	Pagination    *PaginationRequest `protobuf:"bytes,4,opt,name=pagination,proto3" json:"pagination,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -559,15 +569,18 @@ func (x *ListTasksResponse) GetPagination() *PaginationResponse {
 }
 
 type UpdateTaskRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Title          string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	Description    string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	Metadata       map[string]string      `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	UseWorktree    *bool                  `protobuf:"varint,5,opt,name=use_worktree,json=useWorktree,proto3,oneof" json:"use_worktree,omitempty"`
-	PermissionMode *string                `protobuf:"bytes,6,opt,name=permission_mode,json=permissionMode,proto3,oneof" json:"permission_mode,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// content
+	Title       string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// execution options
+	UseWorktree    *bool   `protobuf:"varint,4,opt,name=use_worktree,json=useWorktree,proto3,oneof" json:"use_worktree,omitempty"`
+	PermissionMode *string `protobuf:"bytes,5,opt,name=permission_mode,json=permissionMode,proto3,oneof" json:"permission_mode,omitempty"`
+	// metadata
+	Metadata      map[string]string `protobuf:"bytes,6,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateTaskRequest) Reset() {
@@ -621,13 +634,6 @@ func (x *UpdateTaskRequest) GetDescription() string {
 	return ""
 }
 
-func (x *UpdateTaskRequest) GetMetadata() map[string]string {
-	if x != nil {
-		return x.Metadata
-	}
-	return nil
-}
-
 func (x *UpdateTaskRequest) GetUseWorktree() bool {
 	if x != nil && x.UseWorktree != nil {
 		return *x.UseWorktree
@@ -640,6 +646,13 @@ func (x *UpdateTaskRequest) GetPermissionMode() string {
 		return *x.PermissionMode
 	}
 	return ""
+}
+
+func (x *UpdateTaskRequest) GetMetadata() map[string]string {
+	if x != nil {
+		return x.Metadata
+	}
+	return nil
 }
 
 type UpdateTaskResponse struct {
@@ -875,17 +888,17 @@ const file_taskguild_v1_task_proto_rawDesc = "" +
 	"workflowId\x12\x14\n" +
 	"\x05title\x18\x04 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x1b\n" +
-	"\tstatus_id\x18\x06 \x01(\tR\bstatusId\x12*\n" +
-	"\x11assigned_agent_id\x18\a \x01(\tR\x0fassignedAgentId\x12<\n" +
-	"\bmetadata\x18\b \x03(\v2 .taskguild.v1.Task.MetadataEntryR\bmetadata\x129\n" +
+	"\tstatus_id\x18\x06 \x01(\tR\bstatusId\x12O\n" +
+	"\x11assignment_status\x18\a \x01(\x0e2\".taskguild.v1.TaskAssignmentStatusR\x10assignmentStatus\x12*\n" +
+	"\x11assigned_agent_id\x18\b \x01(\tR\x0fassignedAgentId\x12!\n" +
+	"\fuse_worktree\x18\t \x01(\bR\vuseWorktree\x12'\n" +
+	"\x0fpermission_mode\x18\n" +
+	" \x01(\tR\x0epermissionMode\x12<\n" +
+	"\bmetadata\x18\v \x03(\v2 .taskguild.v1.Task.MetadataEntryR\bmetadata\x129\n" +
 	"\n" +
-	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12O\n" +
-	"\x11assignment_status\x18\v \x01(\x0e2\".taskguild.v1.TaskAssignmentStatusR\x10assignmentStatus\x12!\n" +
-	"\fuse_worktree\x18\f \x01(\bR\vuseWorktree\x12'\n" +
-	"\x0fpermission_mode\x18\r \x01(\tR\x0epermissionMode\x1a;\n" +
+	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xdf\x02\n" +
@@ -895,10 +908,10 @@ const file_taskguild_v1_task_proto_rawDesc = "" +
 	"\vworkflow_id\x18\x02 \x01(\tR\n" +
 	"workflowId\x12\x14\n" +
 	"\x05title\x18\x03 \x01(\tR\x05title\x12 \n" +
-	"\vdescription\x18\x04 \x01(\tR\vdescription\x12I\n" +
-	"\bmetadata\x18\x05 \x03(\v2-.taskguild.v1.CreateTaskRequest.MetadataEntryR\bmetadata\x12!\n" +
-	"\fuse_worktree\x18\x06 \x01(\bR\vuseWorktree\x12'\n" +
-	"\x0fpermission_mode\x18\a \x01(\tR\x0epermissionMode\x1a;\n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12!\n" +
+	"\fuse_worktree\x18\x05 \x01(\bR\vuseWorktree\x12'\n" +
+	"\x0fpermission_mode\x18\x06 \x01(\tR\x0epermissionMode\x12I\n" +
+	"\bmetadata\x18\a \x03(\v2-.taskguild.v1.CreateTaskRequest.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"<\n" +
@@ -925,10 +938,10 @@ const file_taskguild_v1_task_proto_rawDesc = "" +
 	"\x11UpdateTaskRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\x12I\n" +
-	"\bmetadata\x18\x04 \x03(\v2-.taskguild.v1.UpdateTaskRequest.MetadataEntryR\bmetadata\x12&\n" +
-	"\fuse_worktree\x18\x05 \x01(\bH\x00R\vuseWorktree\x88\x01\x01\x12,\n" +
-	"\x0fpermission_mode\x18\x06 \x01(\tH\x01R\x0epermissionMode\x88\x01\x01\x1a;\n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12&\n" +
+	"\fuse_worktree\x18\x04 \x01(\bH\x00R\vuseWorktree\x88\x01\x01\x12,\n" +
+	"\x0fpermission_mode\x18\x05 \x01(\tH\x01R\x0epermissionMode\x88\x01\x01\x12I\n" +
+	"\bmetadata\x18\x06 \x03(\v2-.taskguild.v1.UpdateTaskRequest.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x0f\n" +
@@ -998,10 +1011,10 @@ var file_taskguild_v1_task_proto_goTypes = []any{
 	(*PaginationResponse)(nil),       // 19: taskguild.v1.PaginationResponse
 }
 var file_taskguild_v1_task_proto_depIdxs = []int32{
-	14, // 0: taskguild.v1.Task.metadata:type_name -> taskguild.v1.Task.MetadataEntry
-	17, // 1: taskguild.v1.Task.created_at:type_name -> google.protobuf.Timestamp
-	17, // 2: taskguild.v1.Task.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 3: taskguild.v1.Task.assignment_status:type_name -> taskguild.v1.TaskAssignmentStatus
+	0,  // 0: taskguild.v1.Task.assignment_status:type_name -> taskguild.v1.TaskAssignmentStatus
+	14, // 1: taskguild.v1.Task.metadata:type_name -> taskguild.v1.Task.MetadataEntry
+	17, // 2: taskguild.v1.Task.created_at:type_name -> google.protobuf.Timestamp
+	17, // 3: taskguild.v1.Task.updated_at:type_name -> google.protobuf.Timestamp
 	15, // 4: taskguild.v1.CreateTaskRequest.metadata:type_name -> taskguild.v1.CreateTaskRequest.MetadataEntry
 	1,  // 5: taskguild.v1.CreateTaskResponse.task:type_name -> taskguild.v1.Task
 	1,  // 6: taskguild.v1.GetTaskResponse.task:type_name -> taskguild.v1.Task

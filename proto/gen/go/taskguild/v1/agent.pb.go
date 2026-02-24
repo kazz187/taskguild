@@ -25,22 +25,29 @@ const (
 // AgentDefinition defines a reusable agent that can be assigned to workflow statuses.
 // Fields align with the Claude Code sub-agent .md file format.
 type AgentDefinition struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ProjectId      string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Name           string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`                                           // unique name (used as filename in .claude/agents/)
-	Description    string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`                             // when to delegate to this agent
-	Prompt         string                 `protobuf:"bytes,5,opt,name=prompt,proto3" json:"prompt,omitempty"`                                       // system prompt (body of the MD file)
-	Tools          []string               `protobuf:"bytes,6,rep,name=tools,proto3" json:"tools,omitempty"`                                         // allowed tools (e.g. Read, Glob, Grep, Bash)
-	Model          string                 `protobuf:"bytes,7,opt,name=model,proto3" json:"model,omitempty"`                                         // sonnet, opus, haiku, inherit
-	MaxTurns       int32                  `protobuf:"varint,8,opt,name=max_turns,json=maxTurns,proto3" json:"max_turns,omitempty"`                  // max agentic turns
-	PermissionMode string                 `protobuf:"bytes,9,opt,name=permission_mode,json=permissionMode,proto3" json:"permission_mode,omitempty"` // default, acceptEdits, bypassPermissions
-	Isolation      string                 `protobuf:"bytes,10,opt,name=isolation,proto3" json:"isolation,omitempty"`                                // "", "worktree"
-	IsSynced       bool                   `protobuf:"varint,11,opt,name=is_synced,json=isSynced,proto3" json:"is_synced,omitempty"`                 // true if synced from repository .claude/agents/ directory
-	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// identity
+	Id          string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ProjectId   string `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Name        string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`               // unique name (used as filename in .claude/agents/)
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"` // when to delegate to this agent
+	// system prompt (body of the MD file)
+	Prompt string `protobuf:"bytes,5,opt,name=prompt,proto3" json:"prompt,omitempty"`
+	// tool access
+	Tools           []string `protobuf:"bytes,6,rep,name=tools,proto3" json:"tools,omitempty"`                                            // allowed tools (e.g. Read, Glob, Grep, Bash)
+	DisallowedTools []string `protobuf:"bytes,7,rep,name=disallowed_tools,json=disallowedTools,proto3" json:"disallowed_tools,omitempty"` // tools to deny from inherited list
+	// model & permissions
+	Model          string `protobuf:"bytes,8,opt,name=model,proto3" json:"model,omitempty"`                                         // sonnet, opus, haiku, inherit
+	PermissionMode string `protobuf:"bytes,9,opt,name=permission_mode,json=permissionMode,proto3" json:"permission_mode,omitempty"` // default, acceptEdits, dontAsk, bypassPermissions, plan
+	// extensions
+	Skills []string `protobuf:"bytes,10,rep,name=skills,proto3" json:"skills,omitempty"` // skills to preload into agent context
+	Memory string   `protobuf:"bytes,11,opt,name=memory,proto3" json:"memory,omitempty"` // persistent memory scope: user, project, local
+	// metadata
+	IsSynced      bool                   `protobuf:"varint,12,opt,name=is_synced,json=isSynced,proto3" json:"is_synced,omitempty"` // true if synced from repository .claude/agents/ directory
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AgentDefinition) Reset() {
@@ -115,18 +122,18 @@ func (x *AgentDefinition) GetTools() []string {
 	return nil
 }
 
+func (x *AgentDefinition) GetDisallowedTools() []string {
+	if x != nil {
+		return x.DisallowedTools
+	}
+	return nil
+}
+
 func (x *AgentDefinition) GetModel() string {
 	if x != nil {
 		return x.Model
 	}
 	return ""
-}
-
-func (x *AgentDefinition) GetMaxTurns() int32 {
-	if x != nil {
-		return x.MaxTurns
-	}
-	return 0
 }
 
 func (x *AgentDefinition) GetPermissionMode() string {
@@ -136,9 +143,16 @@ func (x *AgentDefinition) GetPermissionMode() string {
 	return ""
 }
 
-func (x *AgentDefinition) GetIsolation() string {
+func (x *AgentDefinition) GetSkills() []string {
 	if x != nil {
-		return x.Isolation
+		return x.Skills
+	}
+	return nil
+}
+
+func (x *AgentDefinition) GetMemory() string {
+	if x != nil {
+		return x.Memory
 	}
 	return ""
 }
@@ -165,18 +179,24 @@ func (x *AgentDefinition) GetUpdatedAt() *timestamppb.Timestamp {
 }
 
 type CreateAgentRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId      string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description    string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	Prompt         string                 `protobuf:"bytes,4,opt,name=prompt,proto3" json:"prompt,omitempty"`
-	Tools          []string               `protobuf:"bytes,5,rep,name=tools,proto3" json:"tools,omitempty"`
-	Model          string                 `protobuf:"bytes,6,opt,name=model,proto3" json:"model,omitempty"`
-	MaxTurns       int32                  `protobuf:"varint,7,opt,name=max_turns,json=maxTurns,proto3" json:"max_turns,omitempty"`
-	PermissionMode string                 `protobuf:"bytes,8,opt,name=permission_mode,json=permissionMode,proto3" json:"permission_mode,omitempty"`
-	Isolation      string                 `protobuf:"bytes,9,opt,name=isolation,proto3" json:"isolation,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	// identity
+	Name        string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// system prompt
+	Prompt string `protobuf:"bytes,4,opt,name=prompt,proto3" json:"prompt,omitempty"`
+	// tool access
+	Tools           []string `protobuf:"bytes,5,rep,name=tools,proto3" json:"tools,omitempty"`
+	DisallowedTools []string `protobuf:"bytes,6,rep,name=disallowed_tools,json=disallowedTools,proto3" json:"disallowed_tools,omitempty"`
+	// model & permissions
+	Model          string `protobuf:"bytes,7,opt,name=model,proto3" json:"model,omitempty"`
+	PermissionMode string `protobuf:"bytes,8,opt,name=permission_mode,json=permissionMode,proto3" json:"permission_mode,omitempty"`
+	// extensions
+	Skills        []string `protobuf:"bytes,9,rep,name=skills,proto3" json:"skills,omitempty"`
+	Memory        string   `protobuf:"bytes,10,opt,name=memory,proto3" json:"memory,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateAgentRequest) Reset() {
@@ -244,18 +264,18 @@ func (x *CreateAgentRequest) GetTools() []string {
 	return nil
 }
 
+func (x *CreateAgentRequest) GetDisallowedTools() []string {
+	if x != nil {
+		return x.DisallowedTools
+	}
+	return nil
+}
+
 func (x *CreateAgentRequest) GetModel() string {
 	if x != nil {
 		return x.Model
 	}
 	return ""
-}
-
-func (x *CreateAgentRequest) GetMaxTurns() int32 {
-	if x != nil {
-		return x.MaxTurns
-	}
-	return 0
 }
 
 func (x *CreateAgentRequest) GetPermissionMode() string {
@@ -265,9 +285,16 @@ func (x *CreateAgentRequest) GetPermissionMode() string {
 	return ""
 }
 
-func (x *CreateAgentRequest) GetIsolation() string {
+func (x *CreateAgentRequest) GetSkills() []string {
 	if x != nil {
-		return x.Isolation
+		return x.Skills
+	}
+	return nil
+}
+
+func (x *CreateAgentRequest) GetMemory() string {
+	if x != nil {
+		return x.Memory
 	}
 	return ""
 }
@@ -509,18 +536,24 @@ func (x *ListAgentsResponse) GetPagination() *PaginationResponse {
 }
 
 type UpdateAgentRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description    string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	Prompt         string                 `protobuf:"bytes,4,opt,name=prompt,proto3" json:"prompt,omitempty"`
-	Tools          []string               `protobuf:"bytes,5,rep,name=tools,proto3" json:"tools,omitempty"`
-	Model          string                 `protobuf:"bytes,6,opt,name=model,proto3" json:"model,omitempty"`
-	MaxTurns       int32                  `protobuf:"varint,7,opt,name=max_turns,json=maxTurns,proto3" json:"max_turns,omitempty"`
-	PermissionMode string                 `protobuf:"bytes,8,opt,name=permission_mode,json=permissionMode,proto3" json:"permission_mode,omitempty"`
-	Isolation      string                 `protobuf:"bytes,9,opt,name=isolation,proto3" json:"isolation,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// identity
+	Name        string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// system prompt
+	Prompt string `protobuf:"bytes,4,opt,name=prompt,proto3" json:"prompt,omitempty"`
+	// tool access
+	Tools           []string `protobuf:"bytes,5,rep,name=tools,proto3" json:"tools,omitempty"`
+	DisallowedTools []string `protobuf:"bytes,6,rep,name=disallowed_tools,json=disallowedTools,proto3" json:"disallowed_tools,omitempty"`
+	// model & permissions
+	Model          string `protobuf:"bytes,7,opt,name=model,proto3" json:"model,omitempty"`
+	PermissionMode string `protobuf:"bytes,8,opt,name=permission_mode,json=permissionMode,proto3" json:"permission_mode,omitempty"`
+	// extensions
+	Skills        []string `protobuf:"bytes,9,rep,name=skills,proto3" json:"skills,omitempty"`
+	Memory        string   `protobuf:"bytes,10,opt,name=memory,proto3" json:"memory,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateAgentRequest) Reset() {
@@ -588,18 +621,18 @@ func (x *UpdateAgentRequest) GetTools() []string {
 	return nil
 }
 
+func (x *UpdateAgentRequest) GetDisallowedTools() []string {
+	if x != nil {
+		return x.DisallowedTools
+	}
+	return nil
+}
+
 func (x *UpdateAgentRequest) GetModel() string {
 	if x != nil {
 		return x.Model
 	}
 	return ""
-}
-
-func (x *UpdateAgentRequest) GetMaxTurns() int32 {
-	if x != nil {
-		return x.MaxTurns
-	}
-	return 0
 }
 
 func (x *UpdateAgentRequest) GetPermissionMode() string {
@@ -609,9 +642,16 @@ func (x *UpdateAgentRequest) GetPermissionMode() string {
 	return ""
 }
 
-func (x *UpdateAgentRequest) GetIsolation() string {
+func (x *UpdateAgentRequest) GetSkills() []string {
 	if x != nil {
-		return x.Isolation
+		return x.Skills
+	}
+	return nil
+}
+
+func (x *UpdateAgentRequest) GetMemory() string {
+	if x != nil {
+		return x.Memory
 	}
 	return ""
 }
@@ -856,7 +896,7 @@ var File_taskguild_v1_agent_proto protoreflect.FileDescriptor
 
 const file_taskguild_v1_agent_proto_rawDesc = "" +
 	"\n" +
-	"\x18taskguild/v1/agent.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19taskguild/v1/common.proto\"\xb1\x03\n" +
+	"\x18taskguild/v1/agent.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19taskguild/v1/common.proto\"\xd1\x03\n" +
 	"\x0fAgentDefinition\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -864,28 +904,31 @@ const file_taskguild_v1_agent_proto_rawDesc = "" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x16\n" +
 	"\x06prompt\x18\x05 \x01(\tR\x06prompt\x12\x14\n" +
-	"\x05tools\x18\x06 \x03(\tR\x05tools\x12\x14\n" +
-	"\x05model\x18\a \x01(\tR\x05model\x12\x1b\n" +
-	"\tmax_turns\x18\b \x01(\x05R\bmaxTurns\x12'\n" +
-	"\x0fpermission_mode\x18\t \x01(\tR\x0epermissionMode\x12\x1c\n" +
-	"\tisolation\x18\n" +
-	" \x01(\tR\tisolation\x12\x1b\n" +
-	"\tis_synced\x18\v \x01(\bR\bisSynced\x129\n" +
+	"\x05tools\x18\x06 \x03(\tR\x05tools\x12)\n" +
+	"\x10disallowed_tools\x18\a \x03(\tR\x0fdisallowedTools\x12\x14\n" +
+	"\x05model\x18\b \x01(\tR\x05model\x12'\n" +
+	"\x0fpermission_mode\x18\t \x01(\tR\x0epermissionMode\x12\x16\n" +
+	"\x06skills\x18\n" +
+	" \x03(\tR\x06skills\x12\x16\n" +
+	"\x06memory\x18\v \x01(\tR\x06memory\x12\x1b\n" +
+	"\tis_synced\x18\f \x01(\bR\bisSynced\x129\n" +
 	"\n" +
-	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x91\x02\n" +
+	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xb1\x02\n" +
 	"\x12CreateAgentRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x16\n" +
 	"\x06prompt\x18\x04 \x01(\tR\x06prompt\x12\x14\n" +
-	"\x05tools\x18\x05 \x03(\tR\x05tools\x12\x14\n" +
-	"\x05model\x18\x06 \x01(\tR\x05model\x12\x1b\n" +
-	"\tmax_turns\x18\a \x01(\x05R\bmaxTurns\x12'\n" +
-	"\x0fpermission_mode\x18\b \x01(\tR\x0epermissionMode\x12\x1c\n" +
-	"\tisolation\x18\t \x01(\tR\tisolation\"J\n" +
+	"\x05tools\x18\x05 \x03(\tR\x05tools\x12)\n" +
+	"\x10disallowed_tools\x18\x06 \x03(\tR\x0fdisallowedTools\x12\x14\n" +
+	"\x05model\x18\a \x01(\tR\x05model\x12'\n" +
+	"\x0fpermission_mode\x18\b \x01(\tR\x0epermissionMode\x12\x16\n" +
+	"\x06skills\x18\t \x03(\tR\x06skills\x12\x16\n" +
+	"\x06memory\x18\n" +
+	" \x01(\tR\x06memory\"J\n" +
 	"\x13CreateAgentResponse\x123\n" +
 	"\x05agent\x18\x01 \x01(\v2\x1d.taskguild.v1.AgentDefinitionR\x05agent\"!\n" +
 	"\x0fGetAgentRequest\x12\x0e\n" +
@@ -902,17 +945,19 @@ const file_taskguild_v1_agent_proto_rawDesc = "" +
 	"\x06agents\x18\x01 \x03(\v2\x1d.taskguild.v1.AgentDefinitionR\x06agents\x12@\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2 .taskguild.v1.PaginationResponseR\n" +
-	"pagination\"\x82\x02\n" +
+	"pagination\"\xa2\x02\n" +
 	"\x12UpdateAgentRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x16\n" +
 	"\x06prompt\x18\x04 \x01(\tR\x06prompt\x12\x14\n" +
-	"\x05tools\x18\x05 \x03(\tR\x05tools\x12\x14\n" +
-	"\x05model\x18\x06 \x01(\tR\x05model\x12\x1b\n" +
-	"\tmax_turns\x18\a \x01(\x05R\bmaxTurns\x12'\n" +
-	"\x0fpermission_mode\x18\b \x01(\tR\x0epermissionMode\x12\x1c\n" +
-	"\tisolation\x18\t \x01(\tR\tisolation\"J\n" +
+	"\x05tools\x18\x05 \x03(\tR\x05tools\x12)\n" +
+	"\x10disallowed_tools\x18\x06 \x03(\tR\x0fdisallowedTools\x12\x14\n" +
+	"\x05model\x18\a \x01(\tR\x05model\x12'\n" +
+	"\x0fpermission_mode\x18\b \x01(\tR\x0epermissionMode\x12\x16\n" +
+	"\x06skills\x18\t \x03(\tR\x06skills\x12\x16\n" +
+	"\x06memory\x18\n" +
+	" \x01(\tR\x06memory\"J\n" +
 	"\x13UpdateAgentResponse\x123\n" +
 	"\x05agent\x18\x01 \x01(\v2\x1d.taskguild.v1.AgentDefinitionR\x05agent\"$\n" +
 	"\x12DeleteAgentRequest\x12\x0e\n" +

@@ -130,16 +130,20 @@ func (InteractionStatus) EnumDescriptor() ([]byte, []int) {
 }
 
 type Interaction struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	TaskId        string                 `protobuf:"bytes,2,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	AgentId       string                 `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	Type          InteractionType        `protobuf:"varint,4,opt,name=type,proto3,enum=taskguild.v1.InteractionType" json:"type,omitempty"`
-	Status        InteractionStatus      `protobuf:"varint,5,opt,name=status,proto3,enum=taskguild.v1.InteractionStatus" json:"status,omitempty"`
-	Title         string                 `protobuf:"bytes,6,opt,name=title,proto3" json:"title,omitempty"`
-	Description   string                 `protobuf:"bytes,7,opt,name=description,proto3" json:"description,omitempty"`
-	Options       []*InteractionOption   `protobuf:"bytes,8,rep,name=options,proto3" json:"options,omitempty"`
-	Response      string                 `protobuf:"bytes,9,opt,name=response,proto3" json:"response,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// identity
+	Id      string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TaskId  string `protobuf:"bytes,2,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	AgentId string `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	// type & status
+	Type   InteractionType   `protobuf:"varint,4,opt,name=type,proto3,enum=taskguild.v1.InteractionType" json:"type,omitempty"`
+	Status InteractionStatus `protobuf:"varint,5,opt,name=status,proto3,enum=taskguild.v1.InteractionStatus" json:"status,omitempty"`
+	// content
+	Title       string               `protobuf:"bytes,6,opt,name=title,proto3" json:"title,omitempty"`
+	Description string               `protobuf:"bytes,7,opt,name=description,proto3" json:"description,omitempty"`
+	Options     []*InteractionOption `protobuf:"bytes,8,rep,name=options,proto3" json:"options,omitempty"`
+	Response    string               `protobuf:"bytes,9,opt,name=response,proto3" json:"response,omitempty"`
+	// timestamps
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	RespondedAt   *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=responded_at,json=respondedAt,proto3" json:"responded_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -358,11 +362,12 @@ func (x *InteractionEvent) GetInteraction() *Interaction {
 }
 
 type ListInteractionsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	StatusFilter  InteractionStatus      `protobuf:"varint,2,opt,name=status_filter,json=statusFilter,proto3,enum=taskguild.v1.InteractionStatus" json:"status_filter,omitempty"`
-	Pagination    *PaginationRequest     `protobuf:"bytes,3,opt,name=pagination,proto3" json:"pagination,omitempty"`
-	ProjectId     string                 `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// filters
+	ProjectId     string             `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	TaskId        string             `protobuf:"bytes,2,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	StatusFilter  InteractionStatus  `protobuf:"varint,3,opt,name=status_filter,json=statusFilter,proto3,enum=taskguild.v1.InteractionStatus" json:"status_filter,omitempty"`
+	Pagination    *PaginationRequest `protobuf:"bytes,4,opt,name=pagination,proto3" json:"pagination,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -397,6 +402,13 @@ func (*ListInteractionsRequest) Descriptor() ([]byte, []int) {
 	return file_taskguild_v1_interaction_proto_rawDescGZIP(), []int{3}
 }
 
+func (x *ListInteractionsRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
 func (x *ListInteractionsRequest) GetTaskId() string {
 	if x != nil {
 		return x.TaskId
@@ -416,13 +428,6 @@ func (x *ListInteractionsRequest) GetPagination() *PaginationRequest {
 		return x.Pagination
 	}
 	return nil
-}
-
-func (x *ListInteractionsRequest) GetProjectId() string {
-	if x != nil {
-		return x.ProjectId
-	}
-	return ""
 }
 
 type ListInteractionsResponse struct {
@@ -738,14 +743,14 @@ const file_taskguild_v1_interaction_proto_rawDesc = "" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\"O\n" +
 	"\x10InteractionEvent\x12;\n" +
 	"\vinteraction\x18\x01 \x01(\v2\x19.taskguild.v1.InteractionR\vinteraction\"\xd8\x01\n" +
-	"\x17ListInteractionsRequest\x12\x17\n" +
-	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12D\n" +
-	"\rstatus_filter\x18\x02 \x01(\x0e2\x1f.taskguild.v1.InteractionStatusR\fstatusFilter\x12?\n" +
+	"\x17ListInteractionsRequest\x12\x1d\n" +
 	"\n" +
-	"pagination\x18\x03 \x01(\v2\x1f.taskguild.v1.PaginationRequestR\n" +
-	"pagination\x12\x1d\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x17\n" +
+	"\atask_id\x18\x02 \x01(\tR\x06taskId\x12D\n" +
+	"\rstatus_filter\x18\x03 \x01(\x0e2\x1f.taskguild.v1.InteractionStatusR\fstatusFilter\x12?\n" +
 	"\n" +
-	"project_id\x18\x04 \x01(\tR\tprojectId\"\x9b\x01\n" +
+	"pagination\x18\x04 \x01(\v2\x1f.taskguild.v1.PaginationRequestR\n" +
+	"pagination\"\x9b\x01\n" +
 	"\x18ListInteractionsResponse\x12=\n" +
 	"\finteractions\x18\x01 \x03(\v2\x19.taskguild.v1.InteractionR\finteractions\x12@\n" +
 	"\n" +

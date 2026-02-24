@@ -15,12 +15,19 @@ service WorkflowService {
 
 // Workflow defines a project's task lifecycle with custom statuses and agent configurations.
 message Workflow {
+  // identity
   string id = 1;
   string project_id = 2;
+
+  // content
   string name = 3;
   string description = 4;
+
+  // configuration
   repeated WorkflowStatus statuses = 5;
   repeated AgentConfig agent_configs = 6;
+
+  // timestamps
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;
 }
@@ -30,8 +37,12 @@ message WorkflowStatus {
   string id = 1;
   string name = 2;
   int32 order = 3;
+
+  // status flags
   bool is_initial = 4;
   bool is_terminal = 5;
+
+  // transitions & agent
   repeated string transitions_to = 6;  // IDs of statuses this can transition to
   string agent_id = 7;                 // ID of the AgentDefinition assigned to this status
 }
@@ -40,16 +51,24 @@ message WorkflowStatus {
 message AgentConfig {
   string id = 1;
   string workflow_status_id = 2;  // which status triggers this agent
+
+  // content
   string name = 3;
   string description = 4;
   string instructions = 5;        // system prompt / instructions for the agent
+
+  // tool access
   repeated string allowed_tools = 6;
 }
 
 message CreateWorkflowRequest {
   string project_id = 1;
+
+  // content
   string name = 2;
   string description = 3;
+
+  // configuration
   repeated WorkflowStatus statuses = 4;
   repeated AgentConfig agent_configs = 5;
 }
@@ -75,8 +94,12 @@ message ListWorkflowsResponse {
 
 message UpdateWorkflowRequest {
   string id = 1;
+
+  // content
   string name = 2;
   string description = 3;
+
+  // configuration
   repeated WorkflowStatus statuses = 4;
   repeated AgentConfig agent_configs = 5;
 }

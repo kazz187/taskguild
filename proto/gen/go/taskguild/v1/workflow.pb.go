@@ -24,13 +24,17 @@ const (
 
 // Workflow defines a project's task lifecycle with custom statuses and agent configurations.
 type Workflow struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ProjectId     string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	Statuses      []*WorkflowStatus      `protobuf:"bytes,5,rep,name=statuses,proto3" json:"statuses,omitempty"`
-	AgentConfigs  []*AgentConfig         `protobuf:"bytes,6,rep,name=agent_configs,json=agentConfigs,proto3" json:"agent_configs,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// identity
+	Id        string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ProjectId string `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	// content
+	Name        string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	// configuration
+	Statuses     []*WorkflowStatus `protobuf:"bytes,5,rep,name=statuses,proto3" json:"statuses,omitempty"`
+	AgentConfigs []*AgentConfig    `protobuf:"bytes,6,rep,name=agent_configs,json=agentConfigs,proto3" json:"agent_configs,omitempty"`
+	// timestamps
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -125,14 +129,16 @@ func (x *Workflow) GetUpdatedAt() *timestamppb.Timestamp {
 
 // WorkflowStatus defines a custom status in a workflow.
 type WorkflowStatus struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Order         int32                  `protobuf:"varint,3,opt,name=order,proto3" json:"order,omitempty"`
-	IsInitial     bool                   `protobuf:"varint,4,opt,name=is_initial,json=isInitial,proto3" json:"is_initial,omitempty"`
-	IsTerminal    bool                   `protobuf:"varint,5,opt,name=is_terminal,json=isTerminal,proto3" json:"is_terminal,omitempty"`
-	TransitionsTo []string               `protobuf:"bytes,6,rep,name=transitions_to,json=transitionsTo,proto3" json:"transitions_to,omitempty"` // IDs of statuses this can transition to
-	AgentId       string                 `protobuf:"bytes,7,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`                   // ID of the AgentDefinition assigned to this status
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name  string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Order int32                  `protobuf:"varint,3,opt,name=order,proto3" json:"order,omitempty"`
+	// status flags
+	IsInitial  bool `protobuf:"varint,4,opt,name=is_initial,json=isInitial,proto3" json:"is_initial,omitempty"`
+	IsTerminal bool `protobuf:"varint,5,opt,name=is_terminal,json=isTerminal,proto3" json:"is_terminal,omitempty"`
+	// transitions & agent
+	TransitionsTo []string `protobuf:"bytes,6,rep,name=transitions_to,json=transitionsTo,proto3" json:"transitions_to,omitempty"` // IDs of statuses this can transition to
+	AgentId       string   `protobuf:"bytes,7,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`                   // ID of the AgentDefinition assigned to this status
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -221,12 +227,14 @@ type AgentConfig struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	WorkflowStatusId string                 `protobuf:"bytes,2,opt,name=workflow_status_id,json=workflowStatusId,proto3" json:"workflow_status_id,omitempty"` // which status triggers this agent
-	Name             string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Description      string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	Instructions     string                 `protobuf:"bytes,5,opt,name=instructions,proto3" json:"instructions,omitempty"` // system prompt / instructions for the agent
-	AllowedTools     []string               `protobuf:"bytes,6,rep,name=allowed_tools,json=allowedTools,proto3" json:"allowed_tools,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// content
+	Name         string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Description  string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	Instructions string `protobuf:"bytes,5,opt,name=instructions,proto3" json:"instructions,omitempty"` // system prompt / instructions for the agent
+	// tool access
+	AllowedTools  []string `protobuf:"bytes,6,rep,name=allowed_tools,json=allowedTools,proto3" json:"allowed_tools,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AgentConfig) Reset() {
@@ -302,12 +310,14 @@ func (x *AgentConfig) GetAllowedTools() []string {
 }
 
 type CreateWorkflowRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	Statuses      []*WorkflowStatus      `protobuf:"bytes,4,rep,name=statuses,proto3" json:"statuses,omitempty"`
-	AgentConfigs  []*AgentConfig         `protobuf:"bytes,5,rep,name=agent_configs,json=agentConfigs,proto3" json:"agent_configs,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	// content
+	Name        string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// configuration
+	Statuses      []*WorkflowStatus `protobuf:"bytes,4,rep,name=statuses,proto3" json:"statuses,omitempty"`
+	AgentConfigs  []*AgentConfig    `protobuf:"bytes,5,rep,name=agent_configs,json=agentConfigs,proto3" json:"agent_configs,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -614,12 +624,14 @@ func (x *ListWorkflowsResponse) GetPagination() *PaginationResponse {
 }
 
 type UpdateWorkflowRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	Statuses      []*WorkflowStatus      `protobuf:"bytes,4,rep,name=statuses,proto3" json:"statuses,omitempty"`
-	AgentConfigs  []*AgentConfig         `protobuf:"bytes,5,rep,name=agent_configs,json=agentConfigs,proto3" json:"agent_configs,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// content
+	Name        string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// configuration
+	Statuses      []*WorkflowStatus `protobuf:"bytes,4,rep,name=statuses,proto3" json:"statuses,omitempty"`
+	AgentConfigs  []*AgentConfig    `protobuf:"bytes,5,rep,name=agent_configs,json=agentConfigs,proto3" json:"agent_configs,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
