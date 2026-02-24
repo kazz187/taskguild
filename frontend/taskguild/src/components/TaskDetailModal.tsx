@@ -9,6 +9,7 @@ import type { WorkflowStatus } from '@taskguild/proto/taskguild/v1/workflow_pb.t
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { X, Bot, Clock, Loader, Trash2, ArrowRight, MessageSquare, Shield, Bell } from 'lucide-react'
 import { MarkdownDescription } from './MarkdownDescription'
+import { shortId } from '@/lib/id'
 
 interface TaskDetailModalProps {
   taskId: string
@@ -188,7 +189,7 @@ export function TaskDetailModal({
             {task.assignmentStatus === TaskAssignmentStatus.ASSIGNED ? (
               <span className="inline-flex items-center gap-1 text-xs bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-full px-2.5 py-1">
                 <Bot className="w-3 h-3" />
-                {task.assignedAgentId.slice(-12)}
+                {shortId(task.assignedAgentId)}
               </span>
             ) : task.assignmentStatus === TaskAssignmentStatus.PENDING ? (
               <span className="inline-flex items-center gap-1 text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded-full px-2.5 py-1">

@@ -308,9 +308,21 @@ func buildClaudeOptions(
 		permMode = claudeagent.PermissionMode(pm)
 	}
 
+	cwd := workDir
+
+	// If worktree is enabled and the worktree directory already exists, use it as Cwd.
+	// This ensures both fresh and resumed sessions work inside the worktree.
+	if metadata["_use_worktree"] == "true" && worktreeName != "" {
+		wtDir := filepath.Join(workDir, ".claude", "worktrees", worktreeName)
+		if info, err := os.Stat(wtDir); err == nil && info.IsDir() {
+			cwd = wtDir
+			log.Printf("[task:%s] using existing worktree directory: %s", taskID, wtDir)
+		}
+	}
+
 	opts := &claudeagent.ClaudeAgentOptions{
 		SystemPrompt:   instructions,
-		Cwd:            workDir,
+		Cwd:            cwd,
 		PermissionMode: permMode,
 		CanUseTool: func(toolName string, input map[string]any, toolCtx claudeagent.ToolPermissionContext) (claudeagent.PermissionResult, error) {
 			return handlePermissionRequest(ctx, client, taskID, agentManagerID, toolName, input, waiter, permMode)
@@ -327,9 +339,11 @@ func buildClaudeOptions(
 
 	if sessionID != "" {
 		opts.Resume = sessionID
-	} else if metadata["_use_worktree"] == "true" && worktreeName != "" {
-		// Only create a worktree on the first turn. On resume, the session
-		// state already knows the worktree directory.
+	}
+
+	// Set --worktree flag when starting a fresh session (no resume) and worktree is enabled.
+	// This tells Claude CLI to create the worktree if it doesn't exist yet.
+	if sessionID == "" && metadata["_use_worktree"] == "true" && worktreeName != "" {
 		opts.Worktree = &worktreeName
 	}
 

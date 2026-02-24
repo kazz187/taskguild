@@ -7,6 +7,7 @@ import { getProject } from '@taskguild/proto/taskguild/v1/project-ProjectService
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { ChatBubble } from '@/components/ChatBubble'
+import { shortId } from '@/lib/id'
 import { ArrowLeft } from 'lucide-react'
 
 export const Route = createFileRoute('/projects/$projectId/chat')({
@@ -91,7 +92,7 @@ function ProjectChatPage() {
             // Show task label when task changes
             const prevTaskId = idx > 0 ? interactions[idx - 1].taskId : null
             const showTaskLabel = interaction.taskId !== prevTaskId
-            const taskTitle = taskMap.get(interaction.taskId) ?? interaction.taskId.slice(-8)
+            const taskTitle = taskMap.get(interaction.taskId) ?? shortId(interaction.taskId)
 
             return (
               <div key={interaction.id}>

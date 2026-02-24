@@ -70,3 +70,5 @@ __pycache__/
 *$py.class
 
 **/CLAUDE.md
+.claude
+frontend/taskguild/.vite/

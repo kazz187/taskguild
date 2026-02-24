@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { listTasks, updateTaskStatus } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import { listAgents } from '@taskguild/proto/taskguild/v1/agent-AgentService_connectquery.ts'
@@ -42,6 +42,11 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
   })
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [activeTask, setActiveTask] = useState<Task | null>(null)
+
+  // Track whether the last drop was a successful status transition (for animation control)
+  const lastDropWasSuccessful = useRef(false)
+  // Optimistic moves: taskId -> targetStatusId (applied before API response)
+  const [pendingMoves, setPendingMoves] = useState<Map<string, string>>(new Map())
 
   const statusMut = useMutation(updateTaskStatus)
 
@@ -104,11 +109,13 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
       map.set(s.id, [])
     }
     for (const t of tasks) {
-      const arr = map.get(t.statusId)
+      // Apply optimistic move if present, otherwise use actual statusId
+      const effectiveStatusId = pendingMoves.get(t.id) ?? t.statusId
+      const arr = map.get(effectiveStatusId)
       if (arr) arr.push(t)
     }
     return map
-  }, [tasks, sortedStatuses])
+  }, [tasks, sortedStatuses, pendingMoves])
 
   const allowedStatusIds = useMemo(() => {
     if (!activeTask) return new Set<string>()
@@ -117,6 +124,7 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
   }, [activeTask, statusById])
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
+    lastDropWasSuccessful.current = false
     const task = event.active.data.current?.task as Task | undefined
     if (task) setActiveTask(task)
   }, [])
@@ -124,21 +132,50 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event
-      setActiveTask(null)
 
-      if (!over) return
+      if (!over) {
+        lastDropWasSuccessful.current = false
+        setActiveTask(null)
+        return
+      }
 
       const task = active.data.current?.task as Task | undefined
       const targetStatusId = over.id as string
-      if (!task || task.statusId === targetStatusId) return
+      if (!task || task.statusId === targetStatusId) {
+        lastDropWasSuccessful.current = false
+        setActiveTask(null)
+        return
+      }
 
       const currentStatus = statusById.get(task.statusId)
-      if (!currentStatus?.transitionsTo.includes(targetStatusId)) return
+      if (!currentStatus?.transitionsTo.includes(targetStatusId)) {
+        lastDropWasSuccessful.current = false
+        setActiveTask(null)
+        return
+      }
+
+      // Valid drop — mark as successful so DragOverlay skips the snap-back animation
+      lastDropWasSuccessful.current = true
+
+      // Optimistic update: immediately show the task in the target column
+      setPendingMoves((prev) => new Map(prev).set(task.id, targetStatusId))
 
       statusMut.mutate(
         { id: task.id, statusId: targetStatusId },
-        { onSuccess: () => refetch() },
+        {
+          onSettled: () => {
+            // Clear the optimistic move and sync with server state
+            setPendingMoves((prev) => {
+              const next = new Map(prev)
+              next.delete(task.id)
+              return next
+            })
+            refetch()
+          },
+        },
       )
+
+      setActiveTask(null)
     },
     [statusById, statusMut, refetch],
   )
@@ -167,7 +204,9 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
           ))}
         </div>
 
-        <DragOverlay>
+        <DragOverlay
+          dropAnimation={lastDropWasSuccessful.current ? null : undefined}
+        >
           {activeTask ? (
             <div className="w-72">
               <TaskCard task={activeTask} isDragOverlay />
