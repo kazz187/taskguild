@@ -130,6 +130,7 @@ type AgentManagerSubscribeRequest struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	AgentManagerId     string                 `protobuf:"bytes,1,opt,name=agent_manager_id,json=agentManagerId,proto3" json:"agent_manager_id,omitempty"`
 	MaxConcurrentTasks int32                  `protobuf:"varint,2,opt,name=max_concurrent_tasks,json=maxConcurrentTasks,proto3" json:"max_concurrent_tasks,omitempty"`
+	ProjectName        string                 `protobuf:"bytes,3,opt,name=project_name,json=projectName,proto3" json:"project_name,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -176,6 +177,13 @@ func (x *AgentManagerSubscribeRequest) GetMaxConcurrentTasks() int32 {
 		return x.MaxConcurrentTasks
 	}
 	return 0
+}
+
+func (x *AgentManagerSubscribeRequest) GetProjectName() string {
+	if x != nil {
+		return x.ProjectName
+	}
+	return ""
 }
 
 type AgentCommand struct {
@@ -1184,10 +1192,11 @@ var File_taskguild_v1_agent_manager_proto protoreflect.FileDescriptor
 
 const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\n" +
-	" taskguild/v1/agent_manager.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1etaskguild/v1/interaction.proto\"z\n" +
+	" taskguild/v1/agent_manager.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1etaskguild/v1/interaction.proto\"\x9d\x01\n" +
 	"\x1cAgentManagerSubscribeRequest\x12(\n" +
 	"\x10agent_manager_id\x18\x01 \x01(\tR\x0eagentManagerId\x120\n" +
-	"\x14max_concurrent_tasks\x18\x02 \x01(\x05R\x12maxConcurrentTasks\"\xcd\x02\n" +
+	"\x14max_concurrent_tasks\x18\x02 \x01(\x05R\x12maxConcurrentTasks\x12!\n" +
+	"\fproject_name\x18\x03 \x01(\tR\vprojectName\"\xcd\x02\n" +
 	"\fAgentCommand\x12B\n" +
 	"\vassign_task\x18\x01 \x01(\v2\x1f.taskguild.v1.AssignTaskCommandH\x00R\n" +
 	"assignTask\x12]\n" +
