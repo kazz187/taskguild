@@ -6,7 +6,7 @@ build-server:
 	go build -o bin/taskguild-server ./cmd/taskguild-server/
 
 build-agent:
-	go build -o bin/taskguild-agent ./cmd/agent-manager/
+	go build -o bin/taskguild-agent ./cmd/taskguild-agent/
 
 run:
 	TASKGUILD_API_KEY=dev go run ./cmd/taskguild-server/
