@@ -146,7 +146,7 @@ func runTask(
 	hasTransitions := metadata["_available_transitions"] != ""
 
 	// Resolve worktree name: reuse persisted name or generate a new one.
-	worktreeName := metadata["_worktree_name"]
+	worktreeName := metadata["worktree"]
 	if worktreeName == "" && metadata["_use_worktree"] == "true" {
 		worktreeName = generateWorktreeName(ctx, taskID, metadata["_task_title"], workDir)
 		saveWorktreeName(ctx, taskClient, taskID, worktreeName)
@@ -605,7 +605,7 @@ func saveSessionID(ctx context.Context, taskClient taskguildv1connect.TaskServic
 func saveWorktreeName(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, name string) {
 	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
 		Id:       taskID,
-		Metadata: map[string]string{"_worktree_name": name, "worktree": name},
+		Metadata: map[string]string{"worktree": name},
 	}))
 	if err != nil {
 		log.Printf("[task:%s] failed to save worktree_name: %v", taskID, err)
