@@ -13,6 +13,7 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/agent"
 	"github.com/kazz187/taskguild/backend/internal/eventbus"
 	"github.com/kazz187/taskguild/backend/internal/interaction"
+	"github.com/kazz187/taskguild/backend/internal/project"
 	"github.com/kazz187/taskguild/backend/internal/task"
 	"github.com/kazz187/taskguild/backend/internal/workflow"
 	"github.com/kazz187/taskguild/backend/pkg/cerr"
@@ -28,16 +29,18 @@ type Server struct {
 	workflowRepo    workflow.Repository
 	agentRepo       agent.Repository
 	interactionRepo interaction.Repository
+	projectRepo     project.Repository
 	eventBus        *eventbus.Bus
 }
 
-func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, eventBus *eventbus.Bus) *Server {
+func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, projectRepo project.Repository, eventBus *eventbus.Bus) *Server {
 	return &Server{
 		registry:        registry,
 		taskRepo:        taskRepo,
 		workflowRepo:    workflowRepo,
 		agentRepo:       agentRepo,
 		interactionRepo: interactionRepo,
+		projectRepo:     projectRepo,
 		eventBus:        eventBus,
 	}
 }
@@ -48,13 +51,14 @@ func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1
 		return cerr.NewError(cerr.InvalidArgument, "agent_manager_id is required", nil).ConnectError()
 	}
 
-	slog.Info("agent-manager connected", "agent_manager_id", agentManagerID, "max_concurrent_tasks", req.Msg.MaxConcurrentTasks)
+	projectName := req.Msg.ProjectName
+	slog.Info("agent-manager connected", "agent_manager_id", agentManagerID, "max_concurrent_tasks", req.Msg.MaxConcurrentTasks, "project_name", projectName)
 
 	// On (re-)connect, release any tasks still assigned to this agent.
 	// The agent starts fresh and does not retain tasks from a previous session.
 	s.releaseAgentTasks(ctx, agentManagerID)
 
-	commandCh := s.registry.Register(agentManagerID, req.Msg.MaxConcurrentTasks)
+	commandCh := s.registry.Register(agentManagerID, req.Msg.MaxConcurrentTasks, projectName)
 	defer func() {
 		s.registry.Unregister(agentManagerID)
 		// On disconnect, release assigned tasks so other agents can pick them up.
@@ -115,8 +119,14 @@ func (s *Server) releaseAgentTasks(ctx context.Context, agentManagerID string) {
 			}
 		}
 
-		// Broadcast so other connected agents can claim the task.
-		s.registry.BroadcastCommand(&taskguildv1.AgentCommand{
+		// Resolve project name for filtered broadcast.
+		var projectName string
+		if p, pErr := s.projectRepo.Get(ctx, t.ProjectID); pErr == nil {
+			projectName = p.Name
+		}
+
+		// Broadcast so other connected agents (same project) can claim the task.
+		s.registry.BroadcastCommandToProject(projectName, &taskguildv1.AgentCommand{
 			Command: &taskguildv1.AgentCommand_TaskAvailable{
 				TaskAvailable: &taskguildv1.TaskAvailableCommand{
 					TaskId:        t.ID,
@@ -204,6 +214,29 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 			}), nil
 		}
 		return nil, cerr.ExtractConnectError(ctx, err)
+	}
+
+	// Validate project name: if the agent declared a project, verify it matches.
+	if agentProject, ok := s.registry.GetProjectName(req.Msg.AgentManagerId); ok && agentProject != "" {
+		var taskProjectName string
+		if p, pErr := s.projectRepo.Get(ctx, t.ProjectID); pErr == nil {
+			taskProjectName = p.Name
+		}
+		if taskProjectName != "" && agentProject != taskProjectName {
+			// Mismatch: unclaim the task and reject.
+			t.AssignedAgentID = ""
+			t.AssignmentStatus = task.AssignmentStatusPending
+			t.UpdatedAt = time.Now()
+			_ = s.taskRepo.Update(ctx, t)
+			slog.Warn("agent claimed task from wrong project",
+				"task_id", t.ID,
+				"agent_project", agentProject,
+				"task_project", taskProjectName,
+			)
+			return connect.NewResponse(&taskguildv1.ClaimTaskResponse{
+				Success: false,
+			}), nil
+		}
 	}
 
 	// Find agent config for the task's current status.

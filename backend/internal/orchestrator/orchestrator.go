@@ -7,6 +7,7 @@ import (
 
 	"github.com/kazz187/taskguild/backend/internal/agentmanager"
 	"github.com/kazz187/taskguild/backend/internal/eventbus"
+	"github.com/kazz187/taskguild/backend/internal/project"
 	"github.com/kazz187/taskguild/backend/internal/task"
 	"github.com/kazz187/taskguild/backend/internal/workflow"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
@@ -16,14 +17,16 @@ type Orchestrator struct {
 	eventBus     *eventbus.Bus
 	taskRepo     task.Repository
 	workflowRepo workflow.Repository
+	projectRepo  project.Repository
 	registry     *agentmanager.Registry
 }
 
-func New(eventBus *eventbus.Bus, taskRepo task.Repository, workflowRepo workflow.Repository, registry *agentmanager.Registry) *Orchestrator {
+func New(eventBus *eventbus.Bus, taskRepo task.Repository, workflowRepo workflow.Repository, projectRepo project.Repository, registry *agentmanager.Registry) *Orchestrator {
 	return &Orchestrator{
 		eventBus:     eventBus,
 		taskRepo:     taskRepo,
 		workflowRepo: workflowRepo,
+		projectRepo:  projectRepo,
 		registry:     registry,
 	}
 }
@@ -81,7 +84,15 @@ func (o *Orchestrator) handleTaskEvent(ctx context.Context, event *taskguildv1.E
 		return
 	}
 
-	// Broadcast TaskAvailableCommand to all connected agent-managers.
+	// Resolve project name for filtered broadcast.
+	var projectName string
+	if p, err := o.projectRepo.Get(ctx, t.ProjectID); err == nil {
+		projectName = p.Name
+	} else {
+		slog.Error("orchestrator: failed to get project", "project_id", t.ProjectID, "error", err)
+	}
+
+	// Broadcast TaskAvailableCommand to matching agent-managers.
 	cmd := &taskguildv1.AgentCommand{
 		Command: &taskguildv1.AgentCommand_TaskAvailable{
 			TaskAvailable: &taskguildv1.TaskAvailableCommand{
@@ -92,11 +103,12 @@ func (o *Orchestrator) handleTaskEvent(ctx context.Context, event *taskguildv1.E
 			},
 		},
 	}
-	o.registry.BroadcastCommand(cmd)
+	o.registry.BroadcastCommandToProject(projectName, cmd)
 
 	slog.Info("orchestrator: task available broadcast",
 		"task_id", t.ID,
 		"agent_config_id", agentConfigID,
+		"project_name", projectName,
 	)
 }
 

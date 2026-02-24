@@ -82,7 +82,7 @@ func main() {
 	workflowServer := workflow.NewServer(workflowRepo)
 	taskServer := task.NewServer(taskRepo, workflowRepo, bus)
 	interactionServer := interaction.NewServer(interactionRepo, taskRepo, bus)
-	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, bus)
+	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, projectRepo, bus)
 	agentServer := agent.NewServer(agentRepo)
 	eventServer := event.NewServer(bus)
 
@@ -98,7 +98,7 @@ func main() {
 	)
 
 	// Setup orchestrator
-	orch := orchestrator.New(bus, taskRepo, workflowRepo, agentManagerRegistry)
+	orch := orchestrator.New(bus, taskRepo, workflowRepo, projectRepo, agentManagerRegistry)
 
 	// Graceful shutdown
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)

@@ -11,6 +11,7 @@ type connection struct {
 	agentManagerID     string
 	maxConcurrentTasks int32
 	activeTasks        int32
+	projectName        string
 	lastHeartbeat      time.Time
 	commandCh          chan *taskguildv1.AgentCommand
 }
@@ -26,7 +27,7 @@ func NewRegistry() *Registry {
 	}
 }
 
-func (r *Registry) Register(agentManagerID string, maxConcurrentTasks int32) chan *taskguildv1.AgentCommand {
+func (r *Registry) Register(agentManagerID string, maxConcurrentTasks int32, projectName string) chan *taskguildv1.AgentCommand {
 	ch := make(chan *taskguildv1.AgentCommand, 64)
 	r.mu.Lock()
 	// Close existing connection if re-registering.
@@ -36,6 +37,7 @@ func (r *Registry) Register(agentManagerID string, maxConcurrentTasks int32) cha
 	r.conns[agentManagerID] = &connection{
 		agentManagerID:     agentManagerID,
 		maxConcurrentTasks: maxConcurrentTasks,
+		projectName:        projectName,
 		lastHeartbeat:      time.Now(),
 		commandCh:          ch,
 	}
@@ -114,4 +116,32 @@ func (r *Registry) BroadcastCommand(cmd *taskguildv1.AgentCommand) {
 		default:
 		}
 	}
+}
+
+// BroadcastCommandToProject sends a command only to agent-managers
+// whose projectName matches. Agents with an empty projectName (legacy)
+// also receive the command.
+func (r *Registry) BroadcastCommandToProject(projectName string, cmd *taskguildv1.AgentCommand) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, conn := range r.conns {
+		if conn.projectName != "" && conn.projectName != projectName {
+			continue
+		}
+		select {
+		case conn.commandCh <- cmd:
+		default:
+		}
+	}
+}
+
+// GetProjectName returns the project name for a connected agent-manager.
+func (r *Registry) GetProjectName(agentManagerID string) (string, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	conn, ok := r.conns[agentManagerID]
+	if !ok {
+		return "", false
+	}
+	return conn.projectName, true
 }

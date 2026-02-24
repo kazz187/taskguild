@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"syscall"
@@ -25,6 +26,7 @@ type config struct {
 	AgentManagerID     string
 	MaxConcurrentTasks int
 	WorkDir            string
+	ProjectName        string
 }
 
 func loadConfig() (*config, error) {
@@ -56,6 +58,16 @@ func loadConfig() (*config, error) {
 		cfg.WorkDir = v
 	}
 
+	// Derive project name from env var or working directory basename.
+	if v := os.Getenv("TASKGUILD_PROJECT_NAME"); v != "" {
+		cfg.ProjectName = v
+	} else {
+		absDir, err := filepath.Abs(cfg.WorkDir)
+		if err == nil {
+			cfg.ProjectName = filepath.Base(absDir)
+		}
+	}
+
 	return cfg, nil
 }
 
@@ -74,8 +86,8 @@ func main() {
 		log.Fatalf("configuration error: %v", err)
 	}
 
-	log.Printf("agent-manager starting (id: %s, server: %s, max_tasks: %d, work_dir: %s)",
-		cfg.AgentManagerID, cfg.ServerURL, cfg.MaxConcurrentTasks, cfg.WorkDir)
+	log.Printf("agent-manager starting (id: %s, server: %s, max_tasks: %d, work_dir: %s, project_name: %s)",
+		cfg.AgentManagerID, cfg.ServerURL, cfg.MaxConcurrentTasks, cfg.WorkDir, cfg.ProjectName)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -169,6 +181,7 @@ func runSubscribeLoop(
 	stream, err := client.Subscribe(ctx, connect.NewRequest(&v1.AgentManagerSubscribeRequest{
 		AgentManagerId:     cfg.AgentManagerID,
 		MaxConcurrentTasks: int32(cfg.MaxConcurrentTasks),
+		ProjectName:        cfg.ProjectName,
 	}))
 	if err != nil {
 		return fmt.Errorf("failed to subscribe: %w", err)
