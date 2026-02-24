@@ -1,0 +1,15 @@
+{
+  "name": "@taskguild/proto",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    "./taskguild/v1/*.ts": "./taskguild/v1/*.ts",
+    "./taskguild/v1/*": "./taskguild/v1/*.ts",
+    "./buf/validate/*.ts": "./buf/validate/*.ts",
+    "./buf/validate/*": "./buf/validate/*.ts"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.10.2",
+    "@connectrpc/connect": "^2.1.1"
+  }
+}

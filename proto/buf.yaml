@@ -1,7 +1,24 @@
-version: v1
+version: v2
+modules:
+  - path: .
+    name: buf.build/kazz187/taskguild
+deps:
+  - buf.build/bufbuild/protovalidate
+  - buf.build/googleapis/googleapis
+lint:
+  use:
+    - STANDARD
+  except:
+    - FIELD_NOT_REQUIRED
+    - PACKAGE_NO_IMPORT_CYCLE
+    - PACKAGE_VERSION_SUFFIX
+    - RPC_REQUEST_RESPONSE_UNIQUE
+    - RPC_REQUEST_STANDARD_NAME
+    - RPC_RESPONSE_STANDARD_NAME
+  disallow_comment_ignores: true
 breaking:
   use:
     - FILE
-lint:
-  use:
-    - DEFAULT
+  except:
+    - EXTENSION_NO_DELETE
+    - FIELD_SAME_DEFAULT

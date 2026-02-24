@@ -1,0 +1,15 @@
+package task
+
+import "context"
+
+type Repository interface {
+	Create(ctx context.Context, t *Task) error
+	Get(ctx context.Context, id string) (*Task, error)
+	List(ctx context.Context, projectID, workflowID, statusID string, limit, offset int) ([]*Task, int, error)
+	Update(ctx context.Context, t *Task) error
+	Delete(ctx context.Context, id string) error
+	Claim(ctx context.Context, taskID string, agentID string) (*Task, error)
+	// ReleaseByAgent unassigns all tasks currently assigned to the given agent,
+	// resetting them to Pending so other agents can claim them.
+	ReleaseByAgent(ctx context.Context, agentID string) ([]*Task, error)
+}

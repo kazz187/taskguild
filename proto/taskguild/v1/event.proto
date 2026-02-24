@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package taskguild.v1;
+
+import "google/protobuf/timestamp.proto";
+
+service EventService {
+  rpc SubscribeEvents(SubscribeEventsRequest) returns (stream Event);
+}
+
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  EVENT_TYPE_TASK_CREATED = 1;
+  EVENT_TYPE_TASK_UPDATED = 2;
+  EVENT_TYPE_TASK_STATUS_CHANGED = 3;
+  EVENT_TYPE_TASK_DELETED = 4;
+  EVENT_TYPE_AGENT_ASSIGNED = 5;
+  EVENT_TYPE_AGENT_STATUS_CHANGED = 6;
+  EVENT_TYPE_INTERACTION_CREATED = 7;
+  EVENT_TYPE_INTERACTION_RESPONDED = 8;
+}
+
+message Event {
+  string id = 1;
+  EventType type = 2;
+  string resource_id = 3;
+  string payload = 4;            // JSON-encoded event data
+  map<string, string> metadata = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message SubscribeEventsRequest {
+  repeated EventType event_types = 1;
+  string project_id = 2;
+}

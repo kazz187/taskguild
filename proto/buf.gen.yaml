@@ -1,12 +1,35 @@
-version: v1
+version: v2
 managed:
   enabled: true
-  go_package_prefix:
-    default: github.com/kazz187/taskguild/proto/gen/go
+  disable:
+    - file_option: go_package
+      module: buf.build/googleapis/googleapis
+    - file_option: go_package
+      module: buf.build/bufbuild/protovalidate
+  override:
+    - file_option: go_package_prefix
+      value: github.com/kazz187/taskguild/proto/gen/go
+inputs:
+  - directory: .
+  - module: buf.build/bufbuild/protovalidate
 plugins:
-  - plugin: buf.build/protocolbuffers/go
+  # Go protobuf
+  - remote: buf.build/protocolbuffers/go
     out: ./gen/go
     opt: paths=source_relative
-  - plugin: buf.build/connectrpc/go
+  # Connect Go
+  - remote: buf.build/connectrpc/go
     out: ./gen/go
     opt: paths=source_relative
+  # TypeScript (ES modules)
+  - remote: buf.build/bufbuild/es:v2.9.0
+    out: ./gen/ts
+    opt:
+      - import_extension=.ts
+      - target=ts
+  # Connect-Query (TanStack Query integration)
+  - remote: buf.build/connectrpc/query-es:v2.2.0
+    out: ./gen/ts
+    opt:
+      - import_extension=.ts
+      - target=ts

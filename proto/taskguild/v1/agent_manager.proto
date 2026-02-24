@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package taskguild.v1;
+
+import "google/protobuf/timestamp.proto";
+import "taskguild/v1/interaction.proto";
+
+// AgentManagerService is the bidirectional communication channel between
+// the backend and agent-manager instances.
+service AgentManagerService {
+  // Subscribe opens a server-stream for receiving commands from the backend.
+  rpc Subscribe(AgentManagerSubscribeRequest) returns (stream AgentCommand);
+  // Heartbeat sends periodic health signals from the agent-manager.
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  // ReportTaskResult reports the outcome of a task execution.
+  rpc ReportTaskResult(ReportTaskResultRequest) returns (ReportTaskResultResponse);
+  // CreateInteraction creates a new interaction request from an agent.
+  rpc CreateInteraction(CreateInteractionRequest) returns (CreateInteractionResponse);
+  // GetInteractionResponse polls for a user's response to an interaction.
+  rpc GetInteractionResponse(GetInteractionResponseRequest) returns (GetInteractionResponseResponse);
+  // ReportAgentStatus reports the current status of an agent.
+  rpc ReportAgentStatus(ReportAgentStatusRequest) returns (ReportAgentStatusResponse);
+  // ClaimTask allows an agent-manager to claim an available task.
+  rpc ClaimTask(ClaimTaskRequest) returns (ClaimTaskResponse);
+}
+
+message AgentManagerSubscribeRequest {
+  string agent_manager_id = 1;
+  int32 max_concurrent_tasks = 2;
+}
+
+message AgentCommand {
+  oneof command {
+    AssignTaskCommand assign_task = 1;
+    InteractionResponseCommand interaction_response = 2;
+    CancelTaskCommand cancel_task = 3;
+    TaskAvailableCommand task_available = 4;
+  }
+}
+
+message TaskAvailableCommand {
+  string task_id = 1;
+  string agent_config_id = 2;
+  string title = 3;
+  map<string, string> metadata = 4;
+}
+
+message ClaimTaskRequest {
+  string task_id = 1;
+  string agent_manager_id = 2;
+}
+
+message ClaimTaskResponse {
+  bool success = 1;
+  string instructions = 2;
+  string agent_config_id = 3;
+  map<string, string> metadata = 4;
+}
+
+message AssignTaskCommand {
+  string task_id = 1;
+  string agent_config_id = 2;
+  string instructions = 3;
+  string worktree_branch = 4;
+  map<string, string> metadata = 5;
+}
+
+message InteractionResponseCommand {
+  string interaction_id = 1;
+  string response = 2;
+}
+
+message CancelTaskCommand {
+  string task_id = 1;
+  string reason = 2;
+}
+
+message HeartbeatRequest {
+  string agent_manager_id = 1;
+  int32 active_tasks = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+message HeartbeatResponse {}
+
+enum TaskResultStatus {
+  TASK_RESULT_STATUS_UNSPECIFIED = 0;
+  TASK_RESULT_STATUS_COMPLETED = 1;
+  TASK_RESULT_STATUS_FAILED = 2;
+}
+
+message ReportTaskResultRequest {
+  string task_id = 1;
+  TaskResultStatus status = 2;
+  string summary = 3;
+  string error_message = 4;
+}
+message ReportTaskResultResponse {}
+
+message CreateInteractionRequest {
+  string task_id = 1;
+  string agent_id = 2;
+  InteractionType type = 3;
+  string title = 4;
+  string description = 5;
+  repeated InteractionOption options = 6;
+}
+message CreateInteractionResponse {
+  Interaction interaction = 1;
+}
+
+message GetInteractionResponseRequest {
+  string interaction_id = 1;
+}
+message GetInteractionResponseResponse {
+  Interaction interaction = 1;
+}
+
+enum AgentStatus {
+  AGENT_STATUS_UNSPECIFIED = 0;
+  AGENT_STATUS_IDLE = 1;
+  AGENT_STATUS_RUNNING = 2;
+  AGENT_STATUS_WAITING = 3;
+  AGENT_STATUS_ERROR = 4;
+}
+
+message ReportAgentStatusRequest {
+  string agent_manager_id = 1;
+  string task_id = 2;
+  AgentStatus status = 3;
+  string message = 4;
+}
+message ReportAgentStatusResponse {}
