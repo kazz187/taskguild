@@ -241,6 +241,8 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
               isDragging={activeTask !== null}
               transitionTargets={transitionTargetsByStatus.get(status.id) ?? []}
               onTransition={handleMobileTransition}
+              defaultPermissionMode={workflow.defaultPermissionMode}
+              defaultUseWorktree={workflow.defaultUseWorktree}
             />
           ))}
         </div>
@@ -282,6 +284,8 @@ function StatusColumn({
   isDragging,
   transitionTargets,
   onTransition,
+  defaultPermissionMode,
+  defaultUseWorktree,
 }: {
   projectId: string
   workflowId: string
@@ -294,6 +298,8 @@ function StatusColumn({
   isDragging: boolean
   transitionTargets: { id: string; name: string }[]
   onTransition: (taskId: string, targetStatusId: string) => void
+  defaultPermissionMode?: string
+  defaultUseWorktree?: boolean
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.id })
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -369,6 +375,8 @@ function StatusColumn({
         <TaskCreateModal
           projectId={projectId}
           workflowId={workflowId}
+          defaultPermissionMode={defaultPermissionMode}
+          defaultUseWorktree={defaultUseWorktree}
           onCreated={onCreated}
           onClose={() => setShowCreateModal(false)}
         />

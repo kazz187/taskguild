@@ -25,12 +25,14 @@ func NewServer(repo Repository) *Server {
 func (s *Server) CreateWorkflow(ctx context.Context, req *connect.Request[taskguildv1.CreateWorkflowRequest]) (*connect.Response[taskguildv1.CreateWorkflowResponse], error) {
 	now := time.Now()
 	w := &Workflow{
-		ID:          ulid.Make().String(),
-		ProjectID:   req.Msg.ProjectId,
-		Name:        req.Msg.Name,
-		Description: req.Msg.Description,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:                    ulid.Make().String(),
+		ProjectID:             req.Msg.ProjectId,
+		Name:                  req.Msg.Name,
+		Description:           req.Msg.Description,
+		DefaultPermissionMode: req.Msg.DefaultPermissionMode,
+		DefaultUseWorktree:    req.Msg.DefaultUseWorktree,
+		CreatedAt:             now,
+		UpdatedAt:             now,
 	}
 	for _, ps := range req.Msg.Statuses {
 		w.Statuses = append(w.Statuses, statusFromProto(ps))
@@ -105,6 +107,9 @@ func (s *Server) UpdateWorkflow(ctx context.Context, req *connect.Request[taskgu
 			w.AgentConfigs = append(w.AgentConfigs, agentConfigFromProto(pa))
 		}
 	}
+	// Task defaults: always overwrite (empty string is a valid value for permission mode)
+	w.DefaultPermissionMode = req.Msg.DefaultPermissionMode
+	w.DefaultUseWorktree = req.Msg.DefaultUseWorktree
 	w.UpdatedAt = time.Now()
 	if err := s.repo.Update(ctx, w); err != nil {
 		return nil, err
@@ -123,12 +128,14 @@ func (s *Server) DeleteWorkflow(ctx context.Context, req *connect.Request[taskgu
 
 func toProto(w *Workflow) *taskguildv1.Workflow {
 	pb := &taskguildv1.Workflow{
-		Id:          w.ID,
-		ProjectId:   w.ProjectID,
-		Name:        w.Name,
-		Description: w.Description,
-		CreatedAt:   timestamppb.New(w.CreatedAt),
-		UpdatedAt:   timestamppb.New(w.UpdatedAt),
+		Id:                    w.ID,
+		ProjectId:             w.ProjectID,
+		Name:                  w.Name,
+		Description:           w.Description,
+		DefaultPermissionMode: w.DefaultPermissionMode,
+		DefaultUseWorktree:    w.DefaultUseWorktree,
+		CreatedAt:             timestamppb.New(w.CreatedAt),
+		UpdatedAt:             timestamppb.New(w.UpdatedAt),
 	}
 	for _, st := range w.Statuses {
 		pb.Statuses = append(pb.Statuses, statusToProto(st))

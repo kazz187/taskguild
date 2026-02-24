@@ -128,6 +128,8 @@ export function WorkflowForm({
 
   const [name, setName] = useState(workflow?.name ?? '')
   const [description, setDescription] = useState(workflow?.description ?? '')
+  const [defaultPermissionMode, setDefaultPermissionMode] = useState(workflow?.defaultPermissionMode ?? '')
+  const [defaultUseWorktree, setDefaultUseWorktree] = useState(workflow?.defaultUseWorktree ?? false)
   const [statuses, setStatuses] = useState<StatusDraft[]>(initial.statusDrafts)
   const [agentConfigs] = useState<AgentConfigDraft[]>(initial.agentDrafts)
 
@@ -313,6 +315,8 @@ export function WorkflowForm({
           description,
           statuses: protoStatuses,
           agentConfigs: protoAgentConfigs,
+          defaultPermissionMode,
+          defaultUseWorktree,
         },
         { onSuccess: onSaved },
       )
@@ -324,6 +328,8 @@ export function WorkflowForm({
           description,
           statuses: protoStatuses,
           agentConfigs: protoAgentConfigs,
+          defaultPermissionMode,
+          defaultUseWorktree,
         },
         { onSuccess: onSaved },
       )
@@ -368,6 +374,36 @@ export function WorkflowForm({
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
               placeholder="Workflow description"
             />
+          </div>
+        </div>
+
+        {/* Task Defaults */}
+        <div className="mb-6 md:mb-8">
+          <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-3">
+            Task Defaults
+          </h3>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Permission Mode</label>
+              <select
+                value={defaultPermissionMode}
+                onChange={(e) => setDefaultPermissionMode(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
+              >
+                <option value="">Default (ask for permission)</option>
+                <option value="acceptEdits">Accept Edits (auto-approve file changes)</option>
+                <option value="bypassPermissions">Bypass Permissions (auto-approve all)</option>
+              </select>
+            </div>
+            <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={defaultUseWorktree}
+                onChange={(e) => setDefaultUseWorktree(e.target.checked)}
+                className="accent-cyan-500"
+              />
+              Use Worktree (isolate changes in a git worktree)
+            </label>
           </div>
         </div>
 

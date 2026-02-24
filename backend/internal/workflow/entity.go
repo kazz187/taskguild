@@ -11,6 +11,10 @@ type Workflow struct {
 	AgentConfigs []AgentConfig `yaml:"agent_configs"`
 	CreatedAt    time.Time     `yaml:"created_at"`
 	UpdatedAt    time.Time     `yaml:"updated_at"`
+
+	// Task defaults
+	DefaultPermissionMode string `yaml:"default_permission_mode,omitempty"`
+	DefaultUseWorktree    bool   `yaml:"default_use_worktree,omitempty"`
 }
 
 type HookTrigger string

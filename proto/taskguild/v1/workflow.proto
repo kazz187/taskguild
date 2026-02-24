@@ -30,6 +30,10 @@ message Workflow {
   // timestamps
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;
+
+  // task defaults
+  string default_permission_mode = 9;   // default permission mode for new tasks
+  bool default_use_worktree = 10;       // default use_worktree flag for new tasks
 }
 
 enum HookTrigger {
@@ -89,6 +93,10 @@ message CreateWorkflowRequest {
   // configuration
   repeated WorkflowStatus statuses = 4;
   repeated AgentConfig agent_configs = 5;
+
+  // task defaults
+  string default_permission_mode = 6;
+  bool default_use_worktree = 7;
 }
 message CreateWorkflowResponse {
   Workflow workflow = 1;
@@ -120,6 +128,10 @@ message UpdateWorkflowRequest {
   // configuration
   repeated WorkflowStatus statuses = 4;
   repeated AgentConfig agent_configs = 5;
+
+  // task defaults
+  string default_permission_mode = 6;
+  bool default_use_worktree = 7;
 }
 message UpdateWorkflowResponse {
   Workflow workflow = 1;

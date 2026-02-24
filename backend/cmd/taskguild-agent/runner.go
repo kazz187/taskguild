@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -248,6 +249,14 @@ func runTask(
 	if worktreeName == "" && metadata["_use_worktree"] == "true" {
 		worktreeName = generateWorktreeName(ctx, taskID, metadata["_task_title"], workDir)
 		saveWorktreeName(ctx, taskClient, taskID, worktreeName)
+	}
+
+	// Ensure the worktree directory exists before launching Claude so that
+	// Cwd is set to the worktree from the very first turn.
+	if metadata["_use_worktree"] == "true" && worktreeName != "" {
+		if _, err := ensureWorktree(ctx, workDir, worktreeName, taskID); err != nil {
+			log.Printf("[task:%s] WARNING: failed to ensure worktree: %v", taskID, err)
+		}
 	}
 
 	// resolveHookDir returns the worktree directory if it exists, otherwise workDir.
@@ -518,6 +527,33 @@ func slugifyASCII(s string) string {
 	}
 	slug := strings.Trim(sb.String(), "-")
 	return slugMultiHyphen.ReplaceAllString(slug, "-")
+}
+
+// ensureWorktree creates a git worktree if the directory does not already exist.
+// It uses "git worktree add" with a new branch based on HEAD.
+func ensureWorktree(ctx context.Context, workDir, worktreeName, taskID string) (string, error) {
+	wtDir := filepath.Join(workDir, ".claude", "worktrees", worktreeName)
+	if info, err := os.Stat(wtDir); err == nil && info.IsDir() {
+		return wtDir, nil
+	}
+
+	if err := os.MkdirAll(filepath.Join(workDir, ".claude", "worktrees"), 0o755); err != nil {
+		return "", fmt.Errorf("mkdir: %w", err)
+	}
+
+	branchName := "worktree-" + worktreeName
+	cmd := exec.CommandContext(ctx, "git", "worktree", "add", "-b", branchName, wtDir)
+	cmd.Dir = workDir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		// Branch may already exist from a previous run; try without -b.
+		cmd2 := exec.CommandContext(ctx, "git", "worktree", "add", wtDir, branchName)
+		cmd2.Dir = workDir
+		if out2, err2 := cmd2.CombinedOutput(); err2 != nil {
+			return "", fmt.Errorf("git worktree add: %w: %s / %s", err2, out, out2)
+		}
+	}
+	log.Printf("[task:%s] created worktree at %s (branch: %s)", taskID, wtDir, branchName)
+	return wtDir, nil
 }
 
 // generateWorktreeName creates a git-safe worktree/branch name from the task ID and title.

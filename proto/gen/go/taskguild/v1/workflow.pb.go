@@ -87,10 +87,13 @@ type Workflow struct {
 	Statuses     []*WorkflowStatus `protobuf:"bytes,5,rep,name=statuses,proto3" json:"statuses,omitempty"`
 	AgentConfigs []*AgentConfig    `protobuf:"bytes,6,rep,name=agent_configs,json=agentConfigs,proto3" json:"agent_configs,omitempty"`
 	// timestamps
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// task defaults
+	DefaultPermissionMode string `protobuf:"bytes,9,opt,name=default_permission_mode,json=defaultPermissionMode,proto3" json:"default_permission_mode,omitempty"` // default permission mode for new tasks
+	DefaultUseWorktree    bool   `protobuf:"varint,10,opt,name=default_use_worktree,json=defaultUseWorktree,proto3" json:"default_use_worktree,omitempty"`        // default use_worktree flag for new tasks
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *Workflow) Reset() {
@@ -177,6 +180,20 @@ func (x *Workflow) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *Workflow) GetDefaultPermissionMode() string {
+	if x != nil {
+		return x.DefaultPermissionMode
+	}
+	return ""
+}
+
+func (x *Workflow) GetDefaultUseWorktree() bool {
+	if x != nil {
+		return x.DefaultUseWorktree
+	}
+	return false
 }
 
 type StatusHook struct {
@@ -453,10 +470,13 @@ type CreateWorkflowRequest struct {
 	Name        string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
 	// configuration
-	Statuses      []*WorkflowStatus `protobuf:"bytes,4,rep,name=statuses,proto3" json:"statuses,omitempty"`
-	AgentConfigs  []*AgentConfig    `protobuf:"bytes,5,rep,name=agent_configs,json=agentConfigs,proto3" json:"agent_configs,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Statuses     []*WorkflowStatus `protobuf:"bytes,4,rep,name=statuses,proto3" json:"statuses,omitempty"`
+	AgentConfigs []*AgentConfig    `protobuf:"bytes,5,rep,name=agent_configs,json=agentConfigs,proto3" json:"agent_configs,omitempty"`
+	// task defaults
+	DefaultPermissionMode string `protobuf:"bytes,6,opt,name=default_permission_mode,json=defaultPermissionMode,proto3" json:"default_permission_mode,omitempty"`
+	DefaultUseWorktree    bool   `protobuf:"varint,7,opt,name=default_use_worktree,json=defaultUseWorktree,proto3" json:"default_use_worktree,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *CreateWorkflowRequest) Reset() {
@@ -522,6 +542,20 @@ func (x *CreateWorkflowRequest) GetAgentConfigs() []*AgentConfig {
 		return x.AgentConfigs
 	}
 	return nil
+}
+
+func (x *CreateWorkflowRequest) GetDefaultPermissionMode() string {
+	if x != nil {
+		return x.DefaultPermissionMode
+	}
+	return ""
+}
+
+func (x *CreateWorkflowRequest) GetDefaultUseWorktree() bool {
+	if x != nil {
+		return x.DefaultUseWorktree
+	}
+	return false
 }
 
 type CreateWorkflowResponse struct {
@@ -767,10 +801,13 @@ type UpdateWorkflowRequest struct {
 	Name        string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
 	// configuration
-	Statuses      []*WorkflowStatus `protobuf:"bytes,4,rep,name=statuses,proto3" json:"statuses,omitempty"`
-	AgentConfigs  []*AgentConfig    `protobuf:"bytes,5,rep,name=agent_configs,json=agentConfigs,proto3" json:"agent_configs,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Statuses     []*WorkflowStatus `protobuf:"bytes,4,rep,name=statuses,proto3" json:"statuses,omitempty"`
+	AgentConfigs []*AgentConfig    `protobuf:"bytes,5,rep,name=agent_configs,json=agentConfigs,proto3" json:"agent_configs,omitempty"`
+	// task defaults
+	DefaultPermissionMode string `protobuf:"bytes,6,opt,name=default_permission_mode,json=defaultPermissionMode,proto3" json:"default_permission_mode,omitempty"`
+	DefaultUseWorktree    bool   `protobuf:"varint,7,opt,name=default_use_worktree,json=defaultUseWorktree,proto3" json:"default_use_worktree,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *UpdateWorkflowRequest) Reset() {
@@ -836,6 +873,20 @@ func (x *UpdateWorkflowRequest) GetAgentConfigs() []*AgentConfig {
 		return x.AgentConfigs
 	}
 	return nil
+}
+
+func (x *UpdateWorkflowRequest) GetDefaultPermissionMode() string {
+	if x != nil {
+		return x.DefaultPermissionMode
+	}
+	return ""
+}
+
+func (x *UpdateWorkflowRequest) GetDefaultUseWorktree() bool {
+	if x != nil {
+		return x.DefaultUseWorktree
+	}
+	return false
 }
 
 type UpdateWorkflowResponse struct {
@@ -966,7 +1017,7 @@ var File_taskguild_v1_workflow_proto protoreflect.FileDescriptor
 
 const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\n" +
-	"\x1btaskguild/v1/workflow.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19taskguild/v1/common.proto\"\xdf\x02\n" +
+	"\x1btaskguild/v1/workflow.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19taskguild/v1/common.proto\"\xc9\x03\n" +
 	"\bWorkflow\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -978,7 +1029,10 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x96\x01\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x126\n" +
+	"\x17default_permission_mode\x18\t \x01(\tR\x15defaultPermissionMode\x120\n" +
+	"\x14default_use_worktree\x18\n" +
+	" \x01(\bR\x12defaultUseWorktree\"\x96\x01\n" +
 	"\n" +
 	"StatusHook\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
@@ -1003,14 +1057,16 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\"\n" +
 	"\finstructions\x18\x05 \x01(\tR\finstructions\x12#\n" +
-	"\rallowed_tools\x18\x06 \x03(\tR\fallowedTools\"\xe6\x01\n" +
+	"\rallowed_tools\x18\x06 \x03(\tR\fallowedTools\"\xd0\x02\n" +
 	"\x15CreateWorkflowRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x128\n" +
 	"\bstatuses\x18\x04 \x03(\v2\x1c.taskguild.v1.WorkflowStatusR\bstatuses\x12>\n" +
-	"\ragent_configs\x18\x05 \x03(\v2\x19.taskguild.v1.AgentConfigR\fagentConfigs\"L\n" +
+	"\ragent_configs\x18\x05 \x03(\v2\x19.taskguild.v1.AgentConfigR\fagentConfigs\x126\n" +
+	"\x17default_permission_mode\x18\x06 \x01(\tR\x15defaultPermissionMode\x120\n" +
+	"\x14default_use_worktree\x18\a \x01(\bR\x12defaultUseWorktree\"L\n" +
 	"\x16CreateWorkflowResponse\x122\n" +
 	"\bworkflow\x18\x01 \x01(\v2\x16.taskguild.v1.WorkflowR\bworkflow\"$\n" +
 	"\x12GetWorkflowRequest\x12\x0e\n" +
@@ -1027,13 +1083,15 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\tworkflows\x18\x01 \x03(\v2\x16.taskguild.v1.WorkflowR\tworkflows\x12@\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2 .taskguild.v1.PaginationResponseR\n" +
-	"pagination\"\xd7\x01\n" +
+	"pagination\"\xc1\x02\n" +
 	"\x15UpdateWorkflowRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x128\n" +
 	"\bstatuses\x18\x04 \x03(\v2\x1c.taskguild.v1.WorkflowStatusR\bstatuses\x12>\n" +
-	"\ragent_configs\x18\x05 \x03(\v2\x19.taskguild.v1.AgentConfigR\fagentConfigs\"L\n" +
+	"\ragent_configs\x18\x05 \x03(\v2\x19.taskguild.v1.AgentConfigR\fagentConfigs\x126\n" +
+	"\x17default_permission_mode\x18\x06 \x01(\tR\x15defaultPermissionMode\x120\n" +
+	"\x14default_use_worktree\x18\a \x01(\bR\x12defaultUseWorktree\"L\n" +
 	"\x16UpdateWorkflowResponse\x122\n" +
 	"\bworkflow\x18\x01 \x01(\v2\x16.taskguild.v1.WorkflowR\bworkflow\"'\n" +
 	"\x15DeleteWorkflowRequest\x12\x0e\n" +

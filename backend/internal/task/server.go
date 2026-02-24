@@ -129,7 +129,12 @@ func (s *Server) UpdateTask(ctx context.Context, req *connect.Request[taskguildv
 		t.Description = req.Msg.Description
 	}
 	if req.Msg.Metadata != nil {
-		t.Metadata = req.Msg.Metadata
+		if t.Metadata == nil {
+			t.Metadata = make(map[string]string)
+		}
+		for k, v := range req.Msg.Metadata {
+			t.Metadata[k] = v
+		}
 	}
 	if req.Msg.UseWorktree != nil {
 		t.UseWorktree = *req.Msg.UseWorktree

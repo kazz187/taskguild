@@ -6,15 +6,17 @@ import { X } from 'lucide-react'
 interface TaskCreateModalProps {
   projectId: string
   workflowId: string
+  defaultPermissionMode?: string
+  defaultUseWorktree?: boolean
   onCreated: () => void
   onClose: () => void
 }
 
-export function TaskCreateModal({ projectId, workflowId, onCreated, onClose }: TaskCreateModalProps) {
+export function TaskCreateModal({ projectId, workflowId, defaultPermissionMode, defaultUseWorktree, onCreated, onClose }: TaskCreateModalProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [permissionMode, setPermissionMode] = useState('')
-  const [useWorktree, setUseWorktree] = useState(false)
+  const [permissionMode, setPermissionMode] = useState(defaultPermissionMode ?? '')
+  const [useWorktree, setUseWorktree] = useState(defaultUseWorktree ?? false)
   const createMut = useMutation(createTask)
 
   const handleCreate = () => {
