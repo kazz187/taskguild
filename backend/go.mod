@@ -12,7 +12,7 @@ require (
 	github.com/fatih/color v1.15.0
 	github.com/go-chi/chi/v5 v5.2.2
 	github.com/kazz187/claude-agent-sdk-go v0.0.6
-	github.com/kazz187/taskguild/proto/gen/go v0.0.0-00010101000000-000000000000
+	github.com/kazz187/taskguild/proto/gen/go v0.0.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/oklog/ulid/v2 v2.1.1
 	github.com/rs/cors v1.11.1
@@ -47,5 +47,3 @@ require (
 	golang.org/x/text v0.28.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
-
-replace github.com/kazz187/taskguild/proto/gen/go => ../proto/gen/go
