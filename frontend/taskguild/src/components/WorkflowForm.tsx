@@ -88,14 +88,23 @@ export function WorkflowForm({
 
   const initial = workflow
     ? workflowToDrafts(workflow)
-    : {
-        statusDrafts: [
-          { key: genKey(), id: '', name: 'Open', order: 0, isInitial: true, isTerminal: false, transitionsTo: [], agentId: '' },
-          { key: genKey(), id: '', name: 'In Progress', order: 1, isInitial: false, isTerminal: false, transitionsTo: [], agentId: '' },
-          { key: genKey(), id: '', name: 'Done', order: 2, isInitial: false, isTerminal: true, transitionsTo: [], agentId: '' },
-        ],
-        agentDrafts: [],
-      }
+    : (() => {
+        const kDraft = genKey()
+        const kDevelop = genKey()
+        const kReview = genKey()
+        const kTest = genKey()
+        const kClosed = genKey()
+        return {
+          statusDrafts: [
+            { key: kDraft, id: '', name: 'Draft', order: 0, isInitial: true, isTerminal: false, transitionsTo: [kDevelop], agentId: '' },
+            { key: kDevelop, id: '', name: 'Develop', order: 1, isInitial: false, isTerminal: false, transitionsTo: [kReview, kDraft], agentId: '' },
+            { key: kReview, id: '', name: 'Review', order: 2, isInitial: false, isTerminal: false, transitionsTo: [kTest], agentId: '' },
+            { key: kTest, id: '', name: 'Test', order: 3, isInitial: false, isTerminal: false, transitionsTo: [kClosed], agentId: '' },
+            { key: kClosed, id: '', name: 'Closed', order: 4, isInitial: false, isTerminal: true, transitionsTo: [], agentId: '' },
+          ],
+          agentDrafts: [],
+        }
+      })()
 
   const [name, setName] = useState(workflow?.name ?? '')
   const [description, setDescription] = useState(workflow?.description ?? '')

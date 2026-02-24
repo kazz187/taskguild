@@ -31,7 +31,7 @@ func loadConfig() (*config, error) {
 	cfg := &config{
 		ServerURL:          "http://localhost:3100",
 		AgentManagerID:     ulid.Make().String(),
-		MaxConcurrentTasks: 1,
+		MaxConcurrentTasks: 10,
 		WorkDir:            ".",
 	}
 

@@ -188,7 +188,7 @@ export function TaskDetailModal({
             {task.assignmentStatus === TaskAssignmentStatus.ASSIGNED ? (
               <span className="inline-flex items-center gap-1 text-xs bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-full px-2.5 py-1">
                 <Bot className="w-3 h-3" />
-                {task.assignedAgentId.slice(0, 12)}
+                {task.assignedAgentId.slice(-12)}
               </span>
             ) : task.assignmentStatus === TaskAssignmentStatus.PENDING ? (
               <span className="inline-flex items-center gap-1 text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded-full px-2.5 py-1">

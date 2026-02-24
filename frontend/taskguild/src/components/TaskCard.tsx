@@ -61,7 +61,7 @@ export function TaskCard({ task, onEdit, isDragOverlay }: TaskCardProps) {
         {task.assignmentStatus === TaskAssignmentStatus.ASSIGNED ? (
           <span className="inline-flex items-center gap-1 text-xs bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-full px-2 py-0.5">
             <Bot className="w-3 h-3" />
-            {task.assignedAgentId.slice(0, 8)}
+            {task.assignedAgentId.slice(-8)}
           </span>
         ) : task.assignmentStatus === TaskAssignmentStatus.PENDING ? (
           <span className="inline-flex items-center gap-1 text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded-full px-2 py-0.5">
@@ -74,7 +74,7 @@ export function TaskCard({ task, onEdit, isDragOverlay }: TaskCardProps) {
             Unassigned
           </span>
         )}
-        <span className="text-[10px] text-gray-600 font-mono">{task.id.slice(0, 12)}</span>
+        <span className="text-[10px] text-gray-600 font-mono">{task.id.slice(-12)}</span>
       </div>
     </div>
   )

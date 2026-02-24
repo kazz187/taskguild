@@ -12,7 +12,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"unicode"
 
 	"connectrpc.com/connect"
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
@@ -149,7 +148,7 @@ func runTask(
 	// Resolve worktree name: reuse persisted name or generate a new one.
 	worktreeName := metadata["_worktree_name"]
 	if worktreeName == "" && metadata["_use_worktree"] == "true" {
-		worktreeName = generateWorktreeName(taskID, metadata["_task_title"])
+		worktreeName = generateWorktreeName(ctx, taskID, metadata["_task_title"], workDir)
 		saveWorktreeName(ctx, taskClient, taskID, worktreeName)
 	}
 
@@ -339,19 +338,13 @@ func buildClaudeOptions(
 
 var slugMultiHyphen = regexp.MustCompile(`-{2,}`)
 
-// generateWorktreeName creates a git-safe worktree/branch name from the task ID and title.
-// Format: {taskID first 6 chars}_{slugified title} (max 50 chars).
-func generateWorktreeName(taskID, title string) string {
-	prefix := strings.ToLower(taskID)
-	if len(prefix) > 6 {
-		prefix = prefix[:6]
-	}
-
-	// Slugify title: lowercase, keep alphanumeric, replace spaces/separators with hyphens.
+// slugifyASCII extracts ASCII alphanumeric characters from a string, lowercased,
+// with non-ASCII/non-alnum replaced by hyphens (collapsed).
+func slugifyASCII(s string) string {
 	var sb strings.Builder
 	prevHyphen := false
-	for _, r := range strings.ToLower(title) {
-		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+	for _, r := range strings.ToLower(s) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
 			sb.WriteRune(r)
 			prevHyphen = false
 		} else if !prevHyphen {
@@ -360,7 +353,27 @@ func generateWorktreeName(taskID, title string) string {
 		}
 	}
 	slug := strings.Trim(sb.String(), "-")
-	slug = slugMultiHyphen.ReplaceAllString(slug, "-")
+	return slugMultiHyphen.ReplaceAllString(slug, "-")
+}
+
+// generateWorktreeName creates a git-safe worktree/branch name from the task ID and title.
+// If the title is mostly non-ASCII (e.g. Japanese), it uses a lightweight Claude call
+// to generate an English slug. Format: {taskID first 6 chars}_{slug} (max 50 chars).
+func generateWorktreeName(ctx context.Context, taskID, title, workDir string) string {
+	id := strings.ToLower(taskID)
+	prefix := id
+	if len(id) > 6 {
+		prefix = id[len(id)-6:]
+	}
+
+	slug := slugifyASCII(title)
+
+	// If the ASCII slug is too short (title was mostly non-ASCII), ask Claude to translate.
+	if len(slug) < 4 && title != "" {
+		if englishSlug := translateToEnglishSlug(ctx, title, workDir); englishSlug != "" {
+			slug = englishSlug
+		}
+	}
 
 	if slug == "" {
 		return prefix
@@ -372,6 +385,34 @@ func generateWorktreeName(taskID, title string) string {
 		name = strings.TrimRight(name, "-_")
 	}
 	return name
+}
+
+// translateToEnglishSlug uses a lightweight Claude call to convert a non-English
+// title into a short English slug suitable for a git branch name.
+func translateToEnglishSlug(ctx context.Context, title, workDir string) string {
+	prompt := fmt.Sprintf(
+		"Translate the following title into a short English slug for a git branch name. "+
+			"Output ONLY the slug (lowercase, hyphens, no spaces, max 30 chars). No explanation.\n\nTitle: %s",
+		title,
+	)
+	maxTurns := 1
+	opts := &claudeagent.ClaudeAgentOptions{
+		SystemPrompt: "You are a translation assistant. Output only the requested slug, nothing else.",
+		Cwd:          workDir,
+		MaxTurns:     &maxTurns,
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	result, err := claudeagent.RunQuerySync(timeoutCtx, prompt, opts)
+	if err != nil || result.Result == nil {
+		log.Printf("translateToEnglishSlug failed: %v", err)
+		return ""
+	}
+
+	raw := strings.TrimSpace(result.Result.Result)
+	return slugifyASCII(raw)
 }
 
 // waitForUserResponse creates a QUESTION interaction and waits for a response via the event stream.
