@@ -11,6 +11,8 @@ import {
   Timer,
 } from 'lucide-react'
 import { MarkdownDescription } from './MarkdownDescription'
+import { ConnectionIndicator } from './ConnectionIndicator'
+import type { ConnectionStatus } from '@/hooks/useEventSubscription'
 
 /* ─── Helpers ─── */
 
@@ -147,12 +149,16 @@ export function InputBar({
   onSendMessage,
   isRespondPending,
   isSendPending,
+  connectionStatus,
+  onReconnect,
 }: {
   pendingInteraction?: Interaction
   onRespond: (id: string, response: string) => void
   onSendMessage: (message: string) => void
   isRespondPending: boolean
   isSendPending: boolean
+  connectionStatus?: ConnectionStatus
+  onReconnect?: () => void
 }) {
   const [text, setText] = useState('')
 
@@ -181,7 +187,10 @@ export function InputBar({
           {pendingInteraction.title}
         </p>
       )}
-      <div className="flex gap-3 items-end">
+      <div className="flex gap-2 items-end">
+        {connectionStatus && onReconnect && (
+          <ConnectionIndicator status={connectionStatus} onReconnect={onReconnect} />
+        )}
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}

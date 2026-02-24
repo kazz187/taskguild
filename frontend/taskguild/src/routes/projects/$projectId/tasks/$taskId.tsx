@@ -63,7 +63,7 @@ function TaskDetailPage() {
     EventType.AGENT_STATUS_CHANGED, EventType.INTERACTION_CREATED, EventType.INTERACTION_RESPONDED,
   ], [])
 
-  useEventSubscription(eventTypes, projectId, onEvent)
+  const { connectionStatus, reconnect } = useEventSubscription(eventTypes, projectId, onEvent)
 
   // Auto-scroll to bottom when new interactions arrive
   useEffect(() => {
@@ -247,6 +247,8 @@ function TaskDetailPage() {
             onSendMessage={handleSendMessage}
             isRespondPending={respondMut.isPending}
             isSendPending={sendMut.isPending}
+            connectionStatus={connectionStatus}
+            onReconnect={reconnect}
           />
         </div>
       </div>

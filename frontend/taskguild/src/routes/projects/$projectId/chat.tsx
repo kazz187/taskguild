@@ -9,6 +9,7 @@ import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { ChatBubble } from '@/components/ChatBubble'
 import { shortId } from '@/lib/id'
 import { ArrowLeft } from 'lucide-react'
+import { ConnectionIndicator } from '@/components/ConnectionIndicator'
 
 export const Route = createFileRoute('/projects/$projectId/chat')({
   component: ProjectChatPage,
@@ -46,7 +47,7 @@ function ProjectChatPage() {
     EventType.TASK_CREATED, EventType.TASK_UPDATED, EventType.INTERACTION_CREATED, EventType.INTERACTION_RESPONDED,
   ], [])
 
-  useEventSubscription(eventTypes, projectId, onEvent)
+  const { connectionStatus, reconnect } = useEventSubscription(eventTypes, projectId, onEvent)
 
   // Auto-scroll to bottom when new interactions arrive
   useEffect(() => {
@@ -116,6 +117,16 @@ function ProjectChatPage() {
               </div>
             )
           })}
+        </div>
+      </div>
+
+      {/* Connection status bar */}
+      <div className="shrink-0 border-t border-slate-800 px-6 py-2">
+        <div className="max-w-3xl mx-auto flex items-center gap-2">
+          <ConnectionIndicator status={connectionStatus} onReconnect={reconnect} />
+          <span className="text-[11px] text-gray-500">
+            {connectionStatus === 'connected' ? 'Connected' : connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
+          </span>
         </div>
       </div>
     </div>
