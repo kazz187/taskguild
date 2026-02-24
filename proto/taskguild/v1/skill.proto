@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+package taskguild.v1;
+
+import "google/protobuf/timestamp.proto";
+import "taskguild/v1/common.proto";
+
+service SkillService {
+  rpc CreateSkill(CreateSkillRequest) returns (CreateSkillResponse);
+  rpc GetSkill(GetSkillRequest) returns (GetSkillResponse);
+  rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse);
+  rpc UpdateSkill(UpdateSkillRequest) returns (UpdateSkillResponse);
+  rpc DeleteSkill(DeleteSkillRequest) returns (DeleteSkillResponse);
+  // SyncSkillsFromDir scans the given directory for .claude/skills/*/SKILL.md files
+  // and creates/updates skills for the specified project.
+  rpc SyncSkillsFromDir(SyncSkillsFromDirRequest) returns (SyncSkillsFromDirResponse);
+}
+
+// SkillDefinition defines a reusable skill (SKILL.md) that can be referenced by agents.
+// Fields align with the Claude Code skill SKILL.md frontmatter format.
+message SkillDefinition {
+  // identity
+  string id = 1;
+  string project_id = 2;
+  string name = 3;                       // unique name (directory name in .claude/skills/)
+  string description = 4;                // when to use this skill
+
+  // skill content (body of the SKILL.md file)
+  string content = 5;
+
+  // invocation control
+  bool disable_model_invocation = 6;     // if true, only user can invoke via /name
+  bool user_invocable = 7;               // if false, only Claude can invoke
+
+  // tool access
+  repeated string allowed_tools = 8;     // tools allowed when this skill is active
+
+  // model & execution
+  string model = 9;                      // model to use when skill is active
+  string context = 10;                   // "fork" to run in a sub-agent
+  string agent = 11;                     // sub-agent type when context=fork (e.g. Explore, Plan)
+
+  // argument hint
+  string argument_hint = 12;             // hint shown in autocomplete (e.g. [issue-number])
+
+  // metadata
+  bool is_synced = 13;                   // true if synced from repository .claude/skills/ directory
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp updated_at = 15;
+}
+
+message CreateSkillRequest {
+  string project_id = 1;
+
+  // identity
+  string name = 2;
+  string description = 3;
+
+  // skill content
+  string content = 4;
+
+  // invocation control
+  bool disable_model_invocation = 5;
+  bool user_invocable = 6;
+
+  // tool access
+  repeated string allowed_tools = 7;
+
+  // model & execution
+  string model = 8;
+  string context = 9;
+  string agent = 10;
+
+  // argument hint
+  string argument_hint = 11;
+}
+message CreateSkillResponse {
+  SkillDefinition skill = 1;
+}
+
+message GetSkillRequest {
+  string id = 1;
+}
+message GetSkillResponse {
+  SkillDefinition skill = 1;
+}
+
+message ListSkillsRequest {
+  string project_id = 1;
+  PaginationRequest pagination = 2;
+}
+message ListSkillsResponse {
+  repeated SkillDefinition skills = 1;
+  PaginationResponse pagination = 2;
+}
+
+message UpdateSkillRequest {
+  string id = 1;
+
+  // identity
+  string name = 2;
+  string description = 3;
+
+  // skill content
+  string content = 4;
+
+  // invocation control
+  bool disable_model_invocation = 5;
+  bool user_invocable = 6;
+
+  // tool access
+  repeated string allowed_tools = 7;
+
+  // model & execution
+  string model = 8;
+  string context = 9;
+  string agent = 10;
+
+  // argument hint
+  string argument_hint = 11;
+}
+message UpdateSkillResponse {
+  SkillDefinition skill = 1;
+}
+
+message DeleteSkillRequest {
+  string id = 1;
+}
+message DeleteSkillResponse {}
+
+message SyncSkillsFromDirRequest {
+  string project_id = 1;
+  string directory = 2;  // path to the repository root directory
+}
+message SyncSkillsFromDirResponse {
+  repeated SkillDefinition skills = 1;  // skills that were synced
+  int32 created = 2;
+  int32 updated = 3;
+}

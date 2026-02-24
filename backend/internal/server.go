@@ -18,6 +18,7 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/event"
 	"github.com/kazz187/taskguild/backend/internal/interaction"
 	"github.com/kazz187/taskguild/backend/internal/project"
+	"github.com/kazz187/taskguild/backend/internal/skill"
 	"github.com/kazz187/taskguild/backend/internal/task"
 	"github.com/kazz187/taskguild/backend/internal/workflow"
 	"github.com/kazz187/taskguild/backend/internal/config"
@@ -35,6 +36,7 @@ type Server struct {
 	interactionServer  *interaction.Server
 	agentManagerServer *agentmanager.Server
 	agentServer        *agent.Server
+	skillServer        *skill.Server
 	eventServer        *event.Server
 }
 
@@ -46,6 +48,7 @@ func NewServer(
 	interactionServer *interaction.Server,
 	agentManagerServer *agentmanager.Server,
 	agentServer *agent.Server,
+	skillServer *skill.Server,
 	eventServer *event.Server,
 ) *Server {
 	return &Server{
@@ -56,6 +59,7 @@ func NewServer(
 		interactionServer:  interactionServer,
 		agentManagerServer: agentManagerServer,
 		agentServer:        agentServer,
+		skillServer:        skillServer,
 		eventServer:        eventServer,
 	}
 }
@@ -91,6 +95,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	mux.Handle(taskguildv1connect.NewInteractionServiceHandler(s.interactionServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewAgentManagerServiceHandler(s.agentManagerServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewAgentServiceHandler(s.agentServer, handlerOpts))
+	mux.Handle(taskguildv1connect.NewSkillServiceHandler(s.skillServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewEventServiceHandler(s.eventServer, handlerOpts))
 
 	addr := net.JoinHostPort(s.env.HTTPHost, s.env.HTTPPort)
