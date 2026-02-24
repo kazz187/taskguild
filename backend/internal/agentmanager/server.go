@@ -424,6 +424,50 @@ func (s *Server) GetInteractionResponse(ctx context.Context, req *connect.Reques
 	}), nil
 }
 
+func (s *Server) SyncAgents(ctx context.Context, req *connect.Request[taskguildv1.SyncAgentsRequest]) (*connect.Response[taskguildv1.SyncAgentsResponse], error) {
+	projectName := req.Msg.ProjectName
+	if projectName == "" {
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+	}
+
+	proj, err := s.projectRepo.FindByName(ctx, projectName)
+	if err != nil {
+		return nil, cerr.ExtractConnectError(ctx, err)
+	}
+
+	agents, _, err := s.agentRepo.List(ctx, proj.ID, 1000, 0)
+	if err != nil {
+		return nil, cerr.ExtractConnectError(ctx, err)
+	}
+
+	protos := make([]*taskguildv1.AgentDefinition, len(agents))
+	for i, ag := range agents {
+		protos[i] = agentToProto(ag)
+	}
+
+	return connect.NewResponse(&taskguildv1.SyncAgentsResponse{
+		Agents: protos,
+	}), nil
+}
+
+func agentToProto(a *agent.Agent) *taskguildv1.AgentDefinition {
+	return &taskguildv1.AgentDefinition{
+		Id:             a.ID,
+		ProjectId:      a.ProjectID,
+		Name:           a.Name,
+		Description:    a.Description,
+		Prompt:         a.Prompt,
+		Tools:          a.Tools,
+		Model:          a.Model,
+		MaxTurns:       a.MaxTurns,
+		PermissionMode: a.PermissionMode,
+		Isolation:      a.Isolation,
+		IsSynced:       a.IsSynced,
+		CreatedAt:      timestamppb.New(a.CreatedAt),
+		UpdatedAt:      timestamppb.New(a.UpdatedAt),
+	}
+}
+
 func (s *Server) ReportAgentStatus(ctx context.Context, req *connect.Request[taskguildv1.ReportAgentStatusRequest]) (*connect.Response[taskguildv1.ReportAgentStatusResponse], error) {
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_AGENT_STATUS_CHANGED,

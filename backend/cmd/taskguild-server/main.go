@@ -27,8 +27,30 @@ import (
 	"github.com/kazz187/taskguild/backend/pkg/clog"
 	"github.com/kazz187/taskguild/backend/pkg/storage"
 
+	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
+
 	server "github.com/kazz187/taskguild/backend/internal"
 )
+
+// agentChangeNotifier implements agent.ChangeNotifier by broadcasting
+// a SyncAgentsCommand to connected agents in the same project.
+type agentChangeNotifier struct {
+	registry    *agentmanager.Registry
+	projectRepo project.Repository
+}
+
+func (n *agentChangeNotifier) NotifyAgentChange(projectID string) {
+	p, err := n.projectRepo.Get(context.Background(), projectID)
+	if err != nil {
+		slog.Error("failed to look up project for agent change notification", "project_id", projectID, "error", err)
+		return
+	}
+	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
+		Command: &taskguildv1.AgentCommand_SyncAgents{
+			SyncAgents: &taskguildv1.SyncAgentsCommand{},
+		},
+	})
+}
 
 func main() {
 	env, err := config.LoadEnv()
@@ -83,7 +105,11 @@ func main() {
 	taskServer := task.NewServer(taskRepo, workflowRepo, bus)
 	interactionServer := interaction.NewServer(interactionRepo, taskRepo, bus)
 	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, projectRepo, bus)
-	agentServer := agent.NewServer(agentRepo)
+	agentChangeNotifier := &agentChangeNotifier{
+		registry:    agentManagerRegistry,
+		projectRepo: projectRepo,
+	}
+	agentServer := agent.NewServer(agentRepo, agentChangeNotifier)
 	eventServer := event.NewServer(bus)
 
 	srv := server.NewServer(

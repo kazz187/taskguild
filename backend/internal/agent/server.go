@@ -19,12 +19,25 @@ import (
 
 var _ taskguildv1connect.AgentServiceHandler = (*Server)(nil)
 
-type Server struct {
-	repo Repository
+// ChangeNotifier is called after agent CRUD operations to notify connected
+// agents that they should re-sync their local agent definitions.
+type ChangeNotifier interface {
+	NotifyAgentChange(projectID string)
 }
 
-func NewServer(repo Repository) *Server {
-	return &Server{repo: repo}
+type Server struct {
+	repo     Repository
+	notifier ChangeNotifier
+}
+
+func NewServer(repo Repository, notifier ChangeNotifier) *Server {
+	return &Server{repo: repo, notifier: notifier}
+}
+
+func (s *Server) notifyChange(projectID string) {
+	if s.notifier != nil {
+		s.notifier.NotifyAgentChange(projectID)
+	}
 }
 
 func (s *Server) CreateAgent(ctx context.Context, req *connect.Request[taskguildv1.CreateAgentRequest]) (*connect.Response[taskguildv1.CreateAgentResponse], error) {
@@ -47,6 +60,7 @@ func (s *Server) CreateAgent(ctx context.Context, req *connect.Request[taskguild
 	if err := s.repo.Create(ctx, a); err != nil {
 		return nil, err
 	}
+	s.notifyChange(a.ProjectID)
 	return connect.NewResponse(&taskguildv1.CreateAgentResponse{
 		Agent: toProto(a),
 	}), nil
@@ -121,15 +135,22 @@ func (s *Server) UpdateAgent(ctx context.Context, req *connect.Request[taskguild
 	if err := s.repo.Update(ctx, a); err != nil {
 		return nil, err
 	}
+	s.notifyChange(a.ProjectID)
 	return connect.NewResponse(&taskguildv1.UpdateAgentResponse{
 		Agent: toProto(a),
 	}), nil
 }
 
 func (s *Server) DeleteAgent(ctx context.Context, req *connect.Request[taskguildv1.DeleteAgentRequest]) (*connect.Response[taskguildv1.DeleteAgentResponse], error) {
+	// Fetch the agent before deleting to capture the project ID for notification.
+	a, err := s.repo.Get(ctx, req.Msg.Id)
+	if err != nil {
+		return nil, err
+	}
 	if err := s.repo.Delete(ctx, req.Msg.Id); err != nil {
 		return nil, err
 	}
+	s.notifyChange(a.ProjectID)
 	return connect.NewResponse(&taskguildv1.DeleteAgentResponse{}), nil
 }
 
@@ -208,6 +229,10 @@ func (s *Server) SyncAgentsFromDir(ctx context.Context, req *connect.Request[tas
 			synced = append(synced, toProto(a))
 			created++
 		}
+	}
+
+	if created > 0 || updated > 0 {
+		s.notifyChange(req.Msg.ProjectId)
 	}
 
 	return connect.NewResponse(&taskguildv1.SyncAgentsFromDirResponse{

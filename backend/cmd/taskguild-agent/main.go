@@ -135,11 +135,17 @@ func main() {
 		heartbeat(ctx, client, cfg.AgentManagerID)
 	}()
 
+	// Initial agent sync before subscribing.
+	syncAgents(ctx, client, cfg)
+
 	// Subscribe loop with reconnection
 	for {
 		if ctx.Err() != nil {
 			break
 		}
+
+		// Re-sync agents on each reconnection so local files stay up-to-date.
+		syncAgents(ctx, client, cfg)
 
 		err := runSubscribeLoop(ctx, client, taskClient, interClient, cfg, &mu, activeTasks, &wg, sem)
 		if ctx.Err() != nil {
@@ -252,6 +258,10 @@ func runSubscribeLoop(
 
 				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir)
 			}(taskID)
+
+		case *v1.AgentCommand_SyncAgents:
+			log.Println("received sync agents command, re-syncing...")
+			syncAgents(ctx, client, cfg)
 
 		case *v1.AgentCommand_CancelTask:
 			cancelCmd := c.CancelTask

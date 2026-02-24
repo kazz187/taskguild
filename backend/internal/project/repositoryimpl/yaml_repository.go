@@ -56,6 +56,27 @@ func (r *YAMLRepository) Get(ctx context.Context, id string) (*project.Project, 
 	return &p, nil
 }
 
+func (r *YAMLRepository) FindByName(ctx context.Context, name string) (*project.Project, error) {
+	paths, err := r.storage.List(ctx, projectsPrefix)
+	if err != nil {
+		return nil, cerr.WrapStorageReadError("project", err)
+	}
+	for _, p := range paths {
+		data, err := r.storage.Read(ctx, p)
+		if err != nil {
+			continue
+		}
+		var proj project.Project
+		if err := yaml.Unmarshal(data, &proj); err != nil {
+			continue
+		}
+		if proj.Name == name {
+			return &proj, nil
+		}
+	}
+	return nil, cerr.NewError(cerr.NotFound, "project not found", nil)
+}
+
 func (r *YAMLRepository) List(ctx context.Context, limit, offset int) ([]*project.Project, int, error) {
 	paths, err := r.storage.List(ctx, projectsPrefix)
 	if err != nil {
