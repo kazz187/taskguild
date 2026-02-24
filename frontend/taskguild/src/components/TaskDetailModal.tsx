@@ -7,7 +7,7 @@ import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { InteractionStatus, InteractionType } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import type { WorkflowStatus } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
-import { X, Bot, Clock, Loader, Trash2, ArrowRight, MessageSquare, Shield, Bell } from 'lucide-react'
+import { X, Bot, Clock, GitBranch, Loader, Trash2, ArrowRight, MessageSquare, Shield, Bell } from 'lucide-react'
 import { MarkdownDescription } from './MarkdownDescription'
 import { shortId } from '@/lib/id'
 
@@ -176,6 +176,14 @@ export function TaskDetailModal({
               Use Worktree
             </label>
           </div>
+
+          {/* Worktree name display */}
+          {task.metadata?.['worktree'] && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-400 bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5">
+              <GitBranch className="w-3 h-3 text-gray-500 shrink-0" />
+              <span className="font-mono truncate">{task.metadata['worktree']}</span>
+            </div>
+          )}
 
           {/* Status + Agent + Transitions row */}
           <div className="flex items-center gap-2 flex-wrap">

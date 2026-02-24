@@ -2,7 +2,7 @@ import { useDraggable } from '@dnd-kit/core'
 import { useNavigate } from '@tanstack/react-router'
 import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { TaskAssignmentStatus } from '@taskguild/proto/taskguild/v1/task_pb.ts'
-import { Bot, Clock, Loader, Pencil } from 'lucide-react'
+import { Bot, Clock, GitBranch, Loader, Pencil } from 'lucide-react'
 import { shortId } from '@/lib/id'
 
 interface TaskCardProps {
@@ -55,6 +55,14 @@ export function TaskCard({ task, onEdit, isDragOverlay }: TaskCardProps) {
         <p className="text-xs text-gray-400 mt-1 line-clamp-2">
           {task.description}
         </p>
+      )}
+
+      {/* Worktree indicator */}
+      {task.useWorktree && (
+        <div className="mt-1.5 flex items-center gap-1 text-xs text-gray-500 truncate">
+          <GitBranch className="w-3 h-3 shrink-0" />
+          <span className="truncate font-mono">{task.metadata?.['worktree'] || 'worktree'}</span>
+        </div>
       )}
 
       {/* Assignment status + ID */}
