@@ -2,8 +2,19 @@ import { useState } from 'react'
 import { useMutation, useQuery } from '@connectrpc/connect-query'
 import { createWorkflow, updateWorkflow } from '@taskguild/proto/taskguild/v1/workflow-WorkflowService_connectquery.ts'
 import { listAgents } from '@taskguild/proto/taskguild/v1/agent-AgentService_connectquery.ts'
+import { listSkills } from '@taskguild/proto/taskguild/v1/skill-SkillService_connectquery.ts'
 import type { Workflow } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
-import { X, Plus, Trash2, Bot, ChevronUp, ChevronDown } from 'lucide-react'
+import { HookTrigger } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
+import { X, Plus, Trash2, Bot, ChevronUp, ChevronDown, Zap } from 'lucide-react'
+
+interface HookDraft {
+  key: string
+  id: string
+  skillId: string
+  trigger: HookTrigger
+  order: number
+  name: string
+}
 
 interface StatusDraft {
   key: string
@@ -14,6 +25,7 @@ interface StatusDraft {
   isTerminal: boolean
   transitionsTo: string[] // keys
   agentId: string // reference to AgentDefinition
+  hooks: HookDraft[]
 }
 
 interface AgentConfigDraft {
@@ -44,6 +56,14 @@ function workflowToDrafts(wf: Workflow) {
       isTerminal: s.isTerminal,
       transitionsTo: [], // fill below
       agentId: s.agentId ?? '',
+      hooks: (s.hooks ?? []).map((h) => ({
+        key: genKey(),
+        id: h.id,
+        skillId: h.skillId,
+        trigger: h.trigger,
+        order: h.order,
+        name: h.name,
+      })),
     }
   })
   // Resolve transitions from IDs to keys
@@ -96,11 +116,11 @@ export function WorkflowForm({
         const kClosed = genKey()
         return {
           statusDrafts: [
-            { key: kDraft, id: '', name: 'Draft', order: 0, isInitial: true, isTerminal: false, transitionsTo: [kDevelop], agentId: '' },
-            { key: kDevelop, id: '', name: 'Develop', order: 1, isInitial: false, isTerminal: false, transitionsTo: [kReview, kDraft], agentId: '' },
-            { key: kReview, id: '', name: 'Review', order: 2, isInitial: false, isTerminal: false, transitionsTo: [kTest], agentId: '' },
-            { key: kTest, id: '', name: 'Test', order: 3, isInitial: false, isTerminal: false, transitionsTo: [kClosed], agentId: '' },
-            { key: kClosed, id: '', name: 'Closed', order: 4, isInitial: false, isTerminal: true, transitionsTo: [], agentId: '' },
+            { key: kDraft, id: '', name: 'Draft', order: 0, isInitial: true, isTerminal: false, transitionsTo: [kDevelop], agentId: '', hooks: [] },
+            { key: kDevelop, id: '', name: 'Develop', order: 1, isInitial: false, isTerminal: false, transitionsTo: [kReview, kDraft], agentId: '', hooks: [] },
+            { key: kReview, id: '', name: 'Review', order: 2, isInitial: false, isTerminal: false, transitionsTo: [kTest], agentId: '', hooks: [] },
+            { key: kTest, id: '', name: 'Test', order: 3, isInitial: false, isTerminal: false, transitionsTo: [kClosed], agentId: '', hooks: [] },
+            { key: kClosed, id: '', name: 'Closed', order: 4, isInitial: false, isTerminal: true, transitionsTo: [], agentId: '', hooks: [] },
           ],
           agentDrafts: [],
         }
@@ -115,14 +135,74 @@ export function WorkflowForm({
   const { data: agentsData } = useQuery(listAgents, { projectId })
   const agents = agentsData?.agents ?? []
 
+  // Fetch available skills for the project.
+  const { data: skillsData } = useQuery(listSkills, { projectId })
+  const skills = skillsData?.skills ?? []
+
   const createMutation = useMutation(createWorkflow)
   const updateMutation = useMutation(updateWorkflow)
   const mutation = isEdit ? updateMutation : createMutation
 
+  const addHook = (statusKey: string) => {
+    setStatuses((prev) =>
+      prev.map((s) =>
+        s.key === statusKey
+          ? {
+              ...s,
+              hooks: [
+                ...s.hooks,
+                {
+                  key: genKey(),
+                  id: '',
+                  skillId: '',
+                  trigger: HookTrigger.BEFORE_TASK_EXECUTION,
+                  order: s.hooks.length,
+                  name: '',
+                },
+              ],
+            }
+          : s,
+      ),
+    )
+  }
+
+  const removeHook = (statusKey: string, hookKey: string) => {
+    setStatuses((prev) =>
+      prev.map((s) =>
+        s.key === statusKey
+          ? { ...s, hooks: s.hooks.filter((h) => h.key !== hookKey).map((h, i) => ({ ...h, order: i })) }
+          : s,
+      ),
+    )
+  }
+
+  const moveHook = (statusKey: string, hookIndex: number, direction: -1 | 1) => {
+    setStatuses((prev) =>
+      prev.map((s) => {
+        if (s.key !== statusKey) return s
+        const next = [...s.hooks]
+        const target = hookIndex + direction
+        if (target < 0 || target >= next.length) return s
+        ;[next[hookIndex], next[target]] = [next[target], next[hookIndex]]
+        return { ...s, hooks: next.map((h, i) => ({ ...h, order: i })) }
+      }),
+    )
+  }
+
+  const updateHook = (statusKey: string, hookKey: string, patch: Partial<HookDraft>) => {
+    setStatuses((prev) =>
+      prev.map((s) =>
+        s.key === statusKey
+          ? { ...s, hooks: s.hooks.map((h) => (h.key === hookKey ? { ...h, ...patch } : h)) }
+          : s,
+      ),
+    )
+  }
+
   const addStatus = () => {
     setStatuses((prev) => [
       ...prev,
-      { key: genKey(), id: '', name: '', order: prev.length, isInitial: false, isTerminal: false, transitionsTo: [], agentId: '' },
+      { key: genKey(), id: '', name: '', order: prev.length, isInitial: false, isTerminal: false, transitionsTo: [], agentId: '', hooks: [] },
     ])
   }
 
@@ -188,6 +268,15 @@ export function WorkflowForm({
       isTerminal: s.isTerminal,
       transitionsTo: s.transitionsTo.map((k) => keyToId.get(k)!).filter(Boolean),
       agentId: s.agentId,
+      hooks: s.hooks
+        .filter((h) => h.skillId)
+        .map((h) => ({
+          id: h.id,
+          skillId: h.skillId,
+          trigger: h.trigger,
+          order: h.order,
+          name: h.name,
+        })),
     }))
 
     // Keep legacy agent configs for backward compatibility with existing statuses
@@ -431,6 +520,94 @@ export function WorkflowForm({
                       {agents.length === 0 && (
                         <p className="mt-2 text-[11px] text-gray-600">
                           No agents defined yet. Create agents in the Agents page first.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Hooks */}
+                  {!s.isTerminal && (
+                    <div className="bg-slate-800/50 border border-slate-700 rounded p-2.5 md:p-3 mt-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Zap className="w-3.5 h-3.5 text-amber-400" />
+                          <span className="text-xs text-amber-400">Hooks</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addHook(s.key)}
+                          className="flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 transition-colors"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Add Hook
+                        </button>
+                      </div>
+                      {s.hooks.length === 0 && (
+                        <p className="text-[11px] text-gray-600">No hooks configured.</p>
+                      )}
+                      <div className="space-y-2">
+                        {s.hooks.map((h, hi) => (
+                          <div key={h.key} className="flex items-center gap-2 bg-slate-900/50 rounded p-2">
+                            <div className="flex flex-col -my-1">
+                              <button
+                                type="button"
+                                onClick={() => moveHook(s.key, hi, -1)}
+                                disabled={hi === 0}
+                                className="text-gray-600 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                              >
+                                <ChevronUp className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveHook(s.key, hi, 1)}
+                                disabled={hi === s.hooks.length - 1}
+                                className="text-gray-600 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                              >
+                                <ChevronDown className="w-3 h-3" />
+                              </button>
+                            </div>
+                            <select
+                              value={h.trigger}
+                              onChange={(e) =>
+                                updateHook(s.key, h.key, { trigger: Number(e.target.value) as HookTrigger })
+                              }
+                              className="px-1.5 py-1 bg-slate-800 border border-slate-700 rounded text-white text-[11px] focus:outline-none focus:border-cyan-500"
+                            >
+                              <option value={HookTrigger.BEFORE_TASK_EXECUTION}>Before Task</option>
+                              <option value={HookTrigger.AFTER_TASK_EXECUTION}>After Task</option>
+                              <option value={HookTrigger.AFTER_WORKTREE_CREATION}>After Worktree</option>
+                            </select>
+                            <select
+                              value={h.skillId}
+                              onChange={(e) => {
+                                const sk = skills.find((sk) => sk.id === e.target.value)
+                                updateHook(s.key, h.key, {
+                                  skillId: e.target.value,
+                                  name: sk?.name ?? h.name,
+                                })
+                              }}
+                              className="flex-1 min-w-0 px-1.5 py-1 bg-slate-800 border border-slate-700 rounded text-white text-[11px] focus:outline-none focus:border-cyan-500"
+                            >
+                              <option value="">Select skill…</option>
+                              {skills.map((sk) => (
+                                <option key={sk.id} value={sk.id}>
+                                  {sk.name}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => removeHook(s.key, h.key)}
+                              className="text-gray-600 hover:text-red-400 transition-colors p-0.5 shrink-0"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      {skills.length === 0 && s.hooks.length > 0 && (
+                        <p className="mt-2 text-[11px] text-gray-600">
+                          No skills defined yet. Create skills in the Skills page first.
                         </p>
                       )}
                     </div>

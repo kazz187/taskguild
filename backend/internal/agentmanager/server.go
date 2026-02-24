@@ -14,6 +14,7 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/eventbus"
 	"github.com/kazz187/taskguild/backend/internal/interaction"
 	"github.com/kazz187/taskguild/backend/internal/project"
+	"github.com/kazz187/taskguild/backend/internal/skill"
 	"github.com/kazz187/taskguild/backend/internal/task"
 	"github.com/kazz187/taskguild/backend/internal/workflow"
 	"github.com/kazz187/taskguild/backend/pkg/cerr"
@@ -30,10 +31,11 @@ type Server struct {
 	agentRepo       agent.Repository
 	interactionRepo interaction.Repository
 	projectRepo     project.Repository
+	skillRepo       skill.Repository
 	eventBus        *eventbus.Bus
 }
 
-func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, projectRepo project.Repository, eventBus *eventbus.Bus) *Server {
+func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, projectRepo project.Repository, skillRepo skill.Repository, eventBus *eventbus.Bus) *Server {
 	return &Server{
 		registry:        registry,
 		taskRepo:        taskRepo,
@@ -41,6 +43,7 @@ func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workfl
 		agentRepo:       agentRepo,
 		interactionRepo: interactionRepo,
 		projectRepo:     projectRepo,
+		skillRepo:       skillRepo,
 		eventBus:        eventBus,
 	}
 }
@@ -317,6 +320,44 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 				enrichedMetadata["_available_transitions"] = string(b)
 			}
 			break
+		}
+	}
+
+	// Resolve hooks for the current status and inject into metadata.
+	if s.skillRepo != nil {
+		for _, st := range wf.Statuses {
+			if st.ID == t.StatusID && len(st.Hooks) > 0 {
+				type hookEntry struct {
+					ID      string `json:"id"`
+					SkillID string `json:"skill_id"`
+					Trigger string `json:"trigger"`
+					Order   int32  `json:"order"`
+					Name    string `json:"name"`
+					Content string `json:"content"`
+				}
+				var hooks []hookEntry
+				for _, h := range st.Hooks {
+					sk, err := s.skillRepo.Get(ctx, h.SkillID)
+					if err != nil {
+						slog.Warn("failed to resolve hook skill", "hook_id", h.ID, "skill_id", h.SkillID, "error", err)
+						continue
+					}
+					hooks = append(hooks, hookEntry{
+						ID:      h.ID,
+						SkillID: h.SkillID,
+						Trigger: string(h.Trigger),
+						Order:   h.Order,
+						Name:    h.Name,
+						Content: sk.Content,
+					})
+				}
+				if len(hooks) > 0 {
+					if b, err := json.Marshal(hooks); err == nil {
+						enrichedMetadata["_hooks"] = string(b)
+					}
+				}
+				break
+			}
 		}
 	}
 

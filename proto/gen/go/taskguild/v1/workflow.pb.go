@@ -22,6 +22,58 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type HookTrigger int32
+
+const (
+	HookTrigger_HOOK_TRIGGER_UNSPECIFIED             HookTrigger = 0
+	HookTrigger_HOOK_TRIGGER_BEFORE_TASK_EXECUTION   HookTrigger = 1
+	HookTrigger_HOOK_TRIGGER_AFTER_TASK_EXECUTION    HookTrigger = 2
+	HookTrigger_HOOK_TRIGGER_AFTER_WORKTREE_CREATION HookTrigger = 3
+)
+
+// Enum value maps for HookTrigger.
+var (
+	HookTrigger_name = map[int32]string{
+		0: "HOOK_TRIGGER_UNSPECIFIED",
+		1: "HOOK_TRIGGER_BEFORE_TASK_EXECUTION",
+		2: "HOOK_TRIGGER_AFTER_TASK_EXECUTION",
+		3: "HOOK_TRIGGER_AFTER_WORKTREE_CREATION",
+	}
+	HookTrigger_value = map[string]int32{
+		"HOOK_TRIGGER_UNSPECIFIED":             0,
+		"HOOK_TRIGGER_BEFORE_TASK_EXECUTION":   1,
+		"HOOK_TRIGGER_AFTER_TASK_EXECUTION":    2,
+		"HOOK_TRIGGER_AFTER_WORKTREE_CREATION": 3,
+	}
+)
+
+func (x HookTrigger) Enum() *HookTrigger {
+	p := new(HookTrigger)
+	*p = x
+	return p
+}
+
+func (x HookTrigger) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (HookTrigger) Descriptor() protoreflect.EnumDescriptor {
+	return file_taskguild_v1_workflow_proto_enumTypes[0].Descriptor()
+}
+
+func (HookTrigger) Type() protoreflect.EnumType {
+	return &file_taskguild_v1_workflow_proto_enumTypes[0]
+}
+
+func (x HookTrigger) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use HookTrigger.Descriptor instead.
+func (HookTrigger) EnumDescriptor() ([]byte, []int) {
+	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{0}
+}
+
 // Workflow defines a project's task lifecycle with custom statuses and agent configurations.
 type Workflow struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -127,6 +179,82 @@ func (x *Workflow) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+type StatusHook struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	SkillId       string                 `protobuf:"bytes,2,opt,name=skill_id,json=skillId,proto3" json:"skill_id,omitempty"`
+	Trigger       HookTrigger            `protobuf:"varint,3,opt,name=trigger,proto3,enum=taskguild.v1.HookTrigger" json:"trigger,omitempty"`
+	Order         int32                  `protobuf:"varint,4,opt,name=order,proto3" json:"order,omitempty"`
+	Name          string                 `protobuf:"bytes,5,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StatusHook) Reset() {
+	*x = StatusHook{}
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StatusHook) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StatusHook) ProtoMessage() {}
+
+func (x *StatusHook) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StatusHook.ProtoReflect.Descriptor instead.
+func (*StatusHook) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *StatusHook) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *StatusHook) GetSkillId() string {
+	if x != nil {
+		return x.SkillId
+	}
+	return ""
+}
+
+func (x *StatusHook) GetTrigger() HookTrigger {
+	if x != nil {
+		return x.Trigger
+	}
+	return HookTrigger_HOOK_TRIGGER_UNSPECIFIED
+}
+
+func (x *StatusHook) GetOrder() int32 {
+	if x != nil {
+		return x.Order
+	}
+	return 0
+}
+
+func (x *StatusHook) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
 // WorkflowStatus defines a custom status in a workflow.
 type WorkflowStatus struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -139,13 +267,15 @@ type WorkflowStatus struct {
 	// transitions & agent
 	TransitionsTo []string `protobuf:"bytes,6,rep,name=transitions_to,json=transitionsTo,proto3" json:"transitions_to,omitempty"` // IDs of statuses this can transition to
 	AgentId       string   `protobuf:"bytes,7,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`                   // ID of the AgentDefinition assigned to this status
+	// hooks
+	Hooks         []*StatusHook `protobuf:"bytes,8,rep,name=hooks,proto3" json:"hooks,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *WorkflowStatus) Reset() {
 	*x = WorkflowStatus{}
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[1]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -157,7 +287,7 @@ func (x *WorkflowStatus) String() string {
 func (*WorkflowStatus) ProtoMessage() {}
 
 func (x *WorkflowStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[1]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -170,7 +300,7 @@ func (x *WorkflowStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkflowStatus.ProtoReflect.Descriptor instead.
 func (*WorkflowStatus) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{1}
+	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *WorkflowStatus) GetId() string {
@@ -222,6 +352,13 @@ func (x *WorkflowStatus) GetAgentId() string {
 	return ""
 }
 
+func (x *WorkflowStatus) GetHooks() []*StatusHook {
+	if x != nil {
+		return x.Hooks
+	}
+	return nil
+}
+
 // AgentConfig defines how an agent should behave for a specific status.
 type AgentConfig struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
@@ -239,7 +376,7 @@ type AgentConfig struct {
 
 func (x *AgentConfig) Reset() {
 	*x = AgentConfig{}
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[2]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -251,7 +388,7 @@ func (x *AgentConfig) String() string {
 func (*AgentConfig) ProtoMessage() {}
 
 func (x *AgentConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[2]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -264,7 +401,7 @@ func (x *AgentConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentConfig.ProtoReflect.Descriptor instead.
 func (*AgentConfig) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{2}
+	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *AgentConfig) GetId() string {
@@ -324,7 +461,7 @@ type CreateWorkflowRequest struct {
 
 func (x *CreateWorkflowRequest) Reset() {
 	*x = CreateWorkflowRequest{}
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[3]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -336,7 +473,7 @@ func (x *CreateWorkflowRequest) String() string {
 func (*CreateWorkflowRequest) ProtoMessage() {}
 
 func (x *CreateWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[3]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -349,7 +486,7 @@ func (x *CreateWorkflowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*CreateWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{3}
+	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *CreateWorkflowRequest) GetProjectId() string {
@@ -396,7 +533,7 @@ type CreateWorkflowResponse struct {
 
 func (x *CreateWorkflowResponse) Reset() {
 	*x = CreateWorkflowResponse{}
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[4]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -408,7 +545,7 @@ func (x *CreateWorkflowResponse) String() string {
 func (*CreateWorkflowResponse) ProtoMessage() {}
 
 func (x *CreateWorkflowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[4]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -421,7 +558,7 @@ func (x *CreateWorkflowResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateWorkflowResponse.ProtoReflect.Descriptor instead.
 func (*CreateWorkflowResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{4}
+	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *CreateWorkflowResponse) GetWorkflow() *Workflow {
@@ -440,7 +577,7 @@ type GetWorkflowRequest struct {
 
 func (x *GetWorkflowRequest) Reset() {
 	*x = GetWorkflowRequest{}
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[5]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -452,7 +589,7 @@ func (x *GetWorkflowRequest) String() string {
 func (*GetWorkflowRequest) ProtoMessage() {}
 
 func (x *GetWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[5]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -465,7 +602,7 @@ func (x *GetWorkflowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*GetWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{5}
+	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetWorkflowRequest) GetId() string {
@@ -484,7 +621,7 @@ type GetWorkflowResponse struct {
 
 func (x *GetWorkflowResponse) Reset() {
 	*x = GetWorkflowResponse{}
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[6]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -496,7 +633,7 @@ func (x *GetWorkflowResponse) String() string {
 func (*GetWorkflowResponse) ProtoMessage() {}
 
 func (x *GetWorkflowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[6]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -509,7 +646,7 @@ func (x *GetWorkflowResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkflowResponse.ProtoReflect.Descriptor instead.
 func (*GetWorkflowResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{6}
+	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetWorkflowResponse) GetWorkflow() *Workflow {
@@ -529,7 +666,7 @@ type ListWorkflowsRequest struct {
 
 func (x *ListWorkflowsRequest) Reset() {
 	*x = ListWorkflowsRequest{}
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[7]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -541,7 +678,7 @@ func (x *ListWorkflowsRequest) String() string {
 func (*ListWorkflowsRequest) ProtoMessage() {}
 
 func (x *ListWorkflowsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[7]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -554,7 +691,7 @@ func (x *ListWorkflowsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWorkflowsRequest.ProtoReflect.Descriptor instead.
 func (*ListWorkflowsRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{7}
+	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListWorkflowsRequest) GetProjectId() string {
@@ -581,7 +718,7 @@ type ListWorkflowsResponse struct {
 
 func (x *ListWorkflowsResponse) Reset() {
 	*x = ListWorkflowsResponse{}
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[8]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -593,7 +730,7 @@ func (x *ListWorkflowsResponse) String() string {
 func (*ListWorkflowsResponse) ProtoMessage() {}
 
 func (x *ListWorkflowsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[8]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -606,7 +743,7 @@ func (x *ListWorkflowsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWorkflowsResponse.ProtoReflect.Descriptor instead.
 func (*ListWorkflowsResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{8}
+	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListWorkflowsResponse) GetWorkflows() []*Workflow {
@@ -638,7 +775,7 @@ type UpdateWorkflowRequest struct {
 
 func (x *UpdateWorkflowRequest) Reset() {
 	*x = UpdateWorkflowRequest{}
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[9]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -650,7 +787,7 @@ func (x *UpdateWorkflowRequest) String() string {
 func (*UpdateWorkflowRequest) ProtoMessage() {}
 
 func (x *UpdateWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[9]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -663,7 +800,7 @@ func (x *UpdateWorkflowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*UpdateWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{9}
+	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UpdateWorkflowRequest) GetId() string {
@@ -710,7 +847,7 @@ type UpdateWorkflowResponse struct {
 
 func (x *UpdateWorkflowResponse) Reset() {
 	*x = UpdateWorkflowResponse{}
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[10]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -722,7 +859,7 @@ func (x *UpdateWorkflowResponse) String() string {
 func (*UpdateWorkflowResponse) ProtoMessage() {}
 
 func (x *UpdateWorkflowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[10]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -735,7 +872,7 @@ func (x *UpdateWorkflowResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateWorkflowResponse.ProtoReflect.Descriptor instead.
 func (*UpdateWorkflowResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{10}
+	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *UpdateWorkflowResponse) GetWorkflow() *Workflow {
@@ -754,7 +891,7 @@ type DeleteWorkflowRequest struct {
 
 func (x *DeleteWorkflowRequest) Reset() {
 	*x = DeleteWorkflowRequest{}
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[11]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -766,7 +903,7 @@ func (x *DeleteWorkflowRequest) String() string {
 func (*DeleteWorkflowRequest) ProtoMessage() {}
 
 func (x *DeleteWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[11]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -779,7 +916,7 @@ func (x *DeleteWorkflowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*DeleteWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{11}
+	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *DeleteWorkflowRequest) GetId() string {
@@ -797,7 +934,7 @@ type DeleteWorkflowResponse struct {
 
 func (x *DeleteWorkflowResponse) Reset() {
 	*x = DeleteWorkflowResponse{}
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[12]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -809,7 +946,7 @@ func (x *DeleteWorkflowResponse) String() string {
 func (*DeleteWorkflowResponse) ProtoMessage() {}
 
 func (x *DeleteWorkflowResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_workflow_proto_msgTypes[12]
+	mi := &file_taskguild_v1_workflow_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -822,7 +959,7 @@ func (x *DeleteWorkflowResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteWorkflowResponse.ProtoReflect.Descriptor instead.
 func (*DeleteWorkflowResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{12}
+	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{13}
 }
 
 var File_taskguild_v1_workflow_proto protoreflect.FileDescriptor
@@ -841,7 +978,14 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xcc\x01\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x96\x01\n" +
+	"\n" +
+	"StatusHook\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
+	"\bskill_id\x18\x02 \x01(\tR\askillId\x123\n" +
+	"\atrigger\x18\x03 \x01(\x0e2\x19.taskguild.v1.HookTriggerR\atrigger\x12\x14\n" +
+	"\x05order\x18\x04 \x01(\x05R\x05order\x12\x12\n" +
+	"\x04name\x18\x05 \x01(\tR\x04name\"\xfc\x01\n" +
 	"\x0eWorkflowStatus\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -851,7 +995,8 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\vis_terminal\x18\x05 \x01(\bR\n" +
 	"isTerminal\x12%\n" +
 	"\x0etransitions_to\x18\x06 \x03(\tR\rtransitionsTo\x12\x19\n" +
-	"\bagent_id\x18\a \x01(\tR\aagentId\"\xca\x01\n" +
+	"\bagent_id\x18\a \x01(\tR\aagentId\x12.\n" +
+	"\x05hooks\x18\b \x03(\v2\x18.taskguild.v1.StatusHookR\x05hooks\"\xca\x01\n" +
 	"\vAgentConfig\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
 	"\x12workflow_status_id\x18\x02 \x01(\tR\x10workflowStatusId\x12\x12\n" +
@@ -893,7 +1038,12 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\bworkflow\x18\x01 \x01(\v2\x16.taskguild.v1.WorkflowR\bworkflow\"'\n" +
 	"\x15DeleteWorkflowRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x18\n" +
-	"\x16DeleteWorkflowResponse2\xd6\x03\n" +
+	"\x16DeleteWorkflowResponse*\xa4\x01\n" +
+	"\vHookTrigger\x12\x1c\n" +
+	"\x18HOOK_TRIGGER_UNSPECIFIED\x10\x00\x12&\n" +
+	"\"HOOK_TRIGGER_BEFORE_TASK_EXECUTION\x10\x01\x12%\n" +
+	"!HOOK_TRIGGER_AFTER_TASK_EXECUTION\x10\x02\x12(\n" +
+	"$HOOK_TRIGGER_AFTER_WORKTREE_CREATION\x10\x032\xd6\x03\n" +
 	"\x0fWorkflowService\x12[\n" +
 	"\x0eCreateWorkflow\x12#.taskguild.v1.CreateWorkflowRequest\x1a$.taskguild.v1.CreateWorkflowResponse\x12R\n" +
 	"\vGetWorkflow\x12 .taskguild.v1.GetWorkflowRequest\x1a!.taskguild.v1.GetWorkflowResponse\x12X\n" +
@@ -914,55 +1064,60 @@ func file_taskguild_v1_workflow_proto_rawDescGZIP() []byte {
 	return file_taskguild_v1_workflow_proto_rawDescData
 }
 
-var file_taskguild_v1_workflow_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_taskguild_v1_workflow_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_taskguild_v1_workflow_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_taskguild_v1_workflow_proto_goTypes = []any{
-	(*Workflow)(nil),               // 0: taskguild.v1.Workflow
-	(*WorkflowStatus)(nil),         // 1: taskguild.v1.WorkflowStatus
-	(*AgentConfig)(nil),            // 2: taskguild.v1.AgentConfig
-	(*CreateWorkflowRequest)(nil),  // 3: taskguild.v1.CreateWorkflowRequest
-	(*CreateWorkflowResponse)(nil), // 4: taskguild.v1.CreateWorkflowResponse
-	(*GetWorkflowRequest)(nil),     // 5: taskguild.v1.GetWorkflowRequest
-	(*GetWorkflowResponse)(nil),    // 6: taskguild.v1.GetWorkflowResponse
-	(*ListWorkflowsRequest)(nil),   // 7: taskguild.v1.ListWorkflowsRequest
-	(*ListWorkflowsResponse)(nil),  // 8: taskguild.v1.ListWorkflowsResponse
-	(*UpdateWorkflowRequest)(nil),  // 9: taskguild.v1.UpdateWorkflowRequest
-	(*UpdateWorkflowResponse)(nil), // 10: taskguild.v1.UpdateWorkflowResponse
-	(*DeleteWorkflowRequest)(nil),  // 11: taskguild.v1.DeleteWorkflowRequest
-	(*DeleteWorkflowResponse)(nil), // 12: taskguild.v1.DeleteWorkflowResponse
-	(*timestamppb.Timestamp)(nil),  // 13: google.protobuf.Timestamp
-	(*PaginationRequest)(nil),      // 14: taskguild.v1.PaginationRequest
-	(*PaginationResponse)(nil),     // 15: taskguild.v1.PaginationResponse
+	(HookTrigger)(0),               // 0: taskguild.v1.HookTrigger
+	(*Workflow)(nil),               // 1: taskguild.v1.Workflow
+	(*StatusHook)(nil),             // 2: taskguild.v1.StatusHook
+	(*WorkflowStatus)(nil),         // 3: taskguild.v1.WorkflowStatus
+	(*AgentConfig)(nil),            // 4: taskguild.v1.AgentConfig
+	(*CreateWorkflowRequest)(nil),  // 5: taskguild.v1.CreateWorkflowRequest
+	(*CreateWorkflowResponse)(nil), // 6: taskguild.v1.CreateWorkflowResponse
+	(*GetWorkflowRequest)(nil),     // 7: taskguild.v1.GetWorkflowRequest
+	(*GetWorkflowResponse)(nil),    // 8: taskguild.v1.GetWorkflowResponse
+	(*ListWorkflowsRequest)(nil),   // 9: taskguild.v1.ListWorkflowsRequest
+	(*ListWorkflowsResponse)(nil),  // 10: taskguild.v1.ListWorkflowsResponse
+	(*UpdateWorkflowRequest)(nil),  // 11: taskguild.v1.UpdateWorkflowRequest
+	(*UpdateWorkflowResponse)(nil), // 12: taskguild.v1.UpdateWorkflowResponse
+	(*DeleteWorkflowRequest)(nil),  // 13: taskguild.v1.DeleteWorkflowRequest
+	(*DeleteWorkflowResponse)(nil), // 14: taskguild.v1.DeleteWorkflowResponse
+	(*timestamppb.Timestamp)(nil),  // 15: google.protobuf.Timestamp
+	(*PaginationRequest)(nil),      // 16: taskguild.v1.PaginationRequest
+	(*PaginationResponse)(nil),     // 17: taskguild.v1.PaginationResponse
 }
 var file_taskguild_v1_workflow_proto_depIdxs = []int32{
-	1,  // 0: taskguild.v1.Workflow.statuses:type_name -> taskguild.v1.WorkflowStatus
-	2,  // 1: taskguild.v1.Workflow.agent_configs:type_name -> taskguild.v1.AgentConfig
-	13, // 2: taskguild.v1.Workflow.created_at:type_name -> google.protobuf.Timestamp
-	13, // 3: taskguild.v1.Workflow.updated_at:type_name -> google.protobuf.Timestamp
-	1,  // 4: taskguild.v1.CreateWorkflowRequest.statuses:type_name -> taskguild.v1.WorkflowStatus
-	2,  // 5: taskguild.v1.CreateWorkflowRequest.agent_configs:type_name -> taskguild.v1.AgentConfig
-	0,  // 6: taskguild.v1.CreateWorkflowResponse.workflow:type_name -> taskguild.v1.Workflow
-	0,  // 7: taskguild.v1.GetWorkflowResponse.workflow:type_name -> taskguild.v1.Workflow
-	14, // 8: taskguild.v1.ListWorkflowsRequest.pagination:type_name -> taskguild.v1.PaginationRequest
-	0,  // 9: taskguild.v1.ListWorkflowsResponse.workflows:type_name -> taskguild.v1.Workflow
-	15, // 10: taskguild.v1.ListWorkflowsResponse.pagination:type_name -> taskguild.v1.PaginationResponse
-	1,  // 11: taskguild.v1.UpdateWorkflowRequest.statuses:type_name -> taskguild.v1.WorkflowStatus
-	2,  // 12: taskguild.v1.UpdateWorkflowRequest.agent_configs:type_name -> taskguild.v1.AgentConfig
-	0,  // 13: taskguild.v1.UpdateWorkflowResponse.workflow:type_name -> taskguild.v1.Workflow
-	3,  // 14: taskguild.v1.WorkflowService.CreateWorkflow:input_type -> taskguild.v1.CreateWorkflowRequest
-	5,  // 15: taskguild.v1.WorkflowService.GetWorkflow:input_type -> taskguild.v1.GetWorkflowRequest
-	7,  // 16: taskguild.v1.WorkflowService.ListWorkflows:input_type -> taskguild.v1.ListWorkflowsRequest
-	9,  // 17: taskguild.v1.WorkflowService.UpdateWorkflow:input_type -> taskguild.v1.UpdateWorkflowRequest
-	11, // 18: taskguild.v1.WorkflowService.DeleteWorkflow:input_type -> taskguild.v1.DeleteWorkflowRequest
-	4,  // 19: taskguild.v1.WorkflowService.CreateWorkflow:output_type -> taskguild.v1.CreateWorkflowResponse
-	6,  // 20: taskguild.v1.WorkflowService.GetWorkflow:output_type -> taskguild.v1.GetWorkflowResponse
-	8,  // 21: taskguild.v1.WorkflowService.ListWorkflows:output_type -> taskguild.v1.ListWorkflowsResponse
-	10, // 22: taskguild.v1.WorkflowService.UpdateWorkflow:output_type -> taskguild.v1.UpdateWorkflowResponse
-	12, // 23: taskguild.v1.WorkflowService.DeleteWorkflow:output_type -> taskguild.v1.DeleteWorkflowResponse
-	19, // [19:24] is the sub-list for method output_type
-	14, // [14:19] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	3,  // 0: taskguild.v1.Workflow.statuses:type_name -> taskguild.v1.WorkflowStatus
+	4,  // 1: taskguild.v1.Workflow.agent_configs:type_name -> taskguild.v1.AgentConfig
+	15, // 2: taskguild.v1.Workflow.created_at:type_name -> google.protobuf.Timestamp
+	15, // 3: taskguild.v1.Workflow.updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 4: taskguild.v1.StatusHook.trigger:type_name -> taskguild.v1.HookTrigger
+	2,  // 5: taskguild.v1.WorkflowStatus.hooks:type_name -> taskguild.v1.StatusHook
+	3,  // 6: taskguild.v1.CreateWorkflowRequest.statuses:type_name -> taskguild.v1.WorkflowStatus
+	4,  // 7: taskguild.v1.CreateWorkflowRequest.agent_configs:type_name -> taskguild.v1.AgentConfig
+	1,  // 8: taskguild.v1.CreateWorkflowResponse.workflow:type_name -> taskguild.v1.Workflow
+	1,  // 9: taskguild.v1.GetWorkflowResponse.workflow:type_name -> taskguild.v1.Workflow
+	16, // 10: taskguild.v1.ListWorkflowsRequest.pagination:type_name -> taskguild.v1.PaginationRequest
+	1,  // 11: taskguild.v1.ListWorkflowsResponse.workflows:type_name -> taskguild.v1.Workflow
+	17, // 12: taskguild.v1.ListWorkflowsResponse.pagination:type_name -> taskguild.v1.PaginationResponse
+	3,  // 13: taskguild.v1.UpdateWorkflowRequest.statuses:type_name -> taskguild.v1.WorkflowStatus
+	4,  // 14: taskguild.v1.UpdateWorkflowRequest.agent_configs:type_name -> taskguild.v1.AgentConfig
+	1,  // 15: taskguild.v1.UpdateWorkflowResponse.workflow:type_name -> taskguild.v1.Workflow
+	5,  // 16: taskguild.v1.WorkflowService.CreateWorkflow:input_type -> taskguild.v1.CreateWorkflowRequest
+	7,  // 17: taskguild.v1.WorkflowService.GetWorkflow:input_type -> taskguild.v1.GetWorkflowRequest
+	9,  // 18: taskguild.v1.WorkflowService.ListWorkflows:input_type -> taskguild.v1.ListWorkflowsRequest
+	11, // 19: taskguild.v1.WorkflowService.UpdateWorkflow:input_type -> taskguild.v1.UpdateWorkflowRequest
+	13, // 20: taskguild.v1.WorkflowService.DeleteWorkflow:input_type -> taskguild.v1.DeleteWorkflowRequest
+	6,  // 21: taskguild.v1.WorkflowService.CreateWorkflow:output_type -> taskguild.v1.CreateWorkflowResponse
+	8,  // 22: taskguild.v1.WorkflowService.GetWorkflow:output_type -> taskguild.v1.GetWorkflowResponse
+	10, // 23: taskguild.v1.WorkflowService.ListWorkflows:output_type -> taskguild.v1.ListWorkflowsResponse
+	12, // 24: taskguild.v1.WorkflowService.UpdateWorkflow:output_type -> taskguild.v1.UpdateWorkflowResponse
+	14, // 25: taskguild.v1.WorkflowService.DeleteWorkflow:output_type -> taskguild.v1.DeleteWorkflowResponse
+	21, // [21:26] is the sub-list for method output_type
+	16, // [16:21] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_workflow_proto_init() }
@@ -976,13 +1131,14 @@ func file_taskguild_v1_workflow_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_workflow_proto_rawDesc), len(file_taskguild_v1_workflow_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   13,
+			NumEnums:      1,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_taskguild_v1_workflow_proto_goTypes,
 		DependencyIndexes: file_taskguild_v1_workflow_proto_depIdxs,
+		EnumInfos:         file_taskguild_v1_workflow_proto_enumTypes,
 		MessageInfos:      file_taskguild_v1_workflow_proto_msgTypes,
 	}.Build()
 	File_taskguild_v1_workflow_proto = out.File

@@ -32,6 +32,21 @@ message Workflow {
   google.protobuf.Timestamp updated_at = 8;
 }
 
+enum HookTrigger {
+  HOOK_TRIGGER_UNSPECIFIED = 0;
+  HOOK_TRIGGER_BEFORE_TASK_EXECUTION = 1;
+  HOOK_TRIGGER_AFTER_TASK_EXECUTION = 2;
+  HOOK_TRIGGER_AFTER_WORKTREE_CREATION = 3;
+}
+
+message StatusHook {
+  string id = 1;
+  string skill_id = 2;
+  HookTrigger trigger = 3;
+  int32 order = 4;
+  string name = 5;
+}
+
 // WorkflowStatus defines a custom status in a workflow.
 message WorkflowStatus {
   string id = 1;
@@ -45,6 +60,9 @@ message WorkflowStatus {
   // transitions & agent
   repeated string transitions_to = 6;  // IDs of statuses this can transition to
   string agent_id = 7;                 // ID of the AgentDefinition assigned to this status
+
+  // hooks
+  repeated StatusHook hooks = 8;
 }
 
 // AgentConfig defines how an agent should behave for a specific status.

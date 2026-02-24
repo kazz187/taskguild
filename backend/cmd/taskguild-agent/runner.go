@@ -125,6 +125,76 @@ func runInteractionListener(ctx context.Context, interClient taskguildv1connect.
 	}
 }
 
+// hookEntry represents a resolved hook from metadata.
+type hookEntry struct {
+	ID      string `json:"id"`
+	SkillID string `json:"skill_id"`
+	Trigger string `json:"trigger"`
+	Order   int32  `json:"order"`
+	Name    string `json:"name"`
+	Content string `json:"content"`
+}
+
+// executeHooks parses _hooks from metadata, filters by trigger, and runs each
+// hook sequentially via claudeagent.RunQuerySync. Failures are logged but do
+// not block the main task.
+func executeHooks(ctx context.Context, taskID string, trigger string, metadata map[string]string, workDir string) {
+	hooksJSON := metadata["_hooks"]
+	if hooksJSON == "" {
+		return
+	}
+
+	var hooks []hookEntry
+	if err := json.Unmarshal([]byte(hooksJSON), &hooks); err != nil {
+		log.Printf("[task:%s] failed to parse _hooks metadata: %v", taskID, err)
+		return
+	}
+
+	// Filter by trigger and sort by order.
+	var filtered []hookEntry
+	for _, h := range hooks {
+		if h.Trigger == trigger {
+			filtered = append(filtered, h)
+		}
+	}
+	sort.Slice(filtered, func(i, j int) bool {
+		return filtered[i].Order < filtered[j].Order
+	})
+
+	if len(filtered) == 0 {
+		return
+	}
+
+	log.Printf("[task:%s] executing %d hook(s) for trigger %s", taskID, len(filtered), trigger)
+
+	for _, h := range filtered {
+		log.Printf("[task:%s] running hook %q (id=%s, skill=%s)", taskID, h.Name, h.ID, h.SkillID)
+
+		hookCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+		maxTurns := 3
+		opts := &claudeagent.ClaudeAgentOptions{
+			SystemPrompt:   "You are executing a hook. Follow the instructions precisely.",
+			Cwd:            workDir,
+			PermissionMode: claudeagent.PermissionModeBypassPermissions,
+			MaxTurns:       &maxTurns,
+		}
+
+		result, err := claudeagent.RunQuerySync(hookCtx, h.Content, opts)
+		cancel()
+
+		if err != nil {
+			log.Printf("[task:%s] hook %q failed: %v", taskID, h.Name, err)
+			continue
+		}
+		if result.Result != nil && result.Result.IsError {
+			log.Printf("[task:%s] hook %q returned error: %s", taskID, h.Name, result.Result.Result)
+			continue
+		}
+
+		log.Printf("[task:%s] hook %q completed successfully", taskID, h.Name)
+	}
+}
+
 func runTask(
 	ctx context.Context,
 	client taskguildv1connect.AgentManagerServiceClient,
@@ -137,6 +207,12 @@ func runTask(
 	workDir string,
 ) {
 	reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "starting task")
+
+	// Execute after_task_execution hooks when runTask exits (success or failure).
+	defer executeHooks(ctx, taskID, "after_task_execution", metadata, workDir)
+
+	// Execute before_task_execution hooks.
+	executeHooks(ctx, taskID, "before_task_execution", metadata, workDir)
 
 	// Start interaction stream listener for this task.
 	waiter := newInteractionWaiter()
@@ -155,6 +231,7 @@ func runTask(
 
 	const maxResumeRetries = 2 // after this many consecutive resume failures, start fresh
 
+	worktreeHookFired := false
 	consecutiveErrors := 0
 	backoff := initialBackoff
 
@@ -250,6 +327,16 @@ func runTask(
 		// Success — reset error tracking.
 		consecutiveErrors = 0
 		backoff = initialBackoff
+
+		// Fire after_worktree_creation hook once, after the first successful turn
+		// when a worktree directory exists.
+		if !worktreeHookFired && metadata["_use_worktree"] == "true" && worktreeName != "" {
+			wtDir := filepath.Join(workDir, ".claude", "worktrees", worktreeName)
+			if info, err := os.Stat(wtDir); err == nil && info.IsDir() {
+				worktreeHookFired = true
+				executeHooks(ctx, taskID, "after_worktree_creation", metadata, wtDir)
+			}
+		}
 
 		summary := ""
 		if result.Result != nil {

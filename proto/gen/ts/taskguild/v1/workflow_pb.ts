@@ -2,8 +2,8 @@
 // @generated from file taskguild/v1/workflow.proto (package taskguild.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { PaginationRequest, PaginationResponse } from "./common_pb.ts";
@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file taskguild/v1/workflow.proto.
  */
 export const file_taskguild_v1_workflow: GenFile = /*@__PURE__*/
-  fileDesc("Cht0YXNrZ3VpbGQvdjEvd29ya2Zsb3cucHJvdG8SDHRhc2tndWlsZC52MSKPAgoIV29ya2Zsb3cSCgoCaWQYASABKAkSEgoKcHJvamVjdF9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEi4KCHN0YXR1c2VzGAUgAygLMhwudGFza2d1aWxkLnYxLldvcmtmbG93U3RhdHVzEjAKDWFnZW50X2NvbmZpZ3MYBiADKAsyGS50YXNrZ3VpbGQudjEuQWdlbnRDb25maWcSLgoKY3JlYXRlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAijAEKDldvcmtmbG93U3RhdHVzEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDQoFb3JkZXIYAyABKAUSEgoKaXNfaW5pdGlhbBgEIAEoCBITCgtpc190ZXJtaW5hbBgFIAEoCBIWCg50cmFuc2l0aW9uc190bxgGIAMoCRIQCghhZ2VudF9pZBgHIAEoCSKFAQoLQWdlbnRDb25maWcSCgoCaWQYASABKAkSGgoSd29ya2Zsb3dfc3RhdHVzX2lkGAIgASgJEgwKBG5hbWUYAyABKAkSEwoLZGVzY3JpcHRpb24YBCABKAkSFAoMaW5zdHJ1Y3Rpb25zGAUgASgJEhUKDWFsbG93ZWRfdG9vbHMYBiADKAkisAEKFUNyZWF0ZVdvcmtmbG93UmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEgwKBG5hbWUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSLgoIc3RhdHVzZXMYBCADKAsyHC50YXNrZ3VpbGQudjEuV29ya2Zsb3dTdGF0dXMSMAoNYWdlbnRfY29uZmlncxgFIAMoCzIZLnRhc2tndWlsZC52MS5BZ2VudENvbmZpZyJCChZDcmVhdGVXb3JrZmxvd1Jlc3BvbnNlEigKCHdvcmtmbG93GAEgASgLMhYudGFza2d1aWxkLnYxLldvcmtmbG93IiAKEkdldFdvcmtmbG93UmVxdWVzdBIKCgJpZBgBIAEoCSI/ChNHZXRXb3JrZmxvd1Jlc3BvbnNlEigKCHdvcmtmbG93GAEgASgLMhYudGFza2d1aWxkLnYxLldvcmtmbG93Il8KFExpc3RXb3JrZmxvd3NSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSMwoKcGFnaW5hdGlvbhgCIAEoCzIfLnRhc2tndWlsZC52MS5QYWdpbmF0aW9uUmVxdWVzdCJ4ChVMaXN0V29ya2Zsb3dzUmVzcG9uc2USKQoJd29ya2Zsb3dzGAEgAygLMhYudGFza2d1aWxkLnYxLldvcmtmbG93EjQKCnBhZ2luYXRpb24YAiABKAsyIC50YXNrZ3VpbGQudjEuUGFnaW5hdGlvblJlc3BvbnNlIqgBChVVcGRhdGVXb3JrZmxvd1JlcXVlc3QSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIuCghzdGF0dXNlcxgEIAMoCzIcLnRhc2tndWlsZC52MS5Xb3JrZmxvd1N0YXR1cxIwCg1hZ2VudF9jb25maWdzGAUgAygLMhkudGFza2d1aWxkLnYxLkFnZW50Q29uZmlnIkIKFlVwZGF0ZVdvcmtmbG93UmVzcG9uc2USKAoId29ya2Zsb3cYASABKAsyFi50YXNrZ3VpbGQudjEuV29ya2Zsb3ciIwoVRGVsZXRlV29ya2Zsb3dSZXF1ZXN0EgoKAmlkGAEgASgJIhgKFkRlbGV0ZVdvcmtmbG93UmVzcG9uc2Uy1gMKD1dvcmtmbG93U2VydmljZRJbCg5DcmVhdGVXb3JrZmxvdxIjLnRhc2tndWlsZC52MS5DcmVhdGVXb3JrZmxvd1JlcXVlc3QaJC50YXNrZ3VpbGQudjEuQ3JlYXRlV29ya2Zsb3dSZXNwb25zZRJSCgtHZXRXb3JrZmxvdxIgLnRhc2tndWlsZC52MS5HZXRXb3JrZmxvd1JlcXVlc3QaIS50YXNrZ3VpbGQudjEuR2V0V29ya2Zsb3dSZXNwb25zZRJYCg1MaXN0V29ya2Zsb3dzEiIudGFza2d1aWxkLnYxLkxpc3RXb3JrZmxvd3NSZXF1ZXN0GiMudGFza2d1aWxkLnYxLkxpc3RXb3JrZmxvd3NSZXNwb25zZRJbCg5VcGRhdGVXb3JrZmxvdxIjLnRhc2tndWlsZC52MS5VcGRhdGVXb3JrZmxvd1JlcXVlc3QaJC50YXNrZ3VpbGQudjEuVXBkYXRlV29ya2Zsb3dSZXNwb25zZRJbCg5EZWxldGVXb3JrZmxvdxIjLnRhc2tndWlsZC52MS5EZWxldGVXb3JrZmxvd1JlcXVlc3QaJC50YXNrZ3VpbGQudjEuRGVsZXRlV29ya2Zsb3dSZXNwb25zZUK2AQoQY29tLnRhc2tndWlsZC52MUINV29ya2Zsb3dQcm90b1ABWkJnaXRodWIuY29tL2thenoxODcvdGFza2d1aWxkL3Byb3RvL2dlbi9nby90YXNrZ3VpbGQvdjE7dGFza2d1aWxkdjGiAgNUWFiqAgxUYXNrZ3VpbGQuVjHKAgxUYXNrZ3VpbGRcVjHiAhhUYXNrZ3VpbGRcVjFcR1BCTWV0YWRhdGHqAg1UYXNrZ3VpbGQ6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_taskguild_v1_common]);
+  fileDesc("Cht0YXNrZ3VpbGQvdjEvd29ya2Zsb3cucHJvdG8SDHRhc2tndWlsZC52MSKPAgoIV29ya2Zsb3cSCgoCaWQYASABKAkSEgoKcHJvamVjdF9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEi4KCHN0YXR1c2VzGAUgAygLMhwudGFza2d1aWxkLnYxLldvcmtmbG93U3RhdHVzEjAKDWFnZW50X2NvbmZpZ3MYBiADKAsyGS50YXNrZ3VpbGQudjEuQWdlbnRDb25maWcSLgoKY3JlYXRlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAicwoKU3RhdHVzSG9vaxIKCgJpZBgBIAEoCRIQCghza2lsbF9pZBgCIAEoCRIqCgd0cmlnZ2VyGAMgASgOMhkudGFza2d1aWxkLnYxLkhvb2tUcmlnZ2VyEg0KBW9yZGVyGAQgASgFEgwKBG5hbWUYBSABKAkitQEKDldvcmtmbG93U3RhdHVzEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSDQoFb3JkZXIYAyABKAUSEgoKaXNfaW5pdGlhbBgEIAEoCBITCgtpc190ZXJtaW5hbBgFIAEoCBIWCg50cmFuc2l0aW9uc190bxgGIAMoCRIQCghhZ2VudF9pZBgHIAEoCRInCgVob29rcxgIIAMoCzIYLnRhc2tndWlsZC52MS5TdGF0dXNIb29rIoUBCgtBZ2VudENvbmZpZxIKCgJpZBgBIAEoCRIaChJ3b3JrZmxvd19zdGF0dXNfaWQYAiABKAkSDAoEbmFtZRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIUCgxpbnN0cnVjdGlvbnMYBSABKAkSFQoNYWxsb3dlZF90b29scxgGIAMoCSKwAQoVQ3JlYXRlV29ya2Zsb3dSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIuCghzdGF0dXNlcxgEIAMoCzIcLnRhc2tndWlsZC52MS5Xb3JrZmxvd1N0YXR1cxIwCg1hZ2VudF9jb25maWdzGAUgAygLMhkudGFza2d1aWxkLnYxLkFnZW50Q29uZmlnIkIKFkNyZWF0ZVdvcmtmbG93UmVzcG9uc2USKAoId29ya2Zsb3cYASABKAsyFi50YXNrZ3VpbGQudjEuV29ya2Zsb3ciIAoSR2V0V29ya2Zsb3dSZXF1ZXN0EgoKAmlkGAEgASgJIj8KE0dldFdvcmtmbG93UmVzcG9uc2USKAoId29ya2Zsb3cYASABKAsyFi50YXNrZ3VpbGQudjEuV29ya2Zsb3ciXwoUTGlzdFdvcmtmbG93c1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIzCgpwYWdpbmF0aW9uGAIgASgLMh8udGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXF1ZXN0IngKFUxpc3RXb3JrZmxvd3NSZXNwb25zZRIpCgl3b3JrZmxvd3MYASADKAsyFi50YXNrZ3VpbGQudjEuV29ya2Zsb3cSNAoKcGFnaW5hdGlvbhgCIAEoCzIgLnRhc2tndWlsZC52MS5QYWdpbmF0aW9uUmVzcG9uc2UiqAEKFVVwZGF0ZVdvcmtmbG93UmVxdWVzdBIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEi4KCHN0YXR1c2VzGAQgAygLMhwudGFza2d1aWxkLnYxLldvcmtmbG93U3RhdHVzEjAKDWFnZW50X2NvbmZpZ3MYBSADKAsyGS50YXNrZ3VpbGQudjEuQWdlbnRDb25maWciQgoWVXBkYXRlV29ya2Zsb3dSZXNwb25zZRIoCgh3b3JrZmxvdxgBIAEoCzIWLnRhc2tndWlsZC52MS5Xb3JrZmxvdyIjChVEZWxldGVXb3JrZmxvd1JlcXVlc3QSCgoCaWQYASABKAkiGAoWRGVsZXRlV29ya2Zsb3dSZXNwb25zZSqkAQoLSG9va1RyaWdnZXISHAoYSE9PS19UUklHR0VSX1VOU1BFQ0lGSUVEEAASJgoiSE9PS19UUklHR0VSX0JFRk9SRV9UQVNLX0VYRUNVVElPThABEiUKIUhPT0tfVFJJR0dFUl9BRlRFUl9UQVNLX0VYRUNVVElPThACEigKJEhPT0tfVFJJR0dFUl9BRlRFUl9XT1JLVFJFRV9DUkVBVElPThADMtYDCg9Xb3JrZmxvd1NlcnZpY2USWwoOQ3JlYXRlV29ya2Zsb3cSIy50YXNrZ3VpbGQudjEuQ3JlYXRlV29ya2Zsb3dSZXF1ZXN0GiQudGFza2d1aWxkLnYxLkNyZWF0ZVdvcmtmbG93UmVzcG9uc2USUgoLR2V0V29ya2Zsb3cSIC50YXNrZ3VpbGQudjEuR2V0V29ya2Zsb3dSZXF1ZXN0GiEudGFza2d1aWxkLnYxLkdldFdvcmtmbG93UmVzcG9uc2USWAoNTGlzdFdvcmtmbG93cxIiLnRhc2tndWlsZC52MS5MaXN0V29ya2Zsb3dzUmVxdWVzdBojLnRhc2tndWlsZC52MS5MaXN0V29ya2Zsb3dzUmVzcG9uc2USWwoOVXBkYXRlV29ya2Zsb3cSIy50YXNrZ3VpbGQudjEuVXBkYXRlV29ya2Zsb3dSZXF1ZXN0GiQudGFza2d1aWxkLnYxLlVwZGF0ZVdvcmtmbG93UmVzcG9uc2USWwoORGVsZXRlV29ya2Zsb3cSIy50YXNrZ3VpbGQudjEuRGVsZXRlV29ya2Zsb3dSZXF1ZXN0GiQudGFza2d1aWxkLnYxLkRlbGV0ZVdvcmtmbG93UmVzcG9uc2VCtgEKEGNvbS50YXNrZ3VpbGQudjFCDVdvcmtmbG93UHJvdG9QAVpCZ2l0aHViLmNvbS9rYXp6MTg3L3Rhc2tndWlsZC9wcm90by9nZW4vZ28vdGFza2d1aWxkL3YxO3Rhc2tndWlsZHYxogIDVFhYqgIMVGFza2d1aWxkLlYxygIMVGFza2d1aWxkXFYx4gIYVGFza2d1aWxkXFYxXEdQQk1ldGFkYXRh6gINVGFza2d1aWxkOjpWMWIGcHJvdG8z", [file_google_protobuf_timestamp, file_taskguild_v1_common]);
 
 /**
  * Workflow defines a project's task lifecycle with custom statuses and agent configurations.
@@ -79,6 +79,43 @@ export const WorkflowSchema: GenMessage<Workflow> = /*@__PURE__*/
   messageDesc(file_taskguild_v1_workflow, 0);
 
 /**
+ * @generated from message taskguild.v1.StatusHook
+ */
+export type StatusHook = Message<"taskguild.v1.StatusHook"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string skill_id = 2;
+   */
+  skillId: string;
+
+  /**
+   * @generated from field: taskguild.v1.HookTrigger trigger = 3;
+   */
+  trigger: HookTrigger;
+
+  /**
+   * @generated from field: int32 order = 4;
+   */
+  order: number;
+
+  /**
+   * @generated from field: string name = 5;
+   */
+  name: string;
+};
+
+/**
+ * Describes the message taskguild.v1.StatusHook.
+ * Use `create(StatusHookSchema)` to create a new message.
+ */
+export const StatusHookSchema: GenMessage<StatusHook> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_workflow, 1);
+
+/**
  * WorkflowStatus defines a custom status in a workflow.
  *
  * @generated from message taskguild.v1.WorkflowStatus
@@ -126,6 +163,13 @@ export type WorkflowStatus = Message<"taskguild.v1.WorkflowStatus"> & {
    * @generated from field: string agent_id = 7;
    */
   agentId: string;
+
+  /**
+   * hooks
+   *
+   * @generated from field: repeated taskguild.v1.StatusHook hooks = 8;
+   */
+  hooks: StatusHook[];
 };
 
 /**
@@ -133,7 +177,7 @@ export type WorkflowStatus = Message<"taskguild.v1.WorkflowStatus"> & {
  * Use `create(WorkflowStatusSchema)` to create a new message.
  */
 export const WorkflowStatusSchema: GenMessage<WorkflowStatus> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_workflow, 1);
+  messageDesc(file_taskguild_v1_workflow, 2);
 
 /**
  * AgentConfig defines how an agent should behave for a specific status.
@@ -185,7 +229,7 @@ export type AgentConfig = Message<"taskguild.v1.AgentConfig"> & {
  * Use `create(AgentConfigSchema)` to create a new message.
  */
 export const AgentConfigSchema: GenMessage<AgentConfig> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_workflow, 2);
+  messageDesc(file_taskguild_v1_workflow, 3);
 
 /**
  * @generated from message taskguild.v1.CreateWorkflowRequest
@@ -226,7 +270,7 @@ export type CreateWorkflowRequest = Message<"taskguild.v1.CreateWorkflowRequest"
  * Use `create(CreateWorkflowRequestSchema)` to create a new message.
  */
 export const CreateWorkflowRequestSchema: GenMessage<CreateWorkflowRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_workflow, 3);
+  messageDesc(file_taskguild_v1_workflow, 4);
 
 /**
  * @generated from message taskguild.v1.CreateWorkflowResponse
@@ -243,7 +287,7 @@ export type CreateWorkflowResponse = Message<"taskguild.v1.CreateWorkflowRespons
  * Use `create(CreateWorkflowResponseSchema)` to create a new message.
  */
 export const CreateWorkflowResponseSchema: GenMessage<CreateWorkflowResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_workflow, 4);
+  messageDesc(file_taskguild_v1_workflow, 5);
 
 /**
  * @generated from message taskguild.v1.GetWorkflowRequest
@@ -260,7 +304,7 @@ export type GetWorkflowRequest = Message<"taskguild.v1.GetWorkflowRequest"> & {
  * Use `create(GetWorkflowRequestSchema)` to create a new message.
  */
 export const GetWorkflowRequestSchema: GenMessage<GetWorkflowRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_workflow, 5);
+  messageDesc(file_taskguild_v1_workflow, 6);
 
 /**
  * @generated from message taskguild.v1.GetWorkflowResponse
@@ -277,7 +321,7 @@ export type GetWorkflowResponse = Message<"taskguild.v1.GetWorkflowResponse"> & 
  * Use `create(GetWorkflowResponseSchema)` to create a new message.
  */
 export const GetWorkflowResponseSchema: GenMessage<GetWorkflowResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_workflow, 6);
+  messageDesc(file_taskguild_v1_workflow, 7);
 
 /**
  * @generated from message taskguild.v1.ListWorkflowsRequest
@@ -299,7 +343,7 @@ export type ListWorkflowsRequest = Message<"taskguild.v1.ListWorkflowsRequest"> 
  * Use `create(ListWorkflowsRequestSchema)` to create a new message.
  */
 export const ListWorkflowsRequestSchema: GenMessage<ListWorkflowsRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_workflow, 7);
+  messageDesc(file_taskguild_v1_workflow, 8);
 
 /**
  * @generated from message taskguild.v1.ListWorkflowsResponse
@@ -321,7 +365,7 @@ export type ListWorkflowsResponse = Message<"taskguild.v1.ListWorkflowsResponse"
  * Use `create(ListWorkflowsResponseSchema)` to create a new message.
  */
 export const ListWorkflowsResponseSchema: GenMessage<ListWorkflowsResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_workflow, 8);
+  messageDesc(file_taskguild_v1_workflow, 9);
 
 /**
  * @generated from message taskguild.v1.UpdateWorkflowRequest
@@ -362,7 +406,7 @@ export type UpdateWorkflowRequest = Message<"taskguild.v1.UpdateWorkflowRequest"
  * Use `create(UpdateWorkflowRequestSchema)` to create a new message.
  */
 export const UpdateWorkflowRequestSchema: GenMessage<UpdateWorkflowRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_workflow, 9);
+  messageDesc(file_taskguild_v1_workflow, 10);
 
 /**
  * @generated from message taskguild.v1.UpdateWorkflowResponse
@@ -379,7 +423,7 @@ export type UpdateWorkflowResponse = Message<"taskguild.v1.UpdateWorkflowRespons
  * Use `create(UpdateWorkflowResponseSchema)` to create a new message.
  */
 export const UpdateWorkflowResponseSchema: GenMessage<UpdateWorkflowResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_workflow, 10);
+  messageDesc(file_taskguild_v1_workflow, 11);
 
 /**
  * @generated from message taskguild.v1.DeleteWorkflowRequest
@@ -396,7 +440,7 @@ export type DeleteWorkflowRequest = Message<"taskguild.v1.DeleteWorkflowRequest"
  * Use `create(DeleteWorkflowRequestSchema)` to create a new message.
  */
 export const DeleteWorkflowRequestSchema: GenMessage<DeleteWorkflowRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_workflow, 11);
+  messageDesc(file_taskguild_v1_workflow, 12);
 
 /**
  * @generated from message taskguild.v1.DeleteWorkflowResponse
@@ -409,7 +453,38 @@ export type DeleteWorkflowResponse = Message<"taskguild.v1.DeleteWorkflowRespons
  * Use `create(DeleteWorkflowResponseSchema)` to create a new message.
  */
 export const DeleteWorkflowResponseSchema: GenMessage<DeleteWorkflowResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_workflow, 12);
+  messageDesc(file_taskguild_v1_workflow, 13);
+
+/**
+ * @generated from enum taskguild.v1.HookTrigger
+ */
+export enum HookTrigger {
+  /**
+   * @generated from enum value: HOOK_TRIGGER_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: HOOK_TRIGGER_BEFORE_TASK_EXECUTION = 1;
+   */
+  BEFORE_TASK_EXECUTION = 1,
+
+  /**
+   * @generated from enum value: HOOK_TRIGGER_AFTER_TASK_EXECUTION = 2;
+   */
+  AFTER_TASK_EXECUTION = 2,
+
+  /**
+   * @generated from enum value: HOOK_TRIGGER_AFTER_WORKTREE_CREATION = 3;
+   */
+  AFTER_WORKTREE_CREATION = 3,
+}
+
+/**
+ * Describes the enum taskguild.v1.HookTrigger.
+ */
+export const HookTriggerSchema: GenEnum<HookTrigger> = /*@__PURE__*/
+  enumDesc(file_taskguild_v1_workflow, 0);
 
 /**
  * @generated from service taskguild.v1.WorkflowService

@@ -13,14 +13,32 @@ type Workflow struct {
 	UpdatedAt    time.Time     `yaml:"updated_at"`
 }
 
+type HookTrigger string
+
+const (
+	HookTriggerUnspecified          HookTrigger = ""
+	HookTriggerBeforeTaskExecution  HookTrigger = "before_task_execution"
+	HookTriggerAfterTaskExecution   HookTrigger = "after_task_execution"
+	HookTriggerAfterWorktreeCreation HookTrigger = "after_worktree_creation"
+)
+
+type StatusHook struct {
+	ID      string      `yaml:"id"`
+	SkillID string      `yaml:"skill_id"`
+	Trigger HookTrigger `yaml:"trigger"`
+	Order   int32       `yaml:"order"`
+	Name    string      `yaml:"name"`
+}
+
 type Status struct {
-	ID            string   `yaml:"id"`
-	Name          string   `yaml:"name"`
-	Order         int32    `yaml:"order"`
-	IsInitial     bool     `yaml:"is_initial"`
-	IsTerminal    bool     `yaml:"is_terminal"`
-	TransitionsTo []string `yaml:"transitions_to"`
-	AgentID       string   `yaml:"agent_id,omitempty"`
+	ID            string       `yaml:"id"`
+	Name          string       `yaml:"name"`
+	Order         int32        `yaml:"order"`
+	IsInitial     bool         `yaml:"is_initial"`
+	IsTerminal    bool         `yaml:"is_terminal"`
+	TransitionsTo []string     `yaml:"transitions_to"`
+	AgentID       string       `yaml:"agent_id,omitempty"`
+	Hooks         []StatusHook `yaml:"hooks,omitempty"`
 }
 
 type AgentConfig struct {

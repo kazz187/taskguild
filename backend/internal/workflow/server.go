@@ -140,7 +140,7 @@ func toProto(w *Workflow) *taskguildv1.Workflow {
 }
 
 func statusToProto(s Status) *taskguildv1.WorkflowStatus {
-	return &taskguildv1.WorkflowStatus{
+	pb := &taskguildv1.WorkflowStatus{
 		Id:            s.ID,
 		Name:          s.Name,
 		Order:         s.Order,
@@ -148,6 +148,33 @@ func statusToProto(s Status) *taskguildv1.WorkflowStatus {
 		IsTerminal:    s.IsTerminal,
 		TransitionsTo: s.TransitionsTo,
 		AgentId:       s.AgentID,
+	}
+	for _, h := range s.Hooks {
+		pb.Hooks = append(pb.Hooks, hookToProto(h))
+	}
+	return pb
+}
+
+func hookToProto(h StatusHook) *taskguildv1.StatusHook {
+	return &taskguildv1.StatusHook{
+		Id:      h.ID,
+		SkillId: h.SkillID,
+		Trigger: hookTriggerToProto(h.Trigger),
+		Order:   h.Order,
+		Name:    h.Name,
+	}
+}
+
+func hookTriggerToProto(t HookTrigger) taskguildv1.HookTrigger {
+	switch t {
+	case HookTriggerBeforeTaskExecution:
+		return taskguildv1.HookTrigger_HOOK_TRIGGER_BEFORE_TASK_EXECUTION
+	case HookTriggerAfterTaskExecution:
+		return taskguildv1.HookTrigger_HOOK_TRIGGER_AFTER_TASK_EXECUTION
+	case HookTriggerAfterWorktreeCreation:
+		return taskguildv1.HookTrigger_HOOK_TRIGGER_AFTER_WORKTREE_CREATION
+	default:
+		return taskguildv1.HookTrigger_HOOK_TRIGGER_UNSPECIFIED
 	}
 }
 
@@ -167,7 +194,7 @@ func statusFromProto(ps *taskguildv1.WorkflowStatus) Status {
 	if id == "" {
 		id = ulid.Make().String()
 	}
-	return Status{
+	s := Status{
 		ID:            id,
 		Name:          ps.Name,
 		Order:         ps.Order,
@@ -175,6 +202,37 @@ func statusFromProto(ps *taskguildv1.WorkflowStatus) Status {
 		IsTerminal:    ps.IsTerminal,
 		TransitionsTo: ps.TransitionsTo,
 		AgentID:       ps.AgentId,
+	}
+	for _, ph := range ps.Hooks {
+		s.Hooks = append(s.Hooks, hookFromProto(ph))
+	}
+	return s
+}
+
+func hookFromProto(ph *taskguildv1.StatusHook) StatusHook {
+	id := ph.Id
+	if id == "" {
+		id = ulid.Make().String()
+	}
+	return StatusHook{
+		ID:      id,
+		SkillID: ph.SkillId,
+		Trigger: hookTriggerFromProto(ph.Trigger),
+		Order:   ph.Order,
+		Name:    ph.Name,
+	}
+}
+
+func hookTriggerFromProto(t taskguildv1.HookTrigger) HookTrigger {
+	switch t {
+	case taskguildv1.HookTrigger_HOOK_TRIGGER_BEFORE_TASK_EXECUTION:
+		return HookTriggerBeforeTaskExecution
+	case taskguildv1.HookTrigger_HOOK_TRIGGER_AFTER_TASK_EXECUTION:
+		return HookTriggerAfterTaskExecution
+	case taskguildv1.HookTrigger_HOOK_TRIGGER_AFTER_WORKTREE_CREATION:
+		return HookTriggerAfterWorktreeCreation
+	default:
+		return HookTriggerUnspecified
 	}
 }
 
