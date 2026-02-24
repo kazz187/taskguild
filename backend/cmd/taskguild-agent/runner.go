@@ -261,11 +261,17 @@ func runTask(
 		return workDir
 	}
 
-	// Execute after_task_execution hooks when runTask exits (success or failure).
-	// Use resolveHookDir so hooks run in the worktree if it exists.
-	defer func() {
-		executeHooks(ctx, taskID, "after_task_execution", metadata, resolveHookDir(), taskClient)
-	}()
+	// afterHooks runs after_task_execution hooks exactly once.
+	// It is called explicitly before status transitions and deferred as a
+	// safety-net for all other return paths so hooks always execute.
+	afterHooksExecuted := false
+	afterHooks := func() {
+		if !afterHooksExecuted {
+			afterHooksExecuted = true
+			executeHooks(ctx, taskID, "after_task_execution", metadata, resolveHookDir(), taskClient)
+		}
+	}
+	defer afterHooks()
 
 	// Execute before_task_execution hooks.
 	executeHooks(ctx, taskID, "before_task_execution", metadata, workDir, taskClient)
@@ -397,6 +403,10 @@ func runTask(
 			log.Printf("[task:%s] completed with NEXT_STATUS (turn %d)", taskID, turn)
 			reportTaskResult(ctx, client, taskID, v1.TaskResultStatus_TASK_RESULT_STATUS_COMPLETED, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed")
+			// Run after hooks before transitioning status so that hooks
+			// still observe the current status and the transition happens
+			// only after all hooks complete.
+			afterHooks()
 			handleStatusTransition(ctx, taskClient, taskID, summary, metadata)
 			return
 		}

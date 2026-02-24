@@ -3,7 +3,7 @@ import { Link, useMatchRoute } from '@tanstack/react-router'
 import { useQuery } from '@connectrpc/connect-query'
 import { listProjects } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
 import { listWorkflows } from '@taskguild/proto/taskguild/v1/workflow-WorkflowService_connectquery.ts'
-import { ChevronRight, ChevronDown, MessageSquare, Bot, Sparkles } from 'lucide-react'
+import { ChevronRight, ChevronDown, MessageSquare, Bot, Sparkles, Workflow } from 'lucide-react'
 
 export function SidebarNav() {
   const { data } = useQuery(listProjects, {})
@@ -52,18 +52,7 @@ function ProjectChildren({ projectId }: { projectId: string }) {
 
   return (
     <div className="ml-4 border-l border-slate-800 pl-2 space-y-0.5 py-0.5">
-      {workflows.map((wf) => (
-        <Link
-          key={wf.id}
-          to="/projects/$projectId"
-          params={{ projectId }}
-          search={{ workflowId: wf.id }}
-          className="block px-3 py-1 text-xs text-gray-400 hover:text-white hover:bg-slate-800/40 rounded-md transition-colors truncate"
-          activeProps={{ className: 'block px-3 py-1 text-xs text-white bg-slate-800 rounded-md truncate' }}
-        >
-          {wf.name}
-        </Link>
-      ))}
+      <WorkflowsNode projectId={projectId} workflows={workflows} />
       <Link
         to="/projects/$projectId/agents"
         params={{ projectId }}
@@ -91,6 +80,43 @@ function ProjectChildren({ projectId }: { projectId: string }) {
         <MessageSquare className="w-3 h-3" />
         Chat
       </Link>
+    </div>
+  )
+}
+
+function WorkflowsNode({ projectId, workflows }: { projectId: string; workflows: { id: string; name: string }[] }) {
+  const [expanded, setExpanded] = useState(true)
+
+  return (
+    <div>
+      <button
+        onClick={() => setExpanded((e) => !e)}
+        className="w-full flex items-center gap-1.5 px-3 py-1 text-xs text-gray-400 hover:text-white hover:bg-slate-800/40 rounded-md transition-colors"
+      >
+        {expanded ? (
+          <ChevronDown className="w-3 h-3 shrink-0 text-gray-500" />
+        ) : (
+          <ChevronRight className="w-3 h-3 shrink-0 text-gray-500" />
+        )}
+        <Workflow className="w-3 h-3 shrink-0" />
+        <span>Workflows</span>
+      </button>
+      {expanded && workflows.length > 0 && (
+        <div className="ml-3 border-l border-slate-800 pl-2 space-y-0.5 py-0.5">
+          {workflows.map((wf) => (
+            <Link
+              key={wf.id}
+              to="/projects/$projectId"
+              params={{ projectId }}
+              search={{ workflowId: wf.id }}
+              className="block px-3 py-1 text-xs text-gray-400 hover:text-white hover:bg-slate-800/40 rounded-md transition-colors truncate"
+              activeProps={{ className: 'block px-3 py-1 text-xs text-white bg-slate-800 rounded-md truncate' }}
+            >
+              {wf.name}
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
