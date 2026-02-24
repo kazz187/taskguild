@@ -327,6 +327,9 @@ func buildClaudeOptions(
 		CanUseTool: func(toolName string, input map[string]any, toolCtx claudeagent.ToolPermissionContext) (claudeagent.PermissionResult, error) {
 			return handlePermissionRequest(ctx, client, taskID, agentManagerID, toolName, input, waiter, permMode)
 		},
+		StderrCallback: func(line string) {
+			log.Printf("[task:%s] [claude-stderr] %s", taskID, line)
+		},
 	}
 
 	// Parse and pass sub-agents from metadata.
