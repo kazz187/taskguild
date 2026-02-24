@@ -57,6 +57,8 @@ github.com/kazz187/claude-agent-sdk-go v0.0.8 h1:KAmtpF0EUAPr13xbvChS/lrI8QgZp5Y
 github.com/kazz187/claude-agent-sdk-go v0.0.8/go.mod h1:avEQx0oBuhHXKd3LYfnFfT5DXrBOmTK0iEFyUzRlQss=
 github.com/kazz187/claude-agent-sdk-go v0.0.9 h1:rWrYH6/gbvBqtKEAhPeh1LijWrjYxeQzl83263VP5qc=
 github.com/kazz187/claude-agent-sdk-go v0.0.9/go.mod h1:avEQx0oBuhHXKd3LYfnFfT5DXrBOmTK0iEFyUzRlQss=
+github.com/kazz187/claude-agent-sdk-go v0.0.10 h1:i8y1lN9NDCy21cewCy4m1io9hK51g3Za+BMEDqreMZM=
+github.com/kazz187/claude-agent-sdk-go v0.0.10/go.mod h1:avEQx0oBuhHXKd3LYfnFfT5DXrBOmTK0iEFyUzRlQss=
 github.com/kazz187/taskguild/proto/gen/go v0.0.4 h1:m8C7ih5+4xfNgmQOYgLLo+0vRnJwUgMHSDAHjOwSANA=
 github.com/kazz187/taskguild/proto/gen/go v0.0.4/go.mod h1:hO+gT/k7+ZF9+S02PArSZpPatgQOuwB5u2KDfj2WL0k=
 github.com/kelseyhightower/envconfig v1.4.0 h1:Im6hONhd3pLkfDFsbRgu68RDNkGF1r3dvMUtDTo2cv8=

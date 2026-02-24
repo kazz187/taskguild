@@ -26,6 +26,7 @@ func init() {
 	if os.Getenv("CLAUDE_CODE_STREAM_CLOSE_TIMEOUT") == "" {
 		os.Setenv("CLAUDE_CODE_STREAM_CLOSE_TIMEOUT", "2592000000") // 30 days in ms
 	}
+
 }
 
 const (

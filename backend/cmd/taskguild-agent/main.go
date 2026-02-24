@@ -58,6 +58,11 @@ func loadConfig() (*config, error) {
 		cfg.WorkDir = v
 	}
 
+	// Resolve WorkDir to an absolute path so child processes inherit a stable CWD.
+	if abs, err := filepath.Abs(cfg.WorkDir); err == nil {
+		cfg.WorkDir = abs
+	}
+
 	// Derive project name from env var or working directory basename.
 	if v := os.Getenv("TASKGUILD_PROJECT_NAME"); v != "" {
 		cfg.ProjectName = v
