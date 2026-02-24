@@ -17,15 +17,19 @@ const MODEL_OPTIONS = [
 ]
 
 const PERMISSION_MODE_OPTIONS = [
-  { value: '', label: 'Default' },
+  { value: '', label: 'None (inherit)' },
   { value: 'default', label: 'Default (ask for permission)' },
   { value: 'acceptEdits', label: 'Accept Edits' },
+  { value: 'dontAsk', label: "Don't Ask (auto-deny unpermitted)" },
   { value: 'bypassPermissions', label: 'Bypass Permissions' },
+  { value: 'plan', label: 'Plan (read-only exploration)' },
 ]
 
-const ISOLATION_OPTIONS = [
+const MEMORY_OPTIONS = [
   { value: '', label: 'None' },
-  { value: 'worktree', label: 'Worktree' },
+  { value: 'user', label: 'User (~/.claude/agent-memory/)' },
+  { value: 'project', label: 'Project (.claude/agent-memory/)' },
+  { value: 'local', label: 'Local (.claude/agent-memory-local/)' },
 ]
 
 interface AgentFormData {
@@ -33,10 +37,11 @@ interface AgentFormData {
   description: string
   prompt: string
   tools: string[]
+  disallowedTools: string[]
   model: string
-  maxTurns: number
   permissionMode: string
-  isolation: string
+  skills: string[]
+  memory: string
 }
 
 const emptyForm: AgentFormData = {
@@ -44,10 +49,11 @@ const emptyForm: AgentFormData = {
   description: '',
   prompt: '',
   tools: [],
+  disallowedTools: [],
   model: '',
-  maxTurns: 0,
   permissionMode: '',
-  isolation: '',
+  skills: [],
+  memory: '',
 }
 
 function agentToForm(a: AgentDefinition): AgentFormData {
@@ -56,10 +62,11 @@ function agentToForm(a: AgentDefinition): AgentFormData {
     description: a.description,
     prompt: a.prompt,
     tools: [...a.tools],
+    disallowedTools: [...a.disallowedTools],
     model: a.model,
-    maxTurns: a.maxTurns,
     permissionMode: a.permissionMode,
-    isolation: a.isolation,
+    skills: [...a.skills],
+    memory: a.memory,
   }
 }
 
@@ -73,6 +80,7 @@ export function AgentList({ projectId }: { projectId: string }) {
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<AgentFormData>(emptyForm)
+  const [skillInput, setSkillInput] = useState('')
 
   const agents = data?.agents ?? []
 
@@ -80,18 +88,21 @@ export function AgentList({ projectId }: { projectId: string }) {
     setFormMode('create')
     setEditingId(null)
     setForm(emptyForm)
+    setSkillInput('')
   }
 
   const openEdit = (a: AgentDefinition) => {
     setFormMode('edit')
     setEditingId(a.id)
     setForm(agentToForm(a))
+    setSkillInput('')
   }
 
   const closeForm = () => {
     setFormMode(null)
     setEditingId(null)
     setForm(emptyForm)
+    setSkillInput('')
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -128,6 +139,27 @@ export function AgentList({ projectId }: { projectId: string }) {
         ? prev.tools.filter(t => t !== tool)
         : [...prev.tools, tool],
     }))
+  }
+
+  const toggleDisallowedTool = (tool: string) => {
+    setForm(prev => ({
+      ...prev,
+      disallowedTools: prev.disallowedTools.includes(tool)
+        ? prev.disallowedTools.filter(t => t !== tool)
+        : [...prev.disallowedTools, tool],
+    }))
+  }
+
+  const addSkill = () => {
+    const trimmed = skillInput.trim()
+    if (trimmed && !form.skills.includes(trimmed)) {
+      setForm(prev => ({ ...prev, skills: [...prev.skills, trimmed] }))
+      setSkillInput('')
+    }
+  }
+
+  const removeSkill = (skill: string) => {
+    setForm(prev => ({ ...prev, skills: prev.skills.filter(s => s !== skill) }))
   }
 
   const mutation = formMode === 'create' ? createMut : updateMut
@@ -193,7 +225,7 @@ export function AgentList({ projectId }: { projectId: string }) {
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
                   placeholder="e.g. code-reviewer"
                 />
-                <p className="text-[10px] text-gray-600 mt-0.5">Used as filename in .claude/agents/</p>
+                <p className="text-[10px] text-gray-600 mt-0.5">Lowercase with hyphens. Used as filename in .claude/agents/</p>
               </div>
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Description *</label>
@@ -222,7 +254,7 @@ export function AgentList({ projectId }: { projectId: string }) {
               <p className="text-[10px] text-gray-600 mt-0.5">Body of the .md file. This becomes the agent's system prompt.</p>
             </div>
 
-            {/* Tools */}
+            {/* Allowed Tools */}
             <div>
               <label className="block text-xs text-gray-400 mb-1">Allowed Tools</label>
               <div className="flex flex-wrap gap-1.5">
@@ -241,11 +273,33 @@ export function AgentList({ projectId }: { projectId: string }) {
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] text-gray-600 mt-1">Leave empty to inherit all tools</p>
+              <p className="text-[10px] text-gray-600 mt-1">Leave empty to inherit all tools from parent</p>
             </div>
 
-            {/* Model, MaxTurns, PermissionMode, Isolation row */}
-            <div className="grid grid-cols-4 gap-3">
+            {/* Disallowed Tools */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Disallowed Tools</label>
+              <div className="flex flex-wrap gap-1.5">
+                {AVAILABLE_TOOLS.map(tool => (
+                  <button
+                    key={tool}
+                    type="button"
+                    onClick={() => toggleDisallowedTool(tool)}
+                    className={`px-2.5 py-1 text-xs rounded-lg transition-colors ${
+                      form.disallowedTools.includes(tool)
+                        ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                        : 'bg-slate-800 text-gray-500 border border-slate-700 hover:text-gray-300'
+                    }`}
+                  >
+                    {tool}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-600 mt-1">Tools to deny, removed from inherited or specified list</p>
+            </div>
+
+            {/* Model & Permission Mode row */}
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Model</label>
                 <select
@@ -257,17 +311,6 @@ export function AgentList({ projectId }: { projectId: string }) {
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Max Turns</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={form.maxTurns || ''}
-                  onChange={e => setForm(prev => ({ ...prev, maxTurns: parseInt(e.target.value) || 0 }))}
-                  className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-cyan-500"
-                  placeholder="0 (unlimited)"
-                />
               </div>
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Permission Mode</label>
@@ -282,17 +325,55 @@ export function AgentList({ projectId }: { projectId: string }) {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Isolation</label>
+                <label className="block text-xs text-gray-400 mb-1">Memory</label>
                 <select
-                  value={form.isolation}
-                  onChange={e => setForm(prev => ({ ...prev, isolation: e.target.value }))}
+                  value={form.memory}
+                  onChange={e => setForm(prev => ({ ...prev, memory: e.target.value }))}
                   className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-cyan-500"
                 >
-                  {ISOLATION_OPTIONS.map(opt => (
+                  {MEMORY_OPTIONS.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* Skills */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Skills</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={skillInput}
+                  onChange={e => setSkillInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSkill() } }}
+                  className="flex-1 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
+                  placeholder="e.g. api-conventions"
+                />
+                <button
+                  type="button"
+                  onClick={addSkill}
+                  className="px-3 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-gray-400 hover:text-white hover:border-slate-600 transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+              {form.skills.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {form.skills.map(skill => (
+                    <span
+                      key={skill}
+                      className="flex items-center gap-1 px-2 py-0.5 text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-lg"
+                    >
+                      {skill}
+                      <button type="button" onClick={() => removeSkill(skill)} className="hover:text-purple-200">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <p className="text-[10px] text-gray-600 mt-1">Skills to preload into the agent's context at startup</p>
             </div>
           </div>
 
@@ -346,6 +427,11 @@ export function AgentList({ projectId }: { projectId: string }) {
                         {agent.model}
                       </span>
                     )}
+                    {agent.memory && (
+                      <span className="text-[10px] text-purple-400 bg-purple-500/10 border border-purple-500/20 rounded-full px-1.5 py-0.5 shrink-0">
+                        memory: {agent.memory}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-gray-400 mb-2">{agent.description}</p>
                   {agent.tools.length > 0 && (
@@ -353,6 +439,24 @@ export function AgentList({ projectId }: { projectId: string }) {
                       {agent.tools.map(tool => (
                         <span key={tool} className="text-[10px] px-1.5 py-0.5 bg-slate-800 text-gray-500 rounded">
                           {tool}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {agent.disallowedTools.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-1">
+                      {agent.disallowedTools.map(tool => (
+                        <span key={tool} className="text-[10px] px-1.5 py-0.5 bg-red-500/10 text-red-400 rounded">
+                          -{tool}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {agent.skills.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-1">
+                      {agent.skills.map(skill => (
+                        <span key={skill} className="text-[10px] px-1.5 py-0.5 bg-purple-500/10 text-purple-400 rounded">
+                          {skill}
                         </span>
                       ))}
                     </div>

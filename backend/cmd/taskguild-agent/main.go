@@ -135,9 +135,6 @@ func main() {
 		heartbeat(ctx, client, cfg.AgentManagerID)
 	}()
 
-	// Initial agent sync before subscribing.
-	syncAgents(ctx, client, cfg)
-
 	// Subscribe loop with reconnection
 	for {
 		if ctx.Err() != nil {

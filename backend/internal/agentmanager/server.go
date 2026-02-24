@@ -452,19 +452,20 @@ func (s *Server) SyncAgents(ctx context.Context, req *connect.Request[taskguildv
 
 func agentToProto(a *agent.Agent) *taskguildv1.AgentDefinition {
 	return &taskguildv1.AgentDefinition{
-		Id:             a.ID,
-		ProjectId:      a.ProjectID,
-		Name:           a.Name,
-		Description:    a.Description,
-		Prompt:         a.Prompt,
-		Tools:          a.Tools,
-		Model:          a.Model,
-		MaxTurns:       a.MaxTurns,
-		PermissionMode: a.PermissionMode,
-		Isolation:      a.Isolation,
-		IsSynced:       a.IsSynced,
-		CreatedAt:      timestamppb.New(a.CreatedAt),
-		UpdatedAt:      timestamppb.New(a.UpdatedAt),
+		Id:              a.ID,
+		ProjectId:       a.ProjectID,
+		Name:            a.Name,
+		Description:     a.Description,
+		Prompt:          a.Prompt,
+		Tools:           a.Tools,
+		DisallowedTools: a.DisallowedTools,
+		Model:           a.Model,
+		PermissionMode:  a.PermissionMode,
+		Skills:          a.Skills,
+		Memory:          a.Memory,
+		IsSynced:        a.IsSynced,
+		CreatedAt:       timestamppb.New(a.CreatedAt),
+		UpdatedAt:       timestamppb.New(a.UpdatedAt),
 	}
 }
 

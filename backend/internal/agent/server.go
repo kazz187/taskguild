@@ -43,19 +43,20 @@ func (s *Server) notifyChange(projectID string) {
 func (s *Server) CreateAgent(ctx context.Context, req *connect.Request[taskguildv1.CreateAgentRequest]) (*connect.Response[taskguildv1.CreateAgentResponse], error) {
 	now := time.Now()
 	a := &Agent{
-		ID:             ulid.Make().String(),
-		ProjectID:      req.Msg.ProjectId,
-		Name:           req.Msg.Name,
-		Description:    req.Msg.Description,
-		Prompt:         req.Msg.Prompt,
-		Tools:          req.Msg.Tools,
-		Model:          req.Msg.Model,
-		MaxTurns:       req.Msg.MaxTurns,
-		PermissionMode: req.Msg.PermissionMode,
-		Isolation:      req.Msg.Isolation,
-		IsSynced:       false,
-		CreatedAt:      now,
-		UpdatedAt:      now,
+		ID:              ulid.Make().String(),
+		ProjectID:       req.Msg.ProjectId,
+		Name:            req.Msg.Name,
+		Description:     req.Msg.Description,
+		Prompt:          req.Msg.Prompt,
+		Tools:           req.Msg.Tools,
+		DisallowedTools: req.Msg.DisallowedTools,
+		Model:           req.Msg.Model,
+		PermissionMode:  req.Msg.PermissionMode,
+		Skills:          req.Msg.Skills,
+		Memory:          req.Msg.Memory,
+		IsSynced:        false,
+		CreatedAt:       now,
+		UpdatedAt:       now,
 	}
 	if err := s.repo.Create(ctx, a); err != nil {
 		return nil, err
@@ -119,17 +120,20 @@ func (s *Server) UpdateAgent(ctx context.Context, req *connect.Request[taskguild
 	if req.Msg.Tools != nil {
 		a.Tools = req.Msg.Tools
 	}
+	if req.Msg.DisallowedTools != nil {
+		a.DisallowedTools = req.Msg.DisallowedTools
+	}
 	if req.Msg.Model != "" {
 		a.Model = req.Msg.Model
-	}
-	if req.Msg.MaxTurns != 0 {
-		a.MaxTurns = req.Msg.MaxTurns
 	}
 	if req.Msg.PermissionMode != "" {
 		a.PermissionMode = req.Msg.PermissionMode
 	}
-	if req.Msg.Isolation != "" {
-		a.Isolation = req.Msg.Isolation
+	if req.Msg.Skills != nil {
+		a.Skills = req.Msg.Skills
+	}
+	if req.Msg.Memory != "" {
+		a.Memory = req.Msg.Memory
 	}
 	a.UpdatedAt = time.Now()
 	if err := s.repo.Update(ctx, a); err != nil {
@@ -194,10 +198,11 @@ func (s *Server) SyncAgentsFromDir(ctx context.Context, req *connect.Request[tas
 			existing.Description = parsed.Description
 			existing.Prompt = parsed.Prompt
 			existing.Tools = parsed.Tools
+			existing.DisallowedTools = parsed.DisallowedTools
 			existing.Model = parsed.Model
-			existing.MaxTurns = parsed.MaxTurns
 			existing.PermissionMode = parsed.PermissionMode
-			existing.Isolation = parsed.Isolation
+			existing.Skills = parsed.Skills
+			existing.Memory = parsed.Memory
 			existing.IsSynced = true
 			existing.UpdatedAt = time.Now()
 			if err := s.repo.Update(ctx, existing); err != nil {
@@ -209,19 +214,20 @@ func (s *Server) SyncAgentsFromDir(ctx context.Context, req *connect.Request[tas
 			// Create new agent.
 			now := time.Now()
 			a := &Agent{
-				ID:             ulid.Make().String(),
-				ProjectID:      req.Msg.ProjectId,
-				Name:           parsed.Name,
-				Description:    parsed.Description,
-				Prompt:         parsed.Prompt,
-				Tools:          parsed.Tools,
-				Model:          parsed.Model,
-				MaxTurns:       parsed.MaxTurns,
-				PermissionMode: parsed.PermissionMode,
-				Isolation:      parsed.Isolation,
-				IsSynced:       true,
-				CreatedAt:      now,
-				UpdatedAt:      now,
+				ID:              ulid.Make().String(),
+				ProjectID:       req.Msg.ProjectId,
+				Name:            parsed.Name,
+				Description:     parsed.Description,
+				Prompt:          parsed.Prompt,
+				Tools:           parsed.Tools,
+				Model:           parsed.Model,
+				PermissionMode:  parsed.PermissionMode,
+				DisallowedTools: parsed.DisallowedTools,
+				Skills:          parsed.Skills,
+				Memory:          parsed.Memory,
+				IsSynced:        true,
+				CreatedAt:       now,
+				UpdatedAt:       now,
 			}
 			if err := s.repo.Create(ctx, a); err != nil {
 				continue
@@ -244,14 +250,15 @@ func (s *Server) SyncAgentsFromDir(ctx context.Context, req *connect.Request[tas
 
 // parsedAgent holds data extracted from a .claude/agents/*.md file.
 type parsedAgent struct {
-	Name           string
-	Description    string
-	Prompt         string
-	Tools          []string
-	Model          string
-	MaxTurns       int32
-	PermissionMode string
-	Isolation      string
+	Name            string
+	Description     string
+	Prompt          string
+	Tools           []string
+	DisallowedTools []string
+	Model           string
+	PermissionMode  string
+	Skills          []string
+	Memory          string
 }
 
 // parseAgentMDFile parses a Claude Code agent definition markdown file.
@@ -306,34 +313,78 @@ func parseAgentMDFile(filePath string) (*parsedAgent, error) {
 	}
 
 	// Parse frontmatter as simple key: value pairs.
+	// Also supports YAML list format (  - item) for list fields like skills.
+	var currentListKey string
 	for _, line := range frontmatterLines {
+		// Check for YAML list item (e.g. "  - skill-name").
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "- ") && currentListKey != "" {
+			item := strings.TrimSpace(strings.TrimPrefix(trimmed, "- "))
+			if item != "" {
+				switch currentListKey {
+				case "skills":
+					result.Skills = append(result.Skills, item)
+				case "tools":
+					result.Tools = append(result.Tools, item)
+				case "disallowedTools":
+					result.DisallowedTools = append(result.DisallowedTools, item)
+				}
+			}
+			continue
+		}
+
 		if idx := strings.Index(line, ":"); idx > 0 {
 			key := strings.TrimSpace(line[:idx])
 			value := strings.TrimSpace(line[idx+1:])
+			currentListKey = "" // Reset list context.
+
 			switch key {
 			case "name":
 				result.Name = value
 			case "description":
 				result.Description = value
 			case "tools":
-				// Tools can be comma-separated.
-				parts := strings.Split(value, ",")
-				for _, p := range parts {
-					p = strings.TrimSpace(p)
-					if p != "" {
-						result.Tools = append(result.Tools, p)
+				if value == "" {
+					currentListKey = "tools"
+				} else {
+					parts := strings.Split(value, ",")
+					for _, p := range parts {
+						p = strings.TrimSpace(p)
+						if p != "" {
+							result.Tools = append(result.Tools, p)
+						}
+					}
+				}
+			case "disallowedTools":
+				if value == "" {
+					currentListKey = "disallowedTools"
+				} else {
+					parts := strings.Split(value, ",")
+					for _, p := range parts {
+						p = strings.TrimSpace(p)
+						if p != "" {
+							result.DisallowedTools = append(result.DisallowedTools, p)
+						}
 					}
 				}
 			case "model":
 				result.Model = value
-			case "maxTurns":
-				var n int32
-				fmt.Sscanf(value, "%d", &n)
-				result.MaxTurns = n
 			case "permissionMode":
 				result.PermissionMode = value
-			case "isolation":
-				result.Isolation = value
+			case "skills":
+				if value == "" {
+					currentListKey = "skills"
+				} else {
+					parts := strings.Split(value, ",")
+					for _, p := range parts {
+						p = strings.TrimSpace(p)
+						if p != "" {
+							result.Skills = append(result.Skills, p)
+						}
+					}
+				}
+			case "memory":
+				result.Memory = value
 			}
 		}
 	}
@@ -348,18 +399,19 @@ func parseAgentMDFile(filePath string) (*parsedAgent, error) {
 
 func toProto(a *Agent) *taskguildv1.AgentDefinition {
 	return &taskguildv1.AgentDefinition{
-		Id:             a.ID,
-		ProjectId:      a.ProjectID,
-		Name:           a.Name,
-		Description:    a.Description,
-		Prompt:         a.Prompt,
-		Tools:          a.Tools,
-		Model:          a.Model,
-		MaxTurns:       a.MaxTurns,
-		PermissionMode: a.PermissionMode,
-		Isolation:      a.Isolation,
-		IsSynced:       a.IsSynced,
-		CreatedAt:      timestamppb.New(a.CreatedAt),
-		UpdatedAt:      timestamppb.New(a.UpdatedAt),
+		Id:              a.ID,
+		ProjectId:       a.ProjectID,
+		Name:            a.Name,
+		Description:     a.Description,
+		Prompt:          a.Prompt,
+		Tools:           a.Tools,
+		DisallowedTools: a.DisallowedTools,
+		Model:           a.Model,
+		PermissionMode:  a.PermissionMode,
+		Skills:          a.Skills,
+		Memory:          a.Memory,
+		IsSynced:        a.IsSynced,
+		CreatedAt:       timestamppb.New(a.CreatedAt),
+		UpdatedAt:       timestamppb.New(a.UpdatedAt),
 	}
 }

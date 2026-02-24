@@ -64,7 +64,7 @@ func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServi
 }
 
 // buildAgentMDContent generates markdown content with YAML frontmatter
-// matching the format expected by parseAgentMDFile.
+// matching the Claude Code sub-agent .md file format.
 func buildAgentMDContent(ag *v1.AgentDefinition) string {
 	var sb strings.Builder
 
@@ -79,17 +79,23 @@ func buildAgentMDContent(ag *v1.AgentDefinition) string {
 	if len(ag.GetTools()) > 0 {
 		sb.WriteString(fmt.Sprintf("tools: %s\n", strings.Join(ag.GetTools(), ", ")))
 	}
+	if len(ag.GetDisallowedTools()) > 0 {
+		sb.WriteString(fmt.Sprintf("disallowedTools: %s\n", strings.Join(ag.GetDisallowedTools(), ", ")))
+	}
 	if ag.GetModel() != "" {
 		sb.WriteString(fmt.Sprintf("model: %s\n", ag.GetModel()))
-	}
-	if ag.GetMaxTurns() > 0 {
-		sb.WriteString(fmt.Sprintf("maxTurns: %d\n", ag.GetMaxTurns()))
 	}
 	if ag.GetPermissionMode() != "" {
 		sb.WriteString(fmt.Sprintf("permissionMode: %s\n", ag.GetPermissionMode()))
 	}
-	if ag.GetIsolation() != "" {
-		sb.WriteString(fmt.Sprintf("isolation: %s\n", ag.GetIsolation()))
+	if len(ag.GetSkills()) > 0 {
+		sb.WriteString("skills:\n")
+		for _, skill := range ag.GetSkills() {
+			sb.WriteString(fmt.Sprintf("  - %s\n", skill))
+		}
+	}
+	if ag.GetMemory() != "" {
+		sb.WriteString(fmt.Sprintf("memory: %s\n", ag.GetMemory()))
 	}
 
 	sb.WriteString("---\n")
