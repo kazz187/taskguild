@@ -114,6 +114,15 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
       const arr = map.get(effectiveStatusId)
       if (arr) arr.push(t)
     }
+    // Sort tasks within each status: newest first (reverse chronological by created_at)
+    for (const arr of map.values()) {
+      arr.sort((a, b) => {
+        const aSeconds = Number(a.createdAt?.seconds ?? 0n)
+        const bSeconds = Number(b.createdAt?.seconds ?? 0n)
+        if (bSeconds !== aSeconds) return bSeconds - aSeconds
+        return (b.createdAt?.nanos ?? 0) - (a.createdAt?.nanos ?? 0)
+      })
+    }
     return map
   }, [tasks, sortedStatuses, pendingMoves])
 
