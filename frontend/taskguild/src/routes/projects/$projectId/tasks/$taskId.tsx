@@ -12,6 +12,7 @@ import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { TaskDetailModal } from '@/components/TaskDetailModal'
 import { shortId } from '@/lib/id'
 import { ChatBubble, InputBar } from '@/components/ChatBubble'
+import { MarkdownDescription } from '@/components/MarkdownDescription'
 import {
   ArrowLeft,
   ArrowRight,
@@ -103,7 +104,8 @@ function TaskDetailPage() {
   }
 
   const metadata = task.metadata ?? {}
-  const metadataEntries = Object.entries(metadata).filter(([, v]) => v)
+  const resultSummary = metadata['result_summary'] ?? ''
+  const metadataEntries = Object.entries(metadata).filter(([key, v]) => v && key !== 'result_summary' && key !== 'result_status' && key !== 'result_error')
 
   return (
     <div className="flex flex-col h-screen">
@@ -192,6 +194,14 @@ function TaskDetailPage() {
             <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Description</p>
               <p className="text-sm text-gray-300 whitespace-pre-wrap">{task.description}</p>
+            </div>
+          )}
+
+          {/* Result Summary */}
+          {resultSummary && (
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Result Summary</p>
+              <MarkdownDescription content={resultSummary} className="text-sm text-gray-300" />
             </div>
           )}
 

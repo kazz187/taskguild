@@ -178,7 +178,6 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 	if t.Metadata == nil {
 		t.Metadata = make(map[string]string)
 	}
-	t.Metadata["result_status"] = req.Msg.Status.String()
 	if req.Msg.Summary != "" {
 		t.Metadata["result_summary"] = req.Msg.Summary
 	}
@@ -195,9 +194,8 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 		t.ID,
 		"",
 		map[string]string{
-			"project_id":    t.ProjectID,
-			"workflow_id":   t.WorkflowID,
-			"result_status": req.Msg.Status.String(),
+			"project_id":  t.ProjectID,
+			"workflow_id": t.WorkflowID,
 		},
 	)
 

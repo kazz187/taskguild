@@ -89,15 +89,10 @@ message ClaimTaskResponse {
   map<string, string> metadata = 4;
 }
 
-enum TaskResultStatus {
-  TASK_RESULT_STATUS_UNSPECIFIED = 0;
-  TASK_RESULT_STATUS_COMPLETED = 1;
-  TASK_RESULT_STATUS_FAILED = 2;
-}
-
 message ReportTaskResultRequest {
   string task_id = 1;
-  TaskResultStatus status = 2;
+  reserved 2;
+  reserved "status";
   string summary = 3;
   string error_message = 4;
 }
