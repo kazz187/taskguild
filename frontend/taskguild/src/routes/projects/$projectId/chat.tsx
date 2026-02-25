@@ -3,6 +3,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { listTasks } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import { listInteractions, respondToInteraction } from '@taskguild/proto/taskguild/v1/interaction-InteractionService_connectquery.ts'
+import { InteractionStatus, InteractionType } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import { getProject } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
@@ -18,6 +19,8 @@ export const Route = createFileRoute('/projects/$projectId/chat')({
 function ProjectChatPage() {
   const { projectId } = Route.useParams()
   const scrollRef = useRef<HTMLDivElement>(null)
+  const bellAudioRef = useRef<HTMLAudioElement | null>(null)
+  const prevPendingCountRef = useRef(0)
 
   const { data: projectData } = useQuery(getProject, { id: projectId })
   const { data: tasksData, refetch: refetchTasks } = useQuery(listTasks, { projectId })
@@ -48,6 +51,30 @@ function ProjectChatPage() {
   ], [])
 
   const { connectionStatus, reconnect } = useEventSubscription(eventTypes, projectId, onEvent)
+
+  // Count pending requests (permission requests and questions)
+  const pendingRequestCount = useMemo(
+    () =>
+      interactions.filter(
+        (i) =>
+          (i.type === InteractionType.PERMISSION_REQUEST ||
+            i.type === InteractionType.QUESTION) &&
+          i.status === InteractionStatus.PENDING,
+      ).length,
+    [interactions],
+  )
+
+  // Play notification sound when new pending requests arrive
+  useEffect(() => {
+    if (pendingRequestCount > prevPendingCountRef.current) {
+      if (!bellAudioRef.current) {
+        bellAudioRef.current = new Audio('/bell.mp3')
+      }
+      bellAudioRef.current.currentTime = 0
+      bellAudioRef.current.play().catch(() => {})
+    }
+    prevPendingCountRef.current = pendingRequestCount
+  }, [pendingRequestCount])
 
   // Auto-scroll to bottom when new interactions arrive
   useEffect(() => {
