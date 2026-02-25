@@ -11,6 +11,15 @@ import { X, Bot, Clock, GitBranch, Loader, Trash2, ArrowRight, MessageSquare, Sh
 import { MarkdownDescription } from './MarkdownDescription'
 import { shortId } from '@/lib/id'
 
+const TASK_DETAIL_EVENT_TYPES = [
+  EventType.TASK_UPDATED,
+  EventType.TASK_STATUS_CHANGED,
+  EventType.AGENT_ASSIGNED,
+  EventType.AGENT_STATUS_CHANGED,
+  EventType.INTERACTION_CREATED,
+  EventType.INTERACTION_RESPONDED,
+]
+
 interface TaskDetailModalProps {
   taskId: string
   projectId: string
@@ -59,7 +68,7 @@ export function TaskDetailModal({
   }, [refetchTask, refetchInteractions])
 
   useEventSubscription(
-    [EventType.TASK_UPDATED, EventType.TASK_STATUS_CHANGED, EventType.AGENT_ASSIGNED, EventType.AGENT_STATUS_CHANGED, EventType.INTERACTION_CREATED, EventType.INTERACTION_RESPONDED],
+    TASK_DETAIL_EVENT_TYPES,
     projectId,
     onEvent,
   )

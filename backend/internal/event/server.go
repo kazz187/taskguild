@@ -24,6 +24,14 @@ func (s *Server) SubscribeEvents(ctx context.Context, req *connect.Request[taskg
 	subID, ch := s.eventBus.Subscribe(64)
 	defer s.eventBus.Unsubscribe(subID)
 
+	// Send an initial event to signal that the stream connection is established.
+	// This allows the client to immediately transition from "connecting" to "connected".
+	if err := stream.Send(&taskguildv1.Event{
+		Type: taskguildv1.EventType_EVENT_TYPE_UNSPECIFIED,
+	}); err != nil {
+		return err
+	}
+
 	// Build event type filter set.
 	typeFilter := make(map[taskguildv1.EventType]struct{}, len(req.Msg.EventTypes))
 	for _, et := range req.Msg.EventTypes {

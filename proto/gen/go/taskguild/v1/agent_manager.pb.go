@@ -22,55 +22,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type TaskResultStatus int32
-
-const (
-	TaskResultStatus_TASK_RESULT_STATUS_UNSPECIFIED TaskResultStatus = 0
-	TaskResultStatus_TASK_RESULT_STATUS_COMPLETED   TaskResultStatus = 1
-	TaskResultStatus_TASK_RESULT_STATUS_FAILED      TaskResultStatus = 2
-)
-
-// Enum value maps for TaskResultStatus.
-var (
-	TaskResultStatus_name = map[int32]string{
-		0: "TASK_RESULT_STATUS_UNSPECIFIED",
-		1: "TASK_RESULT_STATUS_COMPLETED",
-		2: "TASK_RESULT_STATUS_FAILED",
-	}
-	TaskResultStatus_value = map[string]int32{
-		"TASK_RESULT_STATUS_UNSPECIFIED": 0,
-		"TASK_RESULT_STATUS_COMPLETED":   1,
-		"TASK_RESULT_STATUS_FAILED":      2,
-	}
-)
-
-func (x TaskResultStatus) Enum() *TaskResultStatus {
-	p := new(TaskResultStatus)
-	*p = x
-	return p
-}
-
-func (x TaskResultStatus) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (TaskResultStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_taskguild_v1_agent_manager_proto_enumTypes[0].Descriptor()
-}
-
-func (TaskResultStatus) Type() protoreflect.EnumType {
-	return &file_taskguild_v1_agent_manager_proto_enumTypes[0]
-}
-
-func (x TaskResultStatus) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use TaskResultStatus.Descriptor instead.
-func (TaskResultStatus) EnumDescriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{0}
-}
-
 type AgentStatus int32
 
 const (
@@ -110,11 +61,11 @@ func (x AgentStatus) String() string {
 }
 
 func (AgentStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_taskguild_v1_agent_manager_proto_enumTypes[1].Descriptor()
+	return file_taskguild_v1_agent_manager_proto_enumTypes[0].Descriptor()
 }
 
 func (AgentStatus) Type() protoreflect.EnumType {
-	return &file_taskguild_v1_agent_manager_proto_enumTypes[1]
+	return &file_taskguild_v1_agent_manager_proto_enumTypes[0]
 }
 
 func (x AgentStatus) Number() protoreflect.EnumNumber {
@@ -123,7 +74,7 @@ func (x AgentStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use AgentStatus.Descriptor instead.
 func (AgentStatus) EnumDescriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{1}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{0}
 }
 
 type AgentManagerSubscribeRequest struct {
@@ -724,7 +675,6 @@ func (x *ClaimTaskResponse) GetMetadata() map[string]string {
 type ReportTaskResultRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	Status        TaskResultStatus       `protobuf:"varint,2,opt,name=status,proto3,enum=taskguild.v1.TaskResultStatus" json:"status,omitempty"`
 	Summary       string                 `protobuf:"bytes,3,opt,name=summary,proto3" json:"summary,omitempty"`
 	ErrorMessage  string                 `protobuf:"bytes,4,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -766,13 +716,6 @@ func (x *ReportTaskResultRequest) GetTaskId() string {
 		return x.TaskId
 	}
 	return ""
-}
-
-func (x *ReportTaskResultRequest) GetStatus() TaskResultStatus {
-	if x != nil {
-		return x.Status
-	}
-	return TaskResultStatus_TASK_RESULT_STATUS_UNSPECIFIED
 }
 
 func (x *ReportTaskResultRequest) GetSummary() string {
@@ -1382,12 +1325,11 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\bmetadata\x18\x04 \x03(\v2-.taskguild.v1.ClaimTaskResponse.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa9\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x7f\n" +
 	"\x17ReportTaskResultRequest\x12\x17\n" +
-	"\atask_id\x18\x01 \x01(\tR\x06taskId\x126\n" +
-	"\x06status\x18\x02 \x01(\x0e2\x1e.taskguild.v1.TaskResultStatusR\x06status\x12\x18\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x18\n" +
 	"\asummary\x18\x03 \x01(\tR\asummary\x12#\n" +
-	"\rerror_message\x18\x04 \x01(\tR\ferrorMessage\"\x1a\n" +
+	"\rerror_message\x18\x04 \x01(\tR\ferrorMessageJ\x04\b\x02\x10\x03R\x06status\"\x1a\n" +
 	"\x18ReportTaskResultResponse\"\xaa\x01\n" +
 	"\x18ReportAgentStatusRequest\x12(\n" +
 	"\x10agent_manager_id\x18\x01 \x01(\tR\x0eagentManagerId\x12\x17\n" +
@@ -1416,11 +1358,7 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\x11SyncAgentsRequest\x12!\n" +
 	"\fproject_name\x18\x01 \x01(\tR\vprojectName\"K\n" +
 	"\x12SyncAgentsResponse\x125\n" +
-	"\x06agents\x18\x01 \x03(\v2\x1d.taskguild.v1.AgentDefinitionR\x06agents*w\n" +
-	"\x10TaskResultStatus\x12\"\n" +
-	"\x1eTASK_RESULT_STATUS_UNSPECIFIED\x10\x00\x12 \n" +
-	"\x1cTASK_RESULT_STATUS_COMPLETED\x10\x01\x12\x1d\n" +
-	"\x19TASK_RESULT_STATUS_FAILED\x10\x02*\x8e\x01\n" +
+	"\x06agents\x18\x01 \x03(\v2\x1d.taskguild.v1.AgentDefinitionR\x06agents*\x8e\x01\n" +
 	"\vAgentStatus\x12\x1c\n" +
 	"\x18AGENT_STATUS_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11AGENT_STATUS_IDLE\x10\x01\x12\x18\n" +
@@ -1451,79 +1389,77 @@ func file_taskguild_v1_agent_manager_proto_rawDescGZIP() []byte {
 	return file_taskguild_v1_agent_manager_proto_rawDescData
 }
 
-var file_taskguild_v1_agent_manager_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_taskguild_v1_agent_manager_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_taskguild_v1_agent_manager_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_taskguild_v1_agent_manager_proto_goTypes = []any{
-	(TaskResultStatus)(0),                  // 0: taskguild.v1.TaskResultStatus
-	(AgentStatus)(0),                       // 1: taskguild.v1.AgentStatus
-	(*AgentManagerSubscribeRequest)(nil),   // 2: taskguild.v1.AgentManagerSubscribeRequest
-	(*AgentCommand)(nil),                   // 3: taskguild.v1.AgentCommand
-	(*TaskAvailableCommand)(nil),           // 4: taskguild.v1.TaskAvailableCommand
-	(*AssignTaskCommand)(nil),              // 5: taskguild.v1.AssignTaskCommand
-	(*CancelTaskCommand)(nil),              // 6: taskguild.v1.CancelTaskCommand
-	(*InteractionResponseCommand)(nil),     // 7: taskguild.v1.InteractionResponseCommand
-	(*SyncAgentsCommand)(nil),              // 8: taskguild.v1.SyncAgentsCommand
-	(*ClaimTaskRequest)(nil),               // 9: taskguild.v1.ClaimTaskRequest
-	(*ClaimTaskResponse)(nil),              // 10: taskguild.v1.ClaimTaskResponse
-	(*ReportTaskResultRequest)(nil),        // 11: taskguild.v1.ReportTaskResultRequest
-	(*ReportTaskResultResponse)(nil),       // 12: taskguild.v1.ReportTaskResultResponse
-	(*ReportAgentStatusRequest)(nil),       // 13: taskguild.v1.ReportAgentStatusRequest
-	(*ReportAgentStatusResponse)(nil),      // 14: taskguild.v1.ReportAgentStatusResponse
-	(*HeartbeatRequest)(nil),               // 15: taskguild.v1.HeartbeatRequest
-	(*HeartbeatResponse)(nil),              // 16: taskguild.v1.HeartbeatResponse
-	(*CreateInteractionRequest)(nil),       // 17: taskguild.v1.CreateInteractionRequest
-	(*CreateInteractionResponse)(nil),      // 18: taskguild.v1.CreateInteractionResponse
-	(*GetInteractionResponseRequest)(nil),  // 19: taskguild.v1.GetInteractionResponseRequest
-	(*GetInteractionResponseResponse)(nil), // 20: taskguild.v1.GetInteractionResponseResponse
-	(*SyncAgentsRequest)(nil),              // 21: taskguild.v1.SyncAgentsRequest
-	(*SyncAgentsResponse)(nil),             // 22: taskguild.v1.SyncAgentsResponse
-	nil,                                    // 23: taskguild.v1.TaskAvailableCommand.MetadataEntry
-	nil,                                    // 24: taskguild.v1.AssignTaskCommand.MetadataEntry
-	nil,                                    // 25: taskguild.v1.ClaimTaskResponse.MetadataEntry
-	(*timestamppb.Timestamp)(nil),          // 26: google.protobuf.Timestamp
-	(InteractionType)(0),                   // 27: taskguild.v1.InteractionType
-	(*InteractionOption)(nil),              // 28: taskguild.v1.InteractionOption
-	(*Interaction)(nil),                    // 29: taskguild.v1.Interaction
-	(*AgentDefinition)(nil),                // 30: taskguild.v1.AgentDefinition
+	(AgentStatus)(0),                       // 0: taskguild.v1.AgentStatus
+	(*AgentManagerSubscribeRequest)(nil),   // 1: taskguild.v1.AgentManagerSubscribeRequest
+	(*AgentCommand)(nil),                   // 2: taskguild.v1.AgentCommand
+	(*TaskAvailableCommand)(nil),           // 3: taskguild.v1.TaskAvailableCommand
+	(*AssignTaskCommand)(nil),              // 4: taskguild.v1.AssignTaskCommand
+	(*CancelTaskCommand)(nil),              // 5: taskguild.v1.CancelTaskCommand
+	(*InteractionResponseCommand)(nil),     // 6: taskguild.v1.InteractionResponseCommand
+	(*SyncAgentsCommand)(nil),              // 7: taskguild.v1.SyncAgentsCommand
+	(*ClaimTaskRequest)(nil),               // 8: taskguild.v1.ClaimTaskRequest
+	(*ClaimTaskResponse)(nil),              // 9: taskguild.v1.ClaimTaskResponse
+	(*ReportTaskResultRequest)(nil),        // 10: taskguild.v1.ReportTaskResultRequest
+	(*ReportTaskResultResponse)(nil),       // 11: taskguild.v1.ReportTaskResultResponse
+	(*ReportAgentStatusRequest)(nil),       // 12: taskguild.v1.ReportAgentStatusRequest
+	(*ReportAgentStatusResponse)(nil),      // 13: taskguild.v1.ReportAgentStatusResponse
+	(*HeartbeatRequest)(nil),               // 14: taskguild.v1.HeartbeatRequest
+	(*HeartbeatResponse)(nil),              // 15: taskguild.v1.HeartbeatResponse
+	(*CreateInteractionRequest)(nil),       // 16: taskguild.v1.CreateInteractionRequest
+	(*CreateInteractionResponse)(nil),      // 17: taskguild.v1.CreateInteractionResponse
+	(*GetInteractionResponseRequest)(nil),  // 18: taskguild.v1.GetInteractionResponseRequest
+	(*GetInteractionResponseResponse)(nil), // 19: taskguild.v1.GetInteractionResponseResponse
+	(*SyncAgentsRequest)(nil),              // 20: taskguild.v1.SyncAgentsRequest
+	(*SyncAgentsResponse)(nil),             // 21: taskguild.v1.SyncAgentsResponse
+	nil,                                    // 22: taskguild.v1.TaskAvailableCommand.MetadataEntry
+	nil,                                    // 23: taskguild.v1.AssignTaskCommand.MetadataEntry
+	nil,                                    // 24: taskguild.v1.ClaimTaskResponse.MetadataEntry
+	(*timestamppb.Timestamp)(nil),          // 25: google.protobuf.Timestamp
+	(InteractionType)(0),                   // 26: taskguild.v1.InteractionType
+	(*InteractionOption)(nil),              // 27: taskguild.v1.InteractionOption
+	(*Interaction)(nil),                    // 28: taskguild.v1.Interaction
+	(*AgentDefinition)(nil),                // 29: taskguild.v1.AgentDefinition
 }
 var file_taskguild_v1_agent_manager_proto_depIdxs = []int32{
-	4,  // 0: taskguild.v1.AgentCommand.task_available:type_name -> taskguild.v1.TaskAvailableCommand
-	5,  // 1: taskguild.v1.AgentCommand.assign_task:type_name -> taskguild.v1.AssignTaskCommand
-	6,  // 2: taskguild.v1.AgentCommand.cancel_task:type_name -> taskguild.v1.CancelTaskCommand
-	7,  // 3: taskguild.v1.AgentCommand.interaction_response:type_name -> taskguild.v1.InteractionResponseCommand
-	8,  // 4: taskguild.v1.AgentCommand.sync_agents:type_name -> taskguild.v1.SyncAgentsCommand
-	23, // 5: taskguild.v1.TaskAvailableCommand.metadata:type_name -> taskguild.v1.TaskAvailableCommand.MetadataEntry
-	24, // 6: taskguild.v1.AssignTaskCommand.metadata:type_name -> taskguild.v1.AssignTaskCommand.MetadataEntry
-	25, // 7: taskguild.v1.ClaimTaskResponse.metadata:type_name -> taskguild.v1.ClaimTaskResponse.MetadataEntry
-	0,  // 8: taskguild.v1.ReportTaskResultRequest.status:type_name -> taskguild.v1.TaskResultStatus
-	1,  // 9: taskguild.v1.ReportAgentStatusRequest.status:type_name -> taskguild.v1.AgentStatus
-	26, // 10: taskguild.v1.HeartbeatRequest.timestamp:type_name -> google.protobuf.Timestamp
-	27, // 11: taskguild.v1.CreateInteractionRequest.type:type_name -> taskguild.v1.InteractionType
-	28, // 12: taskguild.v1.CreateInteractionRequest.options:type_name -> taskguild.v1.InteractionOption
-	29, // 13: taskguild.v1.CreateInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
-	29, // 14: taskguild.v1.GetInteractionResponseResponse.interaction:type_name -> taskguild.v1.Interaction
-	30, // 15: taskguild.v1.SyncAgentsResponse.agents:type_name -> taskguild.v1.AgentDefinition
-	2,  // 16: taskguild.v1.AgentManagerService.Subscribe:input_type -> taskguild.v1.AgentManagerSubscribeRequest
-	9,  // 17: taskguild.v1.AgentManagerService.ClaimTask:input_type -> taskguild.v1.ClaimTaskRequest
-	11, // 18: taskguild.v1.AgentManagerService.ReportTaskResult:input_type -> taskguild.v1.ReportTaskResultRequest
-	13, // 19: taskguild.v1.AgentManagerService.ReportAgentStatus:input_type -> taskguild.v1.ReportAgentStatusRequest
-	15, // 20: taskguild.v1.AgentManagerService.Heartbeat:input_type -> taskguild.v1.HeartbeatRequest
-	17, // 21: taskguild.v1.AgentManagerService.CreateInteraction:input_type -> taskguild.v1.CreateInteractionRequest
-	19, // 22: taskguild.v1.AgentManagerService.GetInteractionResponse:input_type -> taskguild.v1.GetInteractionResponseRequest
-	21, // 23: taskguild.v1.AgentManagerService.SyncAgents:input_type -> taskguild.v1.SyncAgentsRequest
-	3,  // 24: taskguild.v1.AgentManagerService.Subscribe:output_type -> taskguild.v1.AgentCommand
-	10, // 25: taskguild.v1.AgentManagerService.ClaimTask:output_type -> taskguild.v1.ClaimTaskResponse
-	12, // 26: taskguild.v1.AgentManagerService.ReportTaskResult:output_type -> taskguild.v1.ReportTaskResultResponse
-	14, // 27: taskguild.v1.AgentManagerService.ReportAgentStatus:output_type -> taskguild.v1.ReportAgentStatusResponse
-	16, // 28: taskguild.v1.AgentManagerService.Heartbeat:output_type -> taskguild.v1.HeartbeatResponse
-	18, // 29: taskguild.v1.AgentManagerService.CreateInteraction:output_type -> taskguild.v1.CreateInteractionResponse
-	20, // 30: taskguild.v1.AgentManagerService.GetInteractionResponse:output_type -> taskguild.v1.GetInteractionResponseResponse
-	22, // 31: taskguild.v1.AgentManagerService.SyncAgents:output_type -> taskguild.v1.SyncAgentsResponse
-	24, // [24:32] is the sub-list for method output_type
-	16, // [16:24] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	3,  // 0: taskguild.v1.AgentCommand.task_available:type_name -> taskguild.v1.TaskAvailableCommand
+	4,  // 1: taskguild.v1.AgentCommand.assign_task:type_name -> taskguild.v1.AssignTaskCommand
+	5,  // 2: taskguild.v1.AgentCommand.cancel_task:type_name -> taskguild.v1.CancelTaskCommand
+	6,  // 3: taskguild.v1.AgentCommand.interaction_response:type_name -> taskguild.v1.InteractionResponseCommand
+	7,  // 4: taskguild.v1.AgentCommand.sync_agents:type_name -> taskguild.v1.SyncAgentsCommand
+	22, // 5: taskguild.v1.TaskAvailableCommand.metadata:type_name -> taskguild.v1.TaskAvailableCommand.MetadataEntry
+	23, // 6: taskguild.v1.AssignTaskCommand.metadata:type_name -> taskguild.v1.AssignTaskCommand.MetadataEntry
+	24, // 7: taskguild.v1.ClaimTaskResponse.metadata:type_name -> taskguild.v1.ClaimTaskResponse.MetadataEntry
+	0,  // 8: taskguild.v1.ReportAgentStatusRequest.status:type_name -> taskguild.v1.AgentStatus
+	25, // 9: taskguild.v1.HeartbeatRequest.timestamp:type_name -> google.protobuf.Timestamp
+	26, // 10: taskguild.v1.CreateInteractionRequest.type:type_name -> taskguild.v1.InteractionType
+	27, // 11: taskguild.v1.CreateInteractionRequest.options:type_name -> taskguild.v1.InteractionOption
+	28, // 12: taskguild.v1.CreateInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
+	28, // 13: taskguild.v1.GetInteractionResponseResponse.interaction:type_name -> taskguild.v1.Interaction
+	29, // 14: taskguild.v1.SyncAgentsResponse.agents:type_name -> taskguild.v1.AgentDefinition
+	1,  // 15: taskguild.v1.AgentManagerService.Subscribe:input_type -> taskguild.v1.AgentManagerSubscribeRequest
+	8,  // 16: taskguild.v1.AgentManagerService.ClaimTask:input_type -> taskguild.v1.ClaimTaskRequest
+	10, // 17: taskguild.v1.AgentManagerService.ReportTaskResult:input_type -> taskguild.v1.ReportTaskResultRequest
+	12, // 18: taskguild.v1.AgentManagerService.ReportAgentStatus:input_type -> taskguild.v1.ReportAgentStatusRequest
+	14, // 19: taskguild.v1.AgentManagerService.Heartbeat:input_type -> taskguild.v1.HeartbeatRequest
+	16, // 20: taskguild.v1.AgentManagerService.CreateInteraction:input_type -> taskguild.v1.CreateInteractionRequest
+	18, // 21: taskguild.v1.AgentManagerService.GetInteractionResponse:input_type -> taskguild.v1.GetInteractionResponseRequest
+	20, // 22: taskguild.v1.AgentManagerService.SyncAgents:input_type -> taskguild.v1.SyncAgentsRequest
+	2,  // 23: taskguild.v1.AgentManagerService.Subscribe:output_type -> taskguild.v1.AgentCommand
+	9,  // 24: taskguild.v1.AgentManagerService.ClaimTask:output_type -> taskguild.v1.ClaimTaskResponse
+	11, // 25: taskguild.v1.AgentManagerService.ReportTaskResult:output_type -> taskguild.v1.ReportTaskResultResponse
+	13, // 26: taskguild.v1.AgentManagerService.ReportAgentStatus:output_type -> taskguild.v1.ReportAgentStatusResponse
+	15, // 27: taskguild.v1.AgentManagerService.Heartbeat:output_type -> taskguild.v1.HeartbeatResponse
+	17, // 28: taskguild.v1.AgentManagerService.CreateInteraction:output_type -> taskguild.v1.CreateInteractionResponse
+	19, // 29: taskguild.v1.AgentManagerService.GetInteractionResponse:output_type -> taskguild.v1.GetInteractionResponseResponse
+	21, // 30: taskguild.v1.AgentManagerService.SyncAgents:output_type -> taskguild.v1.SyncAgentsResponse
+	23, // [23:31] is the sub-list for method output_type
+	15, // [15:23] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_agent_manager_proto_init() }
@@ -1545,7 +1481,7 @@ func file_taskguild_v1_agent_manager_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_agent_manager_proto_rawDesc), len(file_taskguild_v1_agent_manager_proto_rawDesc)),
-			NumEnums:      2,
+			NumEnums:      1,
 			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,

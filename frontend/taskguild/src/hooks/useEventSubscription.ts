@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { createClient } from '@connectrpc/connect'
-import { EventService, type EventType, SubscribeEventsRequestSchema } from '@taskguild/proto/taskguild/v1/event_pb.ts'
+import { EventService, EventType, SubscribeEventsRequestSchema } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { create } from '@bufbuild/protobuf'
 import { transport } from '@/lib/transport'
 
@@ -15,6 +15,16 @@ export function useEventSubscription(
   const [reconnectTrigger, setReconnectTrigger] = useState(0)
   const autoReconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const autoReconnectCountRef = useRef(0)
+
+  // Use refs to avoid re-subscribing when onEvent or eventTypes reference changes
+  const onEventRef = useRef(onEvent)
+  onEventRef.current = onEvent
+
+  const eventTypesRef = useRef(eventTypes)
+  eventTypesRef.current = eventTypes
+
+  // Stable key derived from eventTypes values for useEffect dependency
+  const eventTypesKey = useMemo(() => eventTypes.slice().sort().join(','), [eventTypes])
 
   useEffect(() => {
     if (!projectId) return
@@ -33,15 +43,18 @@ export function useEventSubscription(
     async function subscribe() {
       try {
         const req = create(SubscribeEventsRequestSchema, {
-          eventTypes,
+          eventTypes: eventTypesRef.current,
           projectId,
         })
-        for await (const _event of client.subscribeEvents(req, {
+        for await (const event of client.subscribeEvents(req, {
           signal: controller.signal,
         })) {
           setConnectionStatus('connected')
           autoReconnectCountRef.current = 0 // Reset backoff on successful event
-          onEvent()
+          // Skip onEvent callback for initial connection signal (UNSPECIFIED type)
+          if (event.type !== EventType.UNSPECIFIED) {
+            onEventRef.current()
+          }
         }
         // Stream ended normally (server closed the stream)
         if (!controller.signal.aborted) {
@@ -75,7 +88,7 @@ export function useEventSubscription(
         autoReconnectTimerRef.current = null
       }
     }
-  }, [projectId, eventTypes, onEvent, reconnectTrigger])
+  }, [projectId, eventTypesKey, reconnectTrigger])
 
   const reconnect = useCallback(() => {
     autoReconnectCountRef.current = 0 // Reset backoff on manual reconnect

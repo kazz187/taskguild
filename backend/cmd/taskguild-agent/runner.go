@@ -366,7 +366,7 @@ func runTask(
 
 			if consecutiveErrors >= maxConsecutiveErrors {
 				log.Printf("[task:%s] max consecutive errors reached, giving up", taskID)
-				reportTaskResult(ctx, client, taskID, v1.TaskResultStatus_TASK_RESULT_STATUS_FAILED, "", errMsg)
+				reportTaskResult(ctx, client, taskID, "", errMsg)
 				reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_ERROR, errMsg)
 				return
 			}
@@ -392,6 +392,16 @@ func runTask(
 		consecutiveErrors = 0
 		backoff = initialBackoff
 
+		// Extract and persist task description updates from agent output.
+		if result.Result != nil {
+			if newDesc := parseTaskDescription(result.Result.Result); newDesc != "" {
+				log.Printf("[task:%s] detected TASK_DESCRIPTION update (turn %d)", taskID, turn)
+				saveTaskDescription(ctx, taskClient, taskID, newDesc)
+				// Update local metadata so subsequent prompts reflect the new description.
+				metadata["_task_description"] = newDesc
+			}
+		}
+
 		// Fire after_worktree_creation hook once, after the first successful turn
 		// when a worktree directory exists.
 		if !worktreeHookFired && metadata["_use_worktree"] == "true" && worktreeName != "" {
@@ -404,13 +414,13 @@ func runTask(
 
 		summary := ""
 		if result.Result != nil {
-			summary = result.Result.Result
+			summary = stripTaskDescription(result.Result.Result)
 		}
 
 		// Check completion: NEXT_STATUS present means task is done.
 		if parseNextStatus(summary) != "" {
 			log.Printf("[task:%s] completed with NEXT_STATUS (turn %d)", taskID, turn)
-			reportTaskResult(ctx, client, taskID, v1.TaskResultStatus_TASK_RESULT_STATUS_COMPLETED, summary, "")
+			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed")
 			// Run after hooks before transitioning status so that hooks
 			// still observe the current status and the transition happens
@@ -423,7 +433,7 @@ func runTask(
 		// No transitions available (terminal status) means task is done.
 		if !hasTransitions {
 			log.Printf("[task:%s] completed at terminal status (turn %d)", taskID, turn)
-			reportTaskResult(ctx, client, taskID, v1.TaskResultStatus_TASK_RESULT_STATUS_COMPLETED, summary, "")
+			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed")
 			return
 		}
@@ -435,7 +445,7 @@ func runTask(
 		userResponse, err := waitForUserResponse(ctx, client, taskID, agentManagerID, summary, waiter)
 		if err != nil {
 			log.Printf("[task:%s] user response error: %v, completing task", taskID, err)
-			reportTaskResult(ctx, client, taskID, v1.TaskResultStatus_TASK_RESULT_STATUS_COMPLETED, summary, "")
+			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (no user response)")
 			return
 		}
@@ -481,7 +491,7 @@ func buildClaudeOptions(
 		Cwd:            cwd,
 		PermissionMode: permMode,
 		CanUseTool: func(toolName string, input map[string]any, toolCtx claudeagent.ToolPermissionContext) (claudeagent.PermissionResult, error) {
-			return handlePermissionRequest(ctx, client, taskID, agentManagerID, toolName, input, waiter, permMode)
+			return handlePermissionRequest(ctx, client, taskID, agentManagerID, toolName, input, waiter, permMode, toolCtx)
 		},
 		StderrCallback: func(line string) {
 			log.Printf("[task:%s] [claude-stderr] %s", taskID, line)
@@ -694,6 +704,15 @@ func buildUserPrompt(metadata map[string]string) string {
 		}
 	}
 
+	sb.WriteString("\n## Updating Task Description\n")
+	sb.WriteString("You can update the task description at any time by including the following block in your output:\n")
+	sb.WriteString("TASK_DESCRIPTION_START\n")
+	sb.WriteString("Your updated task description here.\n")
+	sb.WriteString("Multiline content is supported.\n")
+	sb.WriteString("TASK_DESCRIPTION_END\n")
+	sb.WriteString("Use this to summarize planning discussions, refine requirements, or document decisions made during the session.\n")
+	sb.WriteString("The description will be saved and visible in the task UI immediately.\n")
+
 	sb.WriteString("\n## Interactive Session\n")
 	sb.WriteString("You are in an interactive session. ")
 	sb.WriteString("If you need user input, approval, or clarification, ")
@@ -714,6 +733,58 @@ func parseNextStatus(resultText string) string {
 		}
 	}
 	return ""
+}
+
+// parseTaskDescription extracts a task description update from the result text.
+// The description is enclosed between TASK_DESCRIPTION_START and TASK_DESCRIPTION_END markers.
+// Returns the extracted description (trimmed) or empty string if no markers found.
+func parseTaskDescription(resultText string) string {
+	const startMarker = "TASK_DESCRIPTION_START"
+	const endMarker = "TASK_DESCRIPTION_END"
+
+	startIdx := strings.Index(resultText, startMarker)
+	if startIdx == -1 {
+		return ""
+	}
+	contentStart := startIdx + len(startMarker)
+
+	endIdx := strings.Index(resultText[contentStart:], endMarker)
+	if endIdx == -1 {
+		return ""
+	}
+
+	return strings.TrimSpace(resultText[contentStart : contentStart+endIdx])
+}
+
+// stripTaskDescription removes the TASK_DESCRIPTION block from the result text
+// so it doesn't clutter the reported summary.
+func stripTaskDescription(resultText string) string {
+	const startMarker = "TASK_DESCRIPTION_START"
+	const endMarker = "TASK_DESCRIPTION_END"
+
+	startIdx := strings.Index(resultText, startMarker)
+	if startIdx == -1 {
+		return resultText
+	}
+
+	endIdx := strings.Index(resultText[startIdx:], endMarker)
+	if endIdx == -1 {
+		return resultText
+	}
+
+	// Find the start of the line containing the start marker.
+	lineStart := strings.LastIndex(resultText[:startIdx], "\n")
+	if lineStart == -1 {
+		lineStart = 0
+	}
+
+	fullEndIdx := startIdx + endIdx + len(endMarker)
+	// Skip trailing newline if present.
+	if fullEndIdx < len(resultText) && resultText[fullEndIdx] == '\n' {
+		fullEndIdx++
+	}
+
+	return strings.TrimSpace(resultText[:lineStart] + resultText[fullEndIdx:])
 }
 
 // handleStatusTransition parses the agent result and transitions the task status.
@@ -797,6 +868,18 @@ func saveWorktreeName(ctx context.Context, taskClient taskguildv1connect.TaskSer
 	}
 }
 
+func saveTaskDescription(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, description string) {
+	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
+		Id:          taskID,
+		Description: description,
+	}))
+	if err != nil {
+		log.Printf("[task:%s] failed to save task description: %v", taskID, err)
+	} else {
+		log.Printf("[task:%s] task description updated (%d chars)", taskID, len(description))
+	}
+}
+
 // readOnlyTools are always auto-allowed regardless of permission mode.
 var readOnlyTools = map[string]bool{
 	"Read":      true,
@@ -813,6 +896,50 @@ var editTools = map[string]bool{
 	"NotebookEdit": true,
 }
 
+// buildPermissionUpdate constructs permission updates for the "always allow" action.
+// It prefers CLI-provided suggestions when available, falling back to a manually
+// constructed rule from the tool name and input.
+func buildPermissionUpdate(toolName string, input map[string]any, suggestions []*claudeagent.PermissionUpdate) []*claudeagent.PermissionUpdate {
+	// Prefer CLI suggestions: they contain the exact rule format the CLI expects.
+	if len(suggestions) > 0 {
+		var updates []*claudeagent.PermissionUpdate
+		for _, s := range suggestions {
+			if s.Type == claudeagent.PermissionUpdateAddRules &&
+				s.Behavior == claudeagent.PermissionBehaviorAllow {
+				cp := *s // copy
+				cp.Destination = claudeagent.PermissionDestinationLocalSettings
+				updates = append(updates, &cp)
+			}
+		}
+		if len(updates) > 0 {
+			return updates
+		}
+	}
+
+	// Fallback: build rule from tool name and input.
+	rule := &claudeagent.PermissionRuleValue{
+		ToolName: toolName,
+	}
+
+	// For Bash, include the command as ruleContent for a specific match.
+	if toolName == "Bash" {
+		if cmd, ok := input["command"]; ok {
+			if cmdStr, ok := cmd.(string); ok && cmdStr != "" {
+				rule.RuleContent = cmdStr
+			}
+		}
+	}
+
+	return []*claudeagent.PermissionUpdate{
+		{
+			Type:        claudeagent.PermissionUpdateAddRules,
+			Rules:       []*claudeagent.PermissionRuleValue{rule},
+			Behavior:    claudeagent.PermissionBehaviorAllow,
+			Destination: claudeagent.PermissionDestinationLocalSettings,
+		},
+	}
+}
+
 func handlePermissionRequest(
 	ctx context.Context,
 	client taskguildv1connect.AgentManagerServiceClient,
@@ -822,6 +949,7 @@ func handlePermissionRequest(
 	input map[string]any,
 	waiter *interactionWaiter,
 	permMode claudeagent.PermissionMode,
+	toolCtx claudeagent.ToolPermissionContext,
 ) (claudeagent.PermissionResult, error) {
 	// bypassPermissions: allow everything
 	if permMode == claudeagent.PermissionModeBypassPermissions {
@@ -851,6 +979,7 @@ func handlePermissionRequest(
 		Description: description,
 		Options: []*v1.InteractionOption{
 			{Label: "Allow", Value: "allow", Description: "Allow this tool use"},
+			{Label: "Always Allow", Value: "always_allow", Description: "Allow and remember the rule for future uses"},
 			{Label: "Deny", Value: "deny", Description: "Deny this tool use"},
 		},
 	}))
@@ -872,12 +1001,20 @@ func handlePermissionRequest(
 			log.Printf("[task:%s] permission request expired for %s", taskID, toolName)
 			return claudeagent.PermissionResultDeny{Message: "permission request expired"}, nil
 		}
-		if inter.GetResponse() == "allow" {
+		switch inter.GetResponse() {
+		case "allow":
 			log.Printf("[task:%s] permission granted for %s", taskID, toolName)
 			return claudeagent.PermissionResultAllow{}, nil
+		case "always_allow":
+			updates := buildPermissionUpdate(toolName, input, toolCtx.Suggestions)
+			log.Printf("[task:%s] permission granted (always allow) for %s, updating %d rule(s)", taskID, toolName, len(updates))
+			return claudeagent.PermissionResultAllow{
+				UpdatedPermissions: updates,
+			}, nil
+		default:
+			log.Printf("[task:%s] permission denied for %s", taskID, toolName)
+			return claudeagent.PermissionResultDeny{Message: "user denied permission"}, nil
 		}
-		log.Printf("[task:%s] permission denied for %s", taskID, toolName)
-		return claudeagent.PermissionResultDeny{Message: "user denied permission"}, nil
 	}
 }
 
@@ -1040,13 +1177,11 @@ func reportTaskResult(
 	ctx context.Context,
 	client taskguildv1connect.AgentManagerServiceClient,
 	taskID string,
-	status v1.TaskResultStatus,
 	summary string,
 	errMsg string,
 ) {
 	_, err := client.ReportTaskResult(ctx, connect.NewRequest(&v1.ReportTaskResultRequest{
 		TaskId:       taskID,
-		Status:       status,
 		Summary:      summary,
 		ErrorMessage: errMsg,
 	}))
