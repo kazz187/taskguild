@@ -8,18 +8,18 @@ managed:
       module: buf.build/bufbuild/protovalidate
   override:
     - file_option: go_package_prefix
-      value: github.com/kazz187/taskguild/proto/gen/go
+      value: github.com/kazz187/taskguild/backend/gen/proto
 inputs:
   - directory: .
   - module: buf.build/bufbuild/protovalidate
 plugins:
   # Go protobuf
   - remote: buf.build/protocolbuffers/go
-    out: ./gen/go
+    out: ../backend/gen/proto
     opt: paths=source_relative
   # Connect Go
   - remote: buf.build/connectrpc/go
-    out: ./gen/go
+    out: ../backend/gen/proto
     opt: paths=source_relative
   # TypeScript (ES modules)
   - remote: buf.build/bufbuild/es:v2.9.0

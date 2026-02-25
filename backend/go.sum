@@ -58,8 +58,6 @@ github.com/google/jsonschema-go v0.4.2 h1:tmrUohrwoLZZS/P3x7ex0WAVknEkBZM46iALbc
 github.com/google/jsonschema-go v0.4.2/go.mod h1:r5quNTdLOYEz95Ru18zA0ydNbBuYoo9tgaYcxEYhJVE=
 github.com/kazz187/claude-agent-sdk-go v0.0.10 h1:i8y1lN9NDCy21cewCy4m1io9hK51g3Za+BMEDqreMZM=
 github.com/kazz187/claude-agent-sdk-go v0.0.10/go.mod h1:avEQx0oBuhHXKd3LYfnFfT5DXrBOmTK0iEFyUzRlQss=
-github.com/kazz187/taskguild/proto/gen/go v0.0.7 h1:/No+crOdvjUyBUpDFVsErzIg4rxDmltkVWjF82r9vt4=
-github.com/kazz187/taskguild/proto/gen/go v0.0.7/go.mod h1:hO+gT/k7+ZF9+S02PArSZpPatgQOuwB5u2KDfj2WL0k=
 github.com/kelseyhightower/envconfig v1.4.0 h1:Im6hONhd3pLkfDFsbRgu68RDNkGF1r3dvMUtDTo2cv8=
 github.com/kelseyhightower/envconfig v1.4.0/go.mod h1:cccZRl6mQpaq41TPp5QxidR+Sa3axMbJDNb//FQX6Gg=
 github.com/kr/pretty v0.2.1/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=

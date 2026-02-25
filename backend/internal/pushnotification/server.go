@@ -10,8 +10,8 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/config"
 	"github.com/kazz187/taskguild/backend/internal/pushsubscription"
 	"github.com/kazz187/taskguild/backend/pkg/cerr"
-	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
+	taskguildv1 "github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1"
+	"github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1/taskguildv1connect"
 )
 
 var _ taskguildv1connect.PushNotificationServiceHandler = (*Server)(nil)

@@ -6,7 +6,7 @@ import (
 	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
+	taskguildv1 "github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1"
 )
 
 type Bus struct {

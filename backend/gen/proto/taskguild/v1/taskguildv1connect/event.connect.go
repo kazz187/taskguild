@@ -8,7 +8,7 @@ import (
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
+	v1 "github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1"
 	http "net/http"
 	strings "strings"
 )

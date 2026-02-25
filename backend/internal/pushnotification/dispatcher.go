@@ -8,7 +8,7 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/eventbus"
 	"github.com/kazz187/taskguild/backend/internal/interaction"
 	"github.com/kazz187/taskguild/backend/internal/task"
-	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
+	taskguildv1 "github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1"
 )
 
 type Dispatcher struct {

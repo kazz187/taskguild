@@ -373,8 +373,8 @@ const file_taskguild_v1_push_notification_proto_rawDesc = "" +
 	"\x11GetVapidPublicKey\x12&.taskguild.v1.GetVapidPublicKeyRequest\x1a'.taskguild.v1.GetVapidPublicKeyResponse\x12y\n" +
 	"\x18RegisterPushSubscription\x12-.taskguild.v1.RegisterPushSubscriptionRequest\x1a..taskguild.v1.RegisterPushSubscriptionResponse\x12\x7f\n" +
 	"\x1aUnregisterPushSubscription\x12/.taskguild.v1.UnregisterPushSubscriptionRequest\x1a0.taskguild.v1.UnregisterPushSubscriptionResponse\x12m\n" +
-	"\x14SendTestNotification\x12).taskguild.v1.SendTestNotificationRequest\x1a*.taskguild.v1.SendTestNotificationResponseB\xbe\x01\n" +
-	"\x10com.taskguild.v1B\x15PushNotificationProtoP\x01ZBgithub.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
+	"\x14SendTestNotification\x12).taskguild.v1.SendTestNotificationRequest\x1a*.taskguild.v1.SendTestNotificationResponseB\xc3\x01\n" +
+	"\x10com.taskguild.v1B\x15PushNotificationProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
 	file_taskguild_v1_push_notification_proto_rawDescOnce sync.Once

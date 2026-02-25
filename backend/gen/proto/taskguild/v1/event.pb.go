@@ -262,9 +262,9 @@ const file_taskguild_v1_event_proto_rawDesc = "" +
 	" EVENT_TYPE_INTERACTION_RESPONDED\x10\b\x12\x17\n" +
 	"\x13EVENT_TYPE_TASK_LOG\x10\t2^\n" +
 	"\fEventService\x12N\n" +
-	"\x0fSubscribeEvents\x12$.taskguild.v1.SubscribeEventsRequest\x1a\x13.taskguild.v1.Event0\x01B\xb3\x01\n" +
+	"\x0fSubscribeEvents\x12$.taskguild.v1.SubscribeEventsRequest\x1a\x13.taskguild.v1.Event0\x01B\xb8\x01\n" +
 	"\x10com.taskguild.v1B\n" +
-	"EventProtoP\x01ZBgithub.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
+	"EventProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
 	file_taskguild_v1_event_proto_rawDescOnce sync.Once

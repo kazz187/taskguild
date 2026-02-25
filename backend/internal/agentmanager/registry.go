@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
+	taskguildv1 "github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1"
 )
 
 type connection struct {
