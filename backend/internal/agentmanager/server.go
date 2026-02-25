@@ -16,6 +16,7 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/project"
 	"github.com/kazz187/taskguild/backend/internal/skill"
 	"github.com/kazz187/taskguild/backend/internal/task"
+	"github.com/kazz187/taskguild/backend/internal/tasklog"
 	"github.com/kazz187/taskguild/backend/internal/workflow"
 	"github.com/kazz187/taskguild/backend/pkg/cerr"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
@@ -32,10 +33,11 @@ type Server struct {
 	interactionRepo interaction.Repository
 	projectRepo     project.Repository
 	skillRepo       skill.Repository
+	taskLogRepo     tasklog.Repository
 	eventBus        *eventbus.Bus
 }
 
-func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, projectRepo project.Repository, skillRepo skill.Repository, eventBus *eventbus.Bus) *Server {
+func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, projectRepo project.Repository, skillRepo skill.Repository, taskLogRepo tasklog.Repository, eventBus *eventbus.Bus) *Server {
 	return &Server{
 		registry:        registry,
 		taskRepo:        taskRepo,
@@ -44,6 +46,7 @@ func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workfl
 		interactionRepo: interactionRepo,
 		projectRepo:     projectRepo,
 		skillRepo:       skillRepo,
+		taskLogRepo:     taskLogRepo,
 		eventBus:        eventBus,
 	}
 }
@@ -520,6 +523,42 @@ func (s *Server) ReportAgentStatus(ctx context.Context, req *connect.Request[tas
 		},
 	)
 	return connect.NewResponse(&taskguildv1.ReportAgentStatusResponse{}), nil
+}
+
+func (s *Server) ReportTaskLog(ctx context.Context, req *connect.Request[taskguildv1.ReportTaskLogRequest]) (*connect.Response[taskguildv1.ReportTaskLogResponse], error) {
+	if req.Msg.TaskId == "" {
+		return nil, cerr.NewError(cerr.InvalidArgument, "task_id is required", nil).ConnectError()
+	}
+
+	now := time.Now()
+	l := &tasklog.TaskLog{
+		ID:        ulid.Make().String(),
+		TaskID:    req.Msg.TaskId,
+		Level:     int32(req.Msg.Level),
+		Category:  int32(req.Msg.Category),
+		Message:   req.Msg.Message,
+		Metadata:  req.Msg.Metadata,
+		CreatedAt: now,
+	}
+
+	if err := s.taskLogRepo.Create(ctx, l); err != nil {
+		return nil, err
+	}
+
+	// Resolve project_id from the task for event metadata.
+	eventMeta := map[string]string{"task_id": req.Msg.TaskId}
+	if t, err := s.taskRepo.Get(ctx, req.Msg.TaskId); err == nil {
+		eventMeta["project_id"] = t.ProjectID
+	}
+
+	s.eventBus.PublishNew(
+		taskguildv1.EventType_EVENT_TYPE_TASK_LOG,
+		l.ID,
+		"",
+		eventMeta,
+	)
+
+	return connect.NewResponse(&taskguildv1.ReportTaskLogResponse{}), nil
 }
 
 func interactionToProto(i *interaction.Interaction) *taskguildv1.Interaction {

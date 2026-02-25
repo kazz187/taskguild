@@ -6,13 +6,16 @@ import { getProject } from '@taskguild/proto/taskguild/v1/project-ProjectService
 import { listWorkflows } from '@taskguild/proto/taskguild/v1/workflow-WorkflowService_connectquery.ts'
 import { listInteractions, respondToInteraction, sendMessage } from '@taskguild/proto/taskguild/v1/interaction-InteractionService_connectquery.ts'
 import { TaskAssignmentStatus } from '@taskguild/proto/taskguild/v1/task_pb.ts'
-import { InteractionStatus } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
+import { InteractionStatus, InteractionType } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
+import { useTaskLogs } from '@/hooks/useTaskLogs'
 import { TaskDetailModal } from '@/components/TaskDetailModal'
 import { shortId } from '@/lib/id'
-import { ChatBubble, InputBar } from '@/components/ChatBubble'
+import { InputBar } from '@/components/ChatBubble'
 import { MarkdownDescription } from '@/components/MarkdownDescription'
+import { TimelineEntry, type TimelineItem } from '@/components/TimelineEntry'
+import { RequestItem } from '@/components/RequestItem'
 import {
   ArrowLeft,
   ArrowRight,
@@ -22,6 +25,8 @@ import {
   GitBranch,
   Loader,
   Pencil,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/projects/$projectId/tasks/$taskId')({
@@ -31,7 +36,12 @@ export const Route = createFileRoute('/projects/$projectId/tasks/$taskId')({
 function TaskDetailPage() {
   const { projectId, taskId } = Route.useParams()
   const [showEditModal, setShowEditModal] = useState(false)
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const [mobileTab, setMobileTab] = useState<'timeline' | 'requests'>('requests')
+  const [showResolved, setShowResolved] = useState(false)
+  const timelineScrollRef = useRef<HTMLDivElement>(null)
+  const prevTimelineCountRef = useRef(0)
+  const prevPendingCountRef = useRef(0)
+  const bellAudioRef = useRef<HTMLAudioElement | null>(null)
 
   const { data: taskData, refetch: refetchTask } = useQuery(getTask, { id: taskId })
   const { data: projectData } = useQuery(getProject, { id: projectId })
@@ -52,6 +62,48 @@ function TaskDetailPage() {
   const currentStatus = sortedStatuses.find((s) => s.id === task?.statusId)
   const allowedTransitions = currentStatus?.transitionsTo ?? []
 
+  // Fetch task logs
+  const { logs } = useTaskLogs(taskId, projectId)
+
+  // Merge interactions + logs into a sorted timeline
+  const timelineItems = useMemo<TimelineItem[]>(() => {
+    const items: TimelineItem[] = [
+      ...interactions.map((interaction): TimelineItem => ({ kind: 'interaction', interaction })),
+      ...logs.map((log): TimelineItem => ({ kind: 'log', log })),
+    ]
+    items.sort((a, b) => {
+      const tsA = a.kind === 'interaction' ? a.interaction.createdAt : a.log.createdAt
+      const tsB = b.kind === 'interaction' ? b.interaction.createdAt : b.log.createdAt
+      if (!tsA || !tsB) return 0
+      const diff = Number(tsA.seconds) - Number(tsB.seconds)
+      if (diff !== 0) return diff
+      return tsA.nanos - tsB.nanos
+    })
+    return items
+  }, [interactions, logs])
+
+  // Data filtering for split panels
+
+  const requestInteractions = useMemo(
+    () =>
+      interactions.filter(
+        (i) =>
+          i.type === InteractionType.PERMISSION_REQUEST ||
+          i.type === InteractionType.QUESTION,
+      ),
+    [interactions],
+  )
+
+  const pendingRequests = useMemo(
+    () => requestInteractions.filter((i) => i.status === InteractionStatus.PENDING),
+    [requestInteractions],
+  )
+
+  const resolvedRequests = useMemo(
+    () => requestInteractions.filter((i) => i.status !== InteractionStatus.PENDING),
+    [requestInteractions],
+  )
+
   const pendingInteraction = interactions.find((i) => i.status === InteractionStatus.PENDING)
 
   const onEvent = useCallback(() => {
@@ -62,16 +114,37 @@ function TaskDetailPage() {
   const eventTypes = useMemo(() => [
     EventType.TASK_UPDATED, EventType.TASK_STATUS_CHANGED, EventType.AGENT_ASSIGNED,
     EventType.AGENT_STATUS_CHANGED, EventType.INTERACTION_CREATED, EventType.INTERACTION_RESPONDED,
+    EventType.TASK_LOG,
   ], [])
 
   const { connectionStatus, reconnect } = useEventSubscription(eventTypes, projectId, onEvent)
 
-  // Auto-scroll to bottom when new interactions arrive
+  // Auto-scroll timeline to bottom on new entries
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    if (timelineScrollRef.current && timelineItems.length > prevTimelineCountRef.current) {
+      timelineScrollRef.current.scrollTop = timelineScrollRef.current.scrollHeight
     }
-  }, [interactions.length])
+    prevTimelineCountRef.current = timelineItems.length
+  }, [timelineItems.length])
+
+  // Play notification sound when new pending requests arrive
+  useEffect(() => {
+    if (pendingRequests.length > prevPendingCountRef.current) {
+      if (!bellAudioRef.current) {
+        bellAudioRef.current = new Audio('/bell.mp3')
+      }
+      bellAudioRef.current.currentTime = 0
+      bellAudioRef.current.play().catch(() => {})
+    }
+    prevPendingCountRef.current = pendingRequests.length
+  }, [pendingRequests.length])
+
+  // Auto-switch to requests tab on mobile when new pending interaction arrives
+  useEffect(() => {
+    if (pendingRequests.length > 0) {
+      setMobileTab('requests')
+    }
+  }, [pendingRequests.length])
 
   const handleStatusChange = (statusId: string) => {
     if (!task) return
@@ -97,7 +170,7 @@ function TaskDetailPage() {
 
   if (!task) {
     return (
-      <div className="flex items-center justify-center h-screen text-gray-400">
+      <div className="flex items-center justify-center h-full text-gray-400">
         Loading...
       </div>
     )
@@ -108,7 +181,7 @@ function TaskDetailPage() {
   const metadataEntries = Object.entries(metadata).filter(([key, v]) => v && key !== 'result_summary' && key !== 'result_status' && key !== 'result_error')
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-full">
       {/* Header */}
       <div className="shrink-0 border-b border-slate-800 px-4 py-3 md:px-6 md:py-4">
         <div className="flex items-center gap-2 md:gap-3 text-sm text-gray-400 mb-2 md:mb-3">
@@ -129,7 +202,6 @@ function TaskDetailPage() {
           <div className="flex-1 min-w-0">
             <h1 className="text-lg md:text-xl font-bold text-white">{task.title}</h1>
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              {/* Status badge */}
               <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
                 currentStatus?.isInitial ? 'bg-blue-500/20 text-blue-400' :
                 currentStatus?.isTerminal ? 'bg-green-500/20 text-green-400' :
@@ -138,7 +210,6 @@ function TaskDetailPage() {
                 {currentStatus?.name ?? task.statusId}
               </span>
 
-              {/* Agent badge */}
               {task.assignmentStatus === TaskAssignmentStatus.ASSIGNED ? (
                 <span className="inline-flex items-center gap-1 text-xs bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-full px-2.5 py-1">
                   <Bot className="w-3 h-3" />
@@ -156,7 +227,6 @@ function TaskDetailPage() {
                 </span>
               )}
 
-              {/* Status transitions */}
               {allowedTransitions.map((toId) => {
                 const toStatus = sortedStatuses.find((s) => s.id === toId)
                 return (
@@ -186,81 +256,193 @@ function TaskDetailPage() {
         </div>
       </div>
 
-      {/* Chat area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto px-4 py-4 md:px-6 md:py-6 space-y-4">
-          {/* Description card */}
-          {task.description && (
-            <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Description</p>
-              <p className="text-sm text-gray-300 whitespace-pre-wrap">{task.description}</p>
-            </div>
+      {/* Mobile tab switcher */}
+      <div className="md:hidden shrink-0 flex border-b border-slate-800">
+        <button
+          onClick={() => setMobileTab('timeline')}
+          className={`flex-1 py-2 text-xs font-medium text-center transition-colors ${
+            mobileTab === 'timeline'
+              ? 'text-cyan-400 border-b-2 border-cyan-400'
+              : 'text-gray-500 hover:text-gray-300'
+          }`}
+        >
+          Timeline ({timelineItems.length})
+        </button>
+        <button
+          onClick={() => setMobileTab('requests')}
+          className={`flex-1 py-2 text-xs font-medium text-center transition-colors relative ${
+            mobileTab === 'requests'
+              ? 'text-cyan-400 border-b-2 border-cyan-400'
+              : 'text-gray-500 hover:text-gray-300'
+          }`}
+        >
+          Requests
+          {pendingRequests.length > 0 && (
+            <span className="ml-1 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold bg-amber-500 text-black rounded-full">
+              {pendingRequests.length}
+            </span>
           )}
+        </button>
+      </div>
 
-          {/* Result Summary */}
-          {resultSummary && (
-            <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Result Summary</p>
-              <MarkdownDescription content={resultSummary} className="text-sm text-gray-300" />
-            </div>
-          )}
-
-          {/* Metadata */}
-          {metadataEntries.length > 0 && (
-            <div className="bg-slate-900 border border-slate-800 rounded-lg divide-y divide-slate-800">
-              {metadataEntries.map(([key, value]) => (
-                <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 px-3 py-2 md:px-4 md:py-2.5">
-                  <span className="text-xs text-gray-500 font-mono sm:w-40 shrink-0">{key}</span>
-                  {key === 'pull_request_url' || key === 'pr_url' ? (
-                    <a
-                      href={value}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-cyan-400 hover:text-cyan-300 flex items-center gap-1 truncate"
-                    >
-                      <ExternalLink className="w-3 h-3 shrink-0" />
-                      <span className="truncate">{value}</span>
-                    </a>
-                  ) : key === 'worktree' ? (
-                    <span className="text-sm text-gray-300 font-mono flex items-center gap-1">
-                      <GitBranch className="w-3 h-3 text-gray-500 shrink-0" />
-                      {value}
-                    </span>
-                  ) : (
-                    <span className="text-sm text-gray-300 truncate">{value}</span>
-                  )}
+      {/* Split panels */}
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Upper half: Task Details + Timeline */}
+        <div
+          className={`flex-1 min-h-0 flex flex-col ${
+            mobileTab === 'timeline' ? 'flex' : 'hidden md:flex'
+          }`}
+        >
+          <div className="flex-1 min-h-0 overflow-y-auto" ref={timelineScrollRef}>
+            <div className="max-w-3xl mx-auto px-4 py-4 md:px-6 md:py-6 space-y-4">
+              {/* Description card */}
+              {task.description && (
+                <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Description</p>
+                  <p className="text-sm text-gray-300 whitespace-pre-wrap">{task.description}</p>
                 </div>
-              ))}
-            </div>
-          )}
+              )}
 
-          {/* Interaction timeline */}
-          {interactions.length > 0 && (
-            <div className="space-y-3 pt-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">
-                Conversation ({interactions.length})
-              </p>
-              {interactions.map((interaction) => (
-                <ChatBubble
+              {/* Result Summary */}
+              {resultSummary && (
+                <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Result Summary</p>
+                  <MarkdownDescription content={resultSummary} className="text-sm text-gray-300" />
+                </div>
+              )}
+
+              {/* Metadata */}
+              {metadataEntries.length > 0 && (
+                <div className="bg-slate-900 border border-slate-800 rounded-lg divide-y divide-slate-800">
+                  {metadataEntries.map(([key, value]) => (
+                    <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 px-3 py-2 md:px-4 md:py-2.5">
+                      <span className="text-xs text-gray-500 font-mono sm:w-40 shrink-0">{key}</span>
+                      {key === 'pull_request_url' || key === 'pr_url' ? (
+                        <a
+                          href={value}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-cyan-400 hover:text-cyan-300 flex items-center gap-1 truncate"
+                        >
+                          <ExternalLink className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{value}</span>
+                        </a>
+                      ) : key === 'worktree' ? (
+                        <span className="text-sm text-gray-300 font-mono flex items-center gap-1">
+                          <GitBranch className="w-3 h-3 text-gray-500 shrink-0" />
+                          {value}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-300 truncate">{value}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Execution Timeline */}
+              {timelineItems.length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">
+                    Execution Timeline ({timelineItems.length})
+                  </p>
+                  <div className="space-y-0.5">
+                    {timelineItems.map((item) => {
+                      const key = item.kind === 'interaction' ? item.interaction.id : item.log.id
+                      return <TimelineEntry key={key} item={item} />
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="hidden md:block shrink-0 border-t border-slate-700" />
+
+        {/* Lower half: Agent Requests */}
+        <div
+          className={`flex-1 min-h-0 flex flex-col ${
+            mobileTab === 'requests' ? 'flex' : 'hidden md:flex'
+          }`}
+        >
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="max-w-3xl mx-auto px-4 py-4 md:px-6 space-y-3">
+              {/* Section header */}
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">
+                  Agent Requests
+                </p>
+                {pendingRequests.length > 0 && (
+                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-400 rounded">
+                    {pendingRequests.length} pending
+                  </span>
+                )}
+              </div>
+
+              {/* Pending requests */}
+              {pendingRequests.map((interaction) => (
+                <RequestItem
                   key={interaction.id}
                   interaction={interaction}
                   onRespond={handleRespond}
                   isRespondPending={respondMut.isPending}
                 />
               ))}
-            </div>
-          )}
 
-          {/* Input bar (inline, below conversation) */}
-          <InputBar
-            pendingInteraction={pendingInteraction}
-            onRespond={handleRespond}
-            onSendMessage={handleSendMessage}
-            isRespondPending={respondMut.isPending}
-            isSendPending={sendMut.isPending}
-            connectionStatus={connectionStatus}
-            onReconnect={reconnect}
-          />
+              {/* Resolved requests (collapsible) */}
+              {resolvedRequests.length > 0 && (
+                <div>
+                  <button
+                    onClick={() => setShowResolved(!showResolved)}
+                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors py-1"
+                  >
+                    {showResolved ? (
+                      <ChevronDown className="w-3 h-3" />
+                    ) : (
+                      <ChevronRight className="w-3 h-3" />
+                    )}
+                    Resolved ({resolvedRequests.length})
+                  </button>
+                  {showResolved && (
+                    <div className="space-y-2 mt-2">
+                      {resolvedRequests.map((interaction) => (
+                        <RequestItem
+                          key={interaction.id}
+                          interaction={interaction}
+                          onRespond={handleRespond}
+                          isRespondPending={respondMut.isPending}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Empty state */}
+              {requestInteractions.length === 0 && (
+                <p className="text-xs text-gray-600 py-4 text-center">
+                  No agent requests yet
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* InputBar pinned to bottom of request panel */}
+          <div className="shrink-0 border-t border-slate-800 px-4 py-3 md:px-6">
+            <div className="max-w-3xl mx-auto">
+              <InputBar
+                pendingInteraction={pendingInteraction}
+                onRespond={handleRespond}
+                onSendMessage={handleSendMessage}
+                isRespondPending={respondMut.isPending}
+                isSendPending={sendMut.isPending}
+                connectionStatus={connectionStatus}
+                onReconnect={reconnect}
+              />
+            </div>
+          </div>
         </div>
       </div>
 

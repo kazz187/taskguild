@@ -21,6 +21,7 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/pushnotification"
 	"github.com/kazz187/taskguild/backend/internal/skill"
 	"github.com/kazz187/taskguild/backend/internal/task"
+	"github.com/kazz187/taskguild/backend/internal/tasklog"
 	"github.com/kazz187/taskguild/backend/internal/workflow"
 	"github.com/kazz187/taskguild/backend/internal/config"
 	"github.com/kazz187/taskguild/backend/pkg/cerr"
@@ -39,6 +40,7 @@ type Server struct {
 	agentServer            *agent.Server
 	skillServer            *skill.Server
 	eventServer            *event.Server
+	taskLogServer          *tasklog.Server
 	pushNotificationServer *pushnotification.Server
 }
 
@@ -52,6 +54,7 @@ func NewServer(
 	agentServer *agent.Server,
 	skillServer *skill.Server,
 	eventServer *event.Server,
+	taskLogServer *tasklog.Server,
 	pushNotificationServer *pushnotification.Server,
 ) *Server {
 	return &Server{
@@ -64,6 +67,7 @@ func NewServer(
 		agentServer:            agentServer,
 		skillServer:            skillServer,
 		eventServer:            eventServer,
+		taskLogServer:          taskLogServer,
 		pushNotificationServer: pushNotificationServer,
 	}
 }
@@ -101,6 +105,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	mux.Handle(taskguildv1connect.NewAgentServiceHandler(s.agentServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewSkillServiceHandler(s.skillServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewEventServiceHandler(s.eventServer, handlerOpts))
+	mux.Handle(taskguildv1connect.NewTaskLogServiceHandler(s.taskLogServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewPushNotificationServiceHandler(s.pushNotificationServer, handlerOpts))
 
 	addr := net.JoinHostPort(s.env.HTTPHost, s.env.HTTPPort)

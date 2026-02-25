@@ -244,6 +244,11 @@ func runTask(
 ) {
 	reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "starting task")
 
+	// Initialize task logger for structured log streaming.
+	tl := newTaskLogger(ctx, client, taskID)
+	defer tl.Close()
+	tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO, "Task started", nil)
+
 	// Resolve worktree name: reuse persisted name or generate a new one.
 	worktreeName := metadata["worktree"]
 	if worktreeName == "" && metadata["_use_worktree"] == "true" {
@@ -277,12 +282,14 @@ func runTask(
 	afterHooks := func() {
 		if !afterHooksExecuted {
 			afterHooksExecuted = true
+			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_HOOK, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO, "Executing after_task_execution hooks", nil)
 			executeHooks(ctx, taskID, "after_task_execution", metadata, resolveHookDir(), taskClient)
 		}
 	}
 	defer afterHooks()
 
 	// Execute before_task_execution hooks.
+	tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_HOOK, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO, "Executing before_task_execution hooks", nil)
 	executeHooks(ctx, taskID, "before_task_execution", metadata, workDir, taskClient)
 
 	// Start interaction stream listener for this task.
@@ -301,7 +308,15 @@ func runTask(
 
 	for turn := 0; ; turn++ {
 		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, worktreeName, client, ctx, taskID, agentManagerID, waiter)
+		// Override StderrCallback to also send to task logger.
+		opts.StderrCallback = func(line string) {
+			log.Printf("[task:%s] [claude-stderr] %s", taskID, line)
+			tl.LogStderr(line)
+		}
 
+		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_START, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+			fmt.Sprintf("Turn %d started", turn),
+			map[string]string{"turn": fmt.Sprintf("%d", turn)})
 		log.Printf("[task:%s] === Claude SDK Input (turn %d) ===", taskID, turn)
 		if turn == 0 {
 			log.Printf("[task:%s] SystemPrompt:\n%s", taskID, instructions)
@@ -327,6 +342,16 @@ func runTask(
 			log.Printf("[task:%s] Result is nil", taskID)
 		}
 		log.Printf("[task:%s] === End Claude SDK Output (turn %d) ===", taskID, turn)
+
+		if err != nil {
+			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_END, v1.TaskLogLevel_TASK_LOG_LEVEL_ERROR,
+				fmt.Sprintf("Turn %d error: %v", turn, err),
+				map[string]string{"turn": fmt.Sprintf("%d", turn)})
+		} else {
+			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_END, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+				fmt.Sprintf("Turn %d completed", turn),
+				map[string]string{"turn": fmt.Sprintf("%d", turn)})
+		}
 
 		// Save session ID for resume.
 		if result.Result != nil && result.Result.SessionID != "" {
@@ -356,6 +381,8 @@ func runTask(
 			// If resume keeps failing, clear session and start fresh.
 			if sessionID != "" && consecutiveErrors >= maxResumeRetries {
 				log.Printf("[task:%s] resume failed %d times, clearing session to start fresh", taskID, consecutiveErrors)
+				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_STATUS_CHANGE, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
+					"Resume failed, restarting with fresh session", nil)
 				sessionID = ""
 				consecutiveErrors = 0
 				backoff = initialBackoff
@@ -366,6 +393,8 @@ func runTask(
 
 			if consecutiveErrors >= maxConsecutiveErrors {
 				log.Printf("[task:%s] max consecutive errors reached, giving up", taskID)
+				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_ERROR, v1.TaskLogLevel_TASK_LOG_LEVEL_ERROR,
+					fmt.Sprintf("Max consecutive errors reached, giving up: %s", errMsg), nil)
 				reportTaskResult(ctx, client, taskID, "", errMsg)
 				reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_ERROR, errMsg)
 				return
@@ -408,6 +437,7 @@ func runTask(
 			wtDir := filepath.Join(workDir, ".claude", "worktrees", worktreeName)
 			if info, err := os.Stat(wtDir); err == nil && info.IsDir() {
 				worktreeHookFired = true
+				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_HOOK, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO, "Executing after_worktree_creation hooks", nil)
 				executeHooks(ctx, taskID, "after_worktree_creation", metadata, wtDir, taskClient)
 			}
 		}
@@ -420,6 +450,9 @@ func runTask(
 		// Check completion: NEXT_STATUS present means task is done.
 		if parseNextStatus(summary) != "" {
 			log.Printf("[task:%s] completed with NEXT_STATUS (turn %d)", taskID, turn)
+			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+				fmt.Sprintf("Task completed with status transition (turn %d)", turn),
+				map[string]string{"next_status": parseNextStatus(summary)})
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed")
 			// Run after hooks before transitioning status so that hooks
@@ -433,6 +466,8 @@ func runTask(
 		// No transitions available (terminal status) means task is done.
 		if !hasTransitions {
 			log.Printf("[task:%s] completed at terminal status (turn %d)", taskID, turn)
+			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+				fmt.Sprintf("Task completed at terminal status (turn %d)", turn), nil)
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed")
 			return

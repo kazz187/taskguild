@@ -57,6 +57,9 @@ const (
 	// AgentManagerServiceSyncAgentsProcedure is the fully-qualified name of the AgentManagerService's
 	// SyncAgents RPC.
 	AgentManagerServiceSyncAgentsProcedure = "/taskguild.v1.AgentManagerService/SyncAgents"
+	// AgentManagerServiceReportTaskLogProcedure is the fully-qualified name of the
+	// AgentManagerService's ReportTaskLog RPC.
+	AgentManagerServiceReportTaskLogProcedure = "/taskguild.v1.AgentManagerService/ReportTaskLog"
 )
 
 // AgentManagerServiceClient is a client for the taskguild.v1.AgentManagerService service.
@@ -78,6 +81,8 @@ type AgentManagerServiceClient interface {
 	// SyncAgents returns all agent definitions for a project so the agent can
 	// write them as .claude/agents/*.md files locally.
 	SyncAgents(context.Context, *connect.Request[v1.SyncAgentsRequest]) (*connect.Response[v1.SyncAgentsResponse], error)
+	// ReportTaskLog reports a structured log entry from an agent during task execution.
+	ReportTaskLog(context.Context, *connect.Request[v1.ReportTaskLogRequest]) (*connect.Response[v1.ReportTaskLogResponse], error)
 }
 
 // NewAgentManagerServiceClient constructs a client for the taskguild.v1.AgentManagerService
@@ -139,6 +144,12 @@ func NewAgentManagerServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(agentManagerServiceMethods.ByName("SyncAgents")),
 			connect.WithClientOptions(opts...),
 		),
+		reportTaskLog: connect.NewClient[v1.ReportTaskLogRequest, v1.ReportTaskLogResponse](
+			httpClient,
+			baseURL+AgentManagerServiceReportTaskLogProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("ReportTaskLog")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -152,6 +163,7 @@ type agentManagerServiceClient struct {
 	createInteraction      *connect.Client[v1.CreateInteractionRequest, v1.CreateInteractionResponse]
 	getInteractionResponse *connect.Client[v1.GetInteractionResponseRequest, v1.GetInteractionResponseResponse]
 	syncAgents             *connect.Client[v1.SyncAgentsRequest, v1.SyncAgentsResponse]
+	reportTaskLog          *connect.Client[v1.ReportTaskLogRequest, v1.ReportTaskLogResponse]
 }
 
 // Subscribe calls taskguild.v1.AgentManagerService.Subscribe.
@@ -194,6 +206,11 @@ func (c *agentManagerServiceClient) SyncAgents(ctx context.Context, req *connect
 	return c.syncAgents.CallUnary(ctx, req)
 }
 
+// ReportTaskLog calls taskguild.v1.AgentManagerService.ReportTaskLog.
+func (c *agentManagerServiceClient) ReportTaskLog(ctx context.Context, req *connect.Request[v1.ReportTaskLogRequest]) (*connect.Response[v1.ReportTaskLogResponse], error) {
+	return c.reportTaskLog.CallUnary(ctx, req)
+}
+
 // AgentManagerServiceHandler is an implementation of the taskguild.v1.AgentManagerService service.
 type AgentManagerServiceHandler interface {
 	// Subscribe opens a server-stream for receiving commands from the backend.
@@ -213,6 +230,8 @@ type AgentManagerServiceHandler interface {
 	// SyncAgents returns all agent definitions for a project so the agent can
 	// write them as .claude/agents/*.md files locally.
 	SyncAgents(context.Context, *connect.Request[v1.SyncAgentsRequest]) (*connect.Response[v1.SyncAgentsResponse], error)
+	// ReportTaskLog reports a structured log entry from an agent during task execution.
+	ReportTaskLog(context.Context, *connect.Request[v1.ReportTaskLogRequest]) (*connect.Response[v1.ReportTaskLogResponse], error)
 }
 
 // NewAgentManagerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -270,6 +289,12 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 		connect.WithSchema(agentManagerServiceMethods.ByName("SyncAgents")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentManagerServiceReportTaskLogHandler := connect.NewUnaryHandler(
+		AgentManagerServiceReportTaskLogProcedure,
+		svc.ReportTaskLog,
+		connect.WithSchema(agentManagerServiceMethods.ByName("ReportTaskLog")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/taskguild.v1.AgentManagerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AgentManagerServiceSubscribeProcedure:
@@ -288,6 +313,8 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 			agentManagerServiceGetInteractionResponseHandler.ServeHTTP(w, r)
 		case AgentManagerServiceSyncAgentsProcedure:
 			agentManagerServiceSyncAgentsHandler.ServeHTTP(w, r)
+		case AgentManagerServiceReportTaskLogProcedure:
+			agentManagerServiceReportTaskLogHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -327,4 +354,8 @@ func (UnimplementedAgentManagerServiceHandler) GetInteractionResponse(context.Co
 
 func (UnimplementedAgentManagerServiceHandler) SyncAgents(context.Context, *connect.Request[v1.SyncAgentsRequest]) (*connect.Response[v1.SyncAgentsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.SyncAgents is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) ReportTaskLog(context.Context, *connect.Request[v1.ReportTaskLogRequest]) (*connect.Response[v1.ReportTaskLogResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportTaskLog is not implemented"))
 }

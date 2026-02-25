@@ -26,6 +26,8 @@ import (
 	skillrepo "github.com/kazz187/taskguild/backend/internal/skill/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/task"
 	taskrepo "github.com/kazz187/taskguild/backend/internal/task/repositoryimpl"
+	"github.com/kazz187/taskguild/backend/internal/tasklog"
+	tasklogrepo "github.com/kazz187/taskguild/backend/internal/tasklog/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/workflow"
 	workflowrepo "github.com/kazz187/taskguild/backend/internal/workflow/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/pkg/clog"
@@ -100,6 +102,7 @@ func main() {
 	interactionRepo := interactionrepo.NewYAMLRepository(store)
 	agentRepo := agentrepo.NewYAMLRepository(store)
 	skillRepo := skillrepo.NewYAMLRepository(store)
+	taskLogRepo := tasklogrepo.NewYAMLRepository(store)
 	pushSubRepo := pushsubrepo.NewYAMLRepository(store)
 
 	// Setup agent-manager registry
@@ -110,13 +113,14 @@ func main() {
 	workflowServer := workflow.NewServer(workflowRepo)
 	taskServer := task.NewServer(taskRepo, workflowRepo, bus)
 	interactionServer := interaction.NewServer(interactionRepo, taskRepo, bus)
-	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, projectRepo, skillRepo, bus)
+	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, projectRepo, skillRepo, taskLogRepo, bus)
 	agentChangeNotifier := &agentChangeNotifier{
 		registry:    agentManagerRegistry,
 		projectRepo: projectRepo,
 	}
 	agentServer := agent.NewServer(agentRepo, agentChangeNotifier)
 	skillServer := skill.NewServer(skillRepo)
+	taskLogServer := tasklog.NewServer(taskLogRepo)
 	eventServer := event.NewServer(bus)
 
 	// Setup push notification
@@ -135,6 +139,7 @@ func main() {
 		agentServer,
 		skillServer,
 		eventServer,
+		taskLogServer,
 		pushNotificationServer,
 	)
 

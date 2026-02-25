@@ -53,3 +53,10 @@ export const getInteractionResponse = AgentManagerService.method.getInteractionR
  * @generated from rpc taskguild.v1.AgentManagerService.SyncAgents
  */
 export const syncAgents = AgentManagerService.method.syncAgents;
+
+/**
+ * ReportTaskLog reports a structured log entry from an agent during task execution.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.ReportTaskLog
+ */
+export const reportTaskLog = AgentManagerService.method.reportTaskLog;

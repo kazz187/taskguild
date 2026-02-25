@@ -5,6 +5,7 @@ package taskguild.v1;
 import "google/protobuf/timestamp.proto";
 import "taskguild/v1/agent.proto";
 import "taskguild/v1/interaction.proto";
+import "taskguild/v1/task_log.proto";
 
 // AgentManagerService is the bidirectional communication channel between
 // the backend and agent-manager instances.
@@ -26,6 +27,8 @@ service AgentManagerService {
   // SyncAgents returns all agent definitions for a project so the agent can
   // write them as .claude/agents/*.md files locally.
   rpc SyncAgents(SyncAgentsRequest) returns (SyncAgentsResponse);
+  // ReportTaskLog reports a structured log entry from an agent during task execution.
+  rpc ReportTaskLog(ReportTaskLogRequest) returns (ReportTaskLogResponse);
 }
 
 // --- Subscribe stream ---
@@ -154,3 +157,14 @@ message SyncAgentsRequest {
 message SyncAgentsResponse {
   repeated AgentDefinition agents = 1;
 }
+
+// --- Task logs ---
+
+message ReportTaskLogRequest {
+  string task_id = 1;
+  TaskLogLevel level = 2;
+  TaskLogCategory category = 3;
+  string message = 4;
+  map<string, string> metadata = 5;
+}
+message ReportTaskLogResponse {}

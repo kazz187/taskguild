@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package taskguild.v1;
+
+import "google/protobuf/timestamp.proto";
+import "taskguild/v1/common.proto";
+
+service TaskLogService {
+  rpc ListTaskLogs(ListTaskLogsRequest) returns (ListTaskLogsResponse);
+}
+
+enum TaskLogLevel {
+  TASK_LOG_LEVEL_UNSPECIFIED = 0;
+  TASK_LOG_LEVEL_INFO = 1;
+  TASK_LOG_LEVEL_DEBUG = 2;
+  TASK_LOG_LEVEL_WARN = 3;
+  TASK_LOG_LEVEL_ERROR = 4;
+}
+
+enum TaskLogCategory {
+  TASK_LOG_CATEGORY_UNSPECIFIED = 0;
+  TASK_LOG_CATEGORY_TURN_START = 1;
+  TASK_LOG_CATEGORY_TURN_END = 2;
+  TASK_LOG_CATEGORY_STATUS_CHANGE = 3;
+  TASK_LOG_CATEGORY_HOOK = 4;
+  TASK_LOG_CATEGORY_STDERR = 5;
+  TASK_LOG_CATEGORY_ERROR = 6;
+  TASK_LOG_CATEGORY_SYSTEM = 7;
+}
+
+message TaskLog {
+  string id = 1;
+  string task_id = 2;
+  TaskLogLevel level = 3;
+  TaskLogCategory category = 4;
+  string message = 5;
+  map<string, string> metadata = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message ListTaskLogsRequest {
+  string task_id = 1;
+  PaginationRequest pagination = 2;
+}
+
+message ListTaskLogsResponse {
+  repeated TaskLog logs = 1;
+  PaginationResponse pagination = 2;
+}
