@@ -2,6 +2,8 @@ package workflow
 
 import (
 	"context"
+	"fmt"
+	"regexp"
 	"time"
 
 	"connectrpc.com/connect"
@@ -11,6 +13,8 @@ import (
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
+
+var alphanumericRe = regexp.MustCompile(`^[a-zA-Z0-9]+$`)
 
 var _ taskguildv1connect.WorkflowServiceHandler = (*Server)(nil)
 
@@ -33,6 +37,9 @@ func (s *Server) CreateWorkflow(ctx context.Context, req *connect.Request[taskgu
 		DefaultUseWorktree:    req.Msg.DefaultUseWorktree,
 		CreatedAt:             now,
 		UpdatedAt:             now,
+	}
+	if err := validateStatuses(req.Msg.Statuses); err != nil {
+		return nil, err
 	}
 	for _, ps := range req.Msg.Statuses {
 		w.Statuses = append(w.Statuses, statusFromProto(ps))
@@ -96,6 +103,9 @@ func (s *Server) UpdateWorkflow(ctx context.Context, req *connect.Request[taskgu
 		w.Description = req.Msg.Description
 	}
 	if req.Msg.Statuses != nil {
+		if err := validateStatuses(req.Msg.Statuses); err != nil {
+			return nil, err
+		}
 		w.Statuses = nil
 		for _, ps := range req.Msg.Statuses {
 			w.Statuses = append(w.Statuses, statusFromProto(ps))
@@ -196,10 +206,28 @@ func agentConfigToProto(a AgentConfig) *taskguildv1.AgentConfig {
 	}
 }
 
+func validateStatuses(statuses []*taskguildv1.WorkflowStatus) error {
+	seen := make(map[string]bool)
+	for _, s := range statuses {
+		id := s.Id
+		if id == "" {
+			id = s.Name
+		}
+		if !alphanumericRe.MatchString(id) {
+			return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("status ID %q must be alphanumeric", id))
+		}
+		if seen[id] {
+			return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("duplicate status ID %q", id))
+		}
+		seen[id] = true
+	}
+	return nil
+}
+
 func statusFromProto(ps *taskguildv1.WorkflowStatus) Status {
 	id := ps.Id
 	if id == "" {
-		id = ulid.Make().String()
+		id = ps.Name
 	}
 	s := Status{
 		ID:            id,

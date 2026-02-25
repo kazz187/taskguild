@@ -141,6 +141,8 @@ export function WorkflowForm({
   const { data: skillsData } = useQuery(listSkills, { projectId })
   const skills = skillsData?.skills ?? []
 
+  const [validationError, setValidationError] = useState('')
+
   const createMutation = useMutation(createWorkflow)
   const updateMutation = useMutation(updateWorkflow)
   const mutation = isEdit ? updateMutation : createMutation
@@ -258,8 +260,8 @@ export function WorkflowForm({
 
   const buildProtoPayload = () => {
     const keyToId = new Map<string, string>()
-    statuses.forEach((s, i) => {
-      keyToId.set(s.key, s.id || `status-${i}`)
+    statuses.forEach((s) => {
+      keyToId.set(s.key, s.name)
     })
 
     const protoStatuses = statuses.map((s) => ({
@@ -305,6 +307,28 @@ export function WorkflowForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    setValidationError('')
+
+    const alphanumeric = /^[a-zA-Z0-9]+$/
+    for (const s of statuses) {
+      if (!s.name) {
+        setValidationError('All status names must be non-empty.')
+        return
+      }
+      if (!alphanumeric.test(s.name)) {
+        setValidationError(`Status name "${s.name}" must be alphanumeric only.`)
+        return
+      }
+    }
+    const nameSet = new Set<string>()
+    for (const s of statuses) {
+      if (nameSet.has(s.name)) {
+        setValidationError(`Duplicate status name "${s.name}".`)
+        return
+      }
+      nameSet.add(s.name)
+    }
+
     const { protoStatuses, protoAgentConfigs } = buildProtoPayload()
 
     if (isEdit) {
@@ -454,10 +478,14 @@ export function WorkflowForm({
                     <input
                       type="text"
                       required
+                      pattern="[a-zA-Z0-9]+"
                       value={s.name}
-                      onChange={(e) => updateStatus(s.key, { name: e.target.value })}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/[^a-zA-Z0-9]/g, '')
+                        updateStatus(s.key, { name: v })
+                      }}
                       className="flex-1 min-w-0 px-2 md:px-3 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-sm focus:outline-none focus:border-cyan-500"
-                      placeholder="Status name"
+                      placeholder="Status name (alphanumeric)"
                     />
                     <div className="flex items-center gap-2 shrink-0">
                       <label className="flex items-center gap-1 text-xs text-gray-400 cursor-pointer">
@@ -654,6 +682,9 @@ export function WorkflowForm({
           </div>
         </div>
 
+        {validationError && (
+          <p className="text-red-400 text-sm mb-4">{validationError}</p>
+        )}
         {mutation.error && (
           <p className="text-red-400 text-sm mb-4">{mutation.error.message}</p>
         )}
