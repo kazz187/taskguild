@@ -662,8 +662,8 @@ const file_taskguild_v1_project_proto_rawDesc = "" +
 	"GetProject\x12\x1f.taskguild.v1.GetProjectRequest\x1a .taskguild.v1.GetProjectResponse\x12U\n" +
 	"\fListProjects\x12!.taskguild.v1.ListProjectsRequest\x1a\".taskguild.v1.ListProjectsResponse\x12X\n" +
 	"\rUpdateProject\x12\".taskguild.v1.UpdateProjectRequest\x1a#.taskguild.v1.UpdateProjectResponse\x12X\n" +
-	"\rDeleteProject\x12\".taskguild.v1.DeleteProjectRequest\x1a#.taskguild.v1.DeleteProjectResponseB\xb5\x01\n" +
-	"\x10com.taskguild.v1B\fProjectProtoP\x01ZBgithub.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
+	"\rDeleteProject\x12\".taskguild.v1.DeleteProjectRequest\x1a#.taskguild.v1.DeleteProjectResponseB\xba\x01\n" +
+	"\x10com.taskguild.v1B\fProjectProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
 	file_taskguild_v1_project_proto_rawDescOnce sync.Once

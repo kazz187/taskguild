@@ -146,8 +146,8 @@ const file_taskguild_v1_common_proto_rawDesc = "" +
 	"\x12PaginationResponse\x12\x14\n" +
 	"\x05total\x18\x01 \x01(\x05R\x05total\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06offset\x18\x03 \x01(\x05R\x06offsetB\xb4\x01\n" +
-	"\x10com.taskguild.v1B\vCommonProtoP\x01ZBgithub.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
+	"\x06offset\x18\x03 \x01(\x05R\x06offsetB\xb9\x01\n" +
+	"\x10com.taskguild.v1B\vCommonProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
 	file_taskguild_v1_common_proto_rawDescOnce sync.Once

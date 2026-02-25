@@ -978,9 +978,9 @@ const file_taskguild_v1_agent_proto_rawDesc = "" +
 	"ListAgents\x12\x1f.taskguild.v1.ListAgentsRequest\x1a .taskguild.v1.ListAgentsResponse\x12R\n" +
 	"\vUpdateAgent\x12 .taskguild.v1.UpdateAgentRequest\x1a!.taskguild.v1.UpdateAgentResponse\x12R\n" +
 	"\vDeleteAgent\x12 .taskguild.v1.DeleteAgentRequest\x1a!.taskguild.v1.DeleteAgentResponse\x12d\n" +
-	"\x11SyncAgentsFromDir\x12&.taskguild.v1.SyncAgentsFromDirRequest\x1a'.taskguild.v1.SyncAgentsFromDirResponseB\xb3\x01\n" +
+	"\x11SyncAgentsFromDir\x12&.taskguild.v1.SyncAgentsFromDirRequest\x1a'.taskguild.v1.SyncAgentsFromDirResponseB\xb8\x01\n" +
 	"\x10com.taskguild.v1B\n" +
-	"AgentProtoP\x01ZBgithub.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
+	"AgentProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
 	file_taskguild_v1_agent_proto_rawDescOnce sync.Once

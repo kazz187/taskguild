@@ -971,8 +971,8 @@ const file_taskguild_v1_task_proto_rawDesc = "" +
 	"UpdateTask\x12\x1f.taskguild.v1.UpdateTaskRequest\x1a .taskguild.v1.UpdateTaskResponse\x12O\n" +
 	"\n" +
 	"DeleteTask\x12\x1f.taskguild.v1.DeleteTaskRequest\x1a .taskguild.v1.DeleteTaskResponse\x12a\n" +
-	"\x10UpdateTaskStatus\x12%.taskguild.v1.UpdateTaskStatusRequest\x1a&.taskguild.v1.UpdateTaskStatusResponseB\xb2\x01\n" +
-	"\x10com.taskguild.v1B\tTaskProtoP\x01ZBgithub.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
+	"\x10UpdateTaskStatus\x12%.taskguild.v1.UpdateTaskStatusRequest\x1a&.taskguild.v1.UpdateTaskStatusResponseB\xb7\x01\n" +
+	"\x10com.taskguild.v1B\tTaskProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
 	file_taskguild_v1_task_proto_rawDescOnce sync.Once

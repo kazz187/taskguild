@@ -1497,8 +1497,8 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\x16GetInteractionResponse\x12+.taskguild.v1.GetInteractionResponseRequest\x1a,.taskguild.v1.GetInteractionResponseResponse\x12O\n" +
 	"\n" +
 	"SyncAgents\x12\x1f.taskguild.v1.SyncAgentsRequest\x1a .taskguild.v1.SyncAgentsResponse\x12X\n" +
-	"\rReportTaskLog\x12\".taskguild.v1.ReportTaskLogRequest\x1a#.taskguild.v1.ReportTaskLogResponseB\xba\x01\n" +
-	"\x10com.taskguild.v1B\x11AgentManagerProtoP\x01ZBgithub.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
+	"\rReportTaskLog\x12\".taskguild.v1.ReportTaskLogRequest\x1a#.taskguild.v1.ReportTaskLogResponseB\xbf\x01\n" +
+	"\x10com.taskguild.v1B\x11AgentManagerProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
 	file_taskguild_v1_agent_manager_proto_rawDescOnce sync.Once

@@ -783,8 +783,8 @@ const file_taskguild_v1_interaction_proto_rawDesc = "" +
 	"\x10ListInteractions\x12%.taskguild.v1.ListInteractionsRequest\x1a&.taskguild.v1.ListInteractionsResponse\x12m\n" +
 	"\x14RespondToInteraction\x12).taskguild.v1.RespondToInteractionRequest\x1a*.taskguild.v1.RespondToInteractionResponse\x12R\n" +
 	"\vSendMessage\x12 .taskguild.v1.SendMessageRequest\x1a!.taskguild.v1.SendMessageResponse\x12e\n" +
-	"\x15SubscribeInteractions\x12*.taskguild.v1.SubscribeInteractionsRequest\x1a\x1e.taskguild.v1.InteractionEvent0\x01B\xb9\x01\n" +
-	"\x10com.taskguild.v1B\x10InteractionProtoP\x01ZBgithub.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
+	"\x15SubscribeInteractions\x12*.taskguild.v1.SubscribeInteractionsRequest\x1a\x1e.taskguild.v1.InteractionEvent0\x01B\xbe\x01\n" +
+	"\x10com.taskguild.v1B\x10InteractionProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
 	file_taskguild_v1_interaction_proto_rawDescOnce sync.Once

@@ -26,7 +26,7 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/config"
 	"github.com/kazz187/taskguild/backend/pkg/cerr"
 	"github.com/kazz187/taskguild/backend/pkg/clog"
-	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
+	"github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1/taskguildv1connect"
 )
 
 type Server struct {

@@ -1107,8 +1107,8 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\vGetWorkflow\x12 .taskguild.v1.GetWorkflowRequest\x1a!.taskguild.v1.GetWorkflowResponse\x12X\n" +
 	"\rListWorkflows\x12\".taskguild.v1.ListWorkflowsRequest\x1a#.taskguild.v1.ListWorkflowsResponse\x12[\n" +
 	"\x0eUpdateWorkflow\x12#.taskguild.v1.UpdateWorkflowRequest\x1a$.taskguild.v1.UpdateWorkflowResponse\x12[\n" +
-	"\x0eDeleteWorkflow\x12#.taskguild.v1.DeleteWorkflowRequest\x1a$.taskguild.v1.DeleteWorkflowResponseB\xb6\x01\n" +
-	"\x10com.taskguild.v1B\rWorkflowProtoP\x01ZBgithub.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
+	"\x0eDeleteWorkflow\x12#.taskguild.v1.DeleteWorkflowRequest\x1a$.taskguild.v1.DeleteWorkflowResponseB\xbb\x01\n" +
+	"\x10com.taskguild.v1B\rWorkflowProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
 	file_taskguild_v1_workflow_proto_rawDescOnce sync.Once

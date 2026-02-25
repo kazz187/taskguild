@@ -1008,9 +1008,9 @@ const file_taskguild_v1_skill_proto_rawDesc = "" +
 	"ListSkills\x12\x1f.taskguild.v1.ListSkillsRequest\x1a .taskguild.v1.ListSkillsResponse\x12R\n" +
 	"\vUpdateSkill\x12 .taskguild.v1.UpdateSkillRequest\x1a!.taskguild.v1.UpdateSkillResponse\x12R\n" +
 	"\vDeleteSkill\x12 .taskguild.v1.DeleteSkillRequest\x1a!.taskguild.v1.DeleteSkillResponse\x12d\n" +
-	"\x11SyncSkillsFromDir\x12&.taskguild.v1.SyncSkillsFromDirRequest\x1a'.taskguild.v1.SyncSkillsFromDirResponseB\xb3\x01\n" +
+	"\x11SyncSkillsFromDir\x12&.taskguild.v1.SyncSkillsFromDirRequest\x1a'.taskguild.v1.SyncSkillsFromDirResponseB\xb8\x01\n" +
 	"\x10com.taskguild.v1B\n" +
-	"SkillProtoP\x01ZBgithub.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
+	"SkillProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
 	file_taskguild_v1_skill_proto_rawDescOnce sync.Once

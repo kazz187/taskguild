@@ -16,8 +16,8 @@ import (
 
 	"connectrpc.com/connect"
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
-	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
+	v1 "github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1"
+	"github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1/taskguildv1connect"
 )
 
 func init() {

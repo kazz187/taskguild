@@ -380,8 +380,8 @@ const file_taskguild_v1_task_log_proto_rawDesc = "" +
 	"\x17TASK_LOG_CATEGORY_ERROR\x10\x06\x12\x1c\n" +
 	"\x18TASK_LOG_CATEGORY_SYSTEM\x10\a2g\n" +
 	"\x0eTaskLogService\x12U\n" +
-	"\fListTaskLogs\x12!.taskguild.v1.ListTaskLogsRequest\x1a\".taskguild.v1.ListTaskLogsResponseB\xb5\x01\n" +
-	"\x10com.taskguild.v1B\fTaskLogProtoP\x01ZBgithub.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
+	"\fListTaskLogs\x12!.taskguild.v1.ListTaskLogsRequest\x1a\".taskguild.v1.ListTaskLogsResponseB\xba\x01\n" +
+	"\x10com.taskguild.v1B\fTaskLogProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
 	file_taskguild_v1_task_log_proto_rawDescOnce sync.Once
