@@ -34,7 +34,10 @@ function ProjectDetailPage() {
   const project = projectData?.project
   const workflows = workflowsData?.workflows ?? []
 
-  // Select workflow from search params or auto-select first
+  // Select workflow from search params or auto-select first.
+  // Always sync selectedWorkflow with the latest workflows data so that
+  // workflow-level defaults (e.g. defaultPermissionMode, defaultUseWorktree)
+  // stay up-to-date when the data is refetched.
   useEffect(() => {
     if (workflows.length === 0) return
     if (workflowId) {
@@ -44,20 +47,18 @@ function ProjectDetailPage() {
         return
       }
     }
-    if (!selectedWorkflow) {
-      setSelectedWorkflow(workflows[0])
-    }
+    setSelectedWorkflow((prev: Workflow | null) => {
+      if (!prev) return workflows[0]
+      // Keep selectedWorkflow in sync with the latest data by matching ID
+      return workflows.find((w: Workflow) => w.id === prev.id) ?? workflows[0]
+    })
   }, [workflows, workflowId])
 
   const handleSaved = () => {
     setFormMode(null)
-    refetchWorkflows().then(({ data }) => {
-      // Re-select the workflow if it was being edited
-      if (formMode?.kind === 'edit' && data) {
-        const updated = data.workflows.find((w) => w.id === formMode.workflow.id)
-        if (updated) setSelectedWorkflow(updated)
-      }
-    })
+    // Refetch workflows; the useEffect will automatically sync selectedWorkflow
+    // with the latest data (including updated defaults).
+    refetchWorkflows()
   }
 
   return (
