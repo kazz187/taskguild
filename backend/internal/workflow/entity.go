@@ -13,8 +13,8 @@ type Workflow struct {
 	UpdatedAt    time.Time     `yaml:"updated_at"`
 
 	// Task defaults
-	DefaultPermissionMode string `yaml:"default_permission_mode,omitempty"`
-	DefaultUseWorktree    bool   `yaml:"default_use_worktree,omitempty"`
+	DefaultPermissionMode string `yaml:"default_permission_mode"`
+	DefaultUseWorktree    bool   `yaml:"default_use_worktree"`
 }
 
 type HookTrigger string
