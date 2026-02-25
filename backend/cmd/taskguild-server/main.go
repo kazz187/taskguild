@@ -18,6 +18,8 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/interaction"
 	interactionrepo "github.com/kazz187/taskguild/backend/internal/interaction/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/orchestrator"
+	"github.com/kazz187/taskguild/backend/internal/permission"
+	permissionrepo "github.com/kazz187/taskguild/backend/internal/permission/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/project"
 	projectrepo "github.com/kazz187/taskguild/backend/internal/project/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/pushnotification"
@@ -54,6 +56,26 @@ func (n *agentChangeNotifier) NotifyAgentChange(projectID string) {
 	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
 		Command: &taskguildv1.AgentCommand_SyncAgents{
 			SyncAgents: &taskguildv1.SyncAgentsCommand{},
+		},
+	})
+}
+
+// permissionChangeNotifier implements permission.ChangeNotifier by broadcasting
+// a SyncPermissionsCommand to connected agents in the same project.
+type permissionChangeNotifier struct {
+	registry    *agentmanager.Registry
+	projectRepo project.Repository
+}
+
+func (n *permissionChangeNotifier) NotifyPermissionChange(projectID string) {
+	p, err := n.projectRepo.Get(context.Background(), projectID)
+	if err != nil {
+		slog.Error("failed to look up project for permission change notification", "project_id", projectID, "error", err)
+		return
+	}
+	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
+		Command: &taskguildv1.AgentCommand_SyncPermissions{
+			SyncPermissions: &taskguildv1.SyncPermissionsCommand{},
 		},
 	})
 }
@@ -104,6 +126,7 @@ func main() {
 	skillRepo := skillrepo.NewYAMLRepository(store)
 	taskLogRepo := tasklogrepo.NewYAMLRepository(store)
 	pushSubRepo := pushsubrepo.NewYAMLRepository(store)
+	permissionRepo := permissionrepo.NewYAMLRepository(store)
 
 	// Setup agent-manager registry
 	agentManagerRegistry := agentmanager.NewRegistry()
@@ -113,7 +136,7 @@ func main() {
 	workflowServer := workflow.NewServer(workflowRepo)
 	taskServer := task.NewServer(taskRepo, workflowRepo, bus)
 	interactionServer := interaction.NewServer(interactionRepo, taskRepo, bus)
-	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, projectRepo, skillRepo, taskLogRepo, bus)
+	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, projectRepo, skillRepo, taskLogRepo, permissionRepo, bus)
 	agentChangeNotifier := &agentChangeNotifier{
 		registry:    agentManagerRegistry,
 		projectRepo: projectRepo,
@@ -122,6 +145,11 @@ func main() {
 	skillServer := skill.NewServer(skillRepo)
 	taskLogServer := tasklog.NewServer(taskLogRepo)
 	eventServer := event.NewServer(bus)
+	permissionChangeNotifier := &permissionChangeNotifier{
+		registry:    agentManagerRegistry,
+		projectRepo: projectRepo,
+	}
+	permissionServer := permission.NewServer(permissionRepo, permissionChangeNotifier)
 
 	// Setup push notification
 	vapidEnv := config.VAPIDEnvFromEnv(env)
@@ -141,6 +169,7 @@ func main() {
 		eventServer,
 		taskLogServer,
 		pushNotificationServer,
+		permissionServer,
 	)
 
 	// Setup orchestrator

@@ -5,6 +5,7 @@ package taskguild.v1;
 import "google/protobuf/timestamp.proto";
 import "taskguild/v1/agent.proto";
 import "taskguild/v1/interaction.proto";
+import "taskguild/v1/permission.proto";
 import "taskguild/v1/task_log.proto";
 
 // AgentManagerService is the bidirectional communication channel between
@@ -29,6 +30,9 @@ service AgentManagerService {
   rpc SyncAgents(SyncAgentsRequest) returns (SyncAgentsResponse);
   // ReportTaskLog reports a structured log entry from an agent during task execution.
   rpc ReportTaskLog(ReportTaskLogRequest) returns (ReportTaskLogResponse);
+  // SyncPermissions merges local .claude/settings.json permissions with the
+  // backend's stored permissions (union strategy) and returns the merged result.
+  rpc SyncPermissions(SyncPermissionsRequest) returns (SyncPermissionsResponse);
 }
 
 // --- Subscribe stream ---
@@ -46,6 +50,7 @@ message AgentCommand {
     CancelTaskCommand cancel_task = 3;
     InteractionResponseCommand interaction_response = 4;
     SyncAgentsCommand sync_agents = 5;
+    SyncPermissionsCommand sync_permissions = 6;
   }
 }
 
@@ -78,6 +83,10 @@ message InteractionResponseCommand {
 
 // SyncAgentsCommand tells the agent to re-sync its local .claude/agents/*.md files.
 message SyncAgentsCommand {}
+
+// SyncPermissionsCommand tells the agent to re-sync its local
+// .claude/settings.json permissions section.
+message SyncPermissionsCommand {}
 
 // --- Task lifecycle ---
 
@@ -156,6 +165,18 @@ message SyncAgentsRequest {
 }
 message SyncAgentsResponse {
   repeated AgentDefinition agents = 1;
+}
+
+// --- Permission sync ---
+
+message SyncPermissionsRequest {
+  string project_name = 1;
+  repeated string local_allow = 2;
+  repeated string local_ask = 3;
+  repeated string local_deny = 4;
+}
+message SyncPermissionsResponse {
+  PermissionSet permissions = 1;
 }
 
 // --- Task logs ---

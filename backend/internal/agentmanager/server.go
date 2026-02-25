@@ -13,6 +13,7 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/agent"
 	"github.com/kazz187/taskguild/backend/internal/eventbus"
 	"github.com/kazz187/taskguild/backend/internal/interaction"
+	"github.com/kazz187/taskguild/backend/internal/permission"
 	"github.com/kazz187/taskguild/backend/internal/project"
 	"github.com/kazz187/taskguild/backend/internal/skill"
 	"github.com/kazz187/taskguild/backend/internal/task"
@@ -34,10 +35,11 @@ type Server struct {
 	projectRepo     project.Repository
 	skillRepo       skill.Repository
 	taskLogRepo     tasklog.Repository
+	permissionRepo  permission.Repository
 	eventBus        *eventbus.Bus
 }
 
-func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, projectRepo project.Repository, skillRepo skill.Repository, taskLogRepo tasklog.Repository, eventBus *eventbus.Bus) *Server {
+func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, projectRepo project.Repository, skillRepo skill.Repository, taskLogRepo tasklog.Repository, permissionRepo permission.Repository, eventBus *eventbus.Bus) *Server {
 	return &Server{
 		registry:        registry,
 		taskRepo:        taskRepo,
@@ -47,6 +49,7 @@ func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workfl
 		projectRepo:     projectRepo,
 		skillRepo:       skillRepo,
 		taskLogRepo:     taskLogRepo,
+		permissionRepo:  permissionRepo,
 		eventBus:        eventBus,
 	}
 }
@@ -489,6 +492,42 @@ func (s *Server) SyncAgents(ctx context.Context, req *connect.Request[taskguildv
 
 	return connect.NewResponse(&taskguildv1.SyncAgentsResponse{
 		Agents: protos,
+	}), nil
+}
+
+func (s *Server) SyncPermissions(ctx context.Context, req *connect.Request[taskguildv1.SyncPermissionsRequest]) (*connect.Response[taskguildv1.SyncPermissionsResponse], error) {
+	projectName := req.Msg.ProjectName
+	if projectName == "" {
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+	}
+
+	proj, err := s.projectRepo.FindByName(ctx, projectName)
+	if err != nil {
+		return nil, cerr.ExtractConnectError(ctx, err)
+	}
+
+	// Get stored permissions for the project.
+	stored, err := s.permissionRepo.Get(ctx, proj.ID)
+	if err != nil {
+		return nil, cerr.ExtractConnectError(ctx, err)
+	}
+
+	// Merge local permissions with stored (union strategy).
+	merged := permission.Merge(stored, req.Msg.LocalAllow, req.Msg.LocalAsk, req.Msg.LocalDeny)
+
+	// Save merged result.
+	if err := s.permissionRepo.Upsert(ctx, merged); err != nil {
+		return nil, cerr.ExtractConnectError(ctx, err)
+	}
+
+	return connect.NewResponse(&taskguildv1.SyncPermissionsResponse{
+		Permissions: &taskguildv1.PermissionSet{
+			ProjectId: proj.ID,
+			Allow:     merged.Allow,
+			Ask:       merged.Ask,
+			Deny:      merged.Deny,
+			UpdatedAt: timestamppb.New(merged.UpdatedAt),
+		},
 	}), nil
 }
 

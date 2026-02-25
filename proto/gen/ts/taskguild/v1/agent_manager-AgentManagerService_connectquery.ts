@@ -60,3 +60,11 @@ export const syncAgents = AgentManagerService.method.syncAgents;
  * @generated from rpc taskguild.v1.AgentManagerService.ReportTaskLog
  */
 export const reportTaskLog = AgentManagerService.method.reportTaskLog;
+
+/**
+ * SyncPermissions merges local .claude/settings.json permissions with the
+ * backend's stored permissions (union strategy) and returns the merged result.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.SyncPermissions
+ */
+export const syncPermissions = AgentManagerService.method.syncPermissions;
