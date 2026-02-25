@@ -940,6 +940,155 @@ func buildPermissionUpdate(toolName string, input map[string]any, suggestions []
 	}
 }
 
+// handleAskUserQuestion processes the AskUserQuestion tool by presenting each question
+// as an INTERACTION_TYPE_QUESTION with selectable options. Returns PermissionResultAllow
+// with the user's answers injected into UpdatedInput.
+func handleAskUserQuestion(
+	ctx context.Context,
+	client taskguildv1connect.AgentManagerServiceClient,
+	taskID string,
+	agentID string,
+	input map[string]any,
+	waiter *interactionWaiter,
+) (claudeagent.PermissionResult, error) {
+	questionsRaw, ok := input["questions"]
+	if !ok {
+		log.Printf("[task:%s] AskUserQuestion: no questions field", taskID)
+		return claudeagent.PermissionResultAllow{}, nil
+	}
+
+	questionsSlice, ok := questionsRaw.([]any)
+	if !ok {
+		log.Printf("[task:%s] AskUserQuestion: questions is not an array", taskID)
+		return claudeagent.PermissionResultAllow{}, nil
+	}
+
+	answers := make(map[string]any)
+
+	for i, qRaw := range questionsSlice {
+		qMap, ok := qRaw.(map[string]any)
+		if !ok {
+			log.Printf("[task:%s] AskUserQuestion: question[%d] is not a map", taskID, i)
+			continue
+		}
+
+		questionText, _ := qMap["question"].(string)
+		header, _ := qMap["header"].(string)
+		if questionText == "" {
+			continue
+		}
+
+		// Build interaction options from the question's options array.
+		var interactionOpts []*v1.InteractionOption
+		if optsRaw, ok := qMap["options"].([]any); ok {
+			for _, optRaw := range optsRaw {
+				optMap, ok := optRaw.(map[string]any)
+				if !ok {
+					continue
+				}
+				label, _ := optMap["label"].(string)
+				desc, _ := optMap["description"].(string)
+				if label == "" {
+					continue
+				}
+				interactionOpts = append(interactionOpts, &v1.InteractionOption{
+					Label:       label,
+					Value:       label,
+					Description: desc,
+				})
+			}
+		}
+
+		// Add "Other" option for free-text input.
+		interactionOpts = append(interactionOpts, &v1.InteractionOption{
+			Label:       "Other",
+			Value:       "__other__",
+			Description: "Provide a custom answer",
+		})
+
+		// Build description: include header if present.
+		description := ""
+		if header != "" {
+			description = header
+		}
+
+		resp, err := client.CreateInteraction(ctx, connect.NewRequest(&v1.CreateInteractionRequest{
+			TaskId:      taskID,
+			AgentId:     agentID,
+			Type:        v1.InteractionType_INTERACTION_TYPE_QUESTION,
+			Title:       questionText,
+			Description: description,
+			Options:     interactionOpts,
+		}))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create question interaction: %w", err)
+		}
+
+		interactionID := resp.Msg.GetInteraction().GetId()
+		log.Printf("[task:%s] AskUserQuestion: waiting for answer to question %d (interaction: %s)", taskID, i, interactionID)
+
+		ch := waiter.Register(interactionID)
+
+		var selectedAnswer string
+		select {
+		case <-ctx.Done():
+			waiter.Unregister(interactionID)
+			return claudeagent.PermissionResultDeny{Message: "context cancelled"}, nil
+		case inter := <-ch:
+			waiter.Unregister(interactionID)
+			if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
+				return claudeagent.PermissionResultDeny{Message: "question expired"}, nil
+			}
+			selectedAnswer = inter.GetResponse()
+		}
+
+		// If user chose "Other", create a follow-up interaction for free-text input.
+		if selectedAnswer == "__other__" {
+			followResp, err := client.CreateInteraction(ctx, connect.NewRequest(&v1.CreateInteractionRequest{
+				TaskId:      taskID,
+				AgentId:     agentID,
+				Type:        v1.InteractionType_INTERACTION_TYPE_QUESTION,
+				Title:       questionText,
+				Description: "Enter your custom answer:",
+			}))
+			if err != nil {
+				return nil, fmt.Errorf("failed to create follow-up interaction: %w", err)
+			}
+
+			followID := followResp.Msg.GetInteraction().GetId()
+			log.Printf("[task:%s] AskUserQuestion: waiting for free-text answer (interaction: %s)", taskID, followID)
+
+			followCh := waiter.Register(followID)
+
+			select {
+			case <-ctx.Done():
+				waiter.Unregister(followID)
+				return claudeagent.PermissionResultDeny{Message: "context cancelled"}, nil
+			case inter := <-followCh:
+				waiter.Unregister(followID)
+				if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
+					return claudeagent.PermissionResultDeny{Message: "question expired"}, nil
+				}
+				selectedAnswer = inter.GetResponse()
+			}
+		}
+
+		answers[questionText] = selectedAnswer
+		log.Printf("[task:%s] AskUserQuestion: question %d answered: %q", taskID, i, selectedAnswer)
+	}
+
+	// Inject answers into the input and return as UpdatedInput.
+	updatedInput := make(map[string]any)
+	for k, v := range input {
+		updatedInput[k] = v
+	}
+	updatedInput["answers"] = answers
+
+	return claudeagent.PermissionResultAllow{
+		UpdatedInput: updatedInput,
+	}, nil
+}
+
 func handlePermissionRequest(
 	ctx context.Context,
 	client taskguildv1connect.AgentManagerServiceClient,
@@ -967,6 +1116,11 @@ func handlePermissionRequest(
 	if editTools[toolName] && permMode == claudeagent.PermissionModeAcceptEdits {
 		log.Printf("[task:%s] auto-allowing edit tool %s (acceptEdits)", taskID, toolName)
 		return claudeagent.PermissionResultAllow{}, nil
+	}
+
+	// AskUserQuestion: present as QUESTION interactions instead of permission request
+	if toolName == "AskUserQuestion" {
+		return handleAskUserQuestion(ctx, client, taskID, agentID, input, waiter)
 	}
 
 	description := formatToolDescription(toolName, input)

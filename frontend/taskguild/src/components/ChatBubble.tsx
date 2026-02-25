@@ -93,19 +93,39 @@ export function ChatBubble({
 
           {/* Inline action buttons for pending interactions */}
           {isPending && interaction.options.length > 0 && (
-            <div className="flex gap-2 flex-wrap mt-3">
-              {interaction.options.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => onRespond(interaction.id, opt.value)}
-                  disabled={isRespondPending}
-                  className="px-3 py-1.5 text-xs bg-slate-700 border border-slate-600 rounded-lg text-gray-200 hover:border-cyan-500/50 hover:text-white transition-colors disabled:opacity-50"
-                  title={opt.description}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+            interaction.type === InteractionType.QUESTION ? (
+              /* Question: vertical card layout with label + description */
+              <div className="flex flex-col gap-2 mt-3">
+                {interaction.options.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => onRespond(interaction.id, opt.value)}
+                    disabled={isRespondPending}
+                    className="flex flex-col items-start gap-0.5 px-4 py-2.5 text-left bg-slate-700/60 border border-slate-600 rounded-lg hover:border-blue-500/50 hover:bg-slate-700 transition-colors disabled:opacity-50"
+                  >
+                    <span className="text-sm font-medium text-gray-200">{opt.label}</span>
+                    {opt.description && (
+                      <span className="text-xs text-gray-400">{opt.description}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              /* Permission request: horizontal button layout */
+              <div className="flex gap-2 flex-wrap mt-3">
+                {interaction.options.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => onRespond(interaction.id, opt.value)}
+                    disabled={isRespondPending}
+                    className="px-3 py-1.5 text-xs bg-slate-700 border border-slate-600 rounded-lg text-gray-200 hover:border-cyan-500/50 hover:text-white transition-colors disabled:opacity-50"
+                    title={opt.description}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )
           )}
         </div>
       </div>
