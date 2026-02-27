@@ -2,28 +2,40 @@ type Segment =
   | { type: 'code'; language: string; content: string }
   | { type: 'text'; content: string }
 
-/** Parse a markdown-ish string into code-block and text segments. */
+/** Parse a markdown-ish string into code-block and text segments.
+ *
+ * Supports variable-length backtick fences (```, ````, ````` etc.) so that
+ * content containing triple-backtick code fences can be safely wrapped in a
+ * longer outer fence without confusing the parser.
+ *
+ * Opening fence: a line of 3+ backticks optionally followed by a language tag.
+ * Closing fence: a line of backticks (no language tag) whose length matches the
+ * opening fence exactly.
+ */
 function parse(raw: string): Segment[] {
   const segments: Segment[] = []
-  const fenceRe = /^```(\w*)\s*$/
+  const openFenceRe = /^(`{3,})(\w*)\s*$/
   let i = 0
   const lines = raw.split('\n')
 
   while (i < lines.length) {
-    const m = fenceRe.exec(lines[i])
+    const m = openFenceRe.exec(lines[i])
     if (m) {
-      const lang = m[1] || ''
+      const fenceLen = m[1].length
+      const lang = m[2] || ''
+      // Closing fence: exactly the same number of backticks, no language tag.
+      const closeFenceRe = new RegExp('^`{' + fenceLen + '}\\s*$')
       const codeLines: string[] = []
       i++
-      while (i < lines.length && !fenceRe.test(lines[i])) {
+      while (i < lines.length && !closeFenceRe.test(lines[i])) {
         codeLines.push(lines[i])
         i++
       }
-      if (i < lines.length) i++ // skip closing ```
+      if (i < lines.length) i++ // skip closing fence
       segments.push({ type: 'code', language: lang, content: codeLines.join('\n') })
     } else {
       const textLines: string[] = []
-      while (i < lines.length && !fenceRe.test(lines[i])) {
+      while (i < lines.length && !openFenceRe.test(lines[i])) {
         textLines.push(lines[i])
         i++
       }

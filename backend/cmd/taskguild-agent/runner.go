@@ -141,7 +141,7 @@ type hookEntry struct {
 // not block the main task.
 // If taskClient is provided, hook results containing TASK_METADATA directives
 // will be used to update the task's metadata.
-func executeHooks(ctx context.Context, taskID string, trigger string, metadata map[string]string, workDir string, taskClient taskguildv1connect.TaskServiceClient) {
+func executeHooks(ctx context.Context, taskID string, trigger string, metadata map[string]string, workDir string, taskClient taskguildv1connect.TaskServiceClient, tl *taskLogger) {
 	hooksJSON := metadata["_hooks"]
 	if hooksJSON == "" {
 		return
@@ -172,6 +172,10 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 
 	for _, h := range filtered {
 		log.Printf("[task:%s] running hook %q (id=%s, skill=%s)", taskID, h.Name, h.ID, h.SkillID)
+		if tl != nil {
+			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_HOOK, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+				fmt.Sprintf("Executing hook: %s (%s)", h.Name, trigger), nil)
+		}
 
 		hookCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 		maxTurns := 20
@@ -254,6 +258,7 @@ func runTask(
 	if worktreeName == "" && metadata["_use_worktree"] == "true" {
 		worktreeName = generateWorktreeName(ctx, taskID, metadata["_task_title"], workDir)
 		saveWorktreeName(ctx, taskClient, taskID, worktreeName)
+		metadata["worktree"] = worktreeName // keep local metadata in sync for buildUserPrompt
 	}
 
 	// Ensure the worktree directory exists before launching Claude so that
@@ -282,15 +287,13 @@ func runTask(
 	afterHooks := func() {
 		if !afterHooksExecuted {
 			afterHooksExecuted = true
-			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_HOOK, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO, "Executing after_task_execution hooks", nil)
-			executeHooks(ctx, taskID, "after_task_execution", metadata, resolveHookDir(), taskClient)
+			executeHooks(ctx, taskID, "after_task_execution", metadata, resolveHookDir(), taskClient, tl)
 		}
 	}
 	defer afterHooks()
 
 	// Execute before_task_execution hooks.
-	tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_HOOK, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO, "Executing before_task_execution hooks", nil)
-	executeHooks(ctx, taskID, "before_task_execution", metadata, workDir, taskClient)
+	executeHooks(ctx, taskID, "before_task_execution", metadata, workDir, taskClient, tl)
 
 	// Start interaction stream listener for this task.
 	waiter := newInteractionWaiter()
@@ -437,8 +440,7 @@ func runTask(
 			wtDir := filepath.Join(workDir, ".claude", "worktrees", worktreeName)
 			if info, err := os.Stat(wtDir); err == nil && info.IsDir() {
 				worktreeHookFired = true
-				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_HOOK, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO, "Executing after_worktree_creation hooks", nil)
-				executeHooks(ctx, taskID, "after_worktree_creation", metadata, wtDir, taskClient)
+				executeHooks(ctx, taskID, "after_worktree_creation", metadata, wtDir, taskClient, tl)
 			}
 		}
 
@@ -747,6 +749,21 @@ func buildUserPrompt(metadata map[string]string) string {
 	sb.WriteString("TASK_DESCRIPTION_END\n")
 	sb.WriteString("Use this to summarize planning discussions, refine requirements, or document decisions made during the session.\n")
 	sb.WriteString("The description will be saved and visible in the task UI immediately.\n")
+
+	// Add worktree instructions when the task uses a git worktree.
+	if metadata["_use_worktree"] == "true" {
+		if wt := metadata["worktree"]; wt != "" {
+			sb.WriteString("\n## Git Worktree\n")
+			sb.WriteString("This task uses a git worktree for file isolation.\n")
+			sb.WriteString(fmt.Sprintf("- Worktree branch: `worktree-%s`\n", wt))
+			sb.WriteString(fmt.Sprintf("- Worktree directory: `.claude/worktrees/%s/`\n", wt))
+			sb.WriteString("\nBefore starting work, verify you are on the correct branch:\n")
+			sb.WriteString("```\ngit branch --show-current\n```\n")
+			sb.WriteString(fmt.Sprintf("\nIf you are NOT on branch `worktree-%s`, navigate to the worktree:\n", wt))
+			sb.WriteString(fmt.Sprintf("```\ncd $(git rev-parse --show-toplevel)/.claude/worktrees/%s\n```\n", wt))
+			sb.WriteString("\nAll file modifications and commits must occur within this worktree.\n")
+		}
+	}
 
 	sb.WriteString("\n## Interactive Session\n")
 	sb.WriteString("You are in an interactive session. ")
@@ -1255,6 +1272,29 @@ func inferLanguageFromPath(path string) string {
 	}
 }
 
+// codeBlockFence returns a backtick fence string that is safe to use around the
+// given content. If the content itself contains triple-backtick fences, a longer
+// fence is returned so the inner fences don't close the outer block.
+func codeBlockFence(content string) string {
+	maxRun := 0
+	cur := 0
+	for _, r := range content {
+		if r == '`' {
+			cur++
+			if cur > maxRun {
+				maxRun = cur
+			}
+		} else {
+			cur = 0
+		}
+	}
+	n := maxRun + 1
+	if n < 3 {
+		n = 3
+	}
+	return strings.Repeat("`", n)
+}
+
 // formatToolDescription renders a structured markdown description for a tool invocation.
 func formatToolDescription(toolName string, input map[string]any) string {
 	str := func(key string) string {
@@ -1275,9 +1315,10 @@ func formatToolDescription(toolName string, input map[string]any) string {
 			sb.WriteString(fmt.Sprintf("**Description:** %s\n", desc))
 		}
 		if cmd := str("command"); cmd != "" {
-			sb.WriteString("\n```bash\n")
+			fence := codeBlockFence(cmd)
+			sb.WriteString(fmt.Sprintf("\n%sbash\n", fence))
 			sb.WriteString(cmd)
-			sb.WriteString("\n```\n")
+			sb.WriteString(fmt.Sprintf("\n%s\n", fence))
 		}
 
 	case "Edit":
@@ -1289,7 +1330,9 @@ func formatToolDescription(toolName string, input map[string]any) string {
 		oldStr := str("old_string")
 		newStr := str("new_string")
 		if oldStr != "" || newStr != "" {
-			sb.WriteString("\n```diff\n")
+			combined := oldStr + newStr
+			fence := codeBlockFence(combined)
+			sb.WriteString(fmt.Sprintf("\n%sdiff\n", fence))
 			for _, line := range strings.Split(oldStr, "\n") {
 				sb.WriteString("- ")
 				sb.WriteString(line)
@@ -1300,7 +1343,7 @@ func formatToolDescription(toolName string, input map[string]any) string {
 				sb.WriteString(line)
 				sb.WriteString("\n")
 			}
-			sb.WriteString("```\n")
+			sb.WriteString(fmt.Sprintf("%s\n", fence))
 		}
 
 	case "Write":
@@ -1311,9 +1354,10 @@ func formatToolDescription(toolName string, input map[string]any) string {
 		}
 		if content := str("content"); content != "" {
 			lang := inferLanguageFromPath(filePath)
-			sb.WriteString(fmt.Sprintf("\n```%s\n", lang))
+			fence := codeBlockFence(content)
+			sb.WriteString(fmt.Sprintf("\n%s%s\n", fence, lang))
 			sb.WriteString(content)
-			sb.WriteString("\n```\n")
+			sb.WriteString(fmt.Sprintf("\n%s\n", fence))
 		}
 
 	case "Read":
@@ -1352,7 +1396,8 @@ func formatToolDescription(toolName string, input map[string]any) string {
 			v := input[k]
 			s := fmt.Sprintf("%v", v)
 			if strings.Contains(s, "\n") {
-				sb.WriteString(fmt.Sprintf("**%s:**\n\n```\n%s\n```\n", k, s))
+				fence := codeBlockFence(s)
+				sb.WriteString(fmt.Sprintf("**%s:**\n\n%s\n%s\n%s\n", k, fence, s, fence))
 			} else {
 				sb.WriteString(fmt.Sprintf("**%s:** `%s`\n", k, s))
 			}
