@@ -17,6 +17,7 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/agentmanager"
 	"github.com/kazz187/taskguild/backend/internal/event"
 	"github.com/kazz187/taskguild/backend/internal/interaction"
+	"github.com/kazz187/taskguild/backend/internal/permission"
 	"github.com/kazz187/taskguild/backend/internal/project"
 	"github.com/kazz187/taskguild/backend/internal/pushnotification"
 	"github.com/kazz187/taskguild/backend/internal/skill"
@@ -42,6 +43,7 @@ type Server struct {
 	eventServer            *event.Server
 	taskLogServer          *tasklog.Server
 	pushNotificationServer *pushnotification.Server
+	permissionServer       *permission.Server
 }
 
 func NewServer(
@@ -56,6 +58,7 @@ func NewServer(
 	eventServer *event.Server,
 	taskLogServer *tasklog.Server,
 	pushNotificationServer *pushnotification.Server,
+	permissionServer *permission.Server,
 ) *Server {
 	return &Server{
 		env:                    env,
@@ -69,6 +72,7 @@ func NewServer(
 		eventServer:            eventServer,
 		taskLogServer:          taskLogServer,
 		pushNotificationServer: pushNotificationServer,
+		permissionServer:       permissionServer,
 	}
 }
 
@@ -107,6 +111,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	mux.Handle(taskguildv1connect.NewEventServiceHandler(s.eventServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewTaskLogServiceHandler(s.taskLogServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewPushNotificationServiceHandler(s.pushNotificationServer, handlerOpts))
+	mux.Handle(taskguildv1connect.NewPermissionServiceHandler(s.permissionServer, handlerOpts))
 
 	addr := net.JoinHostPort(s.env.HTTPHost, s.env.HTTPPort)
 	slog.Info("starting server", "addr", addr)

@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package taskguild.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// PermissionService manages project-scoped permission rules (allow/ask/deny)
+// for Claude Code tools and Bash command patterns.
+service PermissionService {
+  // GetPermissions returns the permission set for a project.
+  // Returns empty lists if none exist yet.
+  rpc GetPermissions(GetPermissionsRequest) returns (GetPermissionsResponse);
+
+  // UpdatePermissions replaces the full permission set for a project.
+  rpc UpdatePermissions(UpdatePermissionsRequest) returns (UpdatePermissionsResponse);
+}
+
+// PermissionSet represents a project-scoped set of permission rules.
+message PermissionSet {
+  string project_id = 1;
+  repeated string allow = 2;
+  repeated string ask = 3;
+  repeated string deny = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+message GetPermissionsRequest {
+  string project_id = 1;
+}
+message GetPermissionsResponse {
+  PermissionSet permissions = 1;
+}
+
+message UpdatePermissionsRequest {
+  string project_id = 1;
+  repeated string allow = 2;
+  repeated string ask = 3;
+  repeated string deny = 4;
+}
+message UpdatePermissionsResponse {
+  PermissionSet permissions = 1;
+}

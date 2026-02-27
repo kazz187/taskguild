@@ -60,6 +60,9 @@ const (
 	// AgentManagerServiceReportTaskLogProcedure is the fully-qualified name of the
 	// AgentManagerService's ReportTaskLog RPC.
 	AgentManagerServiceReportTaskLogProcedure = "/taskguild.v1.AgentManagerService/ReportTaskLog"
+	// AgentManagerServiceSyncPermissionsProcedure is the fully-qualified name of the
+	// AgentManagerService's SyncPermissions RPC.
+	AgentManagerServiceSyncPermissionsProcedure = "/taskguild.v1.AgentManagerService/SyncPermissions"
 )
 
 // AgentManagerServiceClient is a client for the taskguild.v1.AgentManagerService service.
@@ -83,6 +86,9 @@ type AgentManagerServiceClient interface {
 	SyncAgents(context.Context, *connect.Request[v1.SyncAgentsRequest]) (*connect.Response[v1.SyncAgentsResponse], error)
 	// ReportTaskLog reports a structured log entry from an agent during task execution.
 	ReportTaskLog(context.Context, *connect.Request[v1.ReportTaskLogRequest]) (*connect.Response[v1.ReportTaskLogResponse], error)
+	// SyncPermissions merges local .claude/settings.json permissions with the
+	// backend's stored permissions (union strategy) and returns the merged result.
+	SyncPermissions(context.Context, *connect.Request[v1.SyncPermissionsRequest]) (*connect.Response[v1.SyncPermissionsResponse], error)
 }
 
 // NewAgentManagerServiceClient constructs a client for the taskguild.v1.AgentManagerService
@@ -150,6 +156,12 @@ func NewAgentManagerServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(agentManagerServiceMethods.ByName("ReportTaskLog")),
 			connect.WithClientOptions(opts...),
 		),
+		syncPermissions: connect.NewClient[v1.SyncPermissionsRequest, v1.SyncPermissionsResponse](
+			httpClient,
+			baseURL+AgentManagerServiceSyncPermissionsProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("SyncPermissions")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -164,6 +176,7 @@ type agentManagerServiceClient struct {
 	getInteractionResponse *connect.Client[v1.GetInteractionResponseRequest, v1.GetInteractionResponseResponse]
 	syncAgents             *connect.Client[v1.SyncAgentsRequest, v1.SyncAgentsResponse]
 	reportTaskLog          *connect.Client[v1.ReportTaskLogRequest, v1.ReportTaskLogResponse]
+	syncPermissions        *connect.Client[v1.SyncPermissionsRequest, v1.SyncPermissionsResponse]
 }
 
 // Subscribe calls taskguild.v1.AgentManagerService.Subscribe.
@@ -211,6 +224,11 @@ func (c *agentManagerServiceClient) ReportTaskLog(ctx context.Context, req *conn
 	return c.reportTaskLog.CallUnary(ctx, req)
 }
 
+// SyncPermissions calls taskguild.v1.AgentManagerService.SyncPermissions.
+func (c *agentManagerServiceClient) SyncPermissions(ctx context.Context, req *connect.Request[v1.SyncPermissionsRequest]) (*connect.Response[v1.SyncPermissionsResponse], error) {
+	return c.syncPermissions.CallUnary(ctx, req)
+}
+
 // AgentManagerServiceHandler is an implementation of the taskguild.v1.AgentManagerService service.
 type AgentManagerServiceHandler interface {
 	// Subscribe opens a server-stream for receiving commands from the backend.
@@ -232,6 +250,9 @@ type AgentManagerServiceHandler interface {
 	SyncAgents(context.Context, *connect.Request[v1.SyncAgentsRequest]) (*connect.Response[v1.SyncAgentsResponse], error)
 	// ReportTaskLog reports a structured log entry from an agent during task execution.
 	ReportTaskLog(context.Context, *connect.Request[v1.ReportTaskLogRequest]) (*connect.Response[v1.ReportTaskLogResponse], error)
+	// SyncPermissions merges local .claude/settings.json permissions with the
+	// backend's stored permissions (union strategy) and returns the merged result.
+	SyncPermissions(context.Context, *connect.Request[v1.SyncPermissionsRequest]) (*connect.Response[v1.SyncPermissionsResponse], error)
 }
 
 // NewAgentManagerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -295,6 +316,12 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 		connect.WithSchema(agentManagerServiceMethods.ByName("ReportTaskLog")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentManagerServiceSyncPermissionsHandler := connect.NewUnaryHandler(
+		AgentManagerServiceSyncPermissionsProcedure,
+		svc.SyncPermissions,
+		connect.WithSchema(agentManagerServiceMethods.ByName("SyncPermissions")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/taskguild.v1.AgentManagerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AgentManagerServiceSubscribeProcedure:
@@ -315,6 +342,8 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 			agentManagerServiceSyncAgentsHandler.ServeHTTP(w, r)
 		case AgentManagerServiceReportTaskLogProcedure:
 			agentManagerServiceReportTaskLogHandler.ServeHTTP(w, r)
+		case AgentManagerServiceSyncPermissionsProcedure:
+			agentManagerServiceSyncPermissionsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -358,4 +387,8 @@ func (UnimplementedAgentManagerServiceHandler) SyncAgents(context.Context, *conn
 
 func (UnimplementedAgentManagerServiceHandler) ReportTaskLog(context.Context, *connect.Request[v1.ReportTaskLogRequest]) (*connect.Response[v1.ReportTaskLogResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportTaskLog is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) SyncPermissions(context.Context, *connect.Request[v1.SyncPermissionsRequest]) (*connect.Response[v1.SyncPermissionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.SyncPermissions is not implemented"))
 }
