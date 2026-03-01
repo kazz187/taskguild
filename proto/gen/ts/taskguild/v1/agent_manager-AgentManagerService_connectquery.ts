@@ -103,3 +103,17 @@ export const requestWorktreeDelete = AgentManagerService.method.requestWorktreeD
  * @generated from rpc taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult
  */
 export const reportWorktreeDeleteResult = AgentManagerService.method.reportWorktreeDeleteResult;
+
+/**
+ * RequestGitPullMain triggers a `git pull origin main` on connected agent-managers (called by frontend).
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.RequestGitPullMain
+ */
+export const requestGitPullMain = AgentManagerService.method.requestGitPullMain;
+
+/**
+ * ReportGitPullMainResult reports the outcome of a git pull origin main from the agent.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.ReportGitPullMainResult
+ */
+export const reportGitPullMainResult = AgentManagerService.method.reportGitPullMainResult;

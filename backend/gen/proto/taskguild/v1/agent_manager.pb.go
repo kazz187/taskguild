@@ -149,6 +149,7 @@ type AgentCommand struct {
 	//	*AgentCommand_SyncPermissions
 	//	*AgentCommand_ListWorktrees
 	//	*AgentCommand_DeleteWorktree
+	//	*AgentCommand_GitPullMain
 	Command       isAgentCommand_Command `protobuf_oneof:"command"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -263,6 +264,15 @@ func (x *AgentCommand) GetDeleteWorktree() *DeleteWorktreeCommand {
 	return nil
 }
 
+func (x *AgentCommand) GetGitPullMain() *GitPullMainCommand {
+	if x != nil {
+		if x, ok := x.Command.(*AgentCommand_GitPullMain); ok {
+			return x.GitPullMain
+		}
+	}
+	return nil
+}
+
 type isAgentCommand_Command interface {
 	isAgentCommand_Command()
 }
@@ -299,6 +309,10 @@ type AgentCommand_DeleteWorktree struct {
 	DeleteWorktree *DeleteWorktreeCommand `protobuf:"bytes,8,opt,name=delete_worktree,json=deleteWorktree,proto3,oneof"`
 }
 
+type AgentCommand_GitPullMain struct {
+	GitPullMain *GitPullMainCommand `protobuf:"bytes,9,opt,name=git_pull_main,json=gitPullMain,proto3,oneof"`
+}
+
 func (*AgentCommand_TaskAvailable) isAgentCommand_Command() {}
 
 func (*AgentCommand_AssignTask) isAgentCommand_Command() {}
@@ -314,6 +328,8 @@ func (*AgentCommand_SyncPermissions) isAgentCommand_Command() {}
 func (*AgentCommand_ListWorktrees) isAgentCommand_Command() {}
 
 func (*AgentCommand_DeleteWorktree) isAgentCommand_Command() {}
+
+func (*AgentCommand_GitPullMain) isAgentCommand_Command() {}
 
 type TaskAvailableCommand struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2253,6 +2269,252 @@ func (*ReportWorktreeDeleteResultResponse) Descriptor() ([]byte, []int) {
 	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{38}
 }
 
+// GitPullMainCommand tells the agent to run `git pull origin main`
+// in the main repository working directory.
+type GitPullMainCommand struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GitPullMainCommand) Reset() {
+	*x = GitPullMainCommand{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GitPullMainCommand) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GitPullMainCommand) ProtoMessage() {}
+
+func (x *GitPullMainCommand) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GitPullMainCommand.ProtoReflect.Descriptor instead.
+func (*GitPullMainCommand) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *GitPullMainCommand) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+type RequestGitPullMainRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestGitPullMainRequest) Reset() {
+	*x = RequestGitPullMainRequest{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestGitPullMainRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestGitPullMainRequest) ProtoMessage() {}
+
+func (x *RequestGitPullMainRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestGitPullMainRequest.ProtoReflect.Descriptor instead.
+func (*RequestGitPullMainRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *RequestGitPullMainRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+type RequestGitPullMainResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestGitPullMainResponse) Reset() {
+	*x = RequestGitPullMainResponse{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestGitPullMainResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestGitPullMainResponse) ProtoMessage() {}
+
+func (x *RequestGitPullMainResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestGitPullMainResponse.ProtoReflect.Descriptor instead.
+func (*RequestGitPullMainResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *RequestGitPullMainResponse) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+type ReportGitPullMainResultRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	ProjectName   string                 `protobuf:"bytes,2,opt,name=project_name,json=projectName,proto3" json:"project_name,omitempty"`
+	Success       bool                   `protobuf:"varint,3,opt,name=success,proto3" json:"success,omitempty"`
+	Output        string                 `protobuf:"bytes,4,opt,name=output,proto3" json:"output,omitempty"`                                 // stdout/stderr from git pull
+	ErrorMessage  string                 `protobuf:"bytes,5,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"` // error description if failed
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportGitPullMainResultRequest) Reset() {
+	*x = ReportGitPullMainResultRequest{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportGitPullMainResultRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportGitPullMainResultRequest) ProtoMessage() {}
+
+func (x *ReportGitPullMainResultRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportGitPullMainResultRequest.ProtoReflect.Descriptor instead.
+func (*ReportGitPullMainResultRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *ReportGitPullMainResultRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *ReportGitPullMainResultRequest) GetProjectName() string {
+	if x != nil {
+		return x.ProjectName
+	}
+	return ""
+}
+
+func (x *ReportGitPullMainResultRequest) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *ReportGitPullMainResultRequest) GetOutput() string {
+	if x != nil {
+		return x.Output
+	}
+	return ""
+}
+
+func (x *ReportGitPullMainResultRequest) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
+type ReportGitPullMainResultResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportGitPullMainResultResponse) Reset() {
+	*x = ReportGitPullMainResultResponse{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportGitPullMainResultResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportGitPullMainResultResponse) ProtoMessage() {}
+
+func (x *ReportGitPullMainResultResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportGitPullMainResultResponse.ProtoReflect.Descriptor instead.
+func (*ReportGitPullMainResultResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{43}
+}
+
 var File_taskguild_v1_agent_manager_proto protoreflect.FileDescriptor
 
 const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
@@ -2261,7 +2523,7 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\x1cAgentManagerSubscribeRequest\x12(\n" +
 	"\x10agent_manager_id\x18\x01 \x01(\tR\x0eagentManagerId\x12!\n" +
 	"\fproject_name\x18\x02 \x01(\tR\vprojectName\x120\n" +
-	"\x14max_concurrent_tasks\x18\x03 \x01(\x05R\x12maxConcurrentTasks\"\x81\x05\n" +
+	"\x14max_concurrent_tasks\x18\x03 \x01(\x05R\x12maxConcurrentTasks\"\xc9\x05\n" +
 	"\fAgentCommand\x12K\n" +
 	"\x0etask_available\x18\x01 \x01(\v2\".taskguild.v1.TaskAvailableCommandH\x00R\rtaskAvailable\x12B\n" +
 	"\vassign_task\x18\x02 \x01(\v2\x1f.taskguild.v1.AssignTaskCommandH\x00R\n" +
@@ -2273,7 +2535,8 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"syncAgents\x12Q\n" +
 	"\x10sync_permissions\x18\x06 \x01(\v2$.taskguild.v1.SyncPermissionsCommandH\x00R\x0fsyncPermissions\x12K\n" +
 	"\x0elist_worktrees\x18\a \x01(\v2\".taskguild.v1.ListWorktreesCommandH\x00R\rlistWorktrees\x12N\n" +
-	"\x0fdelete_worktree\x18\b \x01(\v2#.taskguild.v1.DeleteWorktreeCommandH\x00R\x0edeleteWorktreeB\t\n" +
+	"\x0fdelete_worktree\x18\b \x01(\v2#.taskguild.v1.DeleteWorktreeCommandH\x00R\x0edeleteWorktree\x12F\n" +
+	"\rgit_pull_main\x18\t \x01(\v2 .taskguild.v1.GitPullMainCommandH\x00R\vgitPullMainB\t\n" +
 	"\acommand\"\xf8\x01\n" +
 	"\x14TaskAvailableCommand\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x14\n" +
@@ -2410,13 +2673,30 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\rworktree_name\x18\x03 \x01(\tR\fworktreeName\x12\x18\n" +
 	"\asuccess\x18\x04 \x01(\bR\asuccess\x12#\n" +
 	"\rerror_message\x18\x05 \x01(\tR\ferrorMessage\"$\n" +
-	"\"ReportWorktreeDeleteResultResponse*\x8e\x01\n" +
+	"\"ReportWorktreeDeleteResultResponse\"3\n" +
+	"\x12GitPullMainCommand\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\":\n" +
+	"\x19RequestGitPullMainRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\";\n" +
+	"\x1aRequestGitPullMainResponse\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\"\xb9\x01\n" +
+	"\x1eReportGitPullMainResultRequest\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12!\n" +
+	"\fproject_name\x18\x02 \x01(\tR\vprojectName\x12\x18\n" +
+	"\asuccess\x18\x03 \x01(\bR\asuccess\x12\x16\n" +
+	"\x06output\x18\x04 \x01(\tR\x06output\x12#\n" +
+	"\rerror_message\x18\x05 \x01(\tR\ferrorMessage\"!\n" +
+	"\x1fReportGitPullMainResultResponse*\x8e\x01\n" +
 	"\vAgentStatus\x12\x1c\n" +
 	"\x18AGENT_STATUS_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11AGENT_STATUS_IDLE\x10\x01\x12\x18\n" +
 	"\x14AGENT_STATUS_RUNNING\x10\x02\x12\x18\n" +
 	"\x14AGENT_STATUS_WAITING\x10\x03\x12\x16\n" +
-	"\x12AGENT_STATUS_ERROR\x10\x042\xdf\v\n" +
+	"\x12AGENT_STATUS_ERROR\x10\x042\xc0\r\n" +
 	"\x13AgentManagerService\x12U\n" +
 	"\tSubscribe\x12*.taskguild.v1.AgentManagerSubscribeRequest\x1a\x1a.taskguild.v1.AgentCommand0\x01\x12L\n" +
 	"\tClaimTask\x12\x1e.taskguild.v1.ClaimTaskRequest\x1a\x1f.taskguild.v1.ClaimTaskResponse\x12a\n" +
@@ -2433,7 +2713,9 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\x13RequestWorktreeList\x12(.taskguild.v1.RequestWorktreeListRequest\x1a).taskguild.v1.RequestWorktreeListResponse\x12^\n" +
 	"\x0fGetWorktreeList\x12$.taskguild.v1.GetWorktreeListRequest\x1a%.taskguild.v1.GetWorktreeListResponse\x12p\n" +
 	"\x15RequestWorktreeDelete\x12*.taskguild.v1.RequestWorktreeDeleteRequest\x1a+.taskguild.v1.RequestWorktreeDeleteResponse\x12\x7f\n" +
-	"\x1aReportWorktreeDeleteResult\x12/.taskguild.v1.ReportWorktreeDeleteResultRequest\x1a0.taskguild.v1.ReportWorktreeDeleteResultResponseB\xbf\x01\n" +
+	"\x1aReportWorktreeDeleteResult\x12/.taskguild.v1.ReportWorktreeDeleteResultRequest\x1a0.taskguild.v1.ReportWorktreeDeleteResultResponse\x12g\n" +
+	"\x12RequestGitPullMain\x12'.taskguild.v1.RequestGitPullMainRequest\x1a(.taskguild.v1.RequestGitPullMainResponse\x12v\n" +
+	"\x17ReportGitPullMainResult\x12,.taskguild.v1.ReportGitPullMainResultRequest\x1a-.taskguild.v1.ReportGitPullMainResultResponseB\xbf\x01\n" +
 	"\x10com.taskguild.v1B\x11AgentManagerProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
@@ -2449,7 +2731,7 @@ func file_taskguild_v1_agent_manager_proto_rawDescGZIP() []byte {
 }
 
 var file_taskguild_v1_agent_manager_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_taskguild_v1_agent_manager_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
+var file_taskguild_v1_agent_manager_proto_msgTypes = make([]protoimpl.MessageInfo, 48)
 var file_taskguild_v1_agent_manager_proto_goTypes = []any{
 	(AgentStatus)(0),                           // 0: taskguild.v1.AgentStatus
 	(*AgentManagerSubscribeRequest)(nil),       // 1: taskguild.v1.AgentManagerSubscribeRequest
@@ -2491,18 +2773,23 @@ var file_taskguild_v1_agent_manager_proto_goTypes = []any{
 	(*RequestWorktreeDeleteResponse)(nil),      // 37: taskguild.v1.RequestWorktreeDeleteResponse
 	(*ReportWorktreeDeleteResultRequest)(nil),  // 38: taskguild.v1.ReportWorktreeDeleteResultRequest
 	(*ReportWorktreeDeleteResultResponse)(nil), // 39: taskguild.v1.ReportWorktreeDeleteResultResponse
-	nil,                           // 40: taskguild.v1.TaskAvailableCommand.MetadataEntry
-	nil,                           // 41: taskguild.v1.AssignTaskCommand.MetadataEntry
-	nil,                           // 42: taskguild.v1.ClaimTaskResponse.MetadataEntry
-	nil,                           // 43: taskguild.v1.ReportTaskLogRequest.MetadataEntry
-	(*timestamppb.Timestamp)(nil), // 44: google.protobuf.Timestamp
-	(InteractionType)(0),          // 45: taskguild.v1.InteractionType
-	(*InteractionOption)(nil),     // 46: taskguild.v1.InteractionOption
-	(*Interaction)(nil),           // 47: taskguild.v1.Interaction
-	(*AgentDefinition)(nil),       // 48: taskguild.v1.AgentDefinition
-	(*PermissionSet)(nil),         // 49: taskguild.v1.PermissionSet
-	(TaskLogLevel)(0),             // 50: taskguild.v1.TaskLogLevel
-	(TaskLogCategory)(0),          // 51: taskguild.v1.TaskLogCategory
+	(*GitPullMainCommand)(nil),                 // 40: taskguild.v1.GitPullMainCommand
+	(*RequestGitPullMainRequest)(nil),          // 41: taskguild.v1.RequestGitPullMainRequest
+	(*RequestGitPullMainResponse)(nil),         // 42: taskguild.v1.RequestGitPullMainResponse
+	(*ReportGitPullMainResultRequest)(nil),     // 43: taskguild.v1.ReportGitPullMainResultRequest
+	(*ReportGitPullMainResultResponse)(nil),    // 44: taskguild.v1.ReportGitPullMainResultResponse
+	nil,                                        // 45: taskguild.v1.TaskAvailableCommand.MetadataEntry
+	nil,                                        // 46: taskguild.v1.AssignTaskCommand.MetadataEntry
+	nil,                                        // 47: taskguild.v1.ClaimTaskResponse.MetadataEntry
+	nil,                                        // 48: taskguild.v1.ReportTaskLogRequest.MetadataEntry
+	(*timestamppb.Timestamp)(nil),              // 49: google.protobuf.Timestamp
+	(InteractionType)(0),                       // 50: taskguild.v1.InteractionType
+	(*InteractionOption)(nil),                  // 51: taskguild.v1.InteractionOption
+	(*Interaction)(nil),                        // 52: taskguild.v1.Interaction
+	(*AgentDefinition)(nil),                    // 53: taskguild.v1.AgentDefinition
+	(*PermissionSet)(nil),                      // 54: taskguild.v1.PermissionSet
+	(TaskLogLevel)(0),                          // 55: taskguild.v1.TaskLogLevel
+	(TaskLogCategory)(0),                       // 56: taskguild.v1.TaskLogCategory
 }
 var file_taskguild_v1_agent_manager_proto_depIdxs = []int32{
 	3,  // 0: taskguild.v1.AgentCommand.task_available:type_name -> taskguild.v1.TaskAvailableCommand
@@ -2513,57 +2800,62 @@ var file_taskguild_v1_agent_manager_proto_depIdxs = []int32{
 	8,  // 5: taskguild.v1.AgentCommand.sync_permissions:type_name -> taskguild.v1.SyncPermissionsCommand
 	9,  // 6: taskguild.v1.AgentCommand.list_worktrees:type_name -> taskguild.v1.ListWorktreesCommand
 	29, // 7: taskguild.v1.AgentCommand.delete_worktree:type_name -> taskguild.v1.DeleteWorktreeCommand
-	40, // 8: taskguild.v1.TaskAvailableCommand.metadata:type_name -> taskguild.v1.TaskAvailableCommand.MetadataEntry
-	41, // 9: taskguild.v1.AssignTaskCommand.metadata:type_name -> taskguild.v1.AssignTaskCommand.MetadataEntry
-	42, // 10: taskguild.v1.ClaimTaskResponse.metadata:type_name -> taskguild.v1.ClaimTaskResponse.MetadataEntry
-	0,  // 11: taskguild.v1.ReportAgentStatusRequest.status:type_name -> taskguild.v1.AgentStatus
-	44, // 12: taskguild.v1.HeartbeatRequest.timestamp:type_name -> google.protobuf.Timestamp
-	45, // 13: taskguild.v1.CreateInteractionRequest.type:type_name -> taskguild.v1.InteractionType
-	46, // 14: taskguild.v1.CreateInteractionRequest.options:type_name -> taskguild.v1.InteractionOption
-	47, // 15: taskguild.v1.CreateInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
-	47, // 16: taskguild.v1.GetInteractionResponseResponse.interaction:type_name -> taskguild.v1.Interaction
-	48, // 17: taskguild.v1.SyncAgentsResponse.agents:type_name -> taskguild.v1.AgentDefinition
-	49, // 18: taskguild.v1.SyncPermissionsResponse.permissions:type_name -> taskguild.v1.PermissionSet
-	50, // 19: taskguild.v1.ReportTaskLogRequest.level:type_name -> taskguild.v1.TaskLogLevel
-	51, // 20: taskguild.v1.ReportTaskLogRequest.category:type_name -> taskguild.v1.TaskLogCategory
-	43, // 21: taskguild.v1.ReportTaskLogRequest.metadata:type_name -> taskguild.v1.ReportTaskLogRequest.MetadataEntry
-	28, // 22: taskguild.v1.ReportWorktreeListRequest.worktrees:type_name -> taskguild.v1.WorktreeInfo
-	28, // 23: taskguild.v1.GetWorktreeListResponse.worktrees:type_name -> taskguild.v1.WorktreeInfo
-	1,  // 24: taskguild.v1.AgentManagerService.Subscribe:input_type -> taskguild.v1.AgentManagerSubscribeRequest
-	10, // 25: taskguild.v1.AgentManagerService.ClaimTask:input_type -> taskguild.v1.ClaimTaskRequest
-	12, // 26: taskguild.v1.AgentManagerService.ReportTaskResult:input_type -> taskguild.v1.ReportTaskResultRequest
-	14, // 27: taskguild.v1.AgentManagerService.ReportAgentStatus:input_type -> taskguild.v1.ReportAgentStatusRequest
-	16, // 28: taskguild.v1.AgentManagerService.Heartbeat:input_type -> taskguild.v1.HeartbeatRequest
-	18, // 29: taskguild.v1.AgentManagerService.CreateInteraction:input_type -> taskguild.v1.CreateInteractionRequest
-	20, // 30: taskguild.v1.AgentManagerService.GetInteractionResponse:input_type -> taskguild.v1.GetInteractionResponseRequest
-	22, // 31: taskguild.v1.AgentManagerService.SyncAgents:input_type -> taskguild.v1.SyncAgentsRequest
-	26, // 32: taskguild.v1.AgentManagerService.ReportTaskLog:input_type -> taskguild.v1.ReportTaskLogRequest
-	24, // 33: taskguild.v1.AgentManagerService.SyncPermissions:input_type -> taskguild.v1.SyncPermissionsRequest
-	30, // 34: taskguild.v1.AgentManagerService.ReportWorktreeList:input_type -> taskguild.v1.ReportWorktreeListRequest
-	32, // 35: taskguild.v1.AgentManagerService.RequestWorktreeList:input_type -> taskguild.v1.RequestWorktreeListRequest
-	34, // 36: taskguild.v1.AgentManagerService.GetWorktreeList:input_type -> taskguild.v1.GetWorktreeListRequest
-	36, // 37: taskguild.v1.AgentManagerService.RequestWorktreeDelete:input_type -> taskguild.v1.RequestWorktreeDeleteRequest
-	38, // 38: taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult:input_type -> taskguild.v1.ReportWorktreeDeleteResultRequest
-	2,  // 39: taskguild.v1.AgentManagerService.Subscribe:output_type -> taskguild.v1.AgentCommand
-	11, // 40: taskguild.v1.AgentManagerService.ClaimTask:output_type -> taskguild.v1.ClaimTaskResponse
-	13, // 41: taskguild.v1.AgentManagerService.ReportTaskResult:output_type -> taskguild.v1.ReportTaskResultResponse
-	15, // 42: taskguild.v1.AgentManagerService.ReportAgentStatus:output_type -> taskguild.v1.ReportAgentStatusResponse
-	17, // 43: taskguild.v1.AgentManagerService.Heartbeat:output_type -> taskguild.v1.HeartbeatResponse
-	19, // 44: taskguild.v1.AgentManagerService.CreateInteraction:output_type -> taskguild.v1.CreateInteractionResponse
-	21, // 45: taskguild.v1.AgentManagerService.GetInteractionResponse:output_type -> taskguild.v1.GetInteractionResponseResponse
-	23, // 46: taskguild.v1.AgentManagerService.SyncAgents:output_type -> taskguild.v1.SyncAgentsResponse
-	27, // 47: taskguild.v1.AgentManagerService.ReportTaskLog:output_type -> taskguild.v1.ReportTaskLogResponse
-	25, // 48: taskguild.v1.AgentManagerService.SyncPermissions:output_type -> taskguild.v1.SyncPermissionsResponse
-	31, // 49: taskguild.v1.AgentManagerService.ReportWorktreeList:output_type -> taskguild.v1.ReportWorktreeListResponse
-	33, // 50: taskguild.v1.AgentManagerService.RequestWorktreeList:output_type -> taskguild.v1.RequestWorktreeListResponse
-	35, // 51: taskguild.v1.AgentManagerService.GetWorktreeList:output_type -> taskguild.v1.GetWorktreeListResponse
-	37, // 52: taskguild.v1.AgentManagerService.RequestWorktreeDelete:output_type -> taskguild.v1.RequestWorktreeDeleteResponse
-	39, // 53: taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult:output_type -> taskguild.v1.ReportWorktreeDeleteResultResponse
-	39, // [39:54] is the sub-list for method output_type
-	24, // [24:39] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	40, // 8: taskguild.v1.AgentCommand.git_pull_main:type_name -> taskguild.v1.GitPullMainCommand
+	45, // 9: taskguild.v1.TaskAvailableCommand.metadata:type_name -> taskguild.v1.TaskAvailableCommand.MetadataEntry
+	46, // 10: taskguild.v1.AssignTaskCommand.metadata:type_name -> taskguild.v1.AssignTaskCommand.MetadataEntry
+	47, // 11: taskguild.v1.ClaimTaskResponse.metadata:type_name -> taskguild.v1.ClaimTaskResponse.MetadataEntry
+	0,  // 12: taskguild.v1.ReportAgentStatusRequest.status:type_name -> taskguild.v1.AgentStatus
+	49, // 13: taskguild.v1.HeartbeatRequest.timestamp:type_name -> google.protobuf.Timestamp
+	50, // 14: taskguild.v1.CreateInteractionRequest.type:type_name -> taskguild.v1.InteractionType
+	51, // 15: taskguild.v1.CreateInteractionRequest.options:type_name -> taskguild.v1.InteractionOption
+	52, // 16: taskguild.v1.CreateInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
+	52, // 17: taskguild.v1.GetInteractionResponseResponse.interaction:type_name -> taskguild.v1.Interaction
+	53, // 18: taskguild.v1.SyncAgentsResponse.agents:type_name -> taskguild.v1.AgentDefinition
+	54, // 19: taskguild.v1.SyncPermissionsResponse.permissions:type_name -> taskguild.v1.PermissionSet
+	55, // 20: taskguild.v1.ReportTaskLogRequest.level:type_name -> taskguild.v1.TaskLogLevel
+	56, // 21: taskguild.v1.ReportTaskLogRequest.category:type_name -> taskguild.v1.TaskLogCategory
+	48, // 22: taskguild.v1.ReportTaskLogRequest.metadata:type_name -> taskguild.v1.ReportTaskLogRequest.MetadataEntry
+	28, // 23: taskguild.v1.ReportWorktreeListRequest.worktrees:type_name -> taskguild.v1.WorktreeInfo
+	28, // 24: taskguild.v1.GetWorktreeListResponse.worktrees:type_name -> taskguild.v1.WorktreeInfo
+	1,  // 25: taskguild.v1.AgentManagerService.Subscribe:input_type -> taskguild.v1.AgentManagerSubscribeRequest
+	10, // 26: taskguild.v1.AgentManagerService.ClaimTask:input_type -> taskguild.v1.ClaimTaskRequest
+	12, // 27: taskguild.v1.AgentManagerService.ReportTaskResult:input_type -> taskguild.v1.ReportTaskResultRequest
+	14, // 28: taskguild.v1.AgentManagerService.ReportAgentStatus:input_type -> taskguild.v1.ReportAgentStatusRequest
+	16, // 29: taskguild.v1.AgentManagerService.Heartbeat:input_type -> taskguild.v1.HeartbeatRequest
+	18, // 30: taskguild.v1.AgentManagerService.CreateInteraction:input_type -> taskguild.v1.CreateInteractionRequest
+	20, // 31: taskguild.v1.AgentManagerService.GetInteractionResponse:input_type -> taskguild.v1.GetInteractionResponseRequest
+	22, // 32: taskguild.v1.AgentManagerService.SyncAgents:input_type -> taskguild.v1.SyncAgentsRequest
+	26, // 33: taskguild.v1.AgentManagerService.ReportTaskLog:input_type -> taskguild.v1.ReportTaskLogRequest
+	24, // 34: taskguild.v1.AgentManagerService.SyncPermissions:input_type -> taskguild.v1.SyncPermissionsRequest
+	30, // 35: taskguild.v1.AgentManagerService.ReportWorktreeList:input_type -> taskguild.v1.ReportWorktreeListRequest
+	32, // 36: taskguild.v1.AgentManagerService.RequestWorktreeList:input_type -> taskguild.v1.RequestWorktreeListRequest
+	34, // 37: taskguild.v1.AgentManagerService.GetWorktreeList:input_type -> taskguild.v1.GetWorktreeListRequest
+	36, // 38: taskguild.v1.AgentManagerService.RequestWorktreeDelete:input_type -> taskguild.v1.RequestWorktreeDeleteRequest
+	38, // 39: taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult:input_type -> taskguild.v1.ReportWorktreeDeleteResultRequest
+	41, // 40: taskguild.v1.AgentManagerService.RequestGitPullMain:input_type -> taskguild.v1.RequestGitPullMainRequest
+	43, // 41: taskguild.v1.AgentManagerService.ReportGitPullMainResult:input_type -> taskguild.v1.ReportGitPullMainResultRequest
+	2,  // 42: taskguild.v1.AgentManagerService.Subscribe:output_type -> taskguild.v1.AgentCommand
+	11, // 43: taskguild.v1.AgentManagerService.ClaimTask:output_type -> taskguild.v1.ClaimTaskResponse
+	13, // 44: taskguild.v1.AgentManagerService.ReportTaskResult:output_type -> taskguild.v1.ReportTaskResultResponse
+	15, // 45: taskguild.v1.AgentManagerService.ReportAgentStatus:output_type -> taskguild.v1.ReportAgentStatusResponse
+	17, // 46: taskguild.v1.AgentManagerService.Heartbeat:output_type -> taskguild.v1.HeartbeatResponse
+	19, // 47: taskguild.v1.AgentManagerService.CreateInteraction:output_type -> taskguild.v1.CreateInteractionResponse
+	21, // 48: taskguild.v1.AgentManagerService.GetInteractionResponse:output_type -> taskguild.v1.GetInteractionResponseResponse
+	23, // 49: taskguild.v1.AgentManagerService.SyncAgents:output_type -> taskguild.v1.SyncAgentsResponse
+	27, // 50: taskguild.v1.AgentManagerService.ReportTaskLog:output_type -> taskguild.v1.ReportTaskLogResponse
+	25, // 51: taskguild.v1.AgentManagerService.SyncPermissions:output_type -> taskguild.v1.SyncPermissionsResponse
+	31, // 52: taskguild.v1.AgentManagerService.ReportWorktreeList:output_type -> taskguild.v1.ReportWorktreeListResponse
+	33, // 53: taskguild.v1.AgentManagerService.RequestWorktreeList:output_type -> taskguild.v1.RequestWorktreeListResponse
+	35, // 54: taskguild.v1.AgentManagerService.GetWorktreeList:output_type -> taskguild.v1.GetWorktreeListResponse
+	37, // 55: taskguild.v1.AgentManagerService.RequestWorktreeDelete:output_type -> taskguild.v1.RequestWorktreeDeleteResponse
+	39, // 56: taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult:output_type -> taskguild.v1.ReportWorktreeDeleteResultResponse
+	42, // 57: taskguild.v1.AgentManagerService.RequestGitPullMain:output_type -> taskguild.v1.RequestGitPullMainResponse
+	44, // 58: taskguild.v1.AgentManagerService.ReportGitPullMainResult:output_type -> taskguild.v1.ReportGitPullMainResultResponse
+	42, // [42:59] is the sub-list for method output_type
+	25, // [25:42] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_agent_manager_proto_init() }
@@ -2584,6 +2876,7 @@ func file_taskguild_v1_agent_manager_proto_init() {
 		(*AgentCommand_SyncPermissions)(nil),
 		(*AgentCommand_ListWorktrees)(nil),
 		(*AgentCommand_DeleteWorktree)(nil),
+		(*AgentCommand_GitPullMain)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -2591,7 +2884,7 @@ func file_taskguild_v1_agent_manager_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_agent_manager_proto_rawDesc), len(file_taskguild_v1_agent_manager_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   43,
+			NumMessages:   48,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

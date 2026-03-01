@@ -275,6 +275,11 @@ func runSubscribeLoop(
 				deleteCmd.GetRequestId(), deleteCmd.GetWorktreeName(), deleteCmd.GetForce())
 			go handleDeleteWorktree(ctx, client, cfg, deleteCmd)
 
+		case *v1.AgentCommand_GitPullMain:
+			pullCmd := c.GitPullMain
+			log.Printf("received git pull main command (request_id: %s)", pullCmd.GetRequestId())
+			go handleGitPullMain(ctx, client, cfg, pullCmd.GetRequestId())
+
 		case *v1.AgentCommand_SyncAgents:
 			log.Println("received sync agents command, re-syncing...")
 			syncAgents(ctx, client, cfg)
@@ -517,6 +522,36 @@ func handleDeleteWorktree(ctx context.Context, client taskguildv1connect.AgentMa
 
 	log.Printf("deleted worktree %s (branch: %s, force: %v)", worktreeName, branchName, force)
 	reportResult(true, "")
+}
+
+// handleGitPullMain executes `git pull origin main` in the main repository working directory.
+func handleGitPullMain(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, cfg *config, requestID string) {
+	reportResult := func(success bool, output, errMsg string) {
+		_, err := client.ReportGitPullMainResult(ctx, connect.NewRequest(&v1.ReportGitPullMainResultRequest{
+			RequestId:    requestID,
+			ProjectName:  cfg.ProjectName,
+			Success:      success,
+			Output:       output,
+			ErrorMessage: errMsg,
+		}))
+		if err != nil {
+			log.Printf("failed to report git pull main result: %v", err)
+		}
+	}
+
+	cmd := exec.CommandContext(ctx, "git", "pull", "origin", "main")
+	cmd.Dir = cfg.WorkDir
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
+
+	if err != nil {
+		log.Printf("git pull origin main failed: %v: %s", err, output)
+		reportResult(false, output, fmt.Sprintf("git pull origin main failed: %v", err))
+		return
+	}
+
+	log.Printf("git pull origin main succeeded: %s", output)
+	reportResult(true, output, "")
 }
 
 // authInterceptor adds the API key to outgoing requests.
