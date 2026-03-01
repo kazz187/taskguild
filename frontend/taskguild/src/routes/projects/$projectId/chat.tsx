@@ -124,21 +124,6 @@ function ProjectChatPage() {
         </p>
       </div>
 
-      {/* Pending requests section — pinned between header and chat */}
-      {pendingRequests.length > 0 && (
-        <div className="shrink-0 border-b border-slate-800 bg-slate-800/50 px-4 md:px-6 py-3">
-          <div className="max-w-3xl mx-auto">
-            <PendingRequestsPanel
-              pendingRequests={pendingRequests}
-              onRespond={handleRespond}
-              isRespondPending={respondMut.isPending}
-              taskMap={taskMap}
-              projectId={projectId}
-            />
-          </div>
-        </div>
-      )}
-
       {/* Chat area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-4 py-4 md:px-6 md:py-6 space-y-3">
@@ -180,6 +165,21 @@ function ProjectChatPage() {
           })}
         </div>
       </div>
+
+      {/* Pending requests section — pinned above connection bar */}
+      {pendingRequests.length > 0 && (
+        <div className="shrink-0 border-t border-slate-800 bg-slate-800/50 px-4 md:px-6 py-3">
+          <div className="max-w-3xl mx-auto">
+            <PendingRequestsPanel
+              pendingRequests={pendingRequests}
+              onRespond={handleRespond}
+              isRespondPending={respondMut.isPending}
+              taskMap={taskMap}
+              projectId={projectId}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Connection status bar */}
       <div className="shrink-0 border-t border-slate-800 px-6 py-2">
