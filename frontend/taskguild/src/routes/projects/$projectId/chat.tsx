@@ -115,7 +115,7 @@ function ProjectChatPage() {
 
       {/* Pending requests section — pinned between header and chat */}
       {pendingRequests.length > 0 && (
-        <div className="shrink-0 border-b border-slate-800 px-4 md:px-6 py-3">
+        <div className="shrink-0 border-b border-slate-800 bg-slate-800/50 px-4 md:px-6 py-3">
           <div className="max-w-3xl mx-auto">
             <PendingRequestsPanel
               pendingRequests={pendingRequests}
