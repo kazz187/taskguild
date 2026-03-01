@@ -63,6 +63,15 @@ const (
 	// AgentManagerServiceSyncPermissionsProcedure is the fully-qualified name of the
 	// AgentManagerService's SyncPermissions RPC.
 	AgentManagerServiceSyncPermissionsProcedure = "/taskguild.v1.AgentManagerService/SyncPermissions"
+	// AgentManagerServiceReportWorktreeListProcedure is the fully-qualified name of the
+	// AgentManagerService's ReportWorktreeList RPC.
+	AgentManagerServiceReportWorktreeListProcedure = "/taskguild.v1.AgentManagerService/ReportWorktreeList"
+	// AgentManagerServiceRequestWorktreeListProcedure is the fully-qualified name of the
+	// AgentManagerService's RequestWorktreeList RPC.
+	AgentManagerServiceRequestWorktreeListProcedure = "/taskguild.v1.AgentManagerService/RequestWorktreeList"
+	// AgentManagerServiceGetWorktreeListProcedure is the fully-qualified name of the
+	// AgentManagerService's GetWorktreeList RPC.
+	AgentManagerServiceGetWorktreeListProcedure = "/taskguild.v1.AgentManagerService/GetWorktreeList"
 )
 
 // AgentManagerServiceClient is a client for the taskguild.v1.AgentManagerService service.
@@ -89,6 +98,12 @@ type AgentManagerServiceClient interface {
 	// SyncPermissions merges local .claude/settings.json permissions with the
 	// backend's stored permissions (union strategy) and returns the merged result.
 	SyncPermissions(context.Context, *connect.Request[v1.SyncPermissionsRequest]) (*connect.Response[v1.SyncPermissionsResponse], error)
+	// ReportWorktreeList reports available worktrees from the agent-manager's filesystem.
+	ReportWorktreeList(context.Context, *connect.Request[v1.ReportWorktreeListRequest]) (*connect.Response[v1.ReportWorktreeListResponse], error)
+	// RequestWorktreeList triggers a worktree scan on connected agent-managers (called by frontend).
+	RequestWorktreeList(context.Context, *connect.Request[v1.RequestWorktreeListRequest]) (*connect.Response[v1.RequestWorktreeListResponse], error)
+	// GetWorktreeList returns the cached worktree list for a project.
+	GetWorktreeList(context.Context, *connect.Request[v1.GetWorktreeListRequest]) (*connect.Response[v1.GetWorktreeListResponse], error)
 }
 
 // NewAgentManagerServiceClient constructs a client for the taskguild.v1.AgentManagerService
@@ -162,6 +177,24 @@ func NewAgentManagerServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(agentManagerServiceMethods.ByName("SyncPermissions")),
 			connect.WithClientOptions(opts...),
 		),
+		reportWorktreeList: connect.NewClient[v1.ReportWorktreeListRequest, v1.ReportWorktreeListResponse](
+			httpClient,
+			baseURL+AgentManagerServiceReportWorktreeListProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("ReportWorktreeList")),
+			connect.WithClientOptions(opts...),
+		),
+		requestWorktreeList: connect.NewClient[v1.RequestWorktreeListRequest, v1.RequestWorktreeListResponse](
+			httpClient,
+			baseURL+AgentManagerServiceRequestWorktreeListProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("RequestWorktreeList")),
+			connect.WithClientOptions(opts...),
+		),
+		getWorktreeList: connect.NewClient[v1.GetWorktreeListRequest, v1.GetWorktreeListResponse](
+			httpClient,
+			baseURL+AgentManagerServiceGetWorktreeListProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("GetWorktreeList")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -177,6 +210,9 @@ type agentManagerServiceClient struct {
 	syncAgents             *connect.Client[v1.SyncAgentsRequest, v1.SyncAgentsResponse]
 	reportTaskLog          *connect.Client[v1.ReportTaskLogRequest, v1.ReportTaskLogResponse]
 	syncPermissions        *connect.Client[v1.SyncPermissionsRequest, v1.SyncPermissionsResponse]
+	reportWorktreeList     *connect.Client[v1.ReportWorktreeListRequest, v1.ReportWorktreeListResponse]
+	requestWorktreeList    *connect.Client[v1.RequestWorktreeListRequest, v1.RequestWorktreeListResponse]
+	getWorktreeList        *connect.Client[v1.GetWorktreeListRequest, v1.GetWorktreeListResponse]
 }
 
 // Subscribe calls taskguild.v1.AgentManagerService.Subscribe.
@@ -229,6 +265,21 @@ func (c *agentManagerServiceClient) SyncPermissions(ctx context.Context, req *co
 	return c.syncPermissions.CallUnary(ctx, req)
 }
 
+// ReportWorktreeList calls taskguild.v1.AgentManagerService.ReportWorktreeList.
+func (c *agentManagerServiceClient) ReportWorktreeList(ctx context.Context, req *connect.Request[v1.ReportWorktreeListRequest]) (*connect.Response[v1.ReportWorktreeListResponse], error) {
+	return c.reportWorktreeList.CallUnary(ctx, req)
+}
+
+// RequestWorktreeList calls taskguild.v1.AgentManagerService.RequestWorktreeList.
+func (c *agentManagerServiceClient) RequestWorktreeList(ctx context.Context, req *connect.Request[v1.RequestWorktreeListRequest]) (*connect.Response[v1.RequestWorktreeListResponse], error) {
+	return c.requestWorktreeList.CallUnary(ctx, req)
+}
+
+// GetWorktreeList calls taskguild.v1.AgentManagerService.GetWorktreeList.
+func (c *agentManagerServiceClient) GetWorktreeList(ctx context.Context, req *connect.Request[v1.GetWorktreeListRequest]) (*connect.Response[v1.GetWorktreeListResponse], error) {
+	return c.getWorktreeList.CallUnary(ctx, req)
+}
+
 // AgentManagerServiceHandler is an implementation of the taskguild.v1.AgentManagerService service.
 type AgentManagerServiceHandler interface {
 	// Subscribe opens a server-stream for receiving commands from the backend.
@@ -253,6 +304,12 @@ type AgentManagerServiceHandler interface {
 	// SyncPermissions merges local .claude/settings.json permissions with the
 	// backend's stored permissions (union strategy) and returns the merged result.
 	SyncPermissions(context.Context, *connect.Request[v1.SyncPermissionsRequest]) (*connect.Response[v1.SyncPermissionsResponse], error)
+	// ReportWorktreeList reports available worktrees from the agent-manager's filesystem.
+	ReportWorktreeList(context.Context, *connect.Request[v1.ReportWorktreeListRequest]) (*connect.Response[v1.ReportWorktreeListResponse], error)
+	// RequestWorktreeList triggers a worktree scan on connected agent-managers (called by frontend).
+	RequestWorktreeList(context.Context, *connect.Request[v1.RequestWorktreeListRequest]) (*connect.Response[v1.RequestWorktreeListResponse], error)
+	// GetWorktreeList returns the cached worktree list for a project.
+	GetWorktreeList(context.Context, *connect.Request[v1.GetWorktreeListRequest]) (*connect.Response[v1.GetWorktreeListResponse], error)
 }
 
 // NewAgentManagerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -322,6 +379,24 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 		connect.WithSchema(agentManagerServiceMethods.ByName("SyncPermissions")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentManagerServiceReportWorktreeListHandler := connect.NewUnaryHandler(
+		AgentManagerServiceReportWorktreeListProcedure,
+		svc.ReportWorktreeList,
+		connect.WithSchema(agentManagerServiceMethods.ByName("ReportWorktreeList")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentManagerServiceRequestWorktreeListHandler := connect.NewUnaryHandler(
+		AgentManagerServiceRequestWorktreeListProcedure,
+		svc.RequestWorktreeList,
+		connect.WithSchema(agentManagerServiceMethods.ByName("RequestWorktreeList")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentManagerServiceGetWorktreeListHandler := connect.NewUnaryHandler(
+		AgentManagerServiceGetWorktreeListProcedure,
+		svc.GetWorktreeList,
+		connect.WithSchema(agentManagerServiceMethods.ByName("GetWorktreeList")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/taskguild.v1.AgentManagerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AgentManagerServiceSubscribeProcedure:
@@ -344,6 +419,12 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 			agentManagerServiceReportTaskLogHandler.ServeHTTP(w, r)
 		case AgentManagerServiceSyncPermissionsProcedure:
 			agentManagerServiceSyncPermissionsHandler.ServeHTTP(w, r)
+		case AgentManagerServiceReportWorktreeListProcedure:
+			agentManagerServiceReportWorktreeListHandler.ServeHTTP(w, r)
+		case AgentManagerServiceRequestWorktreeListProcedure:
+			agentManagerServiceRequestWorktreeListHandler.ServeHTTP(w, r)
+		case AgentManagerServiceGetWorktreeListProcedure:
+			agentManagerServiceGetWorktreeListHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -391,4 +472,16 @@ func (UnimplementedAgentManagerServiceHandler) ReportTaskLog(context.Context, *c
 
 func (UnimplementedAgentManagerServiceHandler) SyncPermissions(context.Context, *connect.Request[v1.SyncPermissionsRequest]) (*connect.Response[v1.SyncPermissionsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.SyncPermissions is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) ReportWorktreeList(context.Context, *connect.Request[v1.ReportWorktreeListRequest]) (*connect.Response[v1.ReportWorktreeListResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportWorktreeList is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) RequestWorktreeList(context.Context, *connect.Request[v1.RequestWorktreeListRequest]) (*connect.Response[v1.RequestWorktreeListResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.RequestWorktreeList is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) GetWorktreeList(context.Context, *connect.Request[v1.GetWorktreeListRequest]) (*connect.Response[v1.GetWorktreeListResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.GetWorktreeList is not implemented"))
 }

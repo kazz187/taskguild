@@ -231,7 +231,9 @@ type CreateTaskRequest struct {
 	UseWorktree    bool   `protobuf:"varint,5,opt,name=use_worktree,json=useWorktree,proto3" json:"use_worktree,omitempty"`
 	PermissionMode string `protobuf:"bytes,6,opt,name=permission_mode,json=permissionMode,proto3" json:"permission_mode,omitempty"`
 	// metadata
-	Metadata      map[string]string `protobuf:"bytes,7,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Metadata map[string]string `protobuf:"bytes,7,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// optional: specify initial status (defaults to workflow's IsInitial status)
+	StatusId      *string `protobuf:"bytes,8,opt,name=status_id,json=statusId,proto3,oneof" json:"status_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -313,6 +315,13 @@ func (x *CreateTaskRequest) GetMetadata() map[string]string {
 		return x.Metadata
 	}
 	return nil
+}
+
+func (x *CreateTaskRequest) GetStatusId() string {
+	if x != nil && x.StatusId != nil {
+		return *x.StatusId
+	}
+	return ""
 }
 
 type CreateTaskResponse struct {
@@ -901,7 +910,7 @@ const file_taskguild_v1_task_proto_rawDesc = "" +
 	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xdf\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x8f\x03\n" +
 	"\x11CreateTaskRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1f\n" +
@@ -911,10 +920,13 @@ const file_taskguild_v1_task_proto_rawDesc = "" +
 	"\vdescription\x18\x04 \x01(\tR\vdescription\x12!\n" +
 	"\fuse_worktree\x18\x05 \x01(\bR\vuseWorktree\x12'\n" +
 	"\x0fpermission_mode\x18\x06 \x01(\tR\x0epermissionMode\x12I\n" +
-	"\bmetadata\x18\a \x03(\v2-.taskguild.v1.CreateTaskRequest.MetadataEntryR\bmetadata\x1a;\n" +
+	"\bmetadata\x18\a \x03(\v2-.taskguild.v1.CreateTaskRequest.MetadataEntryR\bmetadata\x12 \n" +
+	"\tstatus_id\x18\b \x01(\tH\x00R\bstatusId\x88\x01\x01\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"<\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\f\n" +
+	"\n" +
+	"_status_id\"<\n" +
 	"\x12CreateTaskResponse\x12&\n" +
 	"\x04task\x18\x01 \x01(\v2\x12.taskguild.v1.TaskR\x04task\" \n" +
 	"\x0eGetTaskRequest\x12\x0e\n" +
@@ -1049,6 +1061,7 @@ func file_taskguild_v1_task_proto_init() {
 		return
 	}
 	file_taskguild_v1_common_proto_init()
+	file_taskguild_v1_task_proto_msgTypes[1].OneofWrappers = []any{}
 	file_taskguild_v1_task_proto_msgTypes[7].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

@@ -35,21 +35,23 @@ const (
 	EventType_EVENT_TYPE_INTERACTION_CREATED   EventType = 7
 	EventType_EVENT_TYPE_INTERACTION_RESPONDED EventType = 8
 	EventType_EVENT_TYPE_TASK_LOG              EventType = 9
+	EventType_EVENT_TYPE_WORKTREE_LIST         EventType = 10
 )
 
 // Enum value maps for EventType.
 var (
 	EventType_name = map[int32]string{
-		0: "EVENT_TYPE_UNSPECIFIED",
-		1: "EVENT_TYPE_TASK_CREATED",
-		2: "EVENT_TYPE_TASK_UPDATED",
-		3: "EVENT_TYPE_TASK_STATUS_CHANGED",
-		4: "EVENT_TYPE_TASK_DELETED",
-		5: "EVENT_TYPE_AGENT_ASSIGNED",
-		6: "EVENT_TYPE_AGENT_STATUS_CHANGED",
-		7: "EVENT_TYPE_INTERACTION_CREATED",
-		8: "EVENT_TYPE_INTERACTION_RESPONDED",
-		9: "EVENT_TYPE_TASK_LOG",
+		0:  "EVENT_TYPE_UNSPECIFIED",
+		1:  "EVENT_TYPE_TASK_CREATED",
+		2:  "EVENT_TYPE_TASK_UPDATED",
+		3:  "EVENT_TYPE_TASK_STATUS_CHANGED",
+		4:  "EVENT_TYPE_TASK_DELETED",
+		5:  "EVENT_TYPE_AGENT_ASSIGNED",
+		6:  "EVENT_TYPE_AGENT_STATUS_CHANGED",
+		7:  "EVENT_TYPE_INTERACTION_CREATED",
+		8:  "EVENT_TYPE_INTERACTION_RESPONDED",
+		9:  "EVENT_TYPE_TASK_LOG",
+		10: "EVENT_TYPE_WORKTREE_LIST",
 	}
 	EventType_value = map[string]int32{
 		"EVENT_TYPE_UNSPECIFIED":           0,
@@ -62,6 +64,7 @@ var (
 		"EVENT_TYPE_INTERACTION_CREATED":   7,
 		"EVENT_TYPE_INTERACTION_RESPONDED": 8,
 		"EVENT_TYPE_TASK_LOG":              9,
+		"EVENT_TYPE_WORKTREE_LIST":         10,
 	}
 )
 
@@ -249,7 +252,7 @@ const file_taskguild_v1_event_proto_rawDesc = "" +
 	"\vevent_types\x18\x01 \x03(\x0e2\x17.taskguild.v1.EventTypeR\n" +
 	"eventTypes\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x02 \x01(\tR\tprojectId*\xc9\x02\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId*\xe7\x02\n" +
 	"\tEventType\x12\x1a\n" +
 	"\x16EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17EVENT_TYPE_TASK_CREATED\x10\x01\x12\x1b\n" +
@@ -260,7 +263,9 @@ const file_taskguild_v1_event_proto_rawDesc = "" +
 	"\x1fEVENT_TYPE_AGENT_STATUS_CHANGED\x10\x06\x12\"\n" +
 	"\x1eEVENT_TYPE_INTERACTION_CREATED\x10\a\x12$\n" +
 	" EVENT_TYPE_INTERACTION_RESPONDED\x10\b\x12\x17\n" +
-	"\x13EVENT_TYPE_TASK_LOG\x10\t2^\n" +
+	"\x13EVENT_TYPE_TASK_LOG\x10\t\x12\x1c\n" +
+	"\x18EVENT_TYPE_WORKTREE_LIST\x10\n" +
+	"2^\n" +
 	"\fEventService\x12N\n" +
 	"\x0fSubscribeEvents\x12$.taskguild.v1.SubscribeEventsRequest\x1a\x13.taskguild.v1.Event0\x01B\xb8\x01\n" +
 	"\x10com.taskguild.v1B\n" +

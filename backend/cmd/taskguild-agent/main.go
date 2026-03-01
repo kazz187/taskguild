@@ -7,9 +7,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -262,6 +264,11 @@ func runSubscribeLoop(
 				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir)
 			}(taskID)
 
+		case *v1.AgentCommand_ListWorktrees:
+			listCmd := c.ListWorktrees
+			log.Printf("received list worktrees command (request_id: %s)", listCmd.GetRequestId())
+			go handleListWorktrees(ctx, client, cfg, listCmd.GetRequestId())
+
 		case *v1.AgentCommand_SyncAgents:
 			log.Println("received sync agents command, re-syncing...")
 			syncAgents(ctx, client, cfg)
@@ -352,6 +359,61 @@ func heartbeat(ctx context.Context, client taskguildv1connect.AgentManagerServic
 				log.Printf("heartbeat error: %v", err)
 			}
 		}
+	}
+}
+
+// handleListWorktrees scans the .claude/worktrees/ directory and reports
+// available worktrees to the backend.
+func handleListWorktrees(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, cfg *config, requestID string) {
+	worktreesDir := filepath.Join(cfg.WorkDir, ".claude", "worktrees")
+	entries, err := os.ReadDir(worktreesDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Printf("no worktrees directory found at %s", worktreesDir)
+		} else {
+			log.Printf("failed to read worktrees directory: %v", err)
+		}
+		// Report empty list so frontend knows the scan completed.
+		_, _ = client.ReportWorktreeList(ctx, connect.NewRequest(&v1.ReportWorktreeListRequest{
+			RequestId:   requestID,
+			ProjectName: cfg.ProjectName,
+		}))
+		return
+	}
+
+	var worktrees []*v1.WorktreeInfo
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		wtDir := filepath.Join(worktreesDir, name)
+
+		// Get branch name.
+		branch := "worktree-" + name
+		cmd := exec.CommandContext(ctx, "git", "branch", "--show-current")
+		cmd.Dir = wtDir
+		if out, err := cmd.Output(); err == nil {
+			if b := strings.TrimSpace(string(out)); b != "" {
+				branch = b
+			}
+		}
+
+		worktrees = append(worktrees, &v1.WorktreeInfo{
+			Name:   name,
+			Branch: branch,
+		})
+	}
+
+	_, err = client.ReportWorktreeList(ctx, connect.NewRequest(&v1.ReportWorktreeListRequest{
+		RequestId:   requestID,
+		ProjectName: cfg.ProjectName,
+		Worktrees:   worktrees,
+	}))
+	if err != nil {
+		log.Printf("failed to report worktree list: %v", err)
+	} else {
+		log.Printf("reported %d worktrees (request_id: %s)", len(worktrees), requestID)
 	}
 }
 
