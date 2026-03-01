@@ -24,6 +24,8 @@ import (
 	projectrepo "github.com/kazz187/taskguild/backend/internal/project/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/pushnotification"
 	pushsubrepo "github.com/kazz187/taskguild/backend/internal/pushsubscription/repositoryimpl"
+	"github.com/kazz187/taskguild/backend/internal/script"
+	scriptrepo "github.com/kazz187/taskguild/backend/internal/script/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/skill"
 	skillrepo "github.com/kazz187/taskguild/backend/internal/skill/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/task"
@@ -124,6 +126,7 @@ func runServer() {
 	interactionRepo := interactionrepo.NewYAMLRepository(store)
 	agentRepo := agentrepo.NewYAMLRepository(store)
 	skillRepo := skillrepo.NewYAMLRepository(store)
+	scriptRepo := scriptrepo.NewYAMLRepository(store)
 	taskLogRepo := tasklogrepo.NewYAMLRepository(store)
 	pushSubRepo := pushsubrepo.NewYAMLRepository(store)
 	permissionRepo := permissionrepo.NewYAMLRepository(store)
@@ -136,13 +139,15 @@ func runServer() {
 	workflowServer := workflow.NewServer(workflowRepo)
 	taskServer := task.NewServer(taskRepo, workflowRepo, bus)
 	interactionServer := interaction.NewServer(interactionRepo, taskRepo, bus)
-	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, projectRepo, skillRepo, taskLogRepo, permissionRepo, bus)
+	scriptResultStore := script.NewInMemoryResultStore()
+	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, projectRepo, skillRepo, scriptRepo, taskLogRepo, permissionRepo, bus, scriptResultStore)
 	agentChangeNotifier := &agentChangeNotifier{
 		registry:    agentManagerRegistry,
 		projectRepo: projectRepo,
 	}
 	agentServer := agent.NewServer(agentRepo, agentChangeNotifier)
 	skillServer := skill.NewServer(skillRepo)
+	scriptServer := script.NewServer(scriptRepo, agentManagerServer, scriptResultStore)
 	taskLogServer := tasklog.NewServer(taskLogRepo)
 	eventServer := event.NewServer(bus)
 	permissionChangeNotifier := &permissionChangeNotifier{
@@ -166,6 +171,7 @@ func runServer() {
 		agentManagerServer,
 		agentServer,
 		skillServer,
+		scriptServer,
 		eventServer,
 		taskLogServer,
 		pushNotificationServer,

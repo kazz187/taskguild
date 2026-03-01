@@ -74,6 +74,55 @@ func (HookTrigger) EnumDescriptor() ([]byte, []int) {
 	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{0}
 }
 
+type HookActionType int32
+
+const (
+	HookActionType_HOOK_ACTION_TYPE_UNSPECIFIED HookActionType = 0
+	HookActionType_HOOK_ACTION_TYPE_SKILL       HookActionType = 1
+	HookActionType_HOOK_ACTION_TYPE_SCRIPT      HookActionType = 2
+)
+
+// Enum value maps for HookActionType.
+var (
+	HookActionType_name = map[int32]string{
+		0: "HOOK_ACTION_TYPE_UNSPECIFIED",
+		1: "HOOK_ACTION_TYPE_SKILL",
+		2: "HOOK_ACTION_TYPE_SCRIPT",
+	}
+	HookActionType_value = map[string]int32{
+		"HOOK_ACTION_TYPE_UNSPECIFIED": 0,
+		"HOOK_ACTION_TYPE_SKILL":       1,
+		"HOOK_ACTION_TYPE_SCRIPT":      2,
+	}
+)
+
+func (x HookActionType) Enum() *HookActionType {
+	p := new(HookActionType)
+	*p = x
+	return p
+}
+
+func (x HookActionType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (HookActionType) Descriptor() protoreflect.EnumDescriptor {
+	return file_taskguild_v1_workflow_proto_enumTypes[1].Descriptor()
+}
+
+func (HookActionType) Type() protoreflect.EnumType {
+	return &file_taskguild_v1_workflow_proto_enumTypes[1]
+}
+
+func (x HookActionType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use HookActionType.Descriptor instead.
+func (HookActionType) EnumDescriptor() ([]byte, []int) {
+	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{1}
+}
+
 // Workflow defines a project's task lifecycle with custom statuses and agent configurations.
 type Workflow struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -199,10 +248,12 @@ func (x *Workflow) GetDefaultUseWorktree() bool {
 type StatusHook struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	SkillId       string                 `protobuf:"bytes,2,opt,name=skill_id,json=skillId,proto3" json:"skill_id,omitempty"`
+	SkillId       string                 `protobuf:"bytes,2,opt,name=skill_id,json=skillId,proto3" json:"skill_id,omitempty"` // deprecated: use action_type + action_id instead
 	Trigger       HookTrigger            `protobuf:"varint,3,opt,name=trigger,proto3,enum=taskguild.v1.HookTrigger" json:"trigger,omitempty"`
 	Order         int32                  `protobuf:"varint,4,opt,name=order,proto3" json:"order,omitempty"`
 	Name          string                 `protobuf:"bytes,5,opt,name=name,proto3" json:"name,omitempty"`
+	ActionType    HookActionType         `protobuf:"varint,6,opt,name=action_type,json=actionType,proto3,enum=taskguild.v1.HookActionType" json:"action_type,omitempty"` // type of action (skill or script)
+	ActionId      string                 `protobuf:"bytes,7,opt,name=action_id,json=actionId,proto3" json:"action_id,omitempty"`                                         // ID of the Skill or Script to execute
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -268,6 +319,20 @@ func (x *StatusHook) GetOrder() int32 {
 func (x *StatusHook) GetName() string {
 	if x != nil {
 		return x.Name
+	}
+	return ""
+}
+
+func (x *StatusHook) GetActionType() HookActionType {
+	if x != nil {
+		return x.ActionType
+	}
+	return HookActionType_HOOK_ACTION_TYPE_UNSPECIFIED
+}
+
+func (x *StatusHook) GetActionId() string {
+	if x != nil {
+		return x.ActionId
 	}
 	return ""
 }
@@ -1032,14 +1097,17 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x126\n" +
 	"\x17default_permission_mode\x18\t \x01(\tR\x15defaultPermissionMode\x120\n" +
 	"\x14default_use_worktree\x18\n" +
-	" \x01(\bR\x12defaultUseWorktree\"\x96\x01\n" +
+	" \x01(\bR\x12defaultUseWorktree\"\xf2\x01\n" +
 	"\n" +
 	"StatusHook\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bskill_id\x18\x02 \x01(\tR\askillId\x123\n" +
 	"\atrigger\x18\x03 \x01(\x0e2\x19.taskguild.v1.HookTriggerR\atrigger\x12\x14\n" +
 	"\x05order\x18\x04 \x01(\x05R\x05order\x12\x12\n" +
-	"\x04name\x18\x05 \x01(\tR\x04name\"\xfc\x01\n" +
+	"\x04name\x18\x05 \x01(\tR\x04name\x12=\n" +
+	"\vaction_type\x18\x06 \x01(\x0e2\x1c.taskguild.v1.HookActionTypeR\n" +
+	"actionType\x12\x1b\n" +
+	"\taction_id\x18\a \x01(\tR\bactionId\"\xfc\x01\n" +
 	"\x0eWorkflowStatus\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -1101,7 +1169,11 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\x18HOOK_TRIGGER_UNSPECIFIED\x10\x00\x12&\n" +
 	"\"HOOK_TRIGGER_BEFORE_TASK_EXECUTION\x10\x01\x12%\n" +
 	"!HOOK_TRIGGER_AFTER_TASK_EXECUTION\x10\x02\x12(\n" +
-	"$HOOK_TRIGGER_AFTER_WORKTREE_CREATION\x10\x032\xd6\x03\n" +
+	"$HOOK_TRIGGER_AFTER_WORKTREE_CREATION\x10\x03*k\n" +
+	"\x0eHookActionType\x12 \n" +
+	"\x1cHOOK_ACTION_TYPE_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16HOOK_ACTION_TYPE_SKILL\x10\x01\x12\x1b\n" +
+	"\x17HOOK_ACTION_TYPE_SCRIPT\x10\x022\xd6\x03\n" +
 	"\x0fWorkflowService\x12[\n" +
 	"\x0eCreateWorkflow\x12#.taskguild.v1.CreateWorkflowRequest\x1a$.taskguild.v1.CreateWorkflowResponse\x12R\n" +
 	"\vGetWorkflow\x12 .taskguild.v1.GetWorkflowRequest\x1a!.taskguild.v1.GetWorkflowResponse\x12X\n" +
@@ -1122,60 +1194,62 @@ func file_taskguild_v1_workflow_proto_rawDescGZIP() []byte {
 	return file_taskguild_v1_workflow_proto_rawDescData
 }
 
-var file_taskguild_v1_workflow_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_taskguild_v1_workflow_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_taskguild_v1_workflow_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_taskguild_v1_workflow_proto_goTypes = []any{
 	(HookTrigger)(0),               // 0: taskguild.v1.HookTrigger
-	(*Workflow)(nil),               // 1: taskguild.v1.Workflow
-	(*StatusHook)(nil),             // 2: taskguild.v1.StatusHook
-	(*WorkflowStatus)(nil),         // 3: taskguild.v1.WorkflowStatus
-	(*AgentConfig)(nil),            // 4: taskguild.v1.AgentConfig
-	(*CreateWorkflowRequest)(nil),  // 5: taskguild.v1.CreateWorkflowRequest
-	(*CreateWorkflowResponse)(nil), // 6: taskguild.v1.CreateWorkflowResponse
-	(*GetWorkflowRequest)(nil),     // 7: taskguild.v1.GetWorkflowRequest
-	(*GetWorkflowResponse)(nil),    // 8: taskguild.v1.GetWorkflowResponse
-	(*ListWorkflowsRequest)(nil),   // 9: taskguild.v1.ListWorkflowsRequest
-	(*ListWorkflowsResponse)(nil),  // 10: taskguild.v1.ListWorkflowsResponse
-	(*UpdateWorkflowRequest)(nil),  // 11: taskguild.v1.UpdateWorkflowRequest
-	(*UpdateWorkflowResponse)(nil), // 12: taskguild.v1.UpdateWorkflowResponse
-	(*DeleteWorkflowRequest)(nil),  // 13: taskguild.v1.DeleteWorkflowRequest
-	(*DeleteWorkflowResponse)(nil), // 14: taskguild.v1.DeleteWorkflowResponse
-	(*timestamppb.Timestamp)(nil),  // 15: google.protobuf.Timestamp
-	(*PaginationRequest)(nil),      // 16: taskguild.v1.PaginationRequest
-	(*PaginationResponse)(nil),     // 17: taskguild.v1.PaginationResponse
+	(HookActionType)(0),            // 1: taskguild.v1.HookActionType
+	(*Workflow)(nil),               // 2: taskguild.v1.Workflow
+	(*StatusHook)(nil),             // 3: taskguild.v1.StatusHook
+	(*WorkflowStatus)(nil),         // 4: taskguild.v1.WorkflowStatus
+	(*AgentConfig)(nil),            // 5: taskguild.v1.AgentConfig
+	(*CreateWorkflowRequest)(nil),  // 6: taskguild.v1.CreateWorkflowRequest
+	(*CreateWorkflowResponse)(nil), // 7: taskguild.v1.CreateWorkflowResponse
+	(*GetWorkflowRequest)(nil),     // 8: taskguild.v1.GetWorkflowRequest
+	(*GetWorkflowResponse)(nil),    // 9: taskguild.v1.GetWorkflowResponse
+	(*ListWorkflowsRequest)(nil),   // 10: taskguild.v1.ListWorkflowsRequest
+	(*ListWorkflowsResponse)(nil),  // 11: taskguild.v1.ListWorkflowsResponse
+	(*UpdateWorkflowRequest)(nil),  // 12: taskguild.v1.UpdateWorkflowRequest
+	(*UpdateWorkflowResponse)(nil), // 13: taskguild.v1.UpdateWorkflowResponse
+	(*DeleteWorkflowRequest)(nil),  // 14: taskguild.v1.DeleteWorkflowRequest
+	(*DeleteWorkflowResponse)(nil), // 15: taskguild.v1.DeleteWorkflowResponse
+	(*timestamppb.Timestamp)(nil),  // 16: google.protobuf.Timestamp
+	(*PaginationRequest)(nil),      // 17: taskguild.v1.PaginationRequest
+	(*PaginationResponse)(nil),     // 18: taskguild.v1.PaginationResponse
 }
 var file_taskguild_v1_workflow_proto_depIdxs = []int32{
-	3,  // 0: taskguild.v1.Workflow.statuses:type_name -> taskguild.v1.WorkflowStatus
-	4,  // 1: taskguild.v1.Workflow.agent_configs:type_name -> taskguild.v1.AgentConfig
-	15, // 2: taskguild.v1.Workflow.created_at:type_name -> google.protobuf.Timestamp
-	15, // 3: taskguild.v1.Workflow.updated_at:type_name -> google.protobuf.Timestamp
+	4,  // 0: taskguild.v1.Workflow.statuses:type_name -> taskguild.v1.WorkflowStatus
+	5,  // 1: taskguild.v1.Workflow.agent_configs:type_name -> taskguild.v1.AgentConfig
+	16, // 2: taskguild.v1.Workflow.created_at:type_name -> google.protobuf.Timestamp
+	16, // 3: taskguild.v1.Workflow.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 4: taskguild.v1.StatusHook.trigger:type_name -> taskguild.v1.HookTrigger
-	2,  // 5: taskguild.v1.WorkflowStatus.hooks:type_name -> taskguild.v1.StatusHook
-	3,  // 6: taskguild.v1.CreateWorkflowRequest.statuses:type_name -> taskguild.v1.WorkflowStatus
-	4,  // 7: taskguild.v1.CreateWorkflowRequest.agent_configs:type_name -> taskguild.v1.AgentConfig
-	1,  // 8: taskguild.v1.CreateWorkflowResponse.workflow:type_name -> taskguild.v1.Workflow
-	1,  // 9: taskguild.v1.GetWorkflowResponse.workflow:type_name -> taskguild.v1.Workflow
-	16, // 10: taskguild.v1.ListWorkflowsRequest.pagination:type_name -> taskguild.v1.PaginationRequest
-	1,  // 11: taskguild.v1.ListWorkflowsResponse.workflows:type_name -> taskguild.v1.Workflow
-	17, // 12: taskguild.v1.ListWorkflowsResponse.pagination:type_name -> taskguild.v1.PaginationResponse
-	3,  // 13: taskguild.v1.UpdateWorkflowRequest.statuses:type_name -> taskguild.v1.WorkflowStatus
-	4,  // 14: taskguild.v1.UpdateWorkflowRequest.agent_configs:type_name -> taskguild.v1.AgentConfig
-	1,  // 15: taskguild.v1.UpdateWorkflowResponse.workflow:type_name -> taskguild.v1.Workflow
-	5,  // 16: taskguild.v1.WorkflowService.CreateWorkflow:input_type -> taskguild.v1.CreateWorkflowRequest
-	7,  // 17: taskguild.v1.WorkflowService.GetWorkflow:input_type -> taskguild.v1.GetWorkflowRequest
-	9,  // 18: taskguild.v1.WorkflowService.ListWorkflows:input_type -> taskguild.v1.ListWorkflowsRequest
-	11, // 19: taskguild.v1.WorkflowService.UpdateWorkflow:input_type -> taskguild.v1.UpdateWorkflowRequest
-	13, // 20: taskguild.v1.WorkflowService.DeleteWorkflow:input_type -> taskguild.v1.DeleteWorkflowRequest
-	6,  // 21: taskguild.v1.WorkflowService.CreateWorkflow:output_type -> taskguild.v1.CreateWorkflowResponse
-	8,  // 22: taskguild.v1.WorkflowService.GetWorkflow:output_type -> taskguild.v1.GetWorkflowResponse
-	10, // 23: taskguild.v1.WorkflowService.ListWorkflows:output_type -> taskguild.v1.ListWorkflowsResponse
-	12, // 24: taskguild.v1.WorkflowService.UpdateWorkflow:output_type -> taskguild.v1.UpdateWorkflowResponse
-	14, // 25: taskguild.v1.WorkflowService.DeleteWorkflow:output_type -> taskguild.v1.DeleteWorkflowResponse
-	21, // [21:26] is the sub-list for method output_type
-	16, // [16:21] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	1,  // 5: taskguild.v1.StatusHook.action_type:type_name -> taskguild.v1.HookActionType
+	3,  // 6: taskguild.v1.WorkflowStatus.hooks:type_name -> taskguild.v1.StatusHook
+	4,  // 7: taskguild.v1.CreateWorkflowRequest.statuses:type_name -> taskguild.v1.WorkflowStatus
+	5,  // 8: taskguild.v1.CreateWorkflowRequest.agent_configs:type_name -> taskguild.v1.AgentConfig
+	2,  // 9: taskguild.v1.CreateWorkflowResponse.workflow:type_name -> taskguild.v1.Workflow
+	2,  // 10: taskguild.v1.GetWorkflowResponse.workflow:type_name -> taskguild.v1.Workflow
+	17, // 11: taskguild.v1.ListWorkflowsRequest.pagination:type_name -> taskguild.v1.PaginationRequest
+	2,  // 12: taskguild.v1.ListWorkflowsResponse.workflows:type_name -> taskguild.v1.Workflow
+	18, // 13: taskguild.v1.ListWorkflowsResponse.pagination:type_name -> taskguild.v1.PaginationResponse
+	4,  // 14: taskguild.v1.UpdateWorkflowRequest.statuses:type_name -> taskguild.v1.WorkflowStatus
+	5,  // 15: taskguild.v1.UpdateWorkflowRequest.agent_configs:type_name -> taskguild.v1.AgentConfig
+	2,  // 16: taskguild.v1.UpdateWorkflowResponse.workflow:type_name -> taskguild.v1.Workflow
+	6,  // 17: taskguild.v1.WorkflowService.CreateWorkflow:input_type -> taskguild.v1.CreateWorkflowRequest
+	8,  // 18: taskguild.v1.WorkflowService.GetWorkflow:input_type -> taskguild.v1.GetWorkflowRequest
+	10, // 19: taskguild.v1.WorkflowService.ListWorkflows:input_type -> taskguild.v1.ListWorkflowsRequest
+	12, // 20: taskguild.v1.WorkflowService.UpdateWorkflow:input_type -> taskguild.v1.UpdateWorkflowRequest
+	14, // 21: taskguild.v1.WorkflowService.DeleteWorkflow:input_type -> taskguild.v1.DeleteWorkflowRequest
+	7,  // 22: taskguild.v1.WorkflowService.CreateWorkflow:output_type -> taskguild.v1.CreateWorkflowResponse
+	9,  // 23: taskguild.v1.WorkflowService.GetWorkflow:output_type -> taskguild.v1.GetWorkflowResponse
+	11, // 24: taskguild.v1.WorkflowService.ListWorkflows:output_type -> taskguild.v1.ListWorkflowsResponse
+	13, // 25: taskguild.v1.WorkflowService.UpdateWorkflow:output_type -> taskguild.v1.UpdateWorkflowResponse
+	15, // 26: taskguild.v1.WorkflowService.DeleteWorkflow:output_type -> taskguild.v1.DeleteWorkflowResponse
+	22, // [22:27] is the sub-list for method output_type
+	17, // [17:22] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_workflow_proto_init() }
@@ -1189,7 +1263,7 @@ func file_taskguild_v1_workflow_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_workflow_proto_rawDesc), len(file_taskguild_v1_workflow_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      2,
 			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,

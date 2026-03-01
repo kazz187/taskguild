@@ -151,9 +151,10 @@ func runAgent() {
 			break
 		}
 
-		// Re-sync agents and permissions on each reconnection so local files stay up-to-date.
+		// Re-sync agents, permissions, and scripts on each reconnection so local files stay up-to-date.
 		syncAgents(ctx, client, cfg)
 		syncPermissions(ctx, client, cfg)
+		syncScripts(ctx, client, cfg)
 
 		err := runSubscribeLoop(ctx, client, taskClient, interClient, cfg, &mu, activeTasks, &wg, sem)
 		if ctx.Err() != nil {
@@ -290,6 +291,16 @@ func runSubscribeLoop(
 		case *v1.AgentCommand_SyncPermissions:
 			log.Println("received sync permissions command, re-syncing...")
 			syncPermissions(ctx, client, cfg)
+
+		case *v1.AgentCommand_SyncScripts:
+			log.Println("received sync scripts command, re-syncing...")
+			syncScripts(ctx, client, cfg)
+
+		case *v1.AgentCommand_ExecuteScript:
+			execCmd := c.ExecuteScript
+			log.Printf("received execute script command (request_id: %s, script_id: %s, filename: %s)",
+				execCmd.GetRequestId(), execCmd.GetScriptId(), execCmd.GetFilename())
+			go handleExecuteScript(ctx, client, cfg, execCmd)
 
 		case *v1.AgentCommand_CancelTask:
 			cancelCmd := c.CancelTask

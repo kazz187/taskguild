@@ -174,11 +174,13 @@ func statusToProto(s Status) *taskguildv1.WorkflowStatus {
 
 func hookToProto(h StatusHook) *taskguildv1.StatusHook {
 	return &taskguildv1.StatusHook{
-		Id:      h.ID,
-		SkillId: h.SkillID,
-		Trigger: hookTriggerToProto(h.Trigger),
-		Order:   h.Order,
-		Name:    h.Name,
+		Id:         h.ID,
+		SkillId:    h.SkillID,
+		Trigger:    hookTriggerToProto(h.Trigger),
+		Order:      h.Order,
+		Name:       h.Name,
+		ActionType: hookActionTypeToProto(h.ActionType),
+		ActionId:   h.ActionID,
 	}
 }
 
@@ -250,11 +252,35 @@ func hookFromProto(ph *taskguildv1.StatusHook) StatusHook {
 		id = ulid.Make().String()
 	}
 	return StatusHook{
-		ID:      id,
-		SkillID: ph.SkillId,
-		Trigger: hookTriggerFromProto(ph.Trigger),
-		Order:   ph.Order,
-		Name:    ph.Name,
+		ID:         id,
+		SkillID:    ph.SkillId,
+		Trigger:    hookTriggerFromProto(ph.Trigger),
+		Order:      ph.Order,
+		Name:       ph.Name,
+		ActionType: hookActionTypeFromProto(ph.ActionType),
+		ActionID:   ph.ActionId,
+	}
+}
+
+func hookActionTypeToProto(t HookActionType) taskguildv1.HookActionType {
+	switch t {
+	case HookActionTypeSkill:
+		return taskguildv1.HookActionType_HOOK_ACTION_TYPE_SKILL
+	case HookActionTypeScript:
+		return taskguildv1.HookActionType_HOOK_ACTION_TYPE_SCRIPT
+	default:
+		return taskguildv1.HookActionType_HOOK_ACTION_TYPE_UNSPECIFIED
+	}
+}
+
+func hookActionTypeFromProto(t taskguildv1.HookActionType) HookActionType {
+	switch t {
+	case taskguildv1.HookActionType_HOOK_ACTION_TYPE_SKILL:
+		return HookActionTypeSkill
+	case taskguildv1.HookActionType_HOOK_ACTION_TYPE_SCRIPT:
+		return HookActionTypeScript
+	default:
+		return HookActionTypeUnspecified
 	}
 }
 

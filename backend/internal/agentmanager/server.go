@@ -17,6 +17,7 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/interaction"
 	"github.com/kazz187/taskguild/backend/internal/permission"
 	"github.com/kazz187/taskguild/backend/internal/project"
+	"github.com/kazz187/taskguild/backend/internal/script"
 	"github.com/kazz187/taskguild/backend/internal/skill"
 	"github.com/kazz187/taskguild/backend/internal/task"
 	"github.com/kazz187/taskguild/backend/internal/tasklog"
@@ -36,9 +37,13 @@ type Server struct {
 	interactionRepo interaction.Repository
 	projectRepo     project.Repository
 	skillRepo       skill.Repository
+	scriptRepo      script.Repository
 	taskLogRepo     tasklog.Repository
 	permissionRepo  permission.Repository
 	eventBus        *eventbus.Bus
+
+	// scriptResultStore stores execution results keyed by request_id.
+	scriptResultStore script.ExecutionResultStore
 
 	// worktreeCache stores the latest worktree list per project_id,
 	// populated by ReportWorktreeList and read by GetWorktreeList.
@@ -46,19 +51,21 @@ type Server struct {
 	worktreeCache map[string][]*taskguildv1.WorktreeInfo // project_id -> worktrees
 }
 
-func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, projectRepo project.Repository, skillRepo skill.Repository, taskLogRepo tasklog.Repository, permissionRepo permission.Repository, eventBus *eventbus.Bus) *Server {
+func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, projectRepo project.Repository, skillRepo skill.Repository, scriptRepo script.Repository, taskLogRepo tasklog.Repository, permissionRepo permission.Repository, eventBus *eventbus.Bus, scriptResultStore script.ExecutionResultStore) *Server {
 	return &Server{
-		registry:        registry,
-		taskRepo:        taskRepo,
-		workflowRepo:    workflowRepo,
-		agentRepo:       agentRepo,
-		interactionRepo: interactionRepo,
-		projectRepo:     projectRepo,
-		skillRepo:       skillRepo,
-		taskLogRepo:     taskLogRepo,
-		permissionRepo:  permissionRepo,
-		eventBus:        eventBus,
-		worktreeCache:   make(map[string][]*taskguildv1.WorktreeInfo),
+		registry:          registry,
+		taskRepo:          taskRepo,
+		workflowRepo:      workflowRepo,
+		agentRepo:         agentRepo,
+		interactionRepo:   interactionRepo,
+		projectRepo:       projectRepo,
+		skillRepo:         skillRepo,
+		scriptRepo:        scriptRepo,
+		taskLogRepo:       taskLogRepo,
+		permissionRepo:    permissionRepo,
+		eventBus:          eventBus,
+		scriptResultStore: scriptResultStore,
+		worktreeCache:     make(map[string][]*taskguildv1.WorktreeInfo),
 	}
 }
 
@@ -353,40 +360,67 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	}
 
 	// Resolve hooks for the current status and inject into metadata.
-	if s.skillRepo != nil {
-		for _, st := range wf.Statuses {
-			if st.ID == t.StatusID && len(st.Hooks) > 0 {
-				type hookEntry struct {
-					ID      string `json:"id"`
-					SkillID string `json:"skill_id"`
-					Trigger string `json:"trigger"`
-					Order   int32  `json:"order"`
-					Name    string `json:"name"`
-					Content string `json:"content"`
-				}
-				var hooks []hookEntry
-				for _, h := range st.Hooks {
-					sk, err := s.skillRepo.Get(ctx, h.SkillID)
-					if err != nil {
-						slog.Warn("failed to resolve hook skill", "hook_id", h.ID, "skill_id", h.SkillID, "error", err)
-						continue
-					}
-					hooks = append(hooks, hookEntry{
-						ID:      h.ID,
-						SkillID: h.SkillID,
-						Trigger: string(h.Trigger),
-						Order:   h.Order,
-						Name:    h.Name,
-						Content: sk.Content,
-					})
-				}
-				if len(hooks) > 0 {
-					if b, err := json.Marshal(hooks); err == nil {
-						enrichedMetadata["_hooks"] = string(b)
-					}
-				}
-				break
+	for _, st := range wf.Statuses {
+		if st.ID == t.StatusID && len(st.Hooks) > 0 {
+			type hookEntry struct {
+				ID         string `json:"id"`
+				SkillID    string `json:"skill_id"`
+				ActionType string `json:"action_type"`
+				ActionID   string `json:"action_id"`
+				Trigger    string `json:"trigger"`
+				Order      int32  `json:"order"`
+				Name       string `json:"name"`
+				Content    string `json:"content"`
 			}
+			var hooks []hookEntry
+			for _, h := range st.Hooks {
+				entry := hookEntry{
+					ID:         h.ID,
+					SkillID:    h.SkillID,
+					ActionType: string(h.ActionType),
+					ActionID:   h.ActionID,
+					Trigger:    string(h.Trigger),
+					Order:      h.Order,
+					Name:       h.Name,
+				}
+
+				// Resolve content based on action type.
+				// New approach: use action_type + action_id.
+				if h.ActionType == workflow.HookActionTypeSkill && h.ActionID != "" {
+					if s.skillRepo != nil {
+						if sk, err := s.skillRepo.Get(ctx, h.ActionID); err == nil {
+							entry.Content = sk.Content
+						} else {
+							slog.Warn("failed to resolve hook skill", "hook_id", h.ID, "action_id", h.ActionID, "error", err)
+						}
+					}
+				} else if h.ActionType == workflow.HookActionTypeScript && h.ActionID != "" {
+					if s.scriptRepo != nil {
+						if sc, err := s.scriptRepo.Get(ctx, h.ActionID); err == nil {
+							entry.Content = sc.Content
+						} else {
+							slog.Warn("failed to resolve hook script", "hook_id", h.ID, "action_id", h.ActionID, "error", err)
+						}
+					}
+				} else if h.SkillID != "" {
+					// Legacy: use skill_id directly.
+					if s.skillRepo != nil {
+						if sk, err := s.skillRepo.Get(ctx, h.SkillID); err == nil {
+							entry.Content = sk.Content
+						} else {
+							slog.Warn("failed to resolve hook skill", "hook_id", h.ID, "skill_id", h.SkillID, "error", err)
+						}
+					}
+				}
+
+				hooks = append(hooks, entry)
+			}
+			if len(hooks) > 0 {
+				if b, err := json.Marshal(hooks); err == nil {
+					enrichedMetadata["_hooks"] = string(b)
+				}
+			}
+			break
 		}
 	}
 
@@ -865,6 +899,128 @@ func (s *Server) ReportGitPullMainResult(ctx context.Context, req *connect.Reque
 	)
 
 	return connect.NewResponse(&taskguildv1.ReportGitPullMainResultResponse{}), nil
+}
+
+// --- Script sync & execution RPCs ---
+
+func (s *Server) SyncScripts(ctx context.Context, req *connect.Request[taskguildv1.SyncScriptsRequest]) (*connect.Response[taskguildv1.SyncScriptsResponse], error) {
+	projectName := req.Msg.ProjectName
+	if projectName == "" {
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+	}
+
+	proj, err := s.projectRepo.FindByName(ctx, projectName)
+	if err != nil {
+		return nil, cerr.ExtractConnectError(ctx, err)
+	}
+
+	scripts, _, err := s.scriptRepo.List(ctx, proj.ID, 1000, 0)
+	if err != nil {
+		return nil, cerr.ExtractConnectError(ctx, err)
+	}
+
+	protos := make([]*taskguildv1.ScriptDefinition, len(scripts))
+	for i, sc := range scripts {
+		protos[i] = scriptToProto(sc)
+	}
+
+	return connect.NewResponse(&taskguildv1.SyncScriptsResponse{
+		Scripts: protos,
+	}), nil
+}
+
+func (s *Server) ReportScriptExecutionResult(ctx context.Context, req *connect.Request[taskguildv1.ReportScriptExecutionResultRequest]) (*connect.Response[taskguildv1.ReportScriptExecutionResultResponse], error) {
+	projectName := req.Msg.ProjectName
+	if projectName == "" {
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+	}
+
+	proj, err := s.projectRepo.FindByName(ctx, projectName)
+	if err != nil {
+		return nil, cerr.ExtractConnectError(ctx, err)
+	}
+
+	// Store result for polling.
+	if s.scriptResultStore != nil {
+		s.scriptResultStore.StoreResult(req.Msg.RequestId, &taskguildv1.GetScriptExecutionResultResponse{
+			Completed:    true,
+			Success:      req.Msg.Success,
+			ExitCode:     req.Msg.ExitCode,
+			Stdout:       req.Msg.Stdout,
+			Stderr:       req.Msg.Stderr,
+			ErrorMessage: req.Msg.ErrorMessage,
+		})
+	}
+
+	// Publish event so frontend can pick up the result.
+	s.eventBus.PublishNew(
+		taskguildv1.EventType_EVENT_TYPE_SCRIPT_EXECUTION_RESULT,
+		req.Msg.RequestId,
+		"",
+		map[string]string{
+			"project_id":    proj.ID,
+			"request_id":    req.Msg.RequestId,
+			"script_id":     req.Msg.ScriptId,
+			"success":       fmt.Sprintf("%v", req.Msg.Success),
+			"exit_code":     fmt.Sprintf("%d", req.Msg.ExitCode),
+			"error_message": req.Msg.ErrorMessage,
+		},
+	)
+
+	slog.Info("script execution result reported",
+		"project_id", proj.ID,
+		"script_id", req.Msg.ScriptId,
+		"success", req.Msg.Success,
+		"exit_code", req.Msg.ExitCode,
+		"request_id", req.Msg.RequestId,
+	)
+
+	return connect.NewResponse(&taskguildv1.ReportScriptExecutionResultResponse{}), nil
+}
+
+// RequestScriptExecution sends an ExecuteScriptCommand to connected agent-managers
+// for the project and returns a request_id.
+func (s *Server) RequestScriptExecution(projectID string, sc *script.Script) (string, error) {
+	proj, err := s.projectRepo.Get(context.Background(), projectID)
+	if err != nil {
+		return "", fmt.Errorf("failed to look up project: %w", err)
+	}
+
+	requestID := ulid.Make().String()
+
+	s.registry.BroadcastCommandToProject(proj.Name, &taskguildv1.AgentCommand{
+		Command: &taskguildv1.AgentCommand_ExecuteScript{
+			ExecuteScript: &taskguildv1.ExecuteScriptCommand{
+				RequestId: requestID,
+				ScriptId:  sc.ID,
+				Filename:  sc.Filename,
+				Content:   sc.Content,
+			},
+		},
+	})
+
+	slog.Info("script execution requested",
+		"project_id", projectID,
+		"project_name", proj.Name,
+		"script_id", sc.ID,
+		"request_id", requestID,
+	)
+
+	return requestID, nil
+}
+
+func scriptToProto(s *script.Script) *taskguildv1.ScriptDefinition {
+	return &taskguildv1.ScriptDefinition{
+		Id:          s.ID,
+		ProjectId:   s.ProjectID,
+		Name:        s.Name,
+		Description: s.Description,
+		Filename:    s.Filename,
+		Content:     s.Content,
+		IsSynced:    s.IsSynced,
+		CreatedAt:   timestamppb.New(s.CreatedAt),
+		UpdatedAt:   timestamppb.New(s.UpdatedAt),
+	}
 }
 
 func interactionToProto(i *interaction.Interaction) *taskguildv1.Interaction {

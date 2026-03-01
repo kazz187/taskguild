@@ -84,6 +84,12 @@ const (
 	// AgentManagerServiceReportGitPullMainResultProcedure is the fully-qualified name of the
 	// AgentManagerService's ReportGitPullMainResult RPC.
 	AgentManagerServiceReportGitPullMainResultProcedure = "/taskguild.v1.AgentManagerService/ReportGitPullMainResult"
+	// AgentManagerServiceSyncScriptsProcedure is the fully-qualified name of the AgentManagerService's
+	// SyncScripts RPC.
+	AgentManagerServiceSyncScriptsProcedure = "/taskguild.v1.AgentManagerService/SyncScripts"
+	// AgentManagerServiceReportScriptExecutionResultProcedure is the fully-qualified name of the
+	// AgentManagerService's ReportScriptExecutionResult RPC.
+	AgentManagerServiceReportScriptExecutionResultProcedure = "/taskguild.v1.AgentManagerService/ReportScriptExecutionResult"
 )
 
 // AgentManagerServiceClient is a client for the taskguild.v1.AgentManagerService service.
@@ -124,6 +130,11 @@ type AgentManagerServiceClient interface {
 	RequestGitPullMain(context.Context, *connect.Request[v1.RequestGitPullMainRequest]) (*connect.Response[v1.RequestGitPullMainResponse], error)
 	// ReportGitPullMainResult reports the outcome of a git pull origin main from the agent.
 	ReportGitPullMainResult(context.Context, *connect.Request[v1.ReportGitPullMainResultRequest]) (*connect.Response[v1.ReportGitPullMainResultResponse], error)
+	// SyncScripts returns all script definitions for a project so the agent can
+	// write them as .claude/scripts/* files locally.
+	SyncScripts(context.Context, *connect.Request[v1.SyncScriptsRequest]) (*connect.Response[v1.SyncScriptsResponse], error)
+	// ReportScriptExecutionResult reports the outcome of a script execution from the agent.
+	ReportScriptExecutionResult(context.Context, *connect.Request[v1.ReportScriptExecutionResultRequest]) (*connect.Response[v1.ReportScriptExecutionResultResponse], error)
 }
 
 // NewAgentManagerServiceClient constructs a client for the taskguild.v1.AgentManagerService
@@ -239,28 +250,42 @@ func NewAgentManagerServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(agentManagerServiceMethods.ByName("ReportGitPullMainResult")),
 			connect.WithClientOptions(opts...),
 		),
+		syncScripts: connect.NewClient[v1.SyncScriptsRequest, v1.SyncScriptsResponse](
+			httpClient,
+			baseURL+AgentManagerServiceSyncScriptsProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("SyncScripts")),
+			connect.WithClientOptions(opts...),
+		),
+		reportScriptExecutionResult: connect.NewClient[v1.ReportScriptExecutionResultRequest, v1.ReportScriptExecutionResultResponse](
+			httpClient,
+			baseURL+AgentManagerServiceReportScriptExecutionResultProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("ReportScriptExecutionResult")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // agentManagerServiceClient implements AgentManagerServiceClient.
 type agentManagerServiceClient struct {
-	subscribe                  *connect.Client[v1.AgentManagerSubscribeRequest, v1.AgentCommand]
-	claimTask                  *connect.Client[v1.ClaimTaskRequest, v1.ClaimTaskResponse]
-	reportTaskResult           *connect.Client[v1.ReportTaskResultRequest, v1.ReportTaskResultResponse]
-	reportAgentStatus          *connect.Client[v1.ReportAgentStatusRequest, v1.ReportAgentStatusResponse]
-	heartbeat                  *connect.Client[v1.HeartbeatRequest, v1.HeartbeatResponse]
-	createInteraction          *connect.Client[v1.CreateInteractionRequest, v1.CreateInteractionResponse]
-	getInteractionResponse     *connect.Client[v1.GetInteractionResponseRequest, v1.GetInteractionResponseResponse]
-	syncAgents                 *connect.Client[v1.SyncAgentsRequest, v1.SyncAgentsResponse]
-	reportTaskLog              *connect.Client[v1.ReportTaskLogRequest, v1.ReportTaskLogResponse]
-	syncPermissions            *connect.Client[v1.SyncPermissionsRequest, v1.SyncPermissionsResponse]
-	reportWorktreeList         *connect.Client[v1.ReportWorktreeListRequest, v1.ReportWorktreeListResponse]
-	requestWorktreeList        *connect.Client[v1.RequestWorktreeListRequest, v1.RequestWorktreeListResponse]
-	getWorktreeList            *connect.Client[v1.GetWorktreeListRequest, v1.GetWorktreeListResponse]
-	requestWorktreeDelete      *connect.Client[v1.RequestWorktreeDeleteRequest, v1.RequestWorktreeDeleteResponse]
-	reportWorktreeDeleteResult *connect.Client[v1.ReportWorktreeDeleteResultRequest, v1.ReportWorktreeDeleteResultResponse]
-	requestGitPullMain         *connect.Client[v1.RequestGitPullMainRequest, v1.RequestGitPullMainResponse]
-	reportGitPullMainResult    *connect.Client[v1.ReportGitPullMainResultRequest, v1.ReportGitPullMainResultResponse]
+	subscribe                   *connect.Client[v1.AgentManagerSubscribeRequest, v1.AgentCommand]
+	claimTask                   *connect.Client[v1.ClaimTaskRequest, v1.ClaimTaskResponse]
+	reportTaskResult            *connect.Client[v1.ReportTaskResultRequest, v1.ReportTaskResultResponse]
+	reportAgentStatus           *connect.Client[v1.ReportAgentStatusRequest, v1.ReportAgentStatusResponse]
+	heartbeat                   *connect.Client[v1.HeartbeatRequest, v1.HeartbeatResponse]
+	createInteraction           *connect.Client[v1.CreateInteractionRequest, v1.CreateInteractionResponse]
+	getInteractionResponse      *connect.Client[v1.GetInteractionResponseRequest, v1.GetInteractionResponseResponse]
+	syncAgents                  *connect.Client[v1.SyncAgentsRequest, v1.SyncAgentsResponse]
+	reportTaskLog               *connect.Client[v1.ReportTaskLogRequest, v1.ReportTaskLogResponse]
+	syncPermissions             *connect.Client[v1.SyncPermissionsRequest, v1.SyncPermissionsResponse]
+	reportWorktreeList          *connect.Client[v1.ReportWorktreeListRequest, v1.ReportWorktreeListResponse]
+	requestWorktreeList         *connect.Client[v1.RequestWorktreeListRequest, v1.RequestWorktreeListResponse]
+	getWorktreeList             *connect.Client[v1.GetWorktreeListRequest, v1.GetWorktreeListResponse]
+	requestWorktreeDelete       *connect.Client[v1.RequestWorktreeDeleteRequest, v1.RequestWorktreeDeleteResponse]
+	reportWorktreeDeleteResult  *connect.Client[v1.ReportWorktreeDeleteResultRequest, v1.ReportWorktreeDeleteResultResponse]
+	requestGitPullMain          *connect.Client[v1.RequestGitPullMainRequest, v1.RequestGitPullMainResponse]
+	reportGitPullMainResult     *connect.Client[v1.ReportGitPullMainResultRequest, v1.ReportGitPullMainResultResponse]
+	syncScripts                 *connect.Client[v1.SyncScriptsRequest, v1.SyncScriptsResponse]
+	reportScriptExecutionResult *connect.Client[v1.ReportScriptExecutionResultRequest, v1.ReportScriptExecutionResultResponse]
 }
 
 // Subscribe calls taskguild.v1.AgentManagerService.Subscribe.
@@ -348,6 +373,16 @@ func (c *agentManagerServiceClient) ReportGitPullMainResult(ctx context.Context,
 	return c.reportGitPullMainResult.CallUnary(ctx, req)
 }
 
+// SyncScripts calls taskguild.v1.AgentManagerService.SyncScripts.
+func (c *agentManagerServiceClient) SyncScripts(ctx context.Context, req *connect.Request[v1.SyncScriptsRequest]) (*connect.Response[v1.SyncScriptsResponse], error) {
+	return c.syncScripts.CallUnary(ctx, req)
+}
+
+// ReportScriptExecutionResult calls taskguild.v1.AgentManagerService.ReportScriptExecutionResult.
+func (c *agentManagerServiceClient) ReportScriptExecutionResult(ctx context.Context, req *connect.Request[v1.ReportScriptExecutionResultRequest]) (*connect.Response[v1.ReportScriptExecutionResultResponse], error) {
+	return c.reportScriptExecutionResult.CallUnary(ctx, req)
+}
+
 // AgentManagerServiceHandler is an implementation of the taskguild.v1.AgentManagerService service.
 type AgentManagerServiceHandler interface {
 	// Subscribe opens a server-stream for receiving commands from the backend.
@@ -386,6 +421,11 @@ type AgentManagerServiceHandler interface {
 	RequestGitPullMain(context.Context, *connect.Request[v1.RequestGitPullMainRequest]) (*connect.Response[v1.RequestGitPullMainResponse], error)
 	// ReportGitPullMainResult reports the outcome of a git pull origin main from the agent.
 	ReportGitPullMainResult(context.Context, *connect.Request[v1.ReportGitPullMainResultRequest]) (*connect.Response[v1.ReportGitPullMainResultResponse], error)
+	// SyncScripts returns all script definitions for a project so the agent can
+	// write them as .claude/scripts/* files locally.
+	SyncScripts(context.Context, *connect.Request[v1.SyncScriptsRequest]) (*connect.Response[v1.SyncScriptsResponse], error)
+	// ReportScriptExecutionResult reports the outcome of a script execution from the agent.
+	ReportScriptExecutionResult(context.Context, *connect.Request[v1.ReportScriptExecutionResultRequest]) (*connect.Response[v1.ReportScriptExecutionResultResponse], error)
 }
 
 // NewAgentManagerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -497,6 +537,18 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 		connect.WithSchema(agentManagerServiceMethods.ByName("ReportGitPullMainResult")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentManagerServiceSyncScriptsHandler := connect.NewUnaryHandler(
+		AgentManagerServiceSyncScriptsProcedure,
+		svc.SyncScripts,
+		connect.WithSchema(agentManagerServiceMethods.ByName("SyncScripts")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentManagerServiceReportScriptExecutionResultHandler := connect.NewUnaryHandler(
+		AgentManagerServiceReportScriptExecutionResultProcedure,
+		svc.ReportScriptExecutionResult,
+		connect.WithSchema(agentManagerServiceMethods.ByName("ReportScriptExecutionResult")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/taskguild.v1.AgentManagerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AgentManagerServiceSubscribeProcedure:
@@ -533,6 +585,10 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 			agentManagerServiceRequestGitPullMainHandler.ServeHTTP(w, r)
 		case AgentManagerServiceReportGitPullMainResultProcedure:
 			agentManagerServiceReportGitPullMainResultHandler.ServeHTTP(w, r)
+		case AgentManagerServiceSyncScriptsProcedure:
+			agentManagerServiceSyncScriptsHandler.ServeHTTP(w, r)
+		case AgentManagerServiceReportScriptExecutionResultProcedure:
+			agentManagerServiceReportScriptExecutionResultHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -608,4 +664,12 @@ func (UnimplementedAgentManagerServiceHandler) RequestGitPullMain(context.Contex
 
 func (UnimplementedAgentManagerServiceHandler) ReportGitPullMainResult(context.Context, *connect.Request[v1.ReportGitPullMainResultRequest]) (*connect.Response[v1.ReportGitPullMainResultResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportGitPullMainResult is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) SyncScripts(context.Context, *connect.Request[v1.SyncScriptsRequest]) (*connect.Response[v1.SyncScriptsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.SyncScripts is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) ReportScriptExecutionResult(context.Context, *connect.Request[v1.ReportScriptExecutionResultRequest]) (*connect.Response[v1.ReportScriptExecutionResultResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportScriptExecutionResult is not implemented"))
 }

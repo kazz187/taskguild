@@ -3,14 +3,17 @@ import { useMutation, useQuery } from '@connectrpc/connect-query'
 import { createWorkflow, updateWorkflow } from '@taskguild/proto/taskguild/v1/workflow-WorkflowService_connectquery.ts'
 import { listAgents } from '@taskguild/proto/taskguild/v1/agent-AgentService_connectquery.ts'
 import { listSkills } from '@taskguild/proto/taskguild/v1/skill-SkillService_connectquery.ts'
+import { listScripts } from '@taskguild/proto/taskguild/v1/script-ScriptService_connectquery.ts'
 import type { Workflow } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
-import { HookTrigger } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
+import { HookTrigger, HookActionType } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { X, Plus, Trash2, Bot, ChevronUp, ChevronDown, Zap } from 'lucide-react'
 
 interface HookDraft {
   key: string
   id: string
-  skillId: string
+  skillId: string // legacy: kept for backward compat
+  actionType: HookActionType
+  actionId: string
   trigger: HookTrigger
   order: number
   name: string
@@ -60,6 +63,8 @@ function workflowToDrafts(wf: Workflow) {
         key: genKey(),
         id: h.id,
         skillId: h.skillId,
+        actionType: h.actionType || (h.skillId ? HookActionType.SKILL : HookActionType.UNSPECIFIED),
+        actionId: h.actionId || h.skillId || '',
         trigger: h.trigger,
         order: h.order,
         name: h.name,
@@ -141,6 +146,10 @@ export function WorkflowForm({
   const { data: skillsData } = useQuery(listSkills, { projectId })
   const skills = skillsData?.skills ?? []
 
+  // Fetch available scripts for the project.
+  const { data: scriptsData } = useQuery(listScripts, { projectId })
+  const scripts = scriptsData?.scripts ?? []
+
   const [validationError, setValidationError] = useState('')
 
   const createMutation = useMutation(createWorkflow)
@@ -159,6 +168,8 @@ export function WorkflowForm({
                   key: genKey(),
                   id: '',
                   skillId: '',
+                  actionType: HookActionType.SKILL,
+                  actionId: '',
                   trigger: HookTrigger.BEFORE_TASK_EXECUTION,
                   order: s.hooks.length,
                   name: '',
@@ -273,10 +284,12 @@ export function WorkflowForm({
       transitionsTo: s.transitionsTo.map((k) => keyToId.get(k)!).filter(Boolean),
       agentId: s.agentId,
       hooks: s.hooks
-        .filter((h) => h.skillId)
+        .filter((h) => h.actionId)
         .map((h) => ({
           id: h.id,
-          skillId: h.skillId,
+          skillId: h.actionType === HookActionType.SKILL ? h.actionId : '',
+          actionType: h.actionType,
+          actionId: h.actionId,
           trigger: h.trigger,
           order: h.order,
           name: h.name,
@@ -642,23 +655,62 @@ export function WorkflowForm({
                               <option value={HookTrigger.AFTER_WORKTREE_CREATION}>After Worktree</option>
                             </select>
                             <select
-                              value={h.skillId}
+                              value={h.actionType}
                               onChange={(e) => {
-                                const sk = skills.find((sk) => sk.id === e.target.value)
+                                const newType = Number(e.target.value) as HookActionType
                                 updateHook(s.key, h.key, {
-                                  skillId: e.target.value,
-                                  name: sk?.name ?? h.name,
+                                  actionType: newType,
+                                  actionId: '',
+                                  skillId: '',
+                                  name: '',
                                 })
                               }}
-                              className="flex-1 min-w-0 px-1.5 py-1 bg-slate-800 border border-slate-700 rounded text-white text-[11px] focus:outline-none focus:border-cyan-500"
+                              className="px-1.5 py-1 bg-slate-800 border border-slate-700 rounded text-white text-[11px] focus:outline-none focus:border-cyan-500"
                             >
-                              <option value="">Select skill…</option>
-                              {skills.map((sk) => (
-                                <option key={sk.id} value={sk.id}>
-                                  {sk.name}
-                                </option>
-                              ))}
+                              <option value={HookActionType.SKILL}>Skill</option>
+                              <option value={HookActionType.SCRIPT}>Script</option>
                             </select>
+                            {h.actionType === HookActionType.SCRIPT ? (
+                              <select
+                                value={h.actionId}
+                                onChange={(e) => {
+                                  const sc = scripts.find((sc) => sc.id === e.target.value)
+                                  updateHook(s.key, h.key, {
+                                    actionId: e.target.value,
+                                    skillId: '',
+                                    name: sc?.name ?? h.name,
+                                  })
+                                }}
+                                className="flex-1 min-w-0 px-1.5 py-1 bg-slate-800 border border-slate-700 rounded text-white text-[11px] focus:outline-none focus:border-cyan-500"
+                              >
+                                <option value="">Select script…</option>
+                                {scripts.map((sc) => (
+                                  <option key={sc.id} value={sc.id}>
+                                    {sc.name}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <select
+                                value={h.actionId}
+                                onChange={(e) => {
+                                  const sk = skills.find((sk) => sk.id === e.target.value)
+                                  updateHook(s.key, h.key, {
+                                    actionId: e.target.value,
+                                    skillId: e.target.value,
+                                    name: sk?.name ?? h.name,
+                                  })
+                                }}
+                                className="flex-1 min-w-0 px-1.5 py-1 bg-slate-800 border border-slate-700 rounded text-white text-[11px] focus:outline-none focus:border-cyan-500"
+                              >
+                                <option value="">Select skill…</option>
+                                {skills.map((sk) => (
+                                  <option key={sk.id} value={sk.id}>
+                                    {sk.name}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
                             <button
                               type="button"
                               onClick={() => removeHook(s.key, h.key)}
@@ -669,9 +721,9 @@ export function WorkflowForm({
                           </div>
                         ))}
                       </div>
-                      {skills.length === 0 && s.hooks.length > 0 && (
+                      {skills.length === 0 && scripts.length === 0 && s.hooks.length > 0 && (
                         <p className="mt-2 text-[11px] text-gray-600">
-                          No skills defined yet. Create skills in the Skills page first.
+                          No skills or scripts defined yet. Create them in the Skills or Scripts page first.
                         </p>
                       )}
                     </div>

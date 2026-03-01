@@ -20,6 +20,7 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/permission"
 	"github.com/kazz187/taskguild/backend/internal/project"
 	"github.com/kazz187/taskguild/backend/internal/pushnotification"
+	"github.com/kazz187/taskguild/backend/internal/script"
 	"github.com/kazz187/taskguild/backend/internal/skill"
 	"github.com/kazz187/taskguild/backend/internal/task"
 	"github.com/kazz187/taskguild/backend/internal/tasklog"
@@ -40,6 +41,7 @@ type Server struct {
 	agentManagerServer     *agentmanager.Server
 	agentServer            *agent.Server
 	skillServer            *skill.Server
+	scriptServer           *script.Server
 	eventServer            *event.Server
 	taskLogServer          *tasklog.Server
 	pushNotificationServer *pushnotification.Server
@@ -55,6 +57,7 @@ func NewServer(
 	agentManagerServer *agentmanager.Server,
 	agentServer *agent.Server,
 	skillServer *skill.Server,
+	scriptServer *script.Server,
 	eventServer *event.Server,
 	taskLogServer *tasklog.Server,
 	pushNotificationServer *pushnotification.Server,
@@ -69,6 +72,7 @@ func NewServer(
 		agentManagerServer:     agentManagerServer,
 		agentServer:            agentServer,
 		skillServer:            skillServer,
+		scriptServer:           scriptServer,
 		eventServer:            eventServer,
 		taskLogServer:          taskLogServer,
 		pushNotificationServer: pushNotificationServer,
@@ -108,6 +112,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	mux.Handle(taskguildv1connect.NewAgentManagerServiceHandler(s.agentManagerServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewAgentServiceHandler(s.agentServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewSkillServiceHandler(s.skillServer, handlerOpts))
+	mux.Handle(taskguildv1connect.NewScriptServiceHandler(s.scriptServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewEventServiceHandler(s.eventServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewTaskLogServiceHandler(s.taskLogServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewPushNotificationServiceHandler(s.pushNotificationServer, handlerOpts))

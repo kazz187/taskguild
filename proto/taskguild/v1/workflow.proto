@@ -43,12 +43,20 @@ enum HookTrigger {
   HOOK_TRIGGER_AFTER_WORKTREE_CREATION = 3;
 }
 
+enum HookActionType {
+  HOOK_ACTION_TYPE_UNSPECIFIED = 0;
+  HOOK_ACTION_TYPE_SKILL = 1;
+  HOOK_ACTION_TYPE_SCRIPT = 2;
+}
+
 message StatusHook {
   string id = 1;
-  string skill_id = 2;
+  string skill_id = 2;           // deprecated: use action_type + action_id instead
   HookTrigger trigger = 3;
   int32 order = 4;
   string name = 5;
+  HookActionType action_type = 6; // type of action (skill or script)
+  string action_id = 7;           // ID of the Skill or Script to execute
 }
 
 // WorkflowStatus defines a custom status in a workflow.

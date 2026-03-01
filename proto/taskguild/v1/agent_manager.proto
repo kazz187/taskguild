@@ -6,6 +6,7 @@ import "google/protobuf/timestamp.proto";
 import "taskguild/v1/agent.proto";
 import "taskguild/v1/interaction.proto";
 import "taskguild/v1/permission.proto";
+import "taskguild/v1/script.proto";
 import "taskguild/v1/task_log.proto";
 
 // AgentManagerService is the bidirectional communication channel between
@@ -47,6 +48,11 @@ service AgentManagerService {
   rpc RequestGitPullMain(RequestGitPullMainRequest) returns (RequestGitPullMainResponse);
   // ReportGitPullMainResult reports the outcome of a git pull origin main from the agent.
   rpc ReportGitPullMainResult(ReportGitPullMainResultRequest) returns (ReportGitPullMainResultResponse);
+  // SyncScripts returns all script definitions for a project so the agent can
+  // write them as .claude/scripts/* files locally.
+  rpc SyncScripts(SyncScriptsRequest) returns (SyncScriptsResponse);
+  // ReportScriptExecutionResult reports the outcome of a script execution from the agent.
+  rpc ReportScriptExecutionResult(ReportScriptExecutionResultRequest) returns (ReportScriptExecutionResultResponse);
 }
 
 // --- Subscribe stream ---
@@ -68,6 +74,8 @@ message AgentCommand {
     ListWorktreesCommand list_worktrees = 7;
     DeleteWorktreeCommand delete_worktree = 8;
     GitPullMainCommand git_pull_main = 9;
+    SyncScriptsCommand sync_scripts = 10;
+    ExecuteScriptCommand execute_script = 11;
   }
 }
 
@@ -292,3 +300,35 @@ message ReportGitPullMainResultRequest {
   string error_message = 5;  // error description if failed
 }
 message ReportGitPullMainResultResponse {}
+
+// --- Script sync & execution ---
+
+// SyncScriptsCommand tells the agent to re-sync its local .claude/scripts/* files.
+message SyncScriptsCommand {}
+
+// ExecuteScriptCommand tells the agent to execute a specific script.
+message ExecuteScriptCommand {
+  string request_id = 1;
+  string script_id = 2;
+  string filename = 3;    // script filename (e.g. deploy.sh)
+  string content = 4;     // script content to execute
+}
+
+message SyncScriptsRequest {
+  string project_name = 1;
+}
+message SyncScriptsResponse {
+  repeated ScriptDefinition scripts = 1;
+}
+
+message ReportScriptExecutionResultRequest {
+  string request_id = 1;
+  string project_name = 2;
+  string script_id = 3;
+  bool success = 4;           // true if exit code == 0
+  int32 exit_code = 5;
+  string stdout = 6;
+  string stderr = 7;
+  string error_message = 8;   // error description if execution failed to start
+}
+message ReportScriptExecutionResultResponse {}
