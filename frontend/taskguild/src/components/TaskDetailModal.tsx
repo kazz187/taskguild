@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { getTask, updateTask, updateTaskStatus, deleteTask } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import { requestWorktreeList, getWorktreeList } from '@taskguild/proto/taskguild/v1/agent_manager-AgentManagerService_connectquery.ts'
@@ -151,12 +151,23 @@ export function TaskDetailModal({
     )
   }
 
-  const handleRespond = (interactionId: string, response: string) => {
+  // Synchronous guard to prevent duplicate responses (survives across renders before mutation state propagates)
+  const respondedIdsRef = useRef<Set<string>>(new Set())
+
+  const handleRespond = useCallback((interactionId: string, response: string) => {
+    if (respondedIdsRef.current.has(interactionId)) return
+    respondedIdsRef.current.add(interactionId)
     respondMut.mutate(
       { id: interactionId, response },
-      { onSuccess: () => refetchInteractions() },
+      {
+        onSuccess: () => refetchInteractions(),
+        onError: () => {
+          // Allow retry on failure
+          respondedIdsRef.current.delete(interactionId)
+        },
+      },
     )
-  }
+  }, [respondMut, refetchInteractions])
 
   if (!task) {
     return (

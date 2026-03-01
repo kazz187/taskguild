@@ -134,12 +134,23 @@ function TaskDetailPage() {
     )
   }
 
-  const handleRespond = (interactionId: string, response: string) => {
+  // Synchronous guard to prevent duplicate responses (survives across renders before mutation state propagates)
+  const respondedIdsRef = useRef<Set<string>>(new Set())
+
+  const handleRespond = useCallback((interactionId: string, response: string) => {
+    if (respondedIdsRef.current.has(interactionId)) return
+    respondedIdsRef.current.add(interactionId)
     respondMut.mutate(
       { id: interactionId, response },
-      { onSuccess: () => refetchInteractions() },
+      {
+        onSuccess: () => refetchInteractions(),
+        onError: () => {
+          // Allow retry on failure
+          respondedIdsRef.current.delete(interactionId)
+        },
+      },
     )
-  }
+  }, [respondMut, refetchInteractions])
 
   const handleSendMessage = (message: string) => {
     sendMut.mutate(
