@@ -668,18 +668,24 @@ func runTask(
 		}
 
 		// Check completion: NEXT_STATUS present means task is done.
-		if parseNextStatus(summary) != "" {
-			log.Printf("[task:%s] completed with NEXT_STATUS (turn %d)", taskID, turn)
+		nextStatusID := parseNextStatus(summary)
+		if nextStatusID != "" {
+			displaySummary := stripNextStatus(summary)
+			log.Printf("[task:%s] completed with NEXT_STATUS %q (turn %d)", taskID, nextStatusID, turn)
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Task completed with status transition (turn %d)", turn),
-				map[string]string{"next_status": parseNextStatus(summary)})
-			reportTaskResult(ctx, client, taskID, summary, "")
+				map[string]string{"next_status": nextStatusID})
+			reportTaskResult(ctx, client, taskID, displaySummary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed")
 			// Run after hooks before transitioning status so that hooks
 			// still observe the current status and the transition happens
 			// only after all hooks complete.
 			afterHooks()
-			handleStatusTransition(ctx, taskClient, taskID, summary, metadata)
+			if err := handleStatusTransition(ctx, taskClient, taskID, nextStatusID, metadata, tl); err != nil {
+				log.Printf("[task:%s] status transition failed: %v", taskID, err)
+				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
+					fmt.Sprintf("Status transition to %q failed: %v", nextStatusID, err), nil)
+			}
 			return
 		}
 
@@ -1045,6 +1051,20 @@ func parseNextStatus(resultText string) string {
 	return ""
 }
 
+// stripNextStatus removes all "NEXT_STATUS: ..." lines from the result text
+// so that the control directive does not appear in the stored result_summary.
+func stripNextStatus(resultText string) string {
+	lines := strings.Split(resultText, "\n")
+	var filtered []string
+	for _, line := range lines {
+		if strings.HasPrefix(strings.TrimSpace(line), "NEXT_STATUS:") {
+			continue
+		}
+		filtered = append(filtered, line)
+	}
+	return strings.TrimSpace(strings.Join(filtered, "\n"))
+}
+
 // parseTaskDescription extracts a task description update from the result text.
 // The description is enclosed between TASK_DESCRIPTION_START and TASK_DESCRIPTION_END markers.
 // Returns the extracted description (trimmed) or empty string if no markers found.
@@ -1097,17 +1117,22 @@ func stripTaskDescription(resultText string) string {
 	return strings.TrimSpace(resultText[:lineStart] + resultText[fullEndIdx:])
 }
 
-// handleStatusTransition parses the agent result and transitions the task status.
+// handleStatusTransition validates and executes a task status transition.
+// nextStatusID is the pre-parsed target status ID (from parseNextStatus).
+// When nextStatusID is empty, auto-transition is attempted if exactly one
+// transition is available.  Errors are returned so the caller can log them
+// to the task logger for user visibility.
 func handleStatusTransition(
 	ctx context.Context,
 	taskClient taskguildv1connect.TaskServiceClient,
 	taskID string,
-	resultText string,
+	nextStatusID string,
 	metadata map[string]string,
-) {
+	tl *taskLogger,
+) error {
 	transitionsJSON := metadata["_available_transitions"]
 	if transitionsJSON == "" {
-		return
+		return fmt.Errorf("no available transitions in metadata")
 	}
 
 	type transitionEntry struct {
@@ -1115,20 +1140,26 @@ func handleStatusTransition(
 		Name string `json:"name"`
 	}
 	var transitions []transitionEntry
-	if err := json.Unmarshal([]byte(transitionsJSON), &transitions); err != nil || len(transitions) == 0 {
-		return
+	if err := json.Unmarshal([]byte(transitionsJSON), &transitions); err != nil {
+		return fmt.Errorf("failed to parse available transitions: %w", err)
 	}
-
-	nextStatusID := parseNextStatus(resultText)
+	if len(transitions) == 0 {
+		return fmt.Errorf("available transitions list is empty")
+	}
 
 	if nextStatusID == "" {
 		// Auto-transition if exactly one transition is available.
 		if len(transitions) == 1 {
 			nextStatusID = transitions[0].ID
 			log.Printf("[task:%s] no NEXT_STATUS found, auto-transitioning to %s (%s)", taskID, nextStatusID, transitions[0].Name)
+			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+				fmt.Sprintf("Auto-transitioning to %s (%s)", nextStatusID, transitions[0].Name), nil)
 		} else {
-			log.Printf("[task:%s] WARNING: no NEXT_STATUS found and %d transitions available, skipping transition", taskID, len(transitions))
-			return
+			var ids []string
+			for _, t := range transitions {
+				ids = append(ids, t.ID)
+			}
+			return fmt.Errorf("no NEXT_STATUS found and %d transitions available (%s), cannot auto-transition", len(transitions), strings.Join(ids, ", "))
 		}
 	} else {
 		// Validate the chosen status is in available transitions.
@@ -1140,8 +1171,11 @@ func handleStatusTransition(
 			}
 		}
 		if !valid {
-			log.Printf("[task:%s] WARNING: NEXT_STATUS %q is not a valid transition, skipping", taskID, nextStatusID)
-			return
+			var ids []string
+			for _, t := range transitions {
+				ids = append(ids, t.ID)
+			}
+			return fmt.Errorf("NEXT_STATUS %q is not a valid transition (available: %s)", nextStatusID, strings.Join(ids, ", "))
 		}
 	}
 
@@ -1150,10 +1184,13 @@ func handleStatusTransition(
 		StatusId: nextStatusID,
 	}))
 	if err != nil {
-		log.Printf("[task:%s] failed to transition status to %s: %v", taskID, nextStatusID, err)
-		return
+		return fmt.Errorf("UpdateTaskStatus RPC failed for %s: %w", nextStatusID, err)
 	}
+
 	log.Printf("[task:%s] status transitioned to %s", taskID, nextStatusID)
+	tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+		fmt.Sprintf("Status transitioned to %s", nextStatusID), nil)
+	return nil
 }
 
 func saveSessionID(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, sessionID string) {
