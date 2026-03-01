@@ -278,7 +278,7 @@ function TextSegment({ content }: { content: string }) {
   )
 }
 
-/* ─── Code block renderers (unchanged) ─── */
+/* ─── Code block renderers ─── */
 
 function DiffLine({ line }: { line: string }) {
   if (line.startsWith('+')) {
@@ -293,8 +293,239 @@ function DiffLine({ line }: { line: string }) {
   return <span>{line}</span>
 }
 
+/* ─── Bash syntax highlighting ─── */
+
+type BashTokenType =
+  | 'command'
+  | 'keyword'
+  | 'operator'
+  | 'string'
+  | 'variable'
+  | 'redirect'
+  | 'flag'
+  | 'comment'
+  | 'continuation'
+  | 'text'
+
+interface BashToken {
+  type: BashTokenType
+  value: string
+}
+
+const BASH_KEYWORDS = new Set([
+  'if', 'then', 'else', 'elif', 'fi',
+  'for', 'in', 'do', 'done',
+  'while', 'until',
+  'case', 'esac',
+  'select',
+  'function',
+  'time',
+  'coproc',
+])
+
+const bashTokenStyles: Record<BashTokenType, string> = {
+  command: 'text-green-400',
+  keyword: 'text-blue-400 font-bold',
+  operator: 'text-yellow-300 font-bold',
+  string: 'text-cyan-300',
+  variable: 'text-purple-400',
+  redirect: 'text-red-400',
+  flag: 'text-blue-300',
+  comment: 'text-gray-500',
+  continuation: 'text-gray-600',
+  text: '',
+}
+
+/**
+ * Tokenize a single line of bash for syntax highlighting.
+ *
+ * This is a lightweight, regex-based tokenizer designed for visual
+ * highlighting only — not full syntax analysis. It handles the most
+ * common patterns found in formatted shell one-liners.
+ */
+export function tokenizeBashLine(line: string): BashToken[] {
+  const tokens: BashToken[] = []
+  let pos = 0
+  // Track whether we've seen the "command" position on this line.
+  // After an operator (&&, ||, |), the next word is a command.
+  let expectCommand = true
+
+  function pushToken(type: BashTokenType, value: string) {
+    if (value) {
+      tokens.push({ type, value })
+    }
+  }
+
+  function remaining() {
+    return line.slice(pos)
+  }
+
+  function matchAt(re: RegExp): RegExpMatchArray | null {
+    const m = remaining().match(re)
+    return m
+  }
+
+  while (pos < line.length) {
+    const rest = remaining()
+
+    // Leading whitespace
+    const wsMatch = rest.match(/^(\s+)/)
+    if (wsMatch) {
+      pushToken('text', wsMatch[1])
+      pos += wsMatch[1].length
+      continue
+    }
+
+    // Trailing backslash continuation
+    if (rest === '\\' || rest.match(/^\\$/)) {
+      pushToken('continuation', '\\')
+      pos += 1
+      continue
+    }
+
+    // Comment (# to end of line, but not inside a word like $#)
+    if (rest[0] === '#' && (pos === 0 || /\s/.test(line[pos - 1]))) {
+      pushToken('comment', rest)
+      pos = line.length
+      continue
+    }
+
+    // Double-quoted string (handle escapes and nested $)
+    if (rest[0] === '"') {
+      let end = 1
+      while (end < rest.length && rest[end] !== '"') {
+        if (rest[end] === '\\') end++ // skip escaped char
+        end++
+      }
+      if (end < rest.length) end++ // include closing quote
+      pushToken('string', rest.slice(0, end))
+      pos += end
+      expectCommand = false
+      continue
+    }
+
+    // Single-quoted string
+    if (rest[0] === "'") {
+      let end = 1
+      while (end < rest.length && rest[end] !== "'") {
+        end++
+      }
+      if (end < rest.length) end++ // include closing quote
+      pushToken('string', rest.slice(0, end))
+      pos += end
+      expectCommand = false
+      continue
+    }
+
+    // $'...' ANSI-C quoting
+    if (rest.startsWith("$'")) {
+      let end = 2
+      while (end < rest.length && rest[end] !== "'") {
+        if (rest[end] === '\\') end++
+        end++
+      }
+      if (end < rest.length) end++
+      pushToken('string', rest.slice(0, end))
+      pos += end
+      expectCommand = false
+      continue
+    }
+
+    // Variable / parameter expansion ($VAR, ${...}, $(...), $((...))).
+    // Also handles $? $! $# $$ $@ $* $0-$9.
+    const varMatch = matchAt(/^\$(?:\(\(.*?\)\)|\([^)]*\)|\{[^}]*\}|[A-Za-z_]\w*|[?!#$@*0-9])/)
+    if (varMatch) {
+      pushToken('variable', varMatch[0])
+      pos += varMatch[0].length
+      expectCommand = false
+      continue
+    }
+
+    // Operators: &&, ||, |&, |, ;; , ;&, ;;&, ;
+    const opMatch = matchAt(/^(?:&>&?|&&|\|\||;\;&|;;&|;\&|;;|\|&|\||;|&>|&)/)
+    if (opMatch) {
+      pushToken('operator', opMatch[0])
+      pos += opMatch[0].length
+      expectCommand = true
+      continue
+    }
+
+    // Redirections: >>, >&, <&, <<-, <<<, <<, <>, <(, >(, >, <
+    // Optionally preceded by a fd number
+    const redirMatch = matchAt(/^(?:\d*(?:>>>|>>|>&|<&|<<-|<<<|<<|<>|>\||<\(|>\(|>|<))/)
+    if (redirMatch) {
+      pushToken('redirect', redirMatch[0])
+      pos += redirMatch[0].length
+      expectCommand = false
+      continue
+    }
+
+    // Word boundary: read a word token (no whitespace, no special chars)
+    const wordMatch = matchAt(/^[^\s'"$|&;><\\#]+/)
+    if (wordMatch) {
+      const word = wordMatch[0]
+
+      if (BASH_KEYWORDS.has(word) && (expectCommand || isKeywordPosition(word))) {
+        pushToken('keyword', word)
+        // After certain keywords, next word is a command
+        expectCommand = word === 'then' || word === 'else' || word === 'elif' ||
+                         word === 'do' || word === 'in' || word === '!'
+      } else if (expectCommand) {
+        // Check for assignment (VAR=value)
+        if (word.includes('=') && /^[A-Za-z_]\w*=/.test(word)) {
+          pushToken('variable', word)
+          // Still expect command after assignment (ENV=val cmd)
+        } else {
+          pushToken('command', word)
+          expectCommand = false
+        }
+      } else if (word.match(/^-/)) {
+        pushToken('flag', word)
+      } else {
+        pushToken('text', word)
+      }
+      pos += word.length
+      continue
+    }
+
+    // Fallback: single character
+    pushToken('text', rest[0])
+    pos += 1
+  }
+
+  return tokens
+}
+
+/** Check if a word is in a keyword position (start of statement). */
+function isKeywordPosition(word: string): boolean {
+  // Standalone keywords that can appear at various positions
+  return word === 'fi' || word === 'done' || word === 'esac' ||
+         word === 'else' || word === 'elif' || word === 'then' ||
+         word === 'do' || word === 'in'
+}
+
+function BashLine({ line }: { line: string }) {
+  const tokens = tokenizeBashLine(line)
+  return (
+    <>
+      {tokens.map((token, i) => {
+        const className = bashTokenStyles[token.type]
+        if (!className) {
+          return <span key={i}>{token.value}</span>
+        }
+        return (
+          <span key={i} className={className}>
+            {token.value}
+          </span>
+        )
+      })}
+    </>
+  )
+}
+
 function CodeBlock({ language, content }: { language: string; content: string }) {
   const isDiff = language === 'diff'
+  const isBash = language === 'bash' || language === 'sh'
 
   return (
     <pre className="bg-slate-900 border border-slate-700 rounded-lg p-3 overflow-x-auto max-h-96 overflow-y-auto my-2 text-[11px] leading-relaxed">
@@ -306,7 +537,14 @@ function CodeBlock({ language, content }: { language: string; content: string })
                 <DiffLine line={line} />
               </span>
             ))
-          : content}
+          : isBash
+            ? content.split('\n').map((line, i) => (
+                <span key={i}>
+                  {i > 0 && '\n'}
+                  <BashLine line={line} />
+                </span>
+              ))
+            : content}
       </code>
     </pre>
   )

@@ -18,6 +18,7 @@ import (
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	v1 "github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1"
 	"github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1/taskguildv1connect"
+	"github.com/kazz187/taskguild/backend/pkg/shellformat"
 )
 
 func init() {
@@ -1572,9 +1573,16 @@ func formatToolDescription(toolName string, input map[string]any) string {
 			sb.WriteString(fmt.Sprintf("**Description:** %s\n", desc))
 		}
 		if cmd := str("command"); cmd != "" {
-			fence := codeBlockFence(cmd)
+			// Format the command for readability (breaks one-liners into
+			// multi-line with proper indentation). Falls back to the
+			// original command on parse error.
+			formatted, _ := shellformat.Format(cmd)
+			if formatted == "" {
+				formatted = cmd
+			}
+			fence := codeBlockFence(formatted)
 			sb.WriteString(fmt.Sprintf("\n%sbash\n", fence))
-			sb.WriteString(cmd)
+			sb.WriteString(formatted)
 			sb.WriteString(fmt.Sprintf("\n%s\n", fence))
 		}
 
