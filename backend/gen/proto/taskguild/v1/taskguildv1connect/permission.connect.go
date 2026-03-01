@@ -39,6 +39,9 @@ const (
 	// PermissionServiceUpdatePermissionsProcedure is the fully-qualified name of the
 	// PermissionService's UpdatePermissions RPC.
 	PermissionServiceUpdatePermissionsProcedure = "/taskguild.v1.PermissionService/UpdatePermissions"
+	// PermissionServiceSyncPermissionsFromDirProcedure is the fully-qualified name of the
+	// PermissionService's SyncPermissionsFromDir RPC.
+	PermissionServiceSyncPermissionsFromDirProcedure = "/taskguild.v1.PermissionService/SyncPermissionsFromDir"
 )
 
 // PermissionServiceClient is a client for the taskguild.v1.PermissionService service.
@@ -48,6 +51,9 @@ type PermissionServiceClient interface {
 	GetPermissions(context.Context, *connect.Request[v1.GetPermissionsRequest]) (*connect.Response[v1.GetPermissionsResponse], error)
 	// UpdatePermissions replaces the full permission set for a project.
 	UpdatePermissions(context.Context, *connect.Request[v1.UpdatePermissionsRequest]) (*connect.Response[v1.UpdatePermissionsResponse], error)
+	// SyncPermissionsFromDir reads .claude/settings.json from the given directory
+	// and merges its permission rules (allow/ask/deny) into the stored set.
+	SyncPermissionsFromDir(context.Context, *connect.Request[v1.SyncPermissionsFromDirRequest]) (*connect.Response[v1.SyncPermissionsFromDirResponse], error)
 }
 
 // NewPermissionServiceClient constructs a client for the taskguild.v1.PermissionService service. By
@@ -73,13 +79,20 @@ func NewPermissionServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			connect.WithSchema(permissionServiceMethods.ByName("UpdatePermissions")),
 			connect.WithClientOptions(opts...),
 		),
+		syncPermissionsFromDir: connect.NewClient[v1.SyncPermissionsFromDirRequest, v1.SyncPermissionsFromDirResponse](
+			httpClient,
+			baseURL+PermissionServiceSyncPermissionsFromDirProcedure,
+			connect.WithSchema(permissionServiceMethods.ByName("SyncPermissionsFromDir")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // permissionServiceClient implements PermissionServiceClient.
 type permissionServiceClient struct {
-	getPermissions    *connect.Client[v1.GetPermissionsRequest, v1.GetPermissionsResponse]
-	updatePermissions *connect.Client[v1.UpdatePermissionsRequest, v1.UpdatePermissionsResponse]
+	getPermissions         *connect.Client[v1.GetPermissionsRequest, v1.GetPermissionsResponse]
+	updatePermissions      *connect.Client[v1.UpdatePermissionsRequest, v1.UpdatePermissionsResponse]
+	syncPermissionsFromDir *connect.Client[v1.SyncPermissionsFromDirRequest, v1.SyncPermissionsFromDirResponse]
 }
 
 // GetPermissions calls taskguild.v1.PermissionService.GetPermissions.
@@ -92,6 +105,11 @@ func (c *permissionServiceClient) UpdatePermissions(ctx context.Context, req *co
 	return c.updatePermissions.CallUnary(ctx, req)
 }
 
+// SyncPermissionsFromDir calls taskguild.v1.PermissionService.SyncPermissionsFromDir.
+func (c *permissionServiceClient) SyncPermissionsFromDir(ctx context.Context, req *connect.Request[v1.SyncPermissionsFromDirRequest]) (*connect.Response[v1.SyncPermissionsFromDirResponse], error) {
+	return c.syncPermissionsFromDir.CallUnary(ctx, req)
+}
+
 // PermissionServiceHandler is an implementation of the taskguild.v1.PermissionService service.
 type PermissionServiceHandler interface {
 	// GetPermissions returns the permission set for a project.
@@ -99,6 +117,9 @@ type PermissionServiceHandler interface {
 	GetPermissions(context.Context, *connect.Request[v1.GetPermissionsRequest]) (*connect.Response[v1.GetPermissionsResponse], error)
 	// UpdatePermissions replaces the full permission set for a project.
 	UpdatePermissions(context.Context, *connect.Request[v1.UpdatePermissionsRequest]) (*connect.Response[v1.UpdatePermissionsResponse], error)
+	// SyncPermissionsFromDir reads .claude/settings.json from the given directory
+	// and merges its permission rules (allow/ask/deny) into the stored set.
+	SyncPermissionsFromDir(context.Context, *connect.Request[v1.SyncPermissionsFromDirRequest]) (*connect.Response[v1.SyncPermissionsFromDirResponse], error)
 }
 
 // NewPermissionServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -120,12 +141,20 @@ func NewPermissionServiceHandler(svc PermissionServiceHandler, opts ...connect.H
 		connect.WithSchema(permissionServiceMethods.ByName("UpdatePermissions")),
 		connect.WithHandlerOptions(opts...),
 	)
+	permissionServiceSyncPermissionsFromDirHandler := connect.NewUnaryHandler(
+		PermissionServiceSyncPermissionsFromDirProcedure,
+		svc.SyncPermissionsFromDir,
+		connect.WithSchema(permissionServiceMethods.ByName("SyncPermissionsFromDir")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/taskguild.v1.PermissionService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PermissionServiceGetPermissionsProcedure:
 			permissionServiceGetPermissionsHandler.ServeHTTP(w, r)
 		case PermissionServiceUpdatePermissionsProcedure:
 			permissionServiceUpdatePermissionsHandler.ServeHTTP(w, r)
+		case PermissionServiceSyncPermissionsFromDirProcedure:
+			permissionServiceSyncPermissionsFromDirHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -141,4 +170,8 @@ func (UnimplementedPermissionServiceHandler) GetPermissions(context.Context, *co
 
 func (UnimplementedPermissionServiceHandler) UpdatePermissions(context.Context, *connect.Request[v1.UpdatePermissionsRequest]) (*connect.Response[v1.UpdatePermissionsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.PermissionService.UpdatePermissions is not implemented"))
+}
+
+func (UnimplementedPermissionServiceHandler) SyncPermissionsFromDir(context.Context, *connect.Request[v1.SyncPermissionsFromDirRequest]) (*connect.Response[v1.SyncPermissionsFromDirResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.PermissionService.SyncPermissionsFromDir is not implemented"))
 }

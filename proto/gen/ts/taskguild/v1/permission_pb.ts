@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file taskguild/v1/permission.proto.
  */
 export const file_taskguild_v1_permission: GenFile = /*@__PURE__*/
-  fileDesc("Ch10YXNrZ3VpbGQvdjEvcGVybWlzc2lvbi5wcm90bxIMdGFza2d1aWxkLnYxIn0KDVBlcm1pc3Npb25TZXQSEgoKcHJvamVjdF9pZBgBIAEoCRINCgVhbGxvdxgCIAMoCRILCgNhc2sYAyADKAkSDAoEZGVueRgEIAMoCRIuCgp1cGRhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIrChVHZXRQZXJtaXNzaW9uc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCSJKChZHZXRQZXJtaXNzaW9uc1Jlc3BvbnNlEjAKC3Blcm1pc3Npb25zGAEgASgLMhsudGFza2d1aWxkLnYxLlBlcm1pc3Npb25TZXQiWAoYVXBkYXRlUGVybWlzc2lvbnNSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSDQoFYWxsb3cYAiADKAkSCwoDYXNrGAMgAygJEgwKBGRlbnkYBCADKAkiTQoZVXBkYXRlUGVybWlzc2lvbnNSZXNwb25zZRIwCgtwZXJtaXNzaW9ucxgBIAEoCzIbLnRhc2tndWlsZC52MS5QZXJtaXNzaW9uU2V0MtYBChFQZXJtaXNzaW9uU2VydmljZRJbCg5HZXRQZXJtaXNzaW9ucxIjLnRhc2tndWlsZC52MS5HZXRQZXJtaXNzaW9uc1JlcXVlc3QaJC50YXNrZ3VpbGQudjEuR2V0UGVybWlzc2lvbnNSZXNwb25zZRJkChFVcGRhdGVQZXJtaXNzaW9ucxImLnRhc2tndWlsZC52MS5VcGRhdGVQZXJtaXNzaW9uc1JlcXVlc3QaJy50YXNrZ3VpbGQudjEuVXBkYXRlUGVybWlzc2lvbnNSZXNwb25zZUK9AQoQY29tLnRhc2tndWlsZC52MUIPUGVybWlzc2lvblByb3RvUAFaR2dpdGh1Yi5jb20va2F6ejE4Ny90YXNrZ3VpbGQvYmFja2VuZC9nZW4vcHJvdG8vdGFza2d1aWxkL3YxO3Rhc2tndWlsZHYxogIDVFhYqgIMVGFza2d1aWxkLlYxygIMVGFza2d1aWxkXFYx4gIYVGFza2d1aWxkXFYxXEdQQk1ldGFkYXRh6gINVGFza2d1aWxkOjpWMWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+  fileDesc("Ch10YXNrZ3VpbGQvdjEvcGVybWlzc2lvbi5wcm90bxIMdGFza2d1aWxkLnYxIn0KDVBlcm1pc3Npb25TZXQSEgoKcHJvamVjdF9pZBgBIAEoCRINCgVhbGxvdxgCIAMoCRILCgNhc2sYAyADKAkSDAoEZGVueRgEIAMoCRIuCgp1cGRhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIrChVHZXRQZXJtaXNzaW9uc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCSJKChZHZXRQZXJtaXNzaW9uc1Jlc3BvbnNlEjAKC3Blcm1pc3Npb25zGAEgASgLMhsudGFza2d1aWxkLnYxLlBlcm1pc3Npb25TZXQiWAoYVXBkYXRlUGVybWlzc2lvbnNSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSDQoFYWxsb3cYAiADKAkSCwoDYXNrGAMgAygJEgwKBGRlbnkYBCADKAkiTQoZVXBkYXRlUGVybWlzc2lvbnNSZXNwb25zZRIwCgtwZXJtaXNzaW9ucxgBIAEoCzIbLnRhc2tndWlsZC52MS5QZXJtaXNzaW9uU2V0IkYKHVN5bmNQZXJtaXNzaW9uc0Zyb21EaXJSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSEQoJZGlyZWN0b3J5GAIgASgJIlIKHlN5bmNQZXJtaXNzaW9uc0Zyb21EaXJSZXNwb25zZRIwCgtwZXJtaXNzaW9ucxgBIAEoCzIbLnRhc2tndWlsZC52MS5QZXJtaXNzaW9uU2V0MssCChFQZXJtaXNzaW9uU2VydmljZRJbCg5HZXRQZXJtaXNzaW9ucxIjLnRhc2tndWlsZC52MS5HZXRQZXJtaXNzaW9uc1JlcXVlc3QaJC50YXNrZ3VpbGQudjEuR2V0UGVybWlzc2lvbnNSZXNwb25zZRJkChFVcGRhdGVQZXJtaXNzaW9ucxImLnRhc2tndWlsZC52MS5VcGRhdGVQZXJtaXNzaW9uc1JlcXVlc3QaJy50YXNrZ3VpbGQudjEuVXBkYXRlUGVybWlzc2lvbnNSZXNwb25zZRJzChZTeW5jUGVybWlzc2lvbnNGcm9tRGlyEisudGFza2d1aWxkLnYxLlN5bmNQZXJtaXNzaW9uc0Zyb21EaXJSZXF1ZXN0GiwudGFza2d1aWxkLnYxLlN5bmNQZXJtaXNzaW9uc0Zyb21EaXJSZXNwb25zZUK9AQoQY29tLnRhc2tndWlsZC52MUIPUGVybWlzc2lvblByb3RvUAFaR2dpdGh1Yi5jb20va2F6ejE4Ny90YXNrZ3VpbGQvYmFja2VuZC9nZW4vcHJvdG8vdGFza2d1aWxkL3YxO3Rhc2tndWlsZHYxogIDVFhYqgIMVGFza2d1aWxkLlYxygIMVGFza2d1aWxkXFYx4gIYVGFza2d1aWxkXFYxXEdQQk1ldGFkYXRh6gINVGFza2d1aWxkOjpWMWIGcHJvdG8z", [file_google_protobuf_timestamp]);
 
 /**
  * PermissionSet represents a project-scoped set of permission rules.
@@ -137,6 +137,49 @@ export const UpdatePermissionsResponseSchema: GenMessage<UpdatePermissionsRespon
   messageDesc(file_taskguild_v1_permission, 4);
 
 /**
+ * @generated from message taskguild.v1.SyncPermissionsFromDirRequest
+ */
+export type SyncPermissionsFromDirRequest = Message<"taskguild.v1.SyncPermissionsFromDirRequest"> & {
+  /**
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+
+  /**
+   * path to the repository root directory
+   *
+   * @generated from field: string directory = 2;
+   */
+  directory: string;
+};
+
+/**
+ * Describes the message taskguild.v1.SyncPermissionsFromDirRequest.
+ * Use `create(SyncPermissionsFromDirRequestSchema)` to create a new message.
+ */
+export const SyncPermissionsFromDirRequestSchema: GenMessage<SyncPermissionsFromDirRequest> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_permission, 5);
+
+/**
+ * @generated from message taskguild.v1.SyncPermissionsFromDirResponse
+ */
+export type SyncPermissionsFromDirResponse = Message<"taskguild.v1.SyncPermissionsFromDirResponse"> & {
+  /**
+   * merged permission set
+   *
+   * @generated from field: taskguild.v1.PermissionSet permissions = 1;
+   */
+  permissions?: PermissionSet;
+};
+
+/**
+ * Describes the message taskguild.v1.SyncPermissionsFromDirResponse.
+ * Use `create(SyncPermissionsFromDirResponseSchema)` to create a new message.
+ */
+export const SyncPermissionsFromDirResponseSchema: GenMessage<SyncPermissionsFromDirResponse> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_permission, 6);
+
+/**
  * PermissionService manages project-scoped permission rules (allow/ask/deny)
  * for Claude Code tools and Bash command patterns.
  *
@@ -163,6 +206,17 @@ export const PermissionService: GenService<{
     methodKind: "unary";
     input: typeof UpdatePermissionsRequestSchema;
     output: typeof UpdatePermissionsResponseSchema;
+  },
+  /**
+   * SyncPermissionsFromDir reads .claude/settings.json from the given directory
+   * and merges its permission rules (allow/ask/deny) into the stored set.
+   *
+   * @generated from rpc taskguild.v1.PermissionService.SyncPermissionsFromDir
+   */
+  syncPermissionsFromDir: {
+    methodKind: "unary";
+    input: typeof SyncPermissionsFromDirRequestSchema;
+    output: typeof SyncPermissionsFromDirResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_taskguild_v1_permission, 0);

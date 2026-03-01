@@ -299,6 +299,102 @@ func (x *UpdatePermissionsResponse) GetPermissions() *PermissionSet {
 	return nil
 }
 
+type SyncPermissionsFromDirRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Directory     string                 `protobuf:"bytes,2,opt,name=directory,proto3" json:"directory,omitempty"` // path to the repository root directory
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SyncPermissionsFromDirRequest) Reset() {
+	*x = SyncPermissionsFromDirRequest{}
+	mi := &file_taskguild_v1_permission_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncPermissionsFromDirRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncPermissionsFromDirRequest) ProtoMessage() {}
+
+func (x *SyncPermissionsFromDirRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_permission_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncPermissionsFromDirRequest.ProtoReflect.Descriptor instead.
+func (*SyncPermissionsFromDirRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_permission_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *SyncPermissionsFromDirRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *SyncPermissionsFromDirRequest) GetDirectory() string {
+	if x != nil {
+		return x.Directory
+	}
+	return ""
+}
+
+type SyncPermissionsFromDirResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Permissions   *PermissionSet         `protobuf:"bytes,1,opt,name=permissions,proto3" json:"permissions,omitempty"` // merged permission set
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SyncPermissionsFromDirResponse) Reset() {
+	*x = SyncPermissionsFromDirResponse{}
+	mi := &file_taskguild_v1_permission_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncPermissionsFromDirResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncPermissionsFromDirResponse) ProtoMessage() {}
+
+func (x *SyncPermissionsFromDirResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_permission_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncPermissionsFromDirResponse.ProtoReflect.Descriptor instead.
+func (*SyncPermissionsFromDirResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_permission_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *SyncPermissionsFromDirResponse) GetPermissions() *PermissionSet {
+	if x != nil {
+		return x.Permissions
+	}
+	return nil
+}
+
 var File_taskguild_v1_permission_proto protoreflect.FileDescriptor
 
 const file_taskguild_v1_permission_proto_rawDesc = "" +
@@ -324,10 +420,17 @@ const file_taskguild_v1_permission_proto_rawDesc = "" +
 	"\x03ask\x18\x03 \x03(\tR\x03ask\x12\x12\n" +
 	"\x04deny\x18\x04 \x03(\tR\x04deny\"Z\n" +
 	"\x19UpdatePermissionsResponse\x12=\n" +
-	"\vpermissions\x18\x01 \x01(\v2\x1b.taskguild.v1.PermissionSetR\vpermissions2\xd6\x01\n" +
+	"\vpermissions\x18\x01 \x01(\v2\x1b.taskguild.v1.PermissionSetR\vpermissions\"\\\n" +
+	"\x1dSyncPermissionsFromDirRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1c\n" +
+	"\tdirectory\x18\x02 \x01(\tR\tdirectory\"_\n" +
+	"\x1eSyncPermissionsFromDirResponse\x12=\n" +
+	"\vpermissions\x18\x01 \x01(\v2\x1b.taskguild.v1.PermissionSetR\vpermissions2\xcb\x02\n" +
 	"\x11PermissionService\x12[\n" +
 	"\x0eGetPermissions\x12#.taskguild.v1.GetPermissionsRequest\x1a$.taskguild.v1.GetPermissionsResponse\x12d\n" +
-	"\x11UpdatePermissions\x12&.taskguild.v1.UpdatePermissionsRequest\x1a'.taskguild.v1.UpdatePermissionsResponseB\xbd\x01\n" +
+	"\x11UpdatePermissions\x12&.taskguild.v1.UpdatePermissionsRequest\x1a'.taskguild.v1.UpdatePermissionsResponse\x12s\n" +
+	"\x16SyncPermissionsFromDir\x12+.taskguild.v1.SyncPermissionsFromDirRequest\x1a,.taskguild.v1.SyncPermissionsFromDirResponseB\xbd\x01\n" +
 	"\x10com.taskguild.v1B\x0fPermissionProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
@@ -342,28 +445,33 @@ func file_taskguild_v1_permission_proto_rawDescGZIP() []byte {
 	return file_taskguild_v1_permission_proto_rawDescData
 }
 
-var file_taskguild_v1_permission_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_taskguild_v1_permission_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_taskguild_v1_permission_proto_goTypes = []any{
-	(*PermissionSet)(nil),             // 0: taskguild.v1.PermissionSet
-	(*GetPermissionsRequest)(nil),     // 1: taskguild.v1.GetPermissionsRequest
-	(*GetPermissionsResponse)(nil),    // 2: taskguild.v1.GetPermissionsResponse
-	(*UpdatePermissionsRequest)(nil),  // 3: taskguild.v1.UpdatePermissionsRequest
-	(*UpdatePermissionsResponse)(nil), // 4: taskguild.v1.UpdatePermissionsResponse
-	(*timestamppb.Timestamp)(nil),     // 5: google.protobuf.Timestamp
+	(*PermissionSet)(nil),                  // 0: taskguild.v1.PermissionSet
+	(*GetPermissionsRequest)(nil),          // 1: taskguild.v1.GetPermissionsRequest
+	(*GetPermissionsResponse)(nil),         // 2: taskguild.v1.GetPermissionsResponse
+	(*UpdatePermissionsRequest)(nil),       // 3: taskguild.v1.UpdatePermissionsRequest
+	(*UpdatePermissionsResponse)(nil),      // 4: taskguild.v1.UpdatePermissionsResponse
+	(*SyncPermissionsFromDirRequest)(nil),  // 5: taskguild.v1.SyncPermissionsFromDirRequest
+	(*SyncPermissionsFromDirResponse)(nil), // 6: taskguild.v1.SyncPermissionsFromDirResponse
+	(*timestamppb.Timestamp)(nil),          // 7: google.protobuf.Timestamp
 }
 var file_taskguild_v1_permission_proto_depIdxs = []int32{
-	5, // 0: taskguild.v1.PermissionSet.updated_at:type_name -> google.protobuf.Timestamp
+	7, // 0: taskguild.v1.PermissionSet.updated_at:type_name -> google.protobuf.Timestamp
 	0, // 1: taskguild.v1.GetPermissionsResponse.permissions:type_name -> taskguild.v1.PermissionSet
 	0, // 2: taskguild.v1.UpdatePermissionsResponse.permissions:type_name -> taskguild.v1.PermissionSet
-	1, // 3: taskguild.v1.PermissionService.GetPermissions:input_type -> taskguild.v1.GetPermissionsRequest
-	3, // 4: taskguild.v1.PermissionService.UpdatePermissions:input_type -> taskguild.v1.UpdatePermissionsRequest
-	2, // 5: taskguild.v1.PermissionService.GetPermissions:output_type -> taskguild.v1.GetPermissionsResponse
-	4, // 6: taskguild.v1.PermissionService.UpdatePermissions:output_type -> taskguild.v1.UpdatePermissionsResponse
-	5, // [5:7] is the sub-list for method output_type
-	3, // [3:5] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	0, // 3: taskguild.v1.SyncPermissionsFromDirResponse.permissions:type_name -> taskguild.v1.PermissionSet
+	1, // 4: taskguild.v1.PermissionService.GetPermissions:input_type -> taskguild.v1.GetPermissionsRequest
+	3, // 5: taskguild.v1.PermissionService.UpdatePermissions:input_type -> taskguild.v1.UpdatePermissionsRequest
+	5, // 6: taskguild.v1.PermissionService.SyncPermissionsFromDir:input_type -> taskguild.v1.SyncPermissionsFromDirRequest
+	2, // 7: taskguild.v1.PermissionService.GetPermissions:output_type -> taskguild.v1.GetPermissionsResponse
+	4, // 8: taskguild.v1.PermissionService.UpdatePermissions:output_type -> taskguild.v1.UpdatePermissionsResponse
+	6, // 9: taskguild.v1.PermissionService.SyncPermissionsFromDir:output_type -> taskguild.v1.SyncPermissionsFromDirResponse
+	7, // [7:10] is the sub-list for method output_type
+	4, // [4:7] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_permission_proto_init() }
@@ -377,7 +485,7 @@ func file_taskguild_v1_permission_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_permission_proto_rawDesc), len(file_taskguild_v1_permission_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -18,3 +18,11 @@ export const getPermissions = PermissionService.method.getPermissions;
  * @generated from rpc taskguild.v1.PermissionService.UpdatePermissions
  */
 export const updatePermissions = PermissionService.method.updatePermissions;
+
+/**
+ * SyncPermissionsFromDir reads .claude/settings.json from the given directory
+ * and merges its permission rules (allow/ask/deny) into the stored set.
+ *
+ * @generated from rpc taskguild.v1.PermissionService.SyncPermissionsFromDir
+ */
+export const syncPermissionsFromDir = PermissionService.method.syncPermissionsFromDir;
