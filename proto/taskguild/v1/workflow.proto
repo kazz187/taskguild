@@ -34,6 +34,9 @@ message Workflow {
   // task defaults
   string default_permission_mode = 9;   // default permission mode for new tasks
   bool default_use_worktree = 10;       // default use_worktree flag for new tasks
+
+  // custom prompt prepended to agent instructions for tasks in this workflow
+  string custom_prompt = 11;
 }
 
 enum HookTrigger {
@@ -105,6 +108,9 @@ message CreateWorkflowRequest {
   // task defaults
   string default_permission_mode = 6;
   bool default_use_worktree = 7;
+
+  // custom prompt prepended to agent instructions
+  string custom_prompt = 8;
 }
 message CreateWorkflowResponse {
   Workflow workflow = 1;
@@ -140,6 +146,9 @@ message UpdateWorkflowRequest {
   // task defaults
   string default_permission_mode = 6;
   bool default_use_worktree = 7;
+
+  // custom prompt prepended to agent instructions
+  string custom_prompt = 8;
 }
 message UpdateWorkflowResponse {
   Workflow workflow = 1;

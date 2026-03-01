@@ -299,6 +299,13 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		}
 	}
 
+	// Prepend workflow custom prompt to agent instructions (if non-empty).
+	if wf.CustomPrompt != "" && instructions != "" {
+		instructions = wf.CustomPrompt + "\n\n" + instructions
+	} else if wf.CustomPrompt != "" {
+		instructions = wf.CustomPrompt
+	}
+
 	// Build enriched metadata with task info and available transitions.
 	enrichedMetadata := make(map[string]string)
 	for k, v := range t.Metadata {
