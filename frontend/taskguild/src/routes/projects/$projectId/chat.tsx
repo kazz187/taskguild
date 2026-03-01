@@ -8,6 +8,7 @@ import { getProject } from '@taskguild/proto/taskguild/v1/project-ProjectService
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { ChatBubble } from '@/components/ChatBubble'
+import { PendingRequestsPanel } from '@/components/PendingRequestsPanel'
 import { shortId } from '@/lib/id'
 import { ArrowLeft } from 'lucide-react'
 import { ConnectionIndicator } from '@/components/ConnectionIndicator'
@@ -52,17 +53,18 @@ function ProjectChatPage() {
 
   const { connectionStatus, reconnect } = useEventSubscription(eventTypes, projectId, onEvent)
 
-  // Count pending requests (permission requests and questions)
-  const pendingRequestCount = useMemo(
+  // Pending requests (permission requests and questions)
+  const pendingRequests = useMemo(
     () =>
       interactions.filter(
         (i) =>
           (i.type === InteractionType.PERMISSION_REQUEST ||
             i.type === InteractionType.QUESTION) &&
           i.status === InteractionStatus.PENDING,
-      ).length,
+      ),
     [interactions],
   )
+  const pendingRequestCount = pendingRequests.length
 
   // Play notification sound when new pending requests arrive
   useEffect(() => {
@@ -111,6 +113,19 @@ function ProjectChatPage() {
         </p>
       </div>
 
+      {/* Pending requests section — pinned between header and chat */}
+      {pendingRequests.length > 0 && (
+        <div className="shrink-0 border-b border-slate-800 px-4 md:px-6 py-3">
+          <div className="max-w-3xl mx-auto">
+            <PendingRequestsPanel
+              pendingRequests={pendingRequests}
+              onRespond={handleRespond}
+              isRespondPending={respondMut.isPending}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Chat area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-4 py-4 md:px-6 md:py-6 space-y-3">
@@ -141,6 +156,11 @@ function ProjectChatPage() {
                   interaction={interaction}
                   onRespond={handleRespond}
                   isRespondPending={respondMut.isPending}
+                  hideActions={
+                    interaction.status === InteractionStatus.PENDING &&
+                    (interaction.type === InteractionType.PERMISSION_REQUEST ||
+                      interaction.type === InteractionType.QUESTION)
+                  }
                 />
               </div>
             )

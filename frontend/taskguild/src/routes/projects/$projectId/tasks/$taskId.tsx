@@ -16,6 +16,7 @@ import { InputBar } from '@/components/ChatBubble'
 import { MarkdownDescription } from '@/components/MarkdownDescription'
 import { TimelineEntry, type TimelineItem } from '@/components/TimelineEntry'
 import { RequestItem } from '@/components/RequestItem'
+import { PendingRequestsPanel } from '@/components/PendingRequestsPanel'
 import {
   ArrowLeft,
   ArrowRight,
@@ -369,27 +370,13 @@ function TaskDetailPage() {
         >
           <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="max-w-3xl mx-auto px-4 py-4 md:px-6 space-y-3">
-              {/* Section header */}
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">
-                  Agent Requests
-                </p>
-                {pendingRequests.length > 0 && (
-                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-400 rounded">
-                    {pendingRequests.length} pending
-                  </span>
-                )}
-              </div>
-
-              {/* Pending requests */}
-              {pendingRequests.map((interaction) => (
-                <RequestItem
-                  key={interaction.id}
-                  interaction={interaction}
-                  onRespond={handleRespond}
-                  isRespondPending={respondMut.isPending}
-                />
-              ))}
+              {/* Pending requests with keyboard shortcuts */}
+              <PendingRequestsPanel
+                pendingRequests={pendingRequests}
+                onRespond={handleRespond}
+                isRespondPending={respondMut.isPending}
+                enabled={mobileTab === 'requests'}
+              />
 
               {/* Resolved requests (collapsible) */}
               {resolvedRequests.length > 0 && (

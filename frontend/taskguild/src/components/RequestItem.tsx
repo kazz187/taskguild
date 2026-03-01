@@ -1,22 +1,47 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { InteractionType, InteractionStatus } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import type { Interaction } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import { Shield, MessageSquare, Bell, CheckCircle } from 'lucide-react'
 import { formatTime } from './ChatBubble'
 import { MarkdownDescription } from './MarkdownDescription'
 
+function getPermissionShortcutLabel(value: string): string | null {
+  switch (value) {
+    case 'allow':
+      return 'y'
+    case 'always_allow':
+      return 'Y'
+    case 'deny':
+      return 'n'
+    default:
+      return null
+  }
+}
+
 export function RequestItem({
   interaction,
   onRespond,
   isRespondPending,
+  isSelected = false,
+  onSelect,
 }: {
   interaction: Interaction
   onRespond: (id: string, response: string) => void
   isRespondPending: boolean
+  isSelected?: boolean
+  onSelect?: () => void
 }) {
   const [freeText, setFreeText] = useState('')
+  const itemRef = useRef<HTMLDivElement>(null)
   const isPending = interaction.status === InteractionStatus.PENDING
   const isResponded = interaction.status === InteractionStatus.RESPONDED
+
+  // Auto-scroll into view when selected
+  useEffect(() => {
+    if (isSelected && itemRef.current) {
+      itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [isSelected])
 
   const icon =
     interaction.type === InteractionType.PERMISSION_REQUEST ? (
@@ -27,10 +52,18 @@ export function RequestItem({
       <Bell className="w-4 h-4 text-gray-400" />
     )
 
+  const showHints = isSelected && isPending
+
   return (
     <div
-      className={`border rounded-lg p-3 ${
-        isPending ? 'bg-slate-800 border-amber-500/30' : 'bg-slate-800/40 border-slate-700/50'
+      ref={itemRef}
+      onClick={() => onSelect?.()}
+      className={`border rounded-lg p-3 transition-colors ${
+        isPending
+          ? isSelected
+            ? 'bg-slate-800 border-cyan-500 ring-1 ring-cyan-500/50 cursor-pointer'
+            : 'bg-slate-800 border-amber-500/30 cursor-pointer'
+          : 'bg-slate-800/40 border-slate-700/50'
       }`}
     >
       {/* Header row: icon + title + timestamp */}
@@ -57,14 +90,19 @@ export function RequestItem({
       {isPending && interaction.options.length > 0 && (
         interaction.type === InteractionType.QUESTION ? (
           <div className="flex flex-col gap-1.5 mt-2 ml-6">
-            {interaction.options.map((opt) => (
+            {interaction.options.map((opt, idx) => (
               <button
                 key={opt.value}
-                onClick={() => onRespond(interaction.id, opt.value)}
+                onClick={(e) => { e.stopPropagation(); onRespond(interaction.id, opt.value) }}
                 disabled={isRespondPending}
                 className="flex flex-col items-start gap-0.5 px-3 py-2 text-left bg-slate-700/60 border border-slate-600 rounded-lg hover:border-blue-500/50 hover:bg-slate-700 transition-colors disabled:opacity-50"
               >
-                <span className="text-xs font-medium text-gray-200">{opt.label}</span>
+                <span className="text-xs font-medium text-gray-200">
+                  {showHints && (
+                    <span className="text-cyan-400 font-mono mr-1">{idx + 1}.</span>
+                  )}
+                  {opt.label}
+                </span>
                 {opt.description && (
                   <span className="text-[11px] text-gray-400">{opt.description}</span>
                 )}
@@ -73,17 +111,25 @@ export function RequestItem({
           </div>
         ) : (
           <div className="flex gap-2 flex-wrap mt-2 ml-6">
-            {interaction.options.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => onRespond(interaction.id, opt.value)}
-                disabled={isRespondPending}
-                className="px-3 py-1.5 text-xs bg-slate-700 border border-slate-600 rounded-lg text-gray-200 hover:border-cyan-500/50 hover:text-white transition-colors disabled:opacity-50"
-                title={opt.description}
-              >
-                {opt.label}
-              </button>
-            ))}
+            {interaction.options.map((opt) => {
+              const shortcut = showHints ? getPermissionShortcutLabel(opt.value) : null
+              return (
+                <button
+                  key={opt.value}
+                  onClick={(e) => { e.stopPropagation(); onRespond(interaction.id, opt.value) }}
+                  disabled={isRespondPending}
+                  className="px-3 py-1.5 text-xs bg-slate-700 border border-slate-600 rounded-lg text-gray-200 hover:border-cyan-500/50 hover:text-white transition-colors disabled:opacity-50"
+                  title={opt.description}
+                >
+                  {opt.label}
+                  {shortcut && (
+                    <span className="ml-1 text-[10px] text-cyan-400 font-mono">
+                      ({shortcut})
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </div>
         )
       )}
