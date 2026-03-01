@@ -33,6 +33,11 @@ const (
 
 	// DebounceInterval is the delay after an fsnotify event before checking the checksum.
 	DebounceInterval = 100 * time.Millisecond
+
+	// ScriptWaitTimeout is the maximum time to wait for the child to finish
+	// running scripts after SIGUSR1 before falling back to SIGTERM+SIGKILL.
+	// The script execution timeout is 5 minutes, so 6 minutes provides buffer.
+	ScriptWaitTimeout = 6 * time.Minute
 )
 
 // Sentinel manages the lifecycle of a child process with the "run" subcommand.
@@ -139,11 +144,28 @@ func (s *Sentinel) mainLoop(sigCh <-chan os.Signal, updateCh <-chan struct{}) {
 			}
 
 		case <-updateCh:
-			// Binary was updated on disk.
-			log.Println("binary update detected, restarting child...")
-			s.stopChild(child)
-			// Drain childDone so we don't leak the goroutine.
-			<-childDone
+			// Binary was updated on disk. Send SIGUSR1 to request graceful
+			// restart so the child can finish running scripts before exiting.
+			// If the child does not handle SIGUSR1 (e.g. old binary or
+			// taskguild-server), the default OS action terminates the process
+			// immediately — same as the previous SIGTERM behaviour.
+			log.Println("binary update detected, requesting graceful restart...")
+			s.requestGracefulRestart(child)
+			select {
+			case <-childDone:
+				log.Println("child exited gracefully after completing scripts")
+			case <-time.After(ScriptWaitTimeout):
+				log.Println("timeout waiting for scripts to complete, force stopping child...")
+				s.stopChild(child)
+				<-childDone
+			case sig := <-sigCh:
+				// OS signal arrived while waiting — force stop and exit sentinel.
+				log.Printf("received %v during restart wait, force stopping child...", sig)
+				s.stopChild(child)
+				<-childDone
+				log.Println("sentinel exiting")
+				return
+			}
 			// Refresh the hash for the new binary.
 			if h, err := HashFile(s.binaryPath); err == nil {
 				s.lastHash = h
@@ -205,6 +227,27 @@ func (s *Sentinel) stopChild(cmd *exec.Cmd) {
 			}
 		}
 	}()
+}
+
+// requestGracefulRestart sends SIGUSR1 to the child process to request a
+// graceful restart. The child is expected to:
+//  1. Stop accepting new script executions.
+//  2. Wait for any running scripts to complete.
+//  3. Exit cleanly.
+//
+// If the child does not handle SIGUSR1 (e.g. old binary or taskguild-server),
+// the default OS action is to terminate the process — which is equivalent to
+// the previous immediate-SIGTERM behaviour.
+func (s *Sentinel) requestGracefulRestart(cmd *exec.Cmd) {
+	if cmd == nil || cmd.Process == nil {
+		return
+	}
+
+	pid := cmd.Process.Pid
+	log.Printf("sending SIGUSR1 to child (pid: %d) for graceful restart", pid)
+	if err := cmd.Process.Signal(syscall.SIGUSR1); err != nil {
+		log.Printf("failed to send SIGUSR1 (process may have already exited): %v", err)
+	}
 }
 
 // watchBinary watches the parent directory of the binary for filesystem events

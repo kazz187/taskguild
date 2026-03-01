@@ -22,6 +22,16 @@ import (
 	"github.com/oklog/ulid/v2"
 )
 
+// scriptTracker tracks running script executions for graceful hot-reload.
+// When the sentinel sends SIGUSR1, the agent-manager sets rejectScripts to
+// prevent new script executions and waits for running ones to complete
+// (via scriptWg) before shutting down.
+var scriptTracker struct {
+	mu      sync.Mutex
+	wg      sync.WaitGroup
+	reject  bool // true once SIGUSR1 is received; prevents new script starts
+}
+
 type config struct {
 	ServerURL          string
 	APIKey             string
@@ -108,6 +118,23 @@ func runAgent() {
 	go func() {
 		sig := <-sigCh
 		log.Printf("received signal %v, shutting down...", sig)
+		cancel()
+	}()
+
+	// Handle SIGUSR1 for graceful hot-reload.
+	// When the sentinel detects a binary update it sends SIGUSR1 instead of
+	// SIGTERM. This handler stops accepting new scripts, waits for running
+	// scripts to complete, and then triggers the normal shutdown flow.
+	usr1Ch := make(chan os.Signal, 1)
+	signal.Notify(usr1Ch, syscall.SIGUSR1)
+	go func() {
+		<-usr1Ch
+		log.Println("received SIGUSR1 (hot reload), waiting for running scripts to complete...")
+		scriptTracker.mu.Lock()
+		scriptTracker.reject = true
+		scriptTracker.mu.Unlock()
+		scriptTracker.wg.Wait()
+		log.Println("all scripts completed, shutting down for hot reload restart")
 		cancel()
 	}()
 

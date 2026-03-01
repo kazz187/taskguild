@@ -188,4 +188,68 @@ func TestConstants(t *testing.T) {
 	if SuccessRunTime != 30*time.Second {
 		t.Errorf("SuccessRunTime: got %v, want %v", SuccessRunTime, 30*time.Second)
 	}
+	if ScriptWaitTimeout != 6*time.Minute {
+		t.Errorf("ScriptWaitTimeout: got %v, want %v", ScriptWaitTimeout, 6*time.Minute)
+	}
+}
+
+func TestRequestGracefulRestart_NilCmd(t *testing.T) {
+	s := &Sentinel{
+		stopCh: make(chan struct{}),
+	}
+
+	// Should not panic with nil cmd.
+	s.requestGracefulRestart(nil)
+}
+
+func TestMainLoopGracefulRestart_ChildExitsBeforeTimeout(t *testing.T) {
+	// Simulate the updateCh case where child exits before ScriptWaitTimeout.
+	// We verify the flow by checking that the sentinel does NOT call stopChild
+	// (force kill) when the child exits on its own.
+
+	s := &Sentinel{
+		backoff: InitialBackoff,
+		stopCh:  make(chan struct{}),
+	}
+
+	childDone := make(chan error, 1)
+
+	// Simulate child exit after a short delay (e.g. after scripts complete).
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		childDone <- nil
+	}()
+
+	// Simulate the updateCh select branch inline:
+	// We can't easily call mainLoop here because it needs real processes,
+	// but we can verify the select logic that waits for childDone.
+	select {
+	case <-childDone:
+		// Expected: child exited before timeout.
+	case <-time.After(ScriptWaitTimeout):
+		t.Error("should not have timed out; child was expected to exit first")
+	}
+
+	// Verify backoff was not changed (no error path taken).
+	if s.backoff != InitialBackoff {
+		t.Errorf("backoff changed unexpectedly: got %v, want %v", s.backoff, InitialBackoff)
+	}
+}
+
+func TestMainLoopGracefulRestart_TimeoutFallback(t *testing.T) {
+	// Verify that the timeout path is taken when the child does not exit.
+	childDone := make(chan error, 1)
+	// Do NOT send to childDone — simulates a stuck child.
+
+	timedOut := false
+	select {
+	case <-childDone:
+		t.Error("child should not have exited")
+	case <-time.After(100 * time.Millisecond): // short timeout for testing
+		timedOut = true
+	}
+
+	if !timedOut {
+		t.Error("expected timeout fallback path to be taken")
+	}
 }

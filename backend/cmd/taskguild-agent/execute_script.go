@@ -42,6 +42,22 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 		}
 	}
 
+	// Register this script execution with the tracker so the SIGUSR1
+	// (hot-reload) handler waits for it to complete before shutting down.
+	// The mutex ensures atomicity between the reject check and wg.Add,
+	// preventing a race where SIGUSR1 handler calls wg.Wait() between
+	// our check and Add.
+	scriptTracker.mu.Lock()
+	if scriptTracker.reject {
+		scriptTracker.mu.Unlock()
+		log.Printf("script %s rejected: agent is shutting down for hot reload (request_id: %s)", filename, requestID)
+		reportResult(false, -1, "", "", "script execution rejected: agent is shutting down for hot reload")
+		return
+	}
+	scriptTracker.wg.Add(1)
+	scriptTracker.mu.Unlock()
+	defer scriptTracker.wg.Done()
+
 	// Write script to temporary file.
 	tmpDir := filepath.Join(cfg.WorkDir, ".claude", "scripts", ".tmp")
 	if err := os.MkdirAll(tmpDir, 0755); err != nil {
