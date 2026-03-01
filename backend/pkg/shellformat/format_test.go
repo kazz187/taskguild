@@ -242,6 +242,18 @@ else
   echo other
 fi`,
 		},
+		{
+			name:  "2-element || with subshell always expands",
+			input: `which buf || (cat Makefile 2> /dev/null | head -50)`,
+			expected: `which buf \
+  || (cat Makefile 2> /dev/null | head -50)`,
+		},
+		{
+			name:  "long command with redirect piped to head",
+			input: `ls /home/ubuntu/taskguild/taskguild/.claude/worktrees/mb7frh_setup-script-execution/proto/node_modules/.bin/ 2> /dev/null | head -20`,
+			expected: `ls /home/ubuntu/taskguild/taskguild/.claude/worktrees/mb7frh_setup-script-execution/proto/node_modules/.bin/ 2> /dev/null \
+  | head -20`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -277,6 +289,8 @@ func TestFormatOutputIsValidBash(t *testing.T) {
 		`a && b && c && d && e && f`,
 		`cat file | grep pattern | awk '{print $1}' && echo done || echo failed`,
 		`arr=(1 2 3); for i in "${arr[@]}"; do echo $i; done`,
+		`which buf || (cat Makefile 2> /dev/null | head -50)`,
+		`ls /home/ubuntu/taskguild/taskguild/.claude/worktrees/mb7frh_setup-script-execution/proto/node_modules/.bin/ 2> /dev/null | head -20`,
 	}
 
 	parser := syntax.NewParser(syntax.KeepComments(true))

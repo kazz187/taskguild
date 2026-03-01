@@ -264,6 +264,26 @@ func isBareBinaryStmt(s *syntax.Stmt) bool {
 	return !s.Negated && !s.Background && len(s.Redirs) == 0
 }
 
+// hasCompoundElement returns true if any element in the chain contains
+// a compound command (subshell, block, if, for, while, case, function).
+// Chains with compound elements are always expanded for readability,
+// even if they fit within the max width.
+func hasCompoundElement(chain []chainElem) bool {
+	for _, elem := range chain {
+		if elem.stmt.Cmd == nil {
+			continue
+		}
+		switch elem.stmt.Cmd.(type) {
+		case *syntax.Subshell, *syntax.Block,
+			*syntax.IfClause, *syntax.ForClause,
+			*syntax.WhileClause, *syntax.CaseClause,
+			*syntax.FuncDecl:
+			return true
+		}
+	}
+	return false
+}
+
 // binaryCmd formats a BinaryCmd node by flattening the chain and
 // rendering each element on its own line with the operator as prefix.
 func (f *formatter) binaryCmd(cmd *syntax.BinaryCmd) {
@@ -278,9 +298,10 @@ func (f *formatter) binaryCmd(cmd *syntax.BinaryCmd) {
 		totalLen += len(f.nodeStr(elem.stmt))
 	}
 
-	// Keep inline if: chain has only 2 elements AND fits within width.
+	// Keep inline if: chain has only 2 elements, fits within width,
+	// and none of the elements contain compound commands (subshells, blocks, etc.).
 	// Chains with 3+ elements are always expanded for readability.
-	if len(chain) <= 2 && totalLen <= f.availWidth() {
+	if len(chain) <= 2 && totalLen <= f.availWidth() && !hasCompoundElement(chain) {
 		// Render inline.
 		for i, elem := range chain {
 			if i > 0 {
