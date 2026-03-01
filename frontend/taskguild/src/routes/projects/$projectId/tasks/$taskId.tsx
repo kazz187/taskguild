@@ -15,8 +15,8 @@ import { shortId } from '@/lib/id'
 import { InputBar } from '@/components/ChatBubble'
 import { MarkdownDescription } from '@/components/MarkdownDescription'
 import { TimelineEntry, type TimelineItem } from '@/components/TimelineEntry'
-import { RequestItem } from '@/components/RequestItem'
 import { PendingRequestsPanel } from '@/components/PendingRequestsPanel'
+import { ConnectionIndicator } from '@/components/ConnectionIndicator'
 import {
   ArrowLeft,
   ArrowRight,
@@ -26,8 +26,6 @@ import {
   GitBranch,
   Loader,
   Pencil,
-  ChevronDown,
-  ChevronRight,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/projects/$projectId/tasks/$taskId')({
@@ -37,8 +35,6 @@ export const Route = createFileRoute('/projects/$projectId/tasks/$taskId')({
 function TaskDetailPage() {
   const { projectId, taskId } = Route.useParams()
   const [showEditModal, setShowEditModal] = useState(false)
-  const [mobileTab, setMobileTab] = useState<'timeline' | 'requests'>('requests')
-  const [showResolved, setShowResolved] = useState(false)
   const timelineScrollRef = useRef<HTMLDivElement>(null)
   const prevTimelineCountRef = useRef(0)
   const prevPendingCountRef = useRef(0)
@@ -83,26 +79,16 @@ function TaskDetailPage() {
     return items
   }, [interactions, logs])
 
-  // Data filtering for split panels
-
-  const requestInteractions = useMemo(
+  // Pending requests (permission requests and questions)
+  const pendingRequests = useMemo(
     () =>
       interactions.filter(
         (i) =>
-          i.type === InteractionType.PERMISSION_REQUEST ||
-          i.type === InteractionType.QUESTION,
+          (i.type === InteractionType.PERMISSION_REQUEST ||
+            i.type === InteractionType.QUESTION) &&
+          i.status === InteractionStatus.PENDING,
       ),
     [interactions],
-  )
-
-  const pendingRequests = useMemo(
-    () => requestInteractions.filter((i) => i.status === InteractionStatus.PENDING),
-    [requestInteractions],
-  )
-
-  const resolvedRequests = useMemo(
-    () => requestInteractions.filter((i) => i.status !== InteractionStatus.PENDING),
-    [requestInteractions],
   )
 
   const pendingInteraction = interactions.find((i) => i.status === InteractionStatus.PENDING)
@@ -138,13 +124,6 @@ function TaskDetailPage() {
       bellAudioRef.current.play().catch(() => {})
     }
     prevPendingCountRef.current = pendingRequests.length
-  }, [pendingRequests.length])
-
-  // Auto-switch to requests tab on mobile when new pending interaction arrives
-  useEffect(() => {
-    if (pendingRequests.length > 0) {
-      setMobileTab('requests')
-    }
   }, [pendingRequests.length])
 
   const handleStatusChange = (statusId: string) => {
@@ -257,179 +236,104 @@ function TaskDetailPage() {
         </div>
       </div>
 
-      {/* Mobile tab switcher */}
-      <div className="md:hidden shrink-0 flex border-b border-slate-800">
-        <button
-          onClick={() => setMobileTab('timeline')}
-          className={`flex-1 py-2 text-xs font-medium text-center transition-colors ${
-            mobileTab === 'timeline'
-              ? 'text-cyan-400 border-b-2 border-cyan-400'
-              : 'text-gray-500 hover:text-gray-300'
-          }`}
-        >
-          Timeline ({timelineItems.length})
-        </button>
-        <button
-          onClick={() => setMobileTab('requests')}
-          className={`flex-1 py-2 text-xs font-medium text-center transition-colors relative ${
-            mobileTab === 'requests'
-              ? 'text-cyan-400 border-b-2 border-cyan-400'
-              : 'text-gray-500 hover:text-gray-300'
-          }`}
-        >
-          Requests
-          {pendingRequests.length > 0 && (
-            <span className="ml-1 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold bg-amber-500 text-black rounded-full">
-              {pendingRequests.length}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Split panels */}
-      <div className="flex-1 flex flex-col min-h-0">
-        {/* Upper half: Task Details + Timeline */}
-        <div
-          className={`flex-1 min-h-0 flex flex-col ${
-            mobileTab === 'timeline' ? 'flex' : 'hidden md:flex'
-          }`}
-        >
-          <div className="flex-1 min-h-0 overflow-y-auto" ref={timelineScrollRef}>
-            <div className="max-w-3xl mx-auto px-4 py-4 md:px-6 md:py-6 space-y-4">
-              {/* Description card */}
-              {task.description && (
-                <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Description</p>
-                  <p className="text-sm text-gray-300 whitespace-pre-wrap">{task.description}</p>
-                </div>
-              )}
-
-              {/* Result Summary */}
-              {resultSummary && (
-                <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Result Summary</p>
-                  <MarkdownDescription content={resultSummary} className="text-sm text-gray-300" />
-                </div>
-              )}
-
-              {/* Metadata */}
-              {metadataEntries.length > 0 && (
-                <div className="bg-slate-900 border border-slate-800 rounded-lg divide-y divide-slate-800">
-                  {metadataEntries.map(([key, value]) => (
-                    <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 px-3 py-2 md:px-4 md:py-2.5">
-                      <span className="text-xs text-gray-500 font-mono sm:w-40 shrink-0">{key}</span>
-                      {key === 'pull_request_url' || key === 'pr_url' ? (
-                        <a
-                          href={value}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-cyan-400 hover:text-cyan-300 flex items-center gap-1 truncate"
-                        >
-                          <ExternalLink className="w-3 h-3 shrink-0" />
-                          <span className="truncate">{value}</span>
-                        </a>
-                      ) : key === 'worktree' ? (
-                        <span className="text-sm text-gray-300 font-mono flex items-center gap-1">
-                          <GitBranch className="w-3 h-3 text-gray-500 shrink-0" />
-                          {value}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-gray-300 truncate">{value}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Execution Timeline */}
-              {timelineItems.length > 0 && (
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">
-                    Execution Timeline ({timelineItems.length})
-                  </p>
-                  <div className="space-y-0.5">
-                    {timelineItems.map((item) => {
-                      const key = item.kind === 'interaction' ? item.interaction.id : item.log.id
-                      return <TimelineEntry key={key} item={item} />
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
+      {/* Pending requests section — pinned between header and timeline */}
+      {pendingRequests.length > 0 && (
+        <div className="shrink-0 border-b border-slate-800 px-4 md:px-6 py-3">
+          <div className="max-w-3xl mx-auto">
+            <PendingRequestsPanel
+              pendingRequests={pendingRequests}
+              onRespond={handleRespond}
+              isRespondPending={respondMut.isPending}
+            />
           </div>
         </div>
+      )}
 
-        {/* Divider */}
-        <div className="hidden md:block shrink-0 border-t border-slate-700" />
+      {/* Timeline area — full height */}
+      <div ref={timelineScrollRef} className="flex-1 overflow-y-auto">
+        <div className="max-w-3xl mx-auto px-4 py-4 md:px-6 md:py-6 space-y-4">
+          {/* Description card */}
+          {task.description && (
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Description</p>
+              <p className="text-sm text-gray-300 whitespace-pre-wrap">{task.description}</p>
+            </div>
+          )}
 
-        {/* Lower half: Agent Requests */}
-        <div
-          className={`flex-1 min-h-0 flex flex-col ${
-            mobileTab === 'requests' ? 'flex' : 'hidden md:flex'
-          }`}
-        >
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <div className="max-w-3xl mx-auto px-4 py-4 md:px-6 space-y-3">
-              {/* Pending requests with keyboard shortcuts */}
-              <PendingRequestsPanel
-                pendingRequests={pendingRequests}
-                onRespond={handleRespond}
-                isRespondPending={respondMut.isPending}
-                enabled={mobileTab === 'requests'}
-              />
+          {/* Result Summary */}
+          {resultSummary && (
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Result Summary</p>
+              <MarkdownDescription content={resultSummary} className="text-sm text-gray-300" />
+            </div>
+          )}
 
-              {/* Resolved requests (collapsible) */}
-              {resolvedRequests.length > 0 && (
-                <div>
-                  <button
-                    onClick={() => setShowResolved(!showResolved)}
-                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors py-1"
-                  >
-                    {showResolved ? (
-                      <ChevronDown className="w-3 h-3" />
-                    ) : (
-                      <ChevronRight className="w-3 h-3" />
-                    )}
-                    Resolved ({resolvedRequests.length})
-                  </button>
-                  {showResolved && (
-                    <div className="space-y-2 mt-2">
-                      {resolvedRequests.map((interaction) => (
-                        <RequestItem
-                          key={interaction.id}
-                          interaction={interaction}
-                          onRespond={handleRespond}
-                          isRespondPending={respondMut.isPending}
-                        />
-                      ))}
-                    </div>
+          {/* Metadata */}
+          {metadataEntries.length > 0 && (
+            <div className="bg-slate-900 border border-slate-800 rounded-lg divide-y divide-slate-800">
+              {metadataEntries.map(([key, value]) => (
+                <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 px-3 py-2 md:px-4 md:py-2.5">
+                  <span className="text-xs text-gray-500 font-mono sm:w-40 shrink-0">{key}</span>
+                  {key === 'pull_request_url' || key === 'pr_url' ? (
+                    <a
+                      href={value}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-cyan-400 hover:text-cyan-300 flex items-center gap-1 truncate"
+                    >
+                      <ExternalLink className="w-3 h-3 shrink-0" />
+                      <span className="truncate">{value}</span>
+                    </a>
+                  ) : key === 'worktree' ? (
+                    <span className="text-sm text-gray-300 font-mono flex items-center gap-1">
+                      <GitBranch className="w-3 h-3 text-gray-500 shrink-0" />
+                      {value}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-gray-300 truncate">{value}</span>
                   )}
                 </div>
-              )}
-
-              {/* Empty state */}
-              {requestInteractions.length === 0 && (
-                <p className="text-xs text-gray-600 py-4 text-center">
-                  No agent requests yet
-                </p>
-              )}
+              ))}
             </div>
-          </div>
+          )}
 
-          {/* InputBar pinned to bottom of request panel */}
-          <div className="shrink-0 border-t border-slate-800 px-4 py-3 md:px-6">
-            <div className="max-w-3xl mx-auto">
-              <InputBar
-                pendingInteraction={pendingInteraction}
-                onRespond={handleRespond}
-                onSendMessage={handleSendMessage}
-                isRespondPending={respondMut.isPending}
-                isSendPending={sendMut.isPending}
-                connectionStatus={connectionStatus}
-                onReconnect={reconnect}
-              />
+          {/* Execution Timeline */}
+          {timelineItems.length > 0 && (
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">
+                Execution Timeline ({timelineItems.length})
+              </p>
+              <div className="space-y-0.5">
+                {timelineItems.map((item) => {
+                  const key = item.kind === 'interaction' ? item.interaction.id : item.log.id
+                  return <TimelineEntry key={key} item={item} />
+                })}
+              </div>
             </div>
-          </div>
+          )}
+        </div>
+      </div>
+
+      {/* InputBar pinned to bottom */}
+      <div className="shrink-0 border-t border-slate-800 px-4 py-3 md:px-6">
+        <div className="max-w-3xl mx-auto">
+          <InputBar
+            pendingInteraction={pendingInteraction}
+            onRespond={handleRespond}
+            onSendMessage={handleSendMessage}
+            isRespondPending={respondMut.isPending}
+            isSendPending={sendMut.isPending}
+          />
+        </div>
+      </div>
+
+      {/* Connection status bar */}
+      <div className="shrink-0 border-t border-slate-800 px-6 py-2">
+        <div className="max-w-3xl mx-auto flex items-center gap-2">
+          <ConnectionIndicator status={connectionStatus} onReconnect={reconnect} />
+          <span className="text-[11px] text-gray-500">
+            {connectionStatus === 'connected' ? 'Connected' : connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
+          </span>
         </div>
       </div>
 
