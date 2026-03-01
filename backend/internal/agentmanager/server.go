@@ -119,6 +119,26 @@ func (s *Server) releaseAgentTasks(ctx context.Context, agentManagerID string) {
 			"agent_manager_id", agentManagerID,
 		)
 
+		// Expire any orphaned PENDING interactions for the released task
+		// so they no longer show in the UI.
+		if expired, err := s.interactionRepo.ExpirePendingByTask(ctx, t.ID); err != nil {
+			slog.Error("failed to expire pending interactions for released task",
+				"task_id", t.ID, "error", err)
+		} else if expired > 0 {
+			slog.Info("expired orphaned pending interactions",
+				"task_id", t.ID, "count", expired)
+			// Publish events so the frontend removes them from the pending list.
+			s.eventBus.PublishNew(
+				taskguildv1.EventType_EVENT_TYPE_INTERACTION_RESPONDED,
+				t.ID,
+				"",
+				map[string]string{
+					"task_id": t.ID,
+					"reason":  "agent_released",
+				},
+			)
+		}
+
 		// Look up agent config to build the broadcast command.
 		wf, err := s.workflowRepo.Get(ctx, t.WorkflowID)
 		if err != nil {

@@ -39,6 +39,9 @@ const (
 	// InteractionServiceRespondToInteractionProcedure is the fully-qualified name of the
 	// InteractionService's RespondToInteraction RPC.
 	InteractionServiceRespondToInteractionProcedure = "/taskguild.v1.InteractionService/RespondToInteraction"
+	// InteractionServiceExpireInteractionProcedure is the fully-qualified name of the
+	// InteractionService's ExpireInteraction RPC.
+	InteractionServiceExpireInteractionProcedure = "/taskguild.v1.InteractionService/ExpireInteraction"
 	// InteractionServiceSendMessageProcedure is the fully-qualified name of the InteractionService's
 	// SendMessage RPC.
 	InteractionServiceSendMessageProcedure = "/taskguild.v1.InteractionService/SendMessage"
@@ -51,6 +54,8 @@ const (
 type InteractionServiceClient interface {
 	ListInteractions(context.Context, *connect.Request[v1.ListInteractionsRequest]) (*connect.Response[v1.ListInteractionsResponse], error)
 	RespondToInteraction(context.Context, *connect.Request[v1.RespondToInteractionRequest]) (*connect.Response[v1.RespondToInteractionResponse], error)
+	// ExpireInteraction sets a PENDING interaction to EXPIRED.
+	ExpireInteraction(context.Context, *connect.Request[v1.ExpireInteractionRequest]) (*connect.Response[v1.ExpireInteractionResponse], error)
 	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
 	SubscribeInteractions(context.Context, *connect.Request[v1.SubscribeInteractionsRequest]) (*connect.ServerStreamForClient[v1.InteractionEvent], error)
 }
@@ -78,6 +83,12 @@ func NewInteractionServiceClient(httpClient connect.HTTPClient, baseURL string, 
 			connect.WithSchema(interactionServiceMethods.ByName("RespondToInteraction")),
 			connect.WithClientOptions(opts...),
 		),
+		expireInteraction: connect.NewClient[v1.ExpireInteractionRequest, v1.ExpireInteractionResponse](
+			httpClient,
+			baseURL+InteractionServiceExpireInteractionProcedure,
+			connect.WithSchema(interactionServiceMethods.ByName("ExpireInteraction")),
+			connect.WithClientOptions(opts...),
+		),
 		sendMessage: connect.NewClient[v1.SendMessageRequest, v1.SendMessageResponse](
 			httpClient,
 			baseURL+InteractionServiceSendMessageProcedure,
@@ -97,6 +108,7 @@ func NewInteractionServiceClient(httpClient connect.HTTPClient, baseURL string, 
 type interactionServiceClient struct {
 	listInteractions      *connect.Client[v1.ListInteractionsRequest, v1.ListInteractionsResponse]
 	respondToInteraction  *connect.Client[v1.RespondToInteractionRequest, v1.RespondToInteractionResponse]
+	expireInteraction     *connect.Client[v1.ExpireInteractionRequest, v1.ExpireInteractionResponse]
 	sendMessage           *connect.Client[v1.SendMessageRequest, v1.SendMessageResponse]
 	subscribeInteractions *connect.Client[v1.SubscribeInteractionsRequest, v1.InteractionEvent]
 }
@@ -109,6 +121,11 @@ func (c *interactionServiceClient) ListInteractions(ctx context.Context, req *co
 // RespondToInteraction calls taskguild.v1.InteractionService.RespondToInteraction.
 func (c *interactionServiceClient) RespondToInteraction(ctx context.Context, req *connect.Request[v1.RespondToInteractionRequest]) (*connect.Response[v1.RespondToInteractionResponse], error) {
 	return c.respondToInteraction.CallUnary(ctx, req)
+}
+
+// ExpireInteraction calls taskguild.v1.InteractionService.ExpireInteraction.
+func (c *interactionServiceClient) ExpireInteraction(ctx context.Context, req *connect.Request[v1.ExpireInteractionRequest]) (*connect.Response[v1.ExpireInteractionResponse], error) {
+	return c.expireInteraction.CallUnary(ctx, req)
 }
 
 // SendMessage calls taskguild.v1.InteractionService.SendMessage.
@@ -125,6 +142,8 @@ func (c *interactionServiceClient) SubscribeInteractions(ctx context.Context, re
 type InteractionServiceHandler interface {
 	ListInteractions(context.Context, *connect.Request[v1.ListInteractionsRequest]) (*connect.Response[v1.ListInteractionsResponse], error)
 	RespondToInteraction(context.Context, *connect.Request[v1.RespondToInteractionRequest]) (*connect.Response[v1.RespondToInteractionResponse], error)
+	// ExpireInteraction sets a PENDING interaction to EXPIRED.
+	ExpireInteraction(context.Context, *connect.Request[v1.ExpireInteractionRequest]) (*connect.Response[v1.ExpireInteractionResponse], error)
 	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
 	SubscribeInteractions(context.Context, *connect.Request[v1.SubscribeInteractionsRequest], *connect.ServerStream[v1.InteractionEvent]) error
 }
@@ -148,6 +167,12 @@ func NewInteractionServiceHandler(svc InteractionServiceHandler, opts ...connect
 		connect.WithSchema(interactionServiceMethods.ByName("RespondToInteraction")),
 		connect.WithHandlerOptions(opts...),
 	)
+	interactionServiceExpireInteractionHandler := connect.NewUnaryHandler(
+		InteractionServiceExpireInteractionProcedure,
+		svc.ExpireInteraction,
+		connect.WithSchema(interactionServiceMethods.ByName("ExpireInteraction")),
+		connect.WithHandlerOptions(opts...),
+	)
 	interactionServiceSendMessageHandler := connect.NewUnaryHandler(
 		InteractionServiceSendMessageProcedure,
 		svc.SendMessage,
@@ -166,6 +191,8 @@ func NewInteractionServiceHandler(svc InteractionServiceHandler, opts ...connect
 			interactionServiceListInteractionsHandler.ServeHTTP(w, r)
 		case InteractionServiceRespondToInteractionProcedure:
 			interactionServiceRespondToInteractionHandler.ServeHTTP(w, r)
+		case InteractionServiceExpireInteractionProcedure:
+			interactionServiceExpireInteractionHandler.ServeHTTP(w, r)
 		case InteractionServiceSendMessageProcedure:
 			interactionServiceSendMessageHandler.ServeHTTP(w, r)
 		case InteractionServiceSubscribeInteractionsProcedure:
@@ -185,6 +212,10 @@ func (UnimplementedInteractionServiceHandler) ListInteractions(context.Context, 
 
 func (UnimplementedInteractionServiceHandler) RespondToInteraction(context.Context, *connect.Request[v1.RespondToInteractionRequest]) (*connect.Response[v1.RespondToInteractionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.InteractionService.RespondToInteraction is not implemented"))
+}
+
+func (UnimplementedInteractionServiceHandler) ExpireInteraction(context.Context, *connect.Request[v1.ExpireInteractionRequest]) (*connect.Response[v1.ExpireInteractionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.InteractionService.ExpireInteraction is not implemented"))
 }
 
 func (UnimplementedInteractionServiceHandler) SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error) {

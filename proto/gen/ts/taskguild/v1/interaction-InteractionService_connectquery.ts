@@ -15,6 +15,13 @@ export const listInteractions = InteractionService.method.listInteractions;
 export const respondToInteraction = InteractionService.method.respondToInteraction;
 
 /**
+ * ExpireInteraction sets a PENDING interaction to EXPIRED.
+ *
+ * @generated from rpc taskguild.v1.InteractionService.ExpireInteraction
+ */
+export const expireInteraction = InteractionService.method.expireInteraction;
+
+/**
  * @generated from rpc taskguild.v1.InteractionService.SendMessage
  */
 export const sendMessage = InteractionService.method.sendMessage;
