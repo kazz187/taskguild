@@ -27,10 +27,12 @@ export function ChatBubble({
   interaction,
   onRespond,
   isRespondPending,
+  hideActions = false,
 }: {
   interaction: Interaction
   onRespond: (id: string, response: string) => void
   isRespondPending: boolean
+  hideActions?: boolean
 }) {
   // User message — right-aligned bubble
   if (interaction.type === InteractionType.USER_MESSAGE) {
@@ -92,7 +94,7 @@ export function ChatBubble({
           )}
 
           {/* Inline action buttons for pending interactions */}
-          {isPending && interaction.options.length > 0 && (
+          {isPending && !hideActions && interaction.options.length > 0 && (
             interaction.type === InteractionType.QUESTION ? (
               /* Question: vertical card layout with label + description */
               <div className="flex flex-col gap-2 mt-3">
