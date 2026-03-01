@@ -47,6 +47,18 @@ export function useRequestKeyboard({
 }: UseRequestKeyboardOptions): UseRequestKeyboardResult {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const prevRequestsRef = useRef<Interaction[]>([])
+  // Track interaction IDs that have already been responded to (synchronous guard against double-send)
+  const respondedIdsRef = useRef<Set<string>>(new Set())
+
+  // Clean up respondedIds when interactions disappear from the pending list
+  useEffect(() => {
+    const currentIds = new Set(pendingRequests.map((r) => r.id))
+    for (const id of respondedIdsRef.current) {
+      if (!currentIds.has(id)) {
+        respondedIdsRef.current.delete(id)
+      }
+    }
+  }, [pendingRequests])
 
   // Auto-select when exactly 1 pending request, or re-select when selected request disappears
   useEffect(() => {
@@ -77,6 +89,37 @@ export function useRequestKeyboard({
 
     prevRequestsRef.current = pendingRequests
   }, [pendingRequests, selectedId])
+
+  /**
+   * Respond to an interaction with a synchronous double-send guard.
+   * Marks the interaction ID as responded immediately (via ref, not state)
+   * so that even rapid key presses within the same render frame are blocked.
+   * Also advances selection to the next pending request.
+   */
+  const guardedRespond = useCallback(
+    (interactionId: string, response: string) => {
+      if (respondedIdsRef.current.has(interactionId)) return
+      respondedIdsRef.current.add(interactionId)
+
+      onRespond(interactionId, response)
+
+      // Advance selection to the next un-responded pending request
+      const currentIndex = pendingRequests.findIndex((r) => r.id === interactionId)
+      const remaining = pendingRequests.filter(
+        (r) => r.id !== interactionId && !respondedIdsRef.current.has(r.id),
+      )
+      if (remaining.length === 0) {
+        setSelectedId(null)
+      } else {
+        // Pick the request at or after the current index
+        const nextAfter = pendingRequests.find(
+          (r, idx) => idx > currentIndex && !respondedIdsRef.current.has(r.id),
+        )
+        setSelectedId(nextAfter?.id ?? remaining[0].id)
+      }
+    },
+    [onRespond, pendingRequests],
+  )
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -123,7 +166,7 @@ export function useRequestKeyboard({
           // Verify the option actually exists in the interaction
           if (!selected.options.some((opt) => opt.value === value)) return
           e.preventDefault()
-          onRespond(selectedId, value)
+          guardedRespond(selectedId, value)
           break
         }
         default: {
@@ -136,13 +179,13 @@ export function useRequestKeyboard({
             if (num > selected.options.length) return
             e.preventDefault()
             const option = selected.options[num - 1]
-            onRespond(selectedId, option.value)
+            guardedRespond(selectedId, option.value)
           }
           break
         }
       }
     },
-    [enabled, pendingRequests, selectedId, isRespondPending, onRespond],
+    [enabled, pendingRequests, selectedId, isRespondPending, guardedRespond],
   )
 
   useEffect(() => {
