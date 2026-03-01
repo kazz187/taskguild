@@ -7,10 +7,12 @@ require (
 	connectrpc.com/connect v1.18.1
 	connectrpc.com/grpchealth v1.4.0
 	github.com/SherClockHolmes/webpush-go v1.4.0
+	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/aws/aws-sdk-go-v2 v1.41.1
 	github.com/aws/aws-sdk-go-v2/config v1.32.9
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.0
 	github.com/fatih/color v1.15.0
+	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-chi/chi/v5 v5.2.2
 	github.com/kazz187/claude-agent-sdk-go v0.0.10
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -19,9 +21,11 @@ require (
 	golang.org/x/net v0.43.0
 	google.golang.org/protobuf v1.36.7
 	gopkg.in/yaml.v3 v3.0.1
+	mvdan.cc/sh/v3 v3.12.0
 )
 
 require (
+	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.4 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.9 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.17 // indirect
@@ -40,13 +44,11 @@ require (
 	github.com/aws/smithy-go v1.24.0 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/google/jsonschema-go v0.4.2 // indirect
-	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/rogpeppe/go-internal v1.14.1 // indirect
+	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
-	mvdan.cc/sh/v3 v3.12.0 // indirect
 )
