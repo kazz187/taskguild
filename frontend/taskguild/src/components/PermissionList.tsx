@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
-import { getPermissions, updatePermissions } from '@taskguild/proto/taskguild/v1/permission-PermissionService_connectquery.ts'
-import { Shield, Plus, X, Save } from 'lucide-react'
+import { getPermissions, updatePermissions, syncPermissionsFromDir } from '@taskguild/proto/taskguild/v1/permission-PermissionService_connectquery.ts'
+import { Shield, Plus, X, Save, RefreshCw } from 'lucide-react'
 
 type PermissionCategory = 'allow' | 'ask' | 'deny'
 
@@ -52,6 +52,7 @@ const CATEGORY_CONFIG: Record<PermissionCategory, {
 export function PermissionList({ projectId }: { projectId: string }) {
   const { data, refetch, isLoading } = useQuery(getPermissions, { projectId })
   const updateMut = useMutation(updatePermissions)
+  const syncMut = useMutation(syncPermissionsFromDir)
 
   const [allow, setAllow] = useState<string[]>([])
   const [ask, setAsk] = useState<string[]>([])
@@ -113,6 +114,13 @@ export function PermissionList({ projectId }: { projectId: string }) {
     )
   }
 
+  const handleSync = () => {
+    syncMut.mutate(
+      { projectId, directory: '.' },
+      { onSuccess: () => refetch() },
+    )
+  }
+
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     addRule(newRule, newCategory)
@@ -136,20 +144,44 @@ export function PermissionList({ projectId }: { projectId: string }) {
             </p>
           </div>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={!dirty || updateMut.isPending}
-          className="flex items-center gap-1.5 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:text-gray-500 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          <Save className="w-3.5 h-3.5" />
-          {updateMut.isPending ? 'Saving...' : 'Save'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSync}
+            disabled={syncMut.isPending}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs md:text-sm md:px-3 text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors disabled:opacity-50"
+            title="Sync permissions from .claude/settings.json"
+          >
+            <RefreshCw className={`w-4 h-4 ${syncMut.isPending ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Sync from Repo</span>
+            <span className="sm:hidden">Sync</span>
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!dirty || updateMut.isPending}
+            className="flex items-center gap-1.5 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:text-gray-500 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <Save className="w-3.5 h-3.5" />
+            {updateMut.isPending ? 'Saving...' : 'Save'}
+          </button>
+        </div>
       </div>
 
       {updateMut.error && (
         <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
           {updateMut.error.message}
         </p>
+      )}
+
+      {syncMut.error && (
+        <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+          {syncMut.error.message}
+        </p>
+      )}
+
+      {syncMut.isSuccess && (
+        <div className="px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-sm">
+          Synced permissions from .claude/settings.json
+        </div>
       )}
 
       {/* Add Rule Form */}

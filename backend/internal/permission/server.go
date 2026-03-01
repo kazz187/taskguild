@@ -2,6 +2,10 @@ package permission
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"connectrpc.com/connect"
@@ -63,6 +67,98 @@ func (s *Server) UpdatePermissions(ctx context.Context, req *connect.Request[tas
 	return connect.NewResponse(&taskguildv1.UpdatePermissionsResponse{
 		Permissions: toProto(ps),
 	}), nil
+}
+
+// SyncPermissionsFromDir reads .claude/settings.json from the given directory
+// and merges its permission rules into the stored set using union strategy.
+func (s *Server) SyncPermissionsFromDir(ctx context.Context, req *connect.Request[taskguildv1.SyncPermissionsFromDirRequest]) (*connect.Response[taskguildv1.SyncPermissionsFromDirResponse], error) {
+	dir := req.Msg.Directory
+	if dir == "" {
+		dir = "."
+	}
+	settingsPath := filepath.Join(dir, ".claude", "settings.json")
+
+	localAllow, localAsk, localDeny, err := readSettingsPermissions(settingsPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read settings.json: %w", err)
+	}
+
+	// If no local permissions found, return existing stored permissions as-is.
+	if len(localAllow) == 0 && len(localAsk) == 0 && len(localDeny) == 0 {
+		stored, err := s.repo.Get(ctx, req.Msg.ProjectId)
+		if err != nil {
+			return nil, err
+		}
+		return connect.NewResponse(&taskguildv1.SyncPermissionsFromDirResponse{
+			Permissions: toProto(stored),
+		}), nil
+	}
+
+	// Get stored permissions and merge with local.
+	stored, err := s.repo.Get(ctx, req.Msg.ProjectId)
+	if err != nil {
+		return nil, err
+	}
+
+	merged := Merge(stored, localAllow, localAsk, localDeny)
+	if err := s.repo.Upsert(ctx, merged); err != nil {
+		return nil, err
+	}
+
+	s.notifyChange(merged.ProjectID)
+
+	return connect.NewResponse(&taskguildv1.SyncPermissionsFromDirResponse{
+		Permissions: toProto(merged),
+	}), nil
+}
+
+// readSettingsPermissions reads and parses permission rules from a .claude/settings.json file.
+// Returns empty slices if the file does not exist or has no permissions section.
+func readSettingsPermissions(path string) (allow, ask, deny []string, err error) {
+	data, readErr := os.ReadFile(path)
+	if readErr != nil {
+		if os.IsNotExist(readErr) {
+			return nil, nil, nil, nil
+		}
+		return nil, nil, nil, readErr
+	}
+
+	var raw map[string]interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, nil, nil, fmt.Errorf("invalid JSON in %s: %w", path, err)
+	}
+
+	permsRaw, ok := raw["permissions"]
+	if !ok {
+		return nil, nil, nil, nil
+	}
+	permsMap, ok := permsRaw.(map[string]interface{})
+	if !ok {
+		return nil, nil, nil, nil
+	}
+
+	allow = toStringSlice(permsMap["allow"])
+	ask = toStringSlice(permsMap["ask"])
+	deny = toStringSlice(permsMap["deny"])
+	return allow, ask, deny, nil
+}
+
+// toStringSlice converts an interface{} (expected to be []interface{} of strings) to []string.
+func toStringSlice(v interface{}) []string {
+	if v == nil {
+		return nil
+	}
+	arr, ok := v.([]interface{})
+	if !ok {
+		return nil
+	}
+	var result []string
+	for _, item := range arr {
+		if s, ok := item.(string); ok {
+			result = append(result, s)
+		}
+	}
+	return result
 }
 
 // Merge performs a union merge of local permissions into stored permissions.

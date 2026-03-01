@@ -13,6 +13,10 @@ service PermissionService {
 
   // UpdatePermissions replaces the full permission set for a project.
   rpc UpdatePermissions(UpdatePermissionsRequest) returns (UpdatePermissionsResponse);
+
+  // SyncPermissionsFromDir reads .claude/settings.json from the given directory
+  // and merges its permission rules (allow/ask/deny) into the stored set.
+  rpc SyncPermissionsFromDir(SyncPermissionsFromDirRequest) returns (SyncPermissionsFromDirResponse);
 }
 
 // PermissionSet represents a project-scoped set of permission rules.
@@ -39,4 +43,12 @@ message UpdatePermissionsRequest {
 }
 message UpdatePermissionsResponse {
   PermissionSet permissions = 1;
+}
+
+message SyncPermissionsFromDirRequest {
+  string project_id = 1;
+  string directory = 2;  // path to the repository root directory
+}
+message SyncPermissionsFromDirResponse {
+  PermissionSet permissions = 1;  // merged permission set
 }
