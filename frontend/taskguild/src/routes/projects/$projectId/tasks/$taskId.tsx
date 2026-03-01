@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { getTask, updateTaskStatus } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import { getProject } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
@@ -34,6 +34,7 @@ export const Route = createFileRoute('/projects/$projectId/tasks/$taskId')({
 
 function TaskDetailPage() {
   const { projectId, taskId } = Route.useParams()
+  const navigate = useNavigate()
   const [showEditModal, setShowEditModal] = useState(false)
   const timelineScrollRef = useRef<HTMLDivElement>(null)
   const prevTimelineCountRef = useRef(0)
@@ -125,6 +126,14 @@ function TaskDetailPage() {
     }
     prevPendingCountRef.current = pendingRequests.length
   }, [pendingRequests.length])
+
+  const handleDeleted = useCallback(() => {
+    navigate({
+      to: '/projects/$projectId',
+      params: { projectId },
+      search: task?.workflowId ? { workflowId: task.workflowId } : {},
+    })
+  }, [navigate, projectId, task?.workflowId])
 
   const handleStatusChange = (statusId: string) => {
     if (!task) return
@@ -357,6 +366,7 @@ function TaskDetailPage() {
           currentStatusId={task.statusId}
           onClose={() => setShowEditModal(false)}
           onChanged={() => refetchTask()}
+          onDeleted={handleDeleted}
         />
       )}
     </div>

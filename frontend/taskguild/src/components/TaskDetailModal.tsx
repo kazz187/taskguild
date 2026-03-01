@@ -28,6 +28,7 @@ interface TaskDetailModalProps {
   currentStatusId: string
   onClose: () => void
   onChanged: () => void
+  onDeleted?: () => void
 }
 
 export function TaskDetailModal({
@@ -37,6 +38,7 @@ export function TaskDetailModal({
   currentStatusId,
   onClose,
   onChanged,
+  onDeleted,
 }: TaskDetailModalProps) {
   const { data: taskData, refetch: refetchTask } = useQuery(getTask, { id: taskId })
   const { data: interactionsData, refetch: refetchInteractions } = useQuery(listInteractions, { taskId })
@@ -147,7 +149,7 @@ export function TaskDetailModal({
     if (!task) return
     deleteMut.mutate(
       { id: task.id },
-      { onSuccess: () => { onChanged(); onClose() } },
+      { onSuccess: () => { if (onDeleted) { onDeleted() } else { onChanged(); onClose() } } },
     )
   }
 
