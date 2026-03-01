@@ -269,6 +269,12 @@ func runSubscribeLoop(
 			log.Printf("received list worktrees command (request_id: %s)", listCmd.GetRequestId())
 			go handleListWorktrees(ctx, client, cfg, listCmd.GetRequestId())
 
+		case *v1.AgentCommand_DeleteWorktree:
+			deleteCmd := c.DeleteWorktree
+			log.Printf("received delete worktree command (request_id: %s, name: %s, force: %v)",
+				deleteCmd.GetRequestId(), deleteCmd.GetWorktreeName(), deleteCmd.GetForce())
+			go handleDeleteWorktree(ctx, client, cfg, deleteCmd)
+
 		case *v1.AgentCommand_SyncAgents:
 			log.Println("received sync agents command, re-syncing...")
 			syncAgents(ctx, client, cfg)
@@ -399,9 +405,31 @@ func handleListWorktrees(ctx context.Context, client taskguildv1connect.AgentMan
 			}
 		}
 
+		// Detect uncommitted changes using git status --porcelain.
+		var hasChanges bool
+		var changedFiles []string
+		statusCmd := exec.CommandContext(ctx, "git", "status", "--porcelain")
+		statusCmd.Dir = wtDir
+		if out, err := statusCmd.Output(); err == nil {
+			lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+			for _, line := range lines {
+				line = strings.TrimSpace(line)
+				if line == "" {
+					continue
+				}
+				hasChanges = true
+				// git status --porcelain format: "XY filename" (filename starts at position 3)
+				if len(line) > 3 {
+					changedFiles = append(changedFiles, line[3:])
+				}
+			}
+		}
+
 		worktrees = append(worktrees, &v1.WorktreeInfo{
-			Name:   name,
-			Branch: branch,
+			Name:         name,
+			Branch:       branch,
+			HasChanges:   hasChanges,
+			ChangedFiles: changedFiles,
 		})
 	}
 
@@ -415,6 +443,80 @@ func handleListWorktrees(ctx context.Context, client taskguildv1connect.AgentMan
 	} else {
 		log.Printf("reported %d worktrees (request_id: %s)", len(worktrees), requestID)
 	}
+}
+
+// handleDeleteWorktree removes a git worktree and its associated branch.
+func handleDeleteWorktree(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, cfg *config, cmd *v1.DeleteWorktreeCommand) {
+	requestID := cmd.GetRequestId()
+	worktreeName := cmd.GetWorktreeName()
+	force := cmd.GetForce()
+
+	reportResult := func(success bool, errMsg string) {
+		_, err := client.ReportWorktreeDeleteResult(ctx, connect.NewRequest(&v1.ReportWorktreeDeleteResultRequest{
+			RequestId:    requestID,
+			ProjectName:  cfg.ProjectName,
+			WorktreeName: worktreeName,
+			Success:      success,
+			ErrorMessage: errMsg,
+		}))
+		if err != nil {
+			log.Printf("failed to report worktree delete result: %v", err)
+		}
+	}
+
+	wtDir := filepath.Join(cfg.WorkDir, ".claude", "worktrees", worktreeName)
+
+	// Verify worktree exists.
+	if _, err := os.Stat(wtDir); os.IsNotExist(err) {
+		reportResult(false, fmt.Sprintf("worktree %q does not exist", worktreeName))
+		return
+	}
+
+	// Check for uncommitted changes (unless force).
+	if !force {
+		statusCmd := exec.CommandContext(ctx, "git", "status", "--porcelain")
+		statusCmd.Dir = wtDir
+		if out, err := statusCmd.Output(); err == nil {
+			if strings.TrimSpace(string(out)) != "" {
+				reportResult(false, "worktree has uncommitted changes; use force delete")
+				return
+			}
+		}
+	}
+
+	// Determine the branch name before removing the worktree.
+	branchName := "worktree-" + worktreeName
+	branchCmd := exec.CommandContext(ctx, "git", "branch", "--show-current")
+	branchCmd.Dir = wtDir
+	if out, err := branchCmd.Output(); err == nil {
+		if b := strings.TrimSpace(string(out)); b != "" {
+			branchName = b
+		}
+	}
+
+	// Remove the git worktree.
+	var removeCmd *exec.Cmd
+	if force {
+		removeCmd = exec.CommandContext(ctx, "git", "worktree", "remove", "--force", wtDir)
+	} else {
+		removeCmd = exec.CommandContext(ctx, "git", "worktree", "remove", wtDir)
+	}
+	removeCmd.Dir = cfg.WorkDir
+	if out, err := removeCmd.CombinedOutput(); err != nil {
+		reportResult(false, fmt.Sprintf("git worktree remove failed: %v: %s", err, strings.TrimSpace(string(out))))
+		return
+	}
+
+	// Delete the associated branch (best-effort).
+	deleteBranchCmd := exec.CommandContext(ctx, "git", "branch", "-D", branchName)
+	deleteBranchCmd.Dir = cfg.WorkDir
+	if out, err := deleteBranchCmd.CombinedOutput(); err != nil {
+		log.Printf("warning: failed to delete branch %s: %v: %s", branchName, err, strings.TrimSpace(string(out)))
+		// Not fatal – worktree is already removed.
+	}
+
+	log.Printf("deleted worktree %s (branch: %s, force: %v)", worktreeName, branchName, force)
+	reportResult(true, "")
 }
 
 // authInterceptor adds the API key to outgoing requests.
