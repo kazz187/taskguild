@@ -15,6 +15,9 @@ type Workflow struct {
 	// Task defaults
 	DefaultPermissionMode string `yaml:"default_permission_mode"`
 	DefaultUseWorktree    bool   `yaml:"default_use_worktree"`
+
+	// Custom prompt prepended to agent instructions for tasks in this workflow
+	CustomPrompt string `yaml:"custom_prompt"`
 }
 
 type HookTrigger string

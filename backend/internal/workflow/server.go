@@ -35,6 +35,7 @@ func (s *Server) CreateWorkflow(ctx context.Context, req *connect.Request[taskgu
 		Description:           req.Msg.Description,
 		DefaultPermissionMode: req.Msg.DefaultPermissionMode,
 		DefaultUseWorktree:    req.Msg.DefaultUseWorktree,
+		CustomPrompt:          req.Msg.CustomPrompt,
 		CreatedAt:             now,
 		UpdatedAt:             now,
 	}
@@ -120,6 +121,7 @@ func (s *Server) UpdateWorkflow(ctx context.Context, req *connect.Request[taskgu
 	// Task defaults: always overwrite (empty string is a valid value for permission mode)
 	w.DefaultPermissionMode = req.Msg.DefaultPermissionMode
 	w.DefaultUseWorktree = req.Msg.DefaultUseWorktree
+	w.CustomPrompt = req.Msg.CustomPrompt
 	w.UpdatedAt = time.Now()
 	if err := s.repo.Update(ctx, w); err != nil {
 		return nil, err
@@ -144,6 +146,7 @@ func toProto(w *Workflow) *taskguildv1.Workflow {
 		Description:           w.Description,
 		DefaultPermissionMode: w.DefaultPermissionMode,
 		DefaultUseWorktree:    w.DefaultUseWorktree,
+		CustomPrompt:          w.CustomPrompt,
 		CreatedAt:             timestamppb.New(w.CreatedAt),
 		UpdatedAt:             timestamppb.New(w.UpdatedAt),
 	}

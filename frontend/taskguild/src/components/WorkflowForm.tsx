@@ -135,6 +135,7 @@ export function WorkflowForm({
   const [description, setDescription] = useState(workflow?.description ?? '')
   const [defaultPermissionMode, setDefaultPermissionMode] = useState(workflow?.defaultPermissionMode ?? '')
   const [defaultUseWorktree, setDefaultUseWorktree] = useState(workflow?.defaultUseWorktree ?? false)
+  const [customPrompt, setCustomPrompt] = useState(workflow?.customPrompt ?? '')
   const [statuses, setStatuses] = useState<StatusDraft[]>(initial.statusDrafts)
   const [agentConfigs] = useState<AgentConfigDraft[]>(initial.agentDrafts)
 
@@ -354,6 +355,7 @@ export function WorkflowForm({
           agentConfigs: protoAgentConfigs,
           defaultPermissionMode,
           defaultUseWorktree,
+          customPrompt,
         },
         { onSuccess: onSaved },
       )
@@ -367,6 +369,7 @@ export function WorkflowForm({
           agentConfigs: protoAgentConfigs,
           defaultPermissionMode,
           defaultUseWorktree,
+          customPrompt,
         },
         { onSuccess: onSaved },
       )
@@ -441,6 +444,19 @@ export function WorkflowForm({
               />
               Use Worktree (isolate changes in a git worktree)
             </label>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Custom Prompt</label>
+              <textarea
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                rows={4}
+                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500 resize-y"
+                placeholder="Custom prompt prepended to agent instructions for all tasks in this workflow"
+              />
+              <p className="text-[11px] text-gray-600 mt-1">
+                If set, this prompt will be prepended to the agent's instructions when a task is claimed.
+              </p>
+            </div>
           </div>
         </div>
 
