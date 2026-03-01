@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { createClient } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
+import { Link } from '@tanstack/react-router'
 import {
   requestWorktreeList,
   getWorktreeList,
@@ -9,10 +10,13 @@ import {
   requestGitPullMain,
 } from '@taskguild/proto/taskguild/v1/agent_manager-AgentManagerService_connectquery.ts'
 import type { WorktreeInfo } from '@taskguild/proto/taskguild/v1/agent_manager_pb.ts'
+import { listTasks } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
+import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
+import { listWorkflows } from '@taskguild/proto/taskguild/v1/workflow-WorkflowService_connectquery.ts'
 import { EventService, EventType, SubscribeEventsRequestSchema } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { transport } from '@/lib/transport'
-import { GitFork, GitBranch, RefreshCw, Trash2, AlertTriangle, X, FileText, Home, Download, CheckCircle2, XCircle } from 'lucide-react'
+import { GitFork, GitBranch, RefreshCw, Trash2, AlertTriangle, X, FileText, Home, Download, CheckCircle2, XCircle, ClipboardList } from 'lucide-react'
 
 // --- Git pull main result hook ---
 
@@ -73,16 +77,59 @@ export function WorktreeList({ projectId }: { projectId: string }) {
   const { data, refetch, isLoading } = useQuery(getWorktreeList, { projectId })
   const worktrees = data?.worktrees ?? []
 
+  // Fetch tasks and workflows for worktree-task association
+  const { data: tasksData, refetch: refetchTasks } = useQuery(listTasks, {
+    projectId,
+    pagination: { limit: 10000 },
+  })
+  const tasks = tasksData?.tasks ?? []
+
+  const { data: workflowsData } = useQuery(listWorkflows, { projectId })
+  const workflows = workflowsData?.workflows ?? []
+
+  // Build statusId -> { name, isInitial, isTerminal } map from all workflows
+  const statusMap = useMemo(() => {
+    const map = new Map<string, { name: string; isInitial: boolean; isTerminal: boolean }>()
+    for (const wf of workflows) {
+      for (const st of wf.statuses) {
+        map.set(st.id, { name: st.name, isInitial: st.isInitial, isTerminal: st.isTerminal })
+      }
+    }
+    return map
+  }, [workflows])
+
+  // Group tasks by worktree name
+  const tasksByWorktree = useMemo(() => {
+    const map = new Map<string, Task[]>()
+    for (const t of tasks) {
+      const wtName = t.metadata['worktree']
+      if (!wtName) continue
+      const arr = map.get(wtName)
+      if (arr) {
+        arr.push(t)
+      } else {
+        map.set(wtName, [t])
+      }
+    }
+    return map
+  }, [tasks])
+
   const [deleteTarget, setDeleteTarget] = useState<WorktreeInfo | null>(null)
 
-  // Subscribe to worktree list events AND worktree deleted events
+  // Subscribe to worktree list events, worktree deleted events, AND task updates
   const eventTypes = useMemo(
-    () => [EventType.WORKTREE_LIST, EventType.WORKTREE_DELETED],
+    () => [
+      EventType.WORKTREE_LIST,
+      EventType.WORKTREE_DELETED,
+      EventType.TASK_UPDATED,
+      EventType.TASK_STATUS_CHANGED,
+    ],
     [],
   )
   const onEvent = useCallback(() => {
     refetch()
-  }, [refetch])
+    refetchTasks()
+  }, [refetch, refetchTasks])
   useEventSubscription(eventTypes, projectId, onEvent)
 
   // Request worktree scan on mount
@@ -145,6 +192,9 @@ export function WorktreeList({ projectId }: { projectId: string }) {
           <WorktreeCard
             key={wt.name}
             worktree={wt}
+            projectId={projectId}
+            tasks={tasksByWorktree.get(wt.name) ?? []}
+            statusMap={statusMap}
             onDelete={() => handleDelete(wt)}
             isDeleting={requestDeleteMut.isPending}
           />
@@ -245,10 +295,16 @@ function MainBranchSection({ projectId }: { projectId: string }) {
 
 function WorktreeCard({
   worktree,
+  projectId,
+  tasks,
+  statusMap,
   onDelete,
   isDeleting,
 }: {
   worktree: WorktreeInfo
+  projectId: string
+  tasks: Task[]
+  statusMap: Map<string, { name: string; isInitial: boolean; isTerminal: boolean }>
   onDelete: () => void
   isDeleting: boolean
 }) {
@@ -268,16 +324,47 @@ function WorktreeCard({
                   changes
                 </span>
               )}
-              {worktree.taskId && (
-                <span className="text-[10px] text-gray-500 bg-slate-800 rounded-full px-1.5 py-0.5 shrink-0">
-                  task: {worktree.taskId.slice(-6)}
-                </span>
-              )}
             </div>
             <div className="flex items-center gap-1.5 text-xs text-gray-400">
               <GitBranch className="w-3 h-3" />
               <span className="truncate">{worktree.branch}</span>
             </div>
+
+            {/* Associated tasks */}
+            {tasks.length > 0 && (
+              <div className="mt-2">
+                <div className="flex items-center gap-1 mb-1">
+                  <ClipboardList className="w-3 h-3 text-gray-500" />
+                  <span className="text-[11px] text-gray-500">Tasks ({tasks.length})</span>
+                </div>
+                <div className="space-y-1 pl-0.5">
+                  {tasks.map((t) => {
+                    const status = statusMap.get(t.statusId)
+                    const statusName = status?.name ?? t.statusId
+                    const badgeClass = status?.isInitial
+                      ? 'bg-blue-500/20 text-blue-400'
+                      : status?.isTerminal
+                        ? 'bg-green-500/20 text-green-400'
+                        : 'bg-gray-500/20 text-gray-300'
+                    return (
+                      <Link
+                        key={t.id}
+                        to="/projects/$projectId/tasks/$taskId"
+                        params={{ projectId, taskId: t.id }}
+                        className="flex items-center gap-1.5 group"
+                      >
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${badgeClass}`}>
+                          {statusName}
+                        </span>
+                        <span className="text-[11px] text-gray-400 group-hover:text-cyan-400 transition-colors truncate">
+                          {t.title}
+                        </span>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Changed files toggle */}
             {worktree.hasChanges && worktree.changedFiles.length > 0 && (
