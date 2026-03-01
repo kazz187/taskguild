@@ -1,4 +1,4 @@
-package main
+package sentinel
 
 import (
 	"crypto/sha256"
@@ -17,9 +17,9 @@ func TestHashFile(t *testing.T) {
 		t.Fatalf("failed to write temp file: %v", err)
 	}
 
-	got, err := hashFile(path)
+	got, err := HashFile(path)
 	if err != nil {
-		t.Fatalf("hashFile failed: %v", err)
+		t.Fatalf("HashFile failed: %v", err)
 	}
 
 	want := sha256.Sum256(content)
@@ -40,13 +40,13 @@ func TestHashFileDifferentContent(t *testing.T) {
 		t.Fatalf("failed to write file2: %v", err)
 	}
 
-	hash1, err := hashFile(path1)
+	hash1, err := HashFile(path1)
 	if err != nil {
-		t.Fatalf("hashFile(file1) failed: %v", err)
+		t.Fatalf("HashFile(file1) failed: %v", err)
 	}
-	hash2, err := hashFile(path2)
+	hash2, err := HashFile(path2)
 	if err != nil {
-		t.Fatalf("hashFile(file2) failed: %v", err)
+		t.Fatalf("HashFile(file2) failed: %v", err)
 	}
 
 	if hash1 == hash2 {
@@ -55,7 +55,7 @@ func TestHashFileDifferentContent(t *testing.T) {
 }
 
 func TestHashFileNotFound(t *testing.T) {
-	_, err := hashFile("/nonexistent/file/path")
+	_, err := HashFile("/nonexistent/file/path")
 	if err == nil {
 		t.Error("expected error for nonexistent file, got nil")
 	}
@@ -74,13 +74,13 @@ func TestHashFileSameContent(t *testing.T) {
 		t.Fatalf("failed to write file2: %v", err)
 	}
 
-	hash1, err := hashFile(path1)
+	hash1, err := HashFile(path1)
 	if err != nil {
-		t.Fatalf("hashFile(file1) failed: %v", err)
+		t.Fatalf("HashFile(file1) failed: %v", err)
 	}
-	hash2, err := hashFile(path2)
+	hash2, err := HashFile(path2)
 	if err != nil {
-		t.Fatalf("hashFile(file2) failed: %v", err)
+		t.Fatalf("HashFile(file2) failed: %v", err)
 	}
 
 	if hash1 != hash2 {
@@ -89,8 +89,8 @@ func TestHashFileSameContent(t *testing.T) {
 }
 
 func TestBackoffProgression(t *testing.T) {
-	s := &sentinel{
-		backoff: sentinelInitialBackoff,
+	s := &Sentinel{
+		backoff: InitialBackoff,
 		stopCh:  make(chan struct{}),
 	}
 
@@ -119,38 +119,38 @@ func TestBackoffProgression(t *testing.T) {
 }
 
 func TestBackoffCap(t *testing.T) {
-	s := &sentinel{
+	s := &Sentinel{
 		backoff: 9 * time.Minute,
 		stopCh:  make(chan struct{}),
 	}
 
 	s.increaseBackoff()
-	if s.backoff != sentinelMaxBackoff {
-		t.Errorf("got %v, want %v (should be capped)", s.backoff, sentinelMaxBackoff)
+	if s.backoff != MaxBackoff {
+		t.Errorf("got %v, want %v (should be capped)", s.backoff, MaxBackoff)
 	}
 
 	// Another increase should stay capped.
 	s.increaseBackoff()
-	if s.backoff != sentinelMaxBackoff {
-		t.Errorf("got %v, want %v (should stay capped)", s.backoff, sentinelMaxBackoff)
+	if s.backoff != MaxBackoff {
+		t.Errorf("got %v, want %v (should stay capped)", s.backoff, MaxBackoff)
 	}
 }
 
 func TestBackoffReset(t *testing.T) {
-	s := &sentinel{
+	s := &Sentinel{
 		backoff: 5 * time.Minute,
 		stopCh:  make(chan struct{}),
 	}
 
 	// Simulate a reset after successful run.
-	s.backoff = sentinelInitialBackoff
-	if s.backoff != sentinelInitialBackoff {
-		t.Errorf("got %v, want %v", s.backoff, sentinelInitialBackoff)
+	s.backoff = InitialBackoff
+	if s.backoff != InitialBackoff {
+		t.Errorf("got %v, want %v", s.backoff, InitialBackoff)
 	}
 }
 
 func TestSleepBackoffInterruptible(t *testing.T) {
-	s := &sentinel{
+	s := &Sentinel{
 		backoff: 10 * time.Second,
 		stopCh:  make(chan struct{}),
 	}
@@ -173,19 +173,19 @@ func TestSleepBackoffInterruptible(t *testing.T) {
 
 func TestConstants(t *testing.T) {
 	// Verify the constants match the spec.
-	if sentinelInitialBackoff != 5*time.Second {
-		t.Errorf("sentinelInitialBackoff: got %v, want %v", sentinelInitialBackoff, 5*time.Second)
+	if InitialBackoff != 5*time.Second {
+		t.Errorf("InitialBackoff: got %v, want %v", InitialBackoff, 5*time.Second)
 	}
-	if sentinelMaxBackoff != 10*time.Minute {
-		t.Errorf("sentinelMaxBackoff: got %v, want %v", sentinelMaxBackoff, 10*time.Minute)
+	if MaxBackoff != 10*time.Minute {
+		t.Errorf("MaxBackoff: got %v, want %v", MaxBackoff, 10*time.Minute)
 	}
-	if sentinelGracePeriod != 10*time.Second {
-		t.Errorf("sentinelGracePeriod: got %v, want %v", sentinelGracePeriod, 10*time.Second)
+	if GracePeriod != 10*time.Second {
+		t.Errorf("GracePeriod: got %v, want %v", GracePeriod, 10*time.Second)
 	}
-	if sentinelBackoffFactor != 2.0 {
-		t.Errorf("sentinelBackoffFactor: got %v, want %v", sentinelBackoffFactor, 2.0)
+	if BackoffFactor != 2.0 {
+		t.Errorf("BackoffFactor: got %v, want %v", BackoffFactor, 2.0)
 	}
-	if sentinelSuccessRunTime != 30*time.Second {
-		t.Errorf("sentinelSuccessRunTime: got %v, want %v", sentinelSuccessRunTime, 30*time.Second)
+	if SuccessRunTime != 30*time.Second {
+		t.Errorf("SuccessRunTime: got %v, want %v", SuccessRunTime, 30*time.Second)
 	}
 }
