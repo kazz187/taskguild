@@ -1,13 +1,14 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { getTask, updateTask, updateTaskStatus, deleteTask } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
+import { requestWorktreeList, getWorktreeList } from '@taskguild/proto/taskguild/v1/agent_manager-AgentManagerService_connectquery.ts'
 import { listInteractions, respondToInteraction } from '@taskguild/proto/taskguild/v1/interaction-InteractionService_connectquery.ts'
 import { TaskAssignmentStatus } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { InteractionStatus, InteractionType } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import type { WorkflowStatus } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
-import { X, Bot, Clock, GitBranch, Loader, Trash2, ArrowRight, MessageSquare, Shield, Bell } from 'lucide-react'
+import { X, Bot, Clock, GitBranch, Loader, Trash2, ArrowRight, MessageSquare, Shield, Bell, RefreshCw } from 'lucide-react'
 import { MarkdownDescription } from './MarkdownDescription'
 import { shortId } from '@/lib/id'
 
@@ -44,14 +45,24 @@ export function TaskDetailModal({
   const statusMut = useMutation(updateTaskStatus)
   const deleteMut = useMutation(deleteTask)
   const respondMut = useMutation(respondToInteraction)
+  const requestWtMut = useMutation(requestWorktreeList)
 
   const [titleDraft, setTitleDraft] = useState('')
   const [descDraft, setDescDraft] = useState('')
   const [permModeDraft, setPermModeDraft] = useState('')
   const [worktreeDraft, setWorktreeDraft] = useState(false)
+  const [selectedWorktree, setSelectedWorktree] = useState('')
 
   const task = taskData?.task
   const interactions = interactionsData?.interactions ?? []
+
+  const isTaskLocked = task?.assignmentStatus === TaskAssignmentStatus.ASSIGNED || task?.assignmentStatus === TaskAssignmentStatus.PENDING
+
+  // Query cached worktree list (only when worktree is enabled and task is not locked)
+  const { data: wtData, refetch: refetchWorktrees } = useQuery(getWorktreeList, { projectId }, {
+    enabled: worktreeDraft && !isTaskLocked,
+  })
+  const worktrees = wtData?.worktrees ?? []
 
   useEffect(() => {
     if (task) {
@@ -59,6 +70,7 @@ export function TaskDetailModal({
       setDescDraft(task.description)
       setPermModeDraft(task.permissionMode ?? '')
       setWorktreeDraft(task.useWorktree ?? false)
+      setSelectedWorktree(task.metadata?.['worktree'] ?? '')
     }
   }, [task?.id])
 
@@ -73,6 +85,20 @@ export function TaskDetailModal({
     onEvent,
   )
 
+  // Subscribe to worktree list events to refetch when a scan completes
+  const worktreeEventTypes = useMemo(() => [EventType.WORKTREE_LIST], [])
+  const onWorktreeEvent = useCallback(() => {
+    refetchWorktrees()
+  }, [refetchWorktrees])
+  useEventSubscription(worktreeEventTypes, projectId, onWorktreeEvent)
+
+  // Request worktree scan when worktree checkbox is toggled on
+  useEffect(() => {
+    if (worktreeDraft && projectId && !isTaskLocked) {
+      requestWtMut.mutate({ projectId })
+    }
+  }, [worktreeDraft, projectId, isTaskLocked])
+
   const currentStatus = statuses.find((s) => s.id === (task?.statusId ?? currentStatusId))
   const allowedTransitions = currentStatus?.transitionsTo ?? []
 
@@ -80,13 +106,20 @@ export function TaskDetailModal({
     titleDraft !== task.title ||
     descDraft !== task.description ||
     permModeDraft !== (task.permissionMode ?? '') ||
-    worktreeDraft !== (task.useWorktree ?? false)
+    worktreeDraft !== (task.useWorktree ?? false) ||
+    selectedWorktree !== (task.metadata?.['worktree'] ?? '')
   ) : false
 
   const handleSave = () => {
     if (!task || !titleDraft.trim() || !hasChanges) return
+    const metadata: Record<string, string> = { ...task.metadata }
+    if (worktreeDraft) {
+      metadata['worktree'] = selectedWorktree
+    } else {
+      metadata['worktree'] = ''
+    }
     updateMut.mutate(
-      { id: task.id, title: titleDraft.trim(), description: descDraft, metadata: task.metadata, permissionMode: permModeDraft, useWorktree: worktreeDraft },
+      { id: task.id, title: titleDraft.trim(), description: descDraft, metadata, permissionMode: permModeDraft, useWorktree: worktreeDraft },
       { onSuccess: () => { refetchTask(); onChanged() } },
     )
   }
@@ -97,6 +130,7 @@ export function TaskDetailModal({
       setDescDraft(task.description)
       setPermModeDraft(task.permissionMode ?? '')
       setWorktreeDraft(task.useWorktree ?? false)
+      setSelectedWorktree(task.metadata?.['worktree'] ?? '')
     }
     onClose()
   }
@@ -175,24 +209,54 @@ export function TaskDetailModal({
                 <option value="bypassPermissions">Bypass Permissions (auto-approve all)</option>
               </select>
             </div>
-            <label className="flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer sm:pt-4">
+            <label className={`flex items-center gap-1.5 text-xs text-gray-400 sm:pt-4 ${isTaskLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
               <input
                 type="checkbox"
                 checked={worktreeDraft}
                 onChange={(e) => setWorktreeDraft(e.target.checked)}
+                disabled={isTaskLocked}
                 className="accent-cyan-500"
               />
               Use Worktree
             </label>
           </div>
 
-          {/* Worktree name display */}
-          {task.metadata?.['worktree'] && (
+          {/* Worktree selection / display */}
+          {isTaskLocked && task.metadata?.['worktree'] ? (
+            // Read-only display when task is assigned/pending
             <div className="flex items-center gap-1.5 text-xs text-gray-400 bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5">
               <GitBranch className="w-3 h-3 text-gray-500 shrink-0" />
               <span className="font-mono truncate">{task.metadata['worktree']}</span>
             </div>
-          )}
+          ) : !isTaskLocked && worktreeDraft ? (
+            // Editable dropdown when worktree is enabled and task is not locked
+            <div className="pl-6">
+              <div className="flex items-center gap-2 mb-1">
+                <GitBranch className="w-3.5 h-3.5 text-gray-500" />
+                <label className="text-xs text-gray-400">Worktree</label>
+                <button
+                  type="button"
+                  onClick={() => requestWtMut.mutate({ projectId })}
+                  className="text-gray-500 hover:text-gray-300 transition-colors"
+                  title="Refresh worktree list"
+                >
+                  <RefreshCw className={`w-3 h-3 ${requestWtMut.isPending ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+              <select
+                value={selectedWorktree}
+                onChange={(e) => setSelectedWorktree(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
+              >
+                <option value="">New worktree (auto-generated)</option>
+                {worktrees.map((wt) => (
+                  <option key={wt.name} value={wt.name}>
+                    {wt.name} ({wt.branch})
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
 
           {/* Status + Agent + Transitions row */}
           <div className="flex items-center gap-2 flex-wrap">
