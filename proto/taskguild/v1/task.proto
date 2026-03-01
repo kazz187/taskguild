@@ -61,6 +61,9 @@ message CreateTaskRequest {
 
   // metadata
   map<string, string> metadata = 7;
+
+  // optional: specify initial status (defaults to workflow's IsInitial status)
+  optional string status_id = 8;
 }
 message CreateTaskResponse {
   Task task = 1;

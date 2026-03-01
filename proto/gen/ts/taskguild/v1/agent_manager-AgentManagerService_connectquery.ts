@@ -68,3 +68,24 @@ export const reportTaskLog = AgentManagerService.method.reportTaskLog;
  * @generated from rpc taskguild.v1.AgentManagerService.SyncPermissions
  */
 export const syncPermissions = AgentManagerService.method.syncPermissions;
+
+/**
+ * ReportWorktreeList reports available worktrees from the agent-manager's filesystem.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.ReportWorktreeList
+ */
+export const reportWorktreeList = AgentManagerService.method.reportWorktreeList;
+
+/**
+ * RequestWorktreeList triggers a worktree scan on connected agent-managers (called by frontend).
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.RequestWorktreeList
+ */
+export const requestWorktreeList = AgentManagerService.method.requestWorktreeList;
+
+/**
+ * GetWorktreeList returns the cached worktree list for a project.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.GetWorktreeList
+ */
+export const getWorktreeList = AgentManagerService.method.getWorktreeList;

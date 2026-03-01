@@ -33,6 +33,12 @@ service AgentManagerService {
   // SyncPermissions merges local .claude/settings.json permissions with the
   // backend's stored permissions (union strategy) and returns the merged result.
   rpc SyncPermissions(SyncPermissionsRequest) returns (SyncPermissionsResponse);
+  // ReportWorktreeList reports available worktrees from the agent-manager's filesystem.
+  rpc ReportWorktreeList(ReportWorktreeListRequest) returns (ReportWorktreeListResponse);
+  // RequestWorktreeList triggers a worktree scan on connected agent-managers (called by frontend).
+  rpc RequestWorktreeList(RequestWorktreeListRequest) returns (RequestWorktreeListResponse);
+  // GetWorktreeList returns the cached worktree list for a project.
+  rpc GetWorktreeList(GetWorktreeListRequest) returns (GetWorktreeListResponse);
 }
 
 // --- Subscribe stream ---
@@ -51,6 +57,7 @@ message AgentCommand {
     InteractionResponseCommand interaction_response = 4;
     SyncAgentsCommand sync_agents = 5;
     SyncPermissionsCommand sync_permissions = 6;
+    ListWorktreesCommand list_worktrees = 7;
   }
 }
 
@@ -87,6 +94,12 @@ message SyncAgentsCommand {}
 // SyncPermissionsCommand tells the agent to re-sync its local
 // .claude/settings.json permissions section.
 message SyncPermissionsCommand {}
+
+// ListWorktreesCommand requests the agent-manager to scan and report
+// available git worktrees in its working directory.
+message ListWorktreesCommand {
+  string request_id = 1;
+}
 
 // --- Task lifecycle ---
 
@@ -189,3 +202,32 @@ message ReportTaskLogRequest {
   map<string, string> metadata = 5;
 }
 message ReportTaskLogResponse {}
+
+// --- Worktree management ---
+
+message WorktreeInfo {
+  string name = 1;      // worktree directory name (e.g., "y3cfp6_agent")
+  string branch = 2;    // git branch name (e.g., "worktree-y3cfp6_agent")
+  string task_id = 3;   // associated task ID if known
+}
+
+message ReportWorktreeListRequest {
+  string request_id = 1;
+  string project_name = 2;
+  repeated WorktreeInfo worktrees = 3;
+}
+message ReportWorktreeListResponse {}
+
+message RequestWorktreeListRequest {
+  string project_id = 1;
+}
+message RequestWorktreeListResponse {
+  string request_id = 1;
+}
+
+message GetWorktreeListRequest {
+  string project_id = 1;
+}
+message GetWorktreeListResponse {
+  repeated WorktreeInfo worktrees = 1;
+}

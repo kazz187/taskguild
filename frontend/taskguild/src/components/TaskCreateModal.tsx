@@ -1,7 +1,10 @@
-import { useState } from 'react'
-import { useMutation } from '@connectrpc/connect-query'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useMutation, useQuery } from '@connectrpc/connect-query'
 import { createTask } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
-import { X } from 'lucide-react'
+import { requestWorktreeList, getWorktreeList } from '@taskguild/proto/taskguild/v1/agent_manager-AgentManagerService_connectquery.ts'
+import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
+import { useEventSubscription } from '@/hooks/useEventSubscription'
+import { X, GitBranch, RefreshCw } from 'lucide-react'
 
 interface TaskCreateModalProps {
   projectId: string
@@ -17,12 +20,39 @@ export function TaskCreateModal({ projectId, workflowId, defaultPermissionMode, 
   const [description, setDescription] = useState('')
   const [permissionMode, setPermissionMode] = useState(defaultPermissionMode ?? '')
   const [useWorktree, setUseWorktree] = useState(defaultUseWorktree ?? false)
+  const [selectedWorktree, setSelectedWorktree] = useState('')
   const createMut = useMutation(createTask)
+  const requestWtMut = useMutation(requestWorktreeList)
+
+  // Query cached worktree list
+  const { data: wtData, refetch: refetchWorktrees } = useQuery(getWorktreeList, { projectId }, {
+    enabled: useWorktree,
+  })
+
+  // Subscribe to worktree list events to refetch when a scan completes
+  const worktreeEventTypes = useMemo(() => [EventType.WORKTREE_LIST], [])
+  const onWorktreeEvent = useCallback(() => {
+    refetchWorktrees()
+  }, [refetchWorktrees])
+  useEventSubscription(worktreeEventTypes, projectId, onWorktreeEvent)
+
+  // Request worktree scan when worktree checkbox is toggled on
+  useEffect(() => {
+    if (useWorktree && projectId) {
+      requestWtMut.mutate({ projectId })
+    }
+  }, [useWorktree, projectId])
+
+  const worktrees = wtData?.worktrees ?? []
 
   const handleCreate = () => {
     if (!title.trim()) return
+    const metadata: Record<string, string> = {}
+    if (selectedWorktree) {
+      metadata['worktree'] = selectedWorktree
+    }
     createMut.mutate(
-      { projectId, workflowId, title: title.trim(), description, metadata: {}, permissionMode, useWorktree },
+      { projectId, workflowId, title: title.trim(), description, metadata, permissionMode, useWorktree },
       {
         onSuccess: () => {
           onCreated()
@@ -84,6 +114,36 @@ export function TaskCreateModal({ projectId, workflowId, defaultPermissionMode, 
             />
             Use Worktree (isolate changes in a git worktree)
           </label>
+
+          {/* Worktree selection */}
+          {useWorktree && (
+            <div className="pl-6">
+              <div className="flex items-center gap-2 mb-1">
+                <GitBranch className="w-3.5 h-3.5 text-gray-500" />
+                <label className="text-xs text-gray-400">Worktree</label>
+                <button
+                  type="button"
+                  onClick={() => requestWtMut.mutate({ projectId })}
+                  className="text-gray-500 hover:text-gray-300 transition-colors"
+                  title="Refresh worktree list"
+                >
+                  <RefreshCw className={`w-3 h-3 ${requestWtMut.isPending ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+              <select
+                value={selectedWorktree}
+                onChange={(e) => setSelectedWorktree(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
+              >
+                <option value="">New worktree (auto-generated)</option>
+                {worktrees.map((wt) => (
+                  <option key={wt.name} value={wt.name}>
+                    {wt.name} ({wt.branch})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

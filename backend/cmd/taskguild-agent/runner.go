@@ -235,6 +235,213 @@ func applyHookMetadata(ctx context.Context, taskID string, output string, taskCl
 	}
 }
 
+// createTaskDirective holds parsed CREATE_TASK directive fields.
+type createTaskDirective struct {
+	Title          string
+	Description    string
+	StatusID       string // could be status name, resolved from _workflow_statuses
+	UseWorktree    *bool
+	Worktree       string
+	PermissionMode string
+}
+
+// parseCreateTasks extracts all CREATE_TASK_START...CREATE_TASK_END blocks from the result text.
+// Key-value headers are parsed until the first empty line; everything after is the description.
+func parseCreateTasks(resultText string) []createTaskDirective {
+	var directives []createTaskDirective
+	remaining := resultText
+	for {
+		startIdx := strings.Index(remaining, "CREATE_TASK_START")
+		if startIdx == -1 {
+			break
+		}
+		afterStart := remaining[startIdx+len("CREATE_TASK_START"):]
+		endIdx := strings.Index(afterStart, "CREATE_TASK_END")
+		if endIdx == -1 {
+			break
+		}
+		body := afterStart[:endIdx]
+		remaining = afterStart[endIdx+len("CREATE_TASK_END"):]
+
+		// Trim leading/trailing newlines from the body.
+		body = strings.TrimLeft(body, "\r\n")
+		body = strings.TrimRight(body, "\r\n \t")
+
+		var d createTaskDirective
+		lines := strings.Split(body, "\n")
+		descStart := 0
+		for i, line := range lines {
+			trimmed := strings.TrimSpace(line)
+			if trimmed == "" {
+				// Empty line marks end of headers; rest is description.
+				descStart = i + 1
+				break
+			}
+			if colonIdx := strings.Index(trimmed, ":"); colonIdx > 0 {
+				key := strings.TrimSpace(trimmed[:colonIdx])
+				value := strings.TrimSpace(trimmed[colonIdx+1:])
+				switch strings.ToLower(key) {
+				case "title":
+					d.Title = value
+				case "status":
+					d.StatusID = value
+				case "use_worktree":
+					b := strings.ToLower(value) == "true"
+					d.UseWorktree = &b
+				case "worktree":
+					d.Worktree = value
+				case "permission_mode":
+					d.PermissionMode = value
+				}
+			}
+			descStart = i + 1
+		}
+		if descStart < len(lines) {
+			d.Description = strings.TrimSpace(strings.Join(lines[descStart:], "\n"))
+		}
+
+		if d.Title != "" {
+			directives = append(directives, d)
+		}
+	}
+	return directives
+}
+
+// stripCreateTasks removes all CREATE_TASK_START...CREATE_TASK_END blocks from the result text.
+func stripCreateTasks(resultText string) string {
+	for {
+		startIdx := strings.Index(resultText, "CREATE_TASK_START")
+		if startIdx == -1 {
+			break
+		}
+		endIdx := strings.Index(resultText[startIdx:], "CREATE_TASK_END")
+		if endIdx == -1 {
+			break
+		}
+		// Find the start of the line containing the start marker.
+		lineStart := strings.LastIndex(resultText[:startIdx], "\n")
+		if lineStart == -1 {
+			lineStart = 0
+		}
+		fullEndIdx := startIdx + endIdx + len("CREATE_TASK_END")
+		// Skip trailing newline if present.
+		if fullEndIdx < len(resultText) && resultText[fullEndIdx] == '\n' {
+			fullEndIdx++
+		}
+		resultText = resultText[:lineStart] + resultText[fullEndIdx:]
+	}
+	return strings.TrimSpace(resultText)
+}
+
+// listLocalWorktrees returns directory names under {workDir}/.claude/worktrees/.
+func listLocalWorktrees(workDir string) []string {
+	dir := filepath.Join(workDir, ".claude", "worktrees")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	var names []string
+	for _, e := range entries {
+		if e.IsDir() {
+			names = append(names, e.Name())
+		}
+	}
+	return names
+}
+
+// createTaskFromDirective creates a new task via TaskService.CreateTask based on the directive.
+func createTaskFromDirective(
+	ctx context.Context,
+	taskClient taskguildv1connect.TaskServiceClient,
+	sourceTaskID string,
+	metadata map[string]string,
+	directive createTaskDirective,
+) {
+	projectID := metadata["_project_id"]
+	workflowID := metadata["_workflow_id"]
+
+	if projectID == "" || workflowID == "" {
+		log.Printf("[task:%s] cannot create task: missing _project_id or _workflow_id", sourceTaskID)
+		return
+	}
+
+	// Resolve status name to ID if needed.
+	statusID := directive.StatusID
+	if statusID != "" {
+		statusID = resolveStatusID(statusID, metadata["_workflow_statuses"])
+	}
+
+	// Determine use_worktree: inherit from current task if not specified.
+	useWorktree := false
+	if directive.UseWorktree != nil {
+		useWorktree = *directive.UseWorktree
+	} else if metadata["_use_worktree"] == "true" {
+		useWorktree = true
+	}
+
+	taskMeta := map[string]string{
+		"source_task_id": sourceTaskID,
+	}
+	if directive.Worktree != "" {
+		taskMeta["worktree"] = directive.Worktree
+	}
+
+	req := &v1.CreateTaskRequest{
+		ProjectId:      projectID,
+		WorkflowId:     workflowID,
+		Title:          directive.Title,
+		Description:    directive.Description,
+		UseWorktree:    useWorktree,
+		PermissionMode: directive.PermissionMode,
+		Metadata:       taskMeta,
+	}
+	if statusID != "" {
+		req.StatusId = &statusID
+	}
+
+	resp, err := taskClient.CreateTask(ctx, connect.NewRequest(req))
+	if err != nil {
+		log.Printf("[task:%s] failed to create task %q: %v", sourceTaskID, directive.Title, err)
+		return
+	}
+
+	newTask := resp.Msg.GetTask()
+	if newTask != nil {
+		log.Printf("[task:%s] created child task %s: %q", sourceTaskID, newTask.GetId(), directive.Title)
+	} else {
+		log.Printf("[task:%s] created child task (no task in response): %q", sourceTaskID, directive.Title)
+	}
+}
+
+// resolveStatusID attempts to resolve a status name to its ID using the workflow_statuses JSON.
+// If the value already looks like an ID (found directly), it is returned as-is.
+func resolveStatusID(statusIDOrName string, workflowStatusesJSON string) string {
+	if workflowStatusesJSON == "" {
+		return statusIDOrName
+	}
+	type statusEntry struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	var statuses []statusEntry
+	if err := json.Unmarshal([]byte(workflowStatusesJSON), &statuses); err != nil {
+		return statusIDOrName
+	}
+	// Check if it matches an ID directly.
+	for _, s := range statuses {
+		if s.ID == statusIDOrName {
+			return statusIDOrName
+		}
+	}
+	// Try matching by name (case-insensitive).
+	for _, s := range statuses {
+		if strings.EqualFold(s.Name, statusIDOrName) {
+			return s.ID
+		}
+	}
+	return statusIDOrName
+}
+
 func runTask(
 	ctx context.Context,
 	client taskguildv1connect.AgentManagerServiceClient,
@@ -300,7 +507,7 @@ func runTask(
 	go runInteractionListener(ctx, interClient, taskID, waiter)
 
 	sessionID := metadata["_session_id"]
-	prompt := buildUserPrompt(metadata)
+	prompt := buildUserPrompt(metadata, workDir)
 	hasTransitions := metadata["_available_transitions"] != ""
 
 	const maxResumeRetries = 2 // after this many consecutive resume failures, start fresh
@@ -434,6 +641,15 @@ func runTask(
 			}
 		}
 
+		// Parse and execute CREATE_TASK directives from agent output.
+		if result.Result != nil {
+			ctDirectives := parseCreateTasks(result.Result.Result)
+			for _, d := range ctDirectives {
+				log.Printf("[task:%s] detected CREATE_TASK directive: %q (turn %d)", taskID, d.Title, turn)
+				createTaskFromDirective(ctx, taskClient, taskID, metadata, d)
+			}
+		}
+
 		// Fire after_worktree_creation hook once, after the first successful turn
 		// when a worktree directory exists.
 		if !worktreeHookFired && metadata["_use_worktree"] == "true" && worktreeName != "" {
@@ -447,6 +663,7 @@ func runTask(
 		summary := ""
 		if result.Result != nil {
 			summary = stripTaskDescription(result.Result.Result)
+			summary = stripCreateTasks(summary)
 		}
 
 		// Check completion: NEXT_STATUS present means task is done.
@@ -701,7 +918,7 @@ func waitForUserResponse(
 }
 
 // buildUserPrompt constructs the user prompt from enriched metadata.
-func buildUserPrompt(metadata map[string]string) string {
+func buildUserPrompt(metadata map[string]string, workDir string) string {
 	title := metadata["_task_title"]
 	description := metadata["_task_description"]
 	currentStatusName := metadata["_current_status_name"]
@@ -749,6 +966,46 @@ func buildUserPrompt(metadata map[string]string) string {
 	sb.WriteString("TASK_DESCRIPTION_END\n")
 	sb.WriteString("Use this to summarize planning discussions, refine requirements, or document decisions made during the session.\n")
 	sb.WriteString("The description will be saved and visible in the task UI immediately.\n")
+
+	// Add task creation instructions.
+	sb.WriteString("\n## Creating New Tasks\n")
+	sb.WriteString("You can create new tasks by including one or more CREATE_TASK blocks in your output:\n")
+	sb.WriteString("```\n")
+	sb.WriteString("CREATE_TASK_START\n")
+	sb.WriteString("title: Task title (required)\n")
+	sb.WriteString("status: Status ID or status name (optional)\n")
+	sb.WriteString("use_worktree: true or false (optional, inherits current task setting)\n")
+	sb.WriteString("worktree: existing-worktree-name (optional)\n")
+	sb.WriteString("permission_mode: acceptEdits (optional)\n")
+	sb.WriteString("\n")
+	sb.WriteString("Task description here.\n")
+	sb.WriteString("Multiple lines supported.\n")
+	sb.WriteString("CREATE_TASK_END\n")
+	sb.WriteString("```\n")
+	sb.WriteString("Headers are key-value pairs parsed until the first empty line. Everything after the empty line is the description.\n")
+
+	// List available workflow statuses if present.
+	if statusesJSON := metadata["_workflow_statuses"]; statusesJSON != "" {
+		type statusEntry struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		}
+		var statuses []statusEntry
+		if err := json.Unmarshal([]byte(statusesJSON), &statuses); err == nil && len(statuses) > 0 {
+			sb.WriteString("\nAvailable statuses for new tasks:\n")
+			for _, s := range statuses {
+				sb.WriteString(fmt.Sprintf("- %s: %s\n", s.ID, s.Name))
+			}
+		}
+	}
+
+	// List available worktrees.
+	if worktrees := listLocalWorktrees(workDir); len(worktrees) > 0 {
+		sb.WriteString("\nExisting worktrees:\n")
+		for _, wt := range worktrees {
+			sb.WriteString(fmt.Sprintf("- %s\n", wt))
+		}
+	}
 
 	// Add worktree instructions when the task uses a git worktree.
 	if metadata["_use_worktree"] == "true" {

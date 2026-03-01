@@ -33,21 +33,38 @@ func NewServer(repo Repository, workflowRepo workflow.Repository, eventBus *even
 }
 
 func (s *Server) CreateTask(ctx context.Context, req *connect.Request[taskguildv1.CreateTaskRequest]) (*connect.Response[taskguildv1.CreateTaskResponse], error) {
-	// Fetch workflow to find initial status.
+	// Fetch workflow to determine the status for the new task.
 	wf, err := s.workflowRepo.Get(ctx, req.Msg.WorkflowId)
 	if err != nil {
 		return nil, err
 	}
 
-	var initialStatusID string
-	for _, st := range wf.Statuses {
-		if st.IsInitial {
-			initialStatusID = st.ID
-			break
+	var statusID string
+	if req.Msg.StatusId != nil && *req.Msg.StatusId != "" {
+		// Validate specified status exists in the workflow.
+		found := false
+		for _, st := range wf.Statuses {
+			if st.ID == *req.Msg.StatusId {
+				found = true
+				break
+			}
 		}
-	}
-	if initialStatusID == "" {
-		return nil, cerr.NewError(cerr.FailedPrecondition, "workflow has no initial status", nil).ConnectError()
+		if !found {
+			return nil, cerr.NewError(cerr.InvalidArgument,
+				fmt.Sprintf("specified status %q not found in workflow", *req.Msg.StatusId), nil).ConnectError()
+		}
+		statusID = *req.Msg.StatusId
+	} else {
+		// Default: use the workflow's initial status.
+		for _, st := range wf.Statuses {
+			if st.IsInitial {
+				statusID = st.ID
+				break
+			}
+		}
+		if statusID == "" {
+			return nil, cerr.NewError(cerr.FailedPrecondition, "workflow has no initial status", nil).ConnectError()
+		}
 	}
 
 	now := time.Now()
@@ -57,7 +74,7 @@ func (s *Server) CreateTask(ctx context.Context, req *connect.Request[taskguildv
 		WorkflowID:       req.Msg.WorkflowId,
 		Title:            req.Msg.Title,
 		Description:      req.Msg.Description,
-		StatusID:         initialStatusID,
+		StatusID:         statusID,
 		AssignmentStatus: AssignmentStatusUnassigned,
 		Metadata:         req.Msg.Metadata,
 		UseWorktree:      req.Msg.UseWorktree,

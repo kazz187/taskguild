@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"sync"
 	"time"
 
 	"connectrpc.com/connect"
@@ -37,6 +38,11 @@ type Server struct {
 	taskLogRepo     tasklog.Repository
 	permissionRepo  permission.Repository
 	eventBus        *eventbus.Bus
+
+	// worktreeCache stores the latest worktree list per project_id,
+	// populated by ReportWorktreeList and read by GetWorktreeList.
+	worktreeMu    sync.RWMutex
+	worktreeCache map[string][]*taskguildv1.WorktreeInfo // project_id -> worktrees
 }
 
 func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, projectRepo project.Repository, skillRepo skill.Repository, taskLogRepo tasklog.Repository, permissionRepo permission.Repository, eventBus *eventbus.Bus) *Server {
@@ -51,6 +57,7 @@ func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workfl
 		taskLogRepo:     taskLogRepo,
 		permissionRepo:  permissionRepo,
 		eventBus:        eventBus,
+		worktreeCache:   make(map[string][]*taskguildv1.WorktreeInfo),
 	}
 }
 
@@ -292,6 +299,8 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	enrichedMetadata["_task_title"] = t.Title
 	enrichedMetadata["_task_description"] = t.Description
 	enrichedMetadata["_current_status_id"] = t.StatusID
+	enrichedMetadata["_project_id"] = t.ProjectID
+	enrichedMetadata["_workflow_id"] = t.WorkflowID
 	if t.UseWorktree {
 		enrichedMetadata["_use_worktree"] = "true"
 	}
@@ -324,6 +333,21 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 				enrichedMetadata["_available_transitions"] = string(b)
 			}
 			break
+		}
+	}
+
+	// Inject all workflow statuses so agents can create tasks with any status.
+	{
+		type statusInfo struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		}
+		var allStatuses []statusInfo
+		for _, st := range wf.Statuses {
+			allStatuses = append(allStatuses, statusInfo{ID: st.ID, Name: st.Name})
+		}
+		if b, err := json.Marshal(allStatuses); err == nil {
+			enrichedMetadata["_workflow_statuses"] = string(b)
 		}
 	}
 
@@ -598,6 +622,91 @@ func (s *Server) ReportTaskLog(ctx context.Context, req *connect.Request[taskgui
 	)
 
 	return connect.NewResponse(&taskguildv1.ReportTaskLogResponse{}), nil
+}
+
+// --- Worktree management RPCs ---
+
+func (s *Server) RequestWorktreeList(ctx context.Context, req *connect.Request[taskguildv1.RequestWorktreeListRequest]) (*connect.Response[taskguildv1.RequestWorktreeListResponse], error) {
+	if req.Msg.ProjectId == "" {
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
+	}
+
+	proj, err := s.projectRepo.Get(ctx, req.Msg.ProjectId)
+	if err != nil {
+		return nil, cerr.ExtractConnectError(ctx, err)
+	}
+
+	requestID := ulid.Make().String()
+
+	// Send ListWorktreesCommand to connected agent-managers for this project.
+	s.registry.BroadcastCommandToProject(proj.Name, &taskguildv1.AgentCommand{
+		Command: &taskguildv1.AgentCommand_ListWorktrees{
+			ListWorktrees: &taskguildv1.ListWorktreesCommand{
+				RequestId: requestID,
+			},
+		},
+	})
+
+	slog.Info("worktree list requested",
+		"project_id", req.Msg.ProjectId,
+		"project_name", proj.Name,
+		"request_id", requestID,
+	)
+
+	return connect.NewResponse(&taskguildv1.RequestWorktreeListResponse{
+		RequestId: requestID,
+	}), nil
+}
+
+func (s *Server) ReportWorktreeList(ctx context.Context, req *connect.Request[taskguildv1.ReportWorktreeListRequest]) (*connect.Response[taskguildv1.ReportWorktreeListResponse], error) {
+	projectName := req.Msg.ProjectName
+	if projectName == "" {
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+	}
+
+	proj, err := s.projectRepo.FindByName(ctx, projectName)
+	if err != nil {
+		return nil, cerr.ExtractConnectError(ctx, err)
+	}
+
+	// Cache the worktree list for this project.
+	s.worktreeMu.Lock()
+	s.worktreeCache[proj.ID] = req.Msg.Worktrees
+	s.worktreeMu.Unlock()
+
+	// Publish event so frontend can pick up the update.
+	s.eventBus.PublishNew(
+		taskguildv1.EventType_EVENT_TYPE_WORKTREE_LIST,
+		req.Msg.RequestId,
+		"",
+		map[string]string{
+			"project_id":  proj.ID,
+			"request_id":  req.Msg.RequestId,
+		},
+	)
+
+	slog.Info("worktree list reported",
+		"project_id", proj.ID,
+		"project_name", projectName,
+		"request_id", req.Msg.RequestId,
+		"count", len(req.Msg.Worktrees),
+	)
+
+	return connect.NewResponse(&taskguildv1.ReportWorktreeListResponse{}), nil
+}
+
+func (s *Server) GetWorktreeList(ctx context.Context, req *connect.Request[taskguildv1.GetWorktreeListRequest]) (*connect.Response[taskguildv1.GetWorktreeListResponse], error) {
+	if req.Msg.ProjectId == "" {
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
+	}
+
+	s.worktreeMu.RLock()
+	worktrees := s.worktreeCache[req.Msg.ProjectId]
+	s.worktreeMu.RUnlock()
+
+	return connect.NewResponse(&taskguildv1.GetWorktreeListResponse{
+		Worktrees: worktrees,
+	}), nil
 }
 
 func interactionToProto(i *interaction.Interaction) *taskguildv1.Interaction {
