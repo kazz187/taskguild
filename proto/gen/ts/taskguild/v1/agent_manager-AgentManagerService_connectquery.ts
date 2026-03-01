@@ -89,3 +89,17 @@ export const requestWorktreeList = AgentManagerService.method.requestWorktreeLis
  * @generated from rpc taskguild.v1.AgentManagerService.GetWorktreeList
  */
 export const getWorktreeList = AgentManagerService.method.getWorktreeList;
+
+/**
+ * RequestWorktreeDelete initiates deletion of a specific worktree (called by frontend).
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.RequestWorktreeDelete
+ */
+export const requestWorktreeDelete = AgentManagerService.method.requestWorktreeDelete;
+
+/**
+ * ReportWorktreeDeleteResult reports the outcome of a worktree deletion from the agent.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult
+ */
+export const reportWorktreeDeleteResult = AgentManagerService.method.reportWorktreeDeleteResult;

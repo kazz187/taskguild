@@ -72,6 +72,12 @@ const (
 	// AgentManagerServiceGetWorktreeListProcedure is the fully-qualified name of the
 	// AgentManagerService's GetWorktreeList RPC.
 	AgentManagerServiceGetWorktreeListProcedure = "/taskguild.v1.AgentManagerService/GetWorktreeList"
+	// AgentManagerServiceRequestWorktreeDeleteProcedure is the fully-qualified name of the
+	// AgentManagerService's RequestWorktreeDelete RPC.
+	AgentManagerServiceRequestWorktreeDeleteProcedure = "/taskguild.v1.AgentManagerService/RequestWorktreeDelete"
+	// AgentManagerServiceReportWorktreeDeleteResultProcedure is the fully-qualified name of the
+	// AgentManagerService's ReportWorktreeDeleteResult RPC.
+	AgentManagerServiceReportWorktreeDeleteResultProcedure = "/taskguild.v1.AgentManagerService/ReportWorktreeDeleteResult"
 )
 
 // AgentManagerServiceClient is a client for the taskguild.v1.AgentManagerService service.
@@ -104,6 +110,10 @@ type AgentManagerServiceClient interface {
 	RequestWorktreeList(context.Context, *connect.Request[v1.RequestWorktreeListRequest]) (*connect.Response[v1.RequestWorktreeListResponse], error)
 	// GetWorktreeList returns the cached worktree list for a project.
 	GetWorktreeList(context.Context, *connect.Request[v1.GetWorktreeListRequest]) (*connect.Response[v1.GetWorktreeListResponse], error)
+	// RequestWorktreeDelete initiates deletion of a specific worktree (called by frontend).
+	RequestWorktreeDelete(context.Context, *connect.Request[v1.RequestWorktreeDeleteRequest]) (*connect.Response[v1.RequestWorktreeDeleteResponse], error)
+	// ReportWorktreeDeleteResult reports the outcome of a worktree deletion from the agent.
+	ReportWorktreeDeleteResult(context.Context, *connect.Request[v1.ReportWorktreeDeleteResultRequest]) (*connect.Response[v1.ReportWorktreeDeleteResultResponse], error)
 }
 
 // NewAgentManagerServiceClient constructs a client for the taskguild.v1.AgentManagerService
@@ -195,24 +205,38 @@ func NewAgentManagerServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(agentManagerServiceMethods.ByName("GetWorktreeList")),
 			connect.WithClientOptions(opts...),
 		),
+		requestWorktreeDelete: connect.NewClient[v1.RequestWorktreeDeleteRequest, v1.RequestWorktreeDeleteResponse](
+			httpClient,
+			baseURL+AgentManagerServiceRequestWorktreeDeleteProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("RequestWorktreeDelete")),
+			connect.WithClientOptions(opts...),
+		),
+		reportWorktreeDeleteResult: connect.NewClient[v1.ReportWorktreeDeleteResultRequest, v1.ReportWorktreeDeleteResultResponse](
+			httpClient,
+			baseURL+AgentManagerServiceReportWorktreeDeleteResultProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("ReportWorktreeDeleteResult")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // agentManagerServiceClient implements AgentManagerServiceClient.
 type agentManagerServiceClient struct {
-	subscribe              *connect.Client[v1.AgentManagerSubscribeRequest, v1.AgentCommand]
-	claimTask              *connect.Client[v1.ClaimTaskRequest, v1.ClaimTaskResponse]
-	reportTaskResult       *connect.Client[v1.ReportTaskResultRequest, v1.ReportTaskResultResponse]
-	reportAgentStatus      *connect.Client[v1.ReportAgentStatusRequest, v1.ReportAgentStatusResponse]
-	heartbeat              *connect.Client[v1.HeartbeatRequest, v1.HeartbeatResponse]
-	createInteraction      *connect.Client[v1.CreateInteractionRequest, v1.CreateInteractionResponse]
-	getInteractionResponse *connect.Client[v1.GetInteractionResponseRequest, v1.GetInteractionResponseResponse]
-	syncAgents             *connect.Client[v1.SyncAgentsRequest, v1.SyncAgentsResponse]
-	reportTaskLog          *connect.Client[v1.ReportTaskLogRequest, v1.ReportTaskLogResponse]
-	syncPermissions        *connect.Client[v1.SyncPermissionsRequest, v1.SyncPermissionsResponse]
-	reportWorktreeList     *connect.Client[v1.ReportWorktreeListRequest, v1.ReportWorktreeListResponse]
-	requestWorktreeList    *connect.Client[v1.RequestWorktreeListRequest, v1.RequestWorktreeListResponse]
-	getWorktreeList        *connect.Client[v1.GetWorktreeListRequest, v1.GetWorktreeListResponse]
+	subscribe                  *connect.Client[v1.AgentManagerSubscribeRequest, v1.AgentCommand]
+	claimTask                  *connect.Client[v1.ClaimTaskRequest, v1.ClaimTaskResponse]
+	reportTaskResult           *connect.Client[v1.ReportTaskResultRequest, v1.ReportTaskResultResponse]
+	reportAgentStatus          *connect.Client[v1.ReportAgentStatusRequest, v1.ReportAgentStatusResponse]
+	heartbeat                  *connect.Client[v1.HeartbeatRequest, v1.HeartbeatResponse]
+	createInteraction          *connect.Client[v1.CreateInteractionRequest, v1.CreateInteractionResponse]
+	getInteractionResponse     *connect.Client[v1.GetInteractionResponseRequest, v1.GetInteractionResponseResponse]
+	syncAgents                 *connect.Client[v1.SyncAgentsRequest, v1.SyncAgentsResponse]
+	reportTaskLog              *connect.Client[v1.ReportTaskLogRequest, v1.ReportTaskLogResponse]
+	syncPermissions            *connect.Client[v1.SyncPermissionsRequest, v1.SyncPermissionsResponse]
+	reportWorktreeList         *connect.Client[v1.ReportWorktreeListRequest, v1.ReportWorktreeListResponse]
+	requestWorktreeList        *connect.Client[v1.RequestWorktreeListRequest, v1.RequestWorktreeListResponse]
+	getWorktreeList            *connect.Client[v1.GetWorktreeListRequest, v1.GetWorktreeListResponse]
+	requestWorktreeDelete      *connect.Client[v1.RequestWorktreeDeleteRequest, v1.RequestWorktreeDeleteResponse]
+	reportWorktreeDeleteResult *connect.Client[v1.ReportWorktreeDeleteResultRequest, v1.ReportWorktreeDeleteResultResponse]
 }
 
 // Subscribe calls taskguild.v1.AgentManagerService.Subscribe.
@@ -280,6 +304,16 @@ func (c *agentManagerServiceClient) GetWorktreeList(ctx context.Context, req *co
 	return c.getWorktreeList.CallUnary(ctx, req)
 }
 
+// RequestWorktreeDelete calls taskguild.v1.AgentManagerService.RequestWorktreeDelete.
+func (c *agentManagerServiceClient) RequestWorktreeDelete(ctx context.Context, req *connect.Request[v1.RequestWorktreeDeleteRequest]) (*connect.Response[v1.RequestWorktreeDeleteResponse], error) {
+	return c.requestWorktreeDelete.CallUnary(ctx, req)
+}
+
+// ReportWorktreeDeleteResult calls taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult.
+func (c *agentManagerServiceClient) ReportWorktreeDeleteResult(ctx context.Context, req *connect.Request[v1.ReportWorktreeDeleteResultRequest]) (*connect.Response[v1.ReportWorktreeDeleteResultResponse], error) {
+	return c.reportWorktreeDeleteResult.CallUnary(ctx, req)
+}
+
 // AgentManagerServiceHandler is an implementation of the taskguild.v1.AgentManagerService service.
 type AgentManagerServiceHandler interface {
 	// Subscribe opens a server-stream for receiving commands from the backend.
@@ -310,6 +344,10 @@ type AgentManagerServiceHandler interface {
 	RequestWorktreeList(context.Context, *connect.Request[v1.RequestWorktreeListRequest]) (*connect.Response[v1.RequestWorktreeListResponse], error)
 	// GetWorktreeList returns the cached worktree list for a project.
 	GetWorktreeList(context.Context, *connect.Request[v1.GetWorktreeListRequest]) (*connect.Response[v1.GetWorktreeListResponse], error)
+	// RequestWorktreeDelete initiates deletion of a specific worktree (called by frontend).
+	RequestWorktreeDelete(context.Context, *connect.Request[v1.RequestWorktreeDeleteRequest]) (*connect.Response[v1.RequestWorktreeDeleteResponse], error)
+	// ReportWorktreeDeleteResult reports the outcome of a worktree deletion from the agent.
+	ReportWorktreeDeleteResult(context.Context, *connect.Request[v1.ReportWorktreeDeleteResultRequest]) (*connect.Response[v1.ReportWorktreeDeleteResultResponse], error)
 }
 
 // NewAgentManagerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -397,6 +435,18 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 		connect.WithSchema(agentManagerServiceMethods.ByName("GetWorktreeList")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentManagerServiceRequestWorktreeDeleteHandler := connect.NewUnaryHandler(
+		AgentManagerServiceRequestWorktreeDeleteProcedure,
+		svc.RequestWorktreeDelete,
+		connect.WithSchema(agentManagerServiceMethods.ByName("RequestWorktreeDelete")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentManagerServiceReportWorktreeDeleteResultHandler := connect.NewUnaryHandler(
+		AgentManagerServiceReportWorktreeDeleteResultProcedure,
+		svc.ReportWorktreeDeleteResult,
+		connect.WithSchema(agentManagerServiceMethods.ByName("ReportWorktreeDeleteResult")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/taskguild.v1.AgentManagerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AgentManagerServiceSubscribeProcedure:
@@ -425,6 +475,10 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 			agentManagerServiceRequestWorktreeListHandler.ServeHTTP(w, r)
 		case AgentManagerServiceGetWorktreeListProcedure:
 			agentManagerServiceGetWorktreeListHandler.ServeHTTP(w, r)
+		case AgentManagerServiceRequestWorktreeDeleteProcedure:
+			agentManagerServiceRequestWorktreeDeleteHandler.ServeHTTP(w, r)
+		case AgentManagerServiceReportWorktreeDeleteResultProcedure:
+			agentManagerServiceReportWorktreeDeleteResultHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -484,4 +538,12 @@ func (UnimplementedAgentManagerServiceHandler) RequestWorktreeList(context.Conte
 
 func (UnimplementedAgentManagerServiceHandler) GetWorktreeList(context.Context, *connect.Request[v1.GetWorktreeListRequest]) (*connect.Response[v1.GetWorktreeListResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.GetWorktreeList is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) RequestWorktreeDelete(context.Context, *connect.Request[v1.RequestWorktreeDeleteRequest]) (*connect.Response[v1.RequestWorktreeDeleteResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.RequestWorktreeDelete is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) ReportWorktreeDeleteResult(context.Context, *connect.Request[v1.ReportWorktreeDeleteResultRequest]) (*connect.Response[v1.ReportWorktreeDeleteResultResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult is not implemented"))
 }

@@ -39,6 +39,10 @@ service AgentManagerService {
   rpc RequestWorktreeList(RequestWorktreeListRequest) returns (RequestWorktreeListResponse);
   // GetWorktreeList returns the cached worktree list for a project.
   rpc GetWorktreeList(GetWorktreeListRequest) returns (GetWorktreeListResponse);
+  // RequestWorktreeDelete initiates deletion of a specific worktree (called by frontend).
+  rpc RequestWorktreeDelete(RequestWorktreeDeleteRequest) returns (RequestWorktreeDeleteResponse);
+  // ReportWorktreeDeleteResult reports the outcome of a worktree deletion from the agent.
+  rpc ReportWorktreeDeleteResult(ReportWorktreeDeleteResultRequest) returns (ReportWorktreeDeleteResultResponse);
 }
 
 // --- Subscribe stream ---
@@ -58,6 +62,7 @@ message AgentCommand {
     SyncAgentsCommand sync_agents = 5;
     SyncPermissionsCommand sync_permissions = 6;
     ListWorktreesCommand list_worktrees = 7;
+    DeleteWorktreeCommand delete_worktree = 8;
   }
 }
 
@@ -209,6 +214,15 @@ message WorktreeInfo {
   string name = 1;      // worktree directory name (e.g., "y3cfp6_agent")
   string branch = 2;    // git branch name (e.g., "worktree-y3cfp6_agent")
   string task_id = 3;   // associated task ID if known
+  bool has_changes = 4;              // true if worktree has uncommitted changes
+  repeated string changed_files = 5; // list of changed file paths (relative to worktree root)
+}
+
+// DeleteWorktreeCommand tells the agent to remove a git worktree and its branch.
+message DeleteWorktreeCommand {
+  string request_id = 1;
+  string worktree_name = 2;  // directory name under .claude/worktrees/
+  bool force = 3;            // if true, delete even when uncommitted changes exist
 }
 
 message ReportWorktreeListRequest {
@@ -231,3 +245,21 @@ message GetWorktreeListRequest {
 message GetWorktreeListResponse {
   repeated WorktreeInfo worktrees = 1;
 }
+
+message RequestWorktreeDeleteRequest {
+  string project_id = 1;
+  string worktree_name = 2;
+  bool force = 3;
+}
+message RequestWorktreeDeleteResponse {
+  string request_id = 1;
+}
+
+message ReportWorktreeDeleteResultRequest {
+  string request_id = 1;
+  string project_name = 2;
+  string worktree_name = 3;
+  bool success = 4;
+  string error_message = 5;
+}
+message ReportWorktreeDeleteResultResponse {}

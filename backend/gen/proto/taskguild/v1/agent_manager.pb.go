@@ -148,6 +148,7 @@ type AgentCommand struct {
 	//	*AgentCommand_SyncAgents
 	//	*AgentCommand_SyncPermissions
 	//	*AgentCommand_ListWorktrees
+	//	*AgentCommand_DeleteWorktree
 	Command       isAgentCommand_Command `protobuf_oneof:"command"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -253,6 +254,15 @@ func (x *AgentCommand) GetListWorktrees() *ListWorktreesCommand {
 	return nil
 }
 
+func (x *AgentCommand) GetDeleteWorktree() *DeleteWorktreeCommand {
+	if x != nil {
+		if x, ok := x.Command.(*AgentCommand_DeleteWorktree); ok {
+			return x.DeleteWorktree
+		}
+	}
+	return nil
+}
+
 type isAgentCommand_Command interface {
 	isAgentCommand_Command()
 }
@@ -285,6 +295,10 @@ type AgentCommand_ListWorktrees struct {
 	ListWorktrees *ListWorktreesCommand `protobuf:"bytes,7,opt,name=list_worktrees,json=listWorktrees,proto3,oneof"`
 }
 
+type AgentCommand_DeleteWorktree struct {
+	DeleteWorktree *DeleteWorktreeCommand `protobuf:"bytes,8,opt,name=delete_worktree,json=deleteWorktree,proto3,oneof"`
+}
+
 func (*AgentCommand_TaskAvailable) isAgentCommand_Command() {}
 
 func (*AgentCommand_AssignTask) isAgentCommand_Command() {}
@@ -298,6 +312,8 @@ func (*AgentCommand_SyncAgents) isAgentCommand_Command() {}
 func (*AgentCommand_SyncPermissions) isAgentCommand_Command() {}
 
 func (*AgentCommand_ListWorktrees) isAgentCommand_Command() {}
+
+func (*AgentCommand_DeleteWorktree) isAgentCommand_Command() {}
 
 type TaskAvailableCommand struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1614,9 +1630,11 @@ func (*ReportTaskLogResponse) Descriptor() ([]byte, []int) {
 
 type WorktreeInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                   // worktree directory name (e.g., "y3cfp6_agent")
-	Branch        string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty"`               // git branch name (e.g., "worktree-y3cfp6_agent")
-	TaskId        string                 `protobuf:"bytes,3,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"` // associated task ID if known
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`                                     // worktree directory name (e.g., "y3cfp6_agent")
+	Branch        string                 `protobuf:"bytes,2,opt,name=branch,proto3" json:"branch,omitempty"`                                 // git branch name (e.g., "worktree-y3cfp6_agent")
+	TaskId        string                 `protobuf:"bytes,3,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`                   // associated task ID if known
+	HasChanges    bool                   `protobuf:"varint,4,opt,name=has_changes,json=hasChanges,proto3" json:"has_changes,omitempty"`      // true if worktree has uncommitted changes
+	ChangedFiles  []string               `protobuf:"bytes,5,rep,name=changed_files,json=changedFiles,proto3" json:"changed_files,omitempty"` // list of changed file paths (relative to worktree root)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1672,6 +1690,81 @@ func (x *WorktreeInfo) GetTaskId() string {
 	return ""
 }
 
+func (x *WorktreeInfo) GetHasChanges() bool {
+	if x != nil {
+		return x.HasChanges
+	}
+	return false
+}
+
+func (x *WorktreeInfo) GetChangedFiles() []string {
+	if x != nil {
+		return x.ChangedFiles
+	}
+	return nil
+}
+
+// DeleteWorktreeCommand tells the agent to remove a git worktree and its branch.
+type DeleteWorktreeCommand struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	WorktreeName  string                 `protobuf:"bytes,2,opt,name=worktree_name,json=worktreeName,proto3" json:"worktree_name,omitempty"` // directory name under .claude/worktrees/
+	Force         bool                   `protobuf:"varint,3,opt,name=force,proto3" json:"force,omitempty"`                                  // if true, delete even when uncommitted changes exist
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteWorktreeCommand) Reset() {
+	*x = DeleteWorktreeCommand{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteWorktreeCommand) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteWorktreeCommand) ProtoMessage() {}
+
+func (x *DeleteWorktreeCommand) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteWorktreeCommand.ProtoReflect.Descriptor instead.
+func (*DeleteWorktreeCommand) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *DeleteWorktreeCommand) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *DeleteWorktreeCommand) GetWorktreeName() string {
+	if x != nil {
+		return x.WorktreeName
+	}
+	return ""
+}
+
+func (x *DeleteWorktreeCommand) GetForce() bool {
+	if x != nil {
+		return x.Force
+	}
+	return false
+}
+
 type ReportWorktreeListRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
@@ -1683,7 +1776,7 @@ type ReportWorktreeListRequest struct {
 
 func (x *ReportWorktreeListRequest) Reset() {
 	*x = ReportWorktreeListRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[28]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1695,7 +1788,7 @@ func (x *ReportWorktreeListRequest) String() string {
 func (*ReportWorktreeListRequest) ProtoMessage() {}
 
 func (x *ReportWorktreeListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[28]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1708,7 +1801,7 @@ func (x *ReportWorktreeListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportWorktreeListRequest.ProtoReflect.Descriptor instead.
 func (*ReportWorktreeListRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{28}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ReportWorktreeListRequest) GetRequestId() string {
@@ -1740,7 +1833,7 @@ type ReportWorktreeListResponse struct {
 
 func (x *ReportWorktreeListResponse) Reset() {
 	*x = ReportWorktreeListResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[29]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1752,7 +1845,7 @@ func (x *ReportWorktreeListResponse) String() string {
 func (*ReportWorktreeListResponse) ProtoMessage() {}
 
 func (x *ReportWorktreeListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[29]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1765,7 +1858,7 @@ func (x *ReportWorktreeListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportWorktreeListResponse.ProtoReflect.Descriptor instead.
 func (*ReportWorktreeListResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{29}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{30}
 }
 
 type RequestWorktreeListRequest struct {
@@ -1777,7 +1870,7 @@ type RequestWorktreeListRequest struct {
 
 func (x *RequestWorktreeListRequest) Reset() {
 	*x = RequestWorktreeListRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[30]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1789,7 +1882,7 @@ func (x *RequestWorktreeListRequest) String() string {
 func (*RequestWorktreeListRequest) ProtoMessage() {}
 
 func (x *RequestWorktreeListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[30]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1802,7 +1895,7 @@ func (x *RequestWorktreeListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestWorktreeListRequest.ProtoReflect.Descriptor instead.
 func (*RequestWorktreeListRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{30}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *RequestWorktreeListRequest) GetProjectId() string {
@@ -1821,7 +1914,7 @@ type RequestWorktreeListResponse struct {
 
 func (x *RequestWorktreeListResponse) Reset() {
 	*x = RequestWorktreeListResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[31]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1833,7 +1926,7 @@ func (x *RequestWorktreeListResponse) String() string {
 func (*RequestWorktreeListResponse) ProtoMessage() {}
 
 func (x *RequestWorktreeListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[31]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1846,7 +1939,7 @@ func (x *RequestWorktreeListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestWorktreeListResponse.ProtoReflect.Descriptor instead.
 func (*RequestWorktreeListResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{31}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *RequestWorktreeListResponse) GetRequestId() string {
@@ -1865,7 +1958,7 @@ type GetWorktreeListRequest struct {
 
 func (x *GetWorktreeListRequest) Reset() {
 	*x = GetWorktreeListRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[32]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1877,7 +1970,7 @@ func (x *GetWorktreeListRequest) String() string {
 func (*GetWorktreeListRequest) ProtoMessage() {}
 
 func (x *GetWorktreeListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[32]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1890,7 +1983,7 @@ func (x *GetWorktreeListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorktreeListRequest.ProtoReflect.Descriptor instead.
 func (*GetWorktreeListRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{32}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *GetWorktreeListRequest) GetProjectId() string {
@@ -1909,7 +2002,7 @@ type GetWorktreeListResponse struct {
 
 func (x *GetWorktreeListResponse) Reset() {
 	*x = GetWorktreeListResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[33]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1921,7 +2014,7 @@ func (x *GetWorktreeListResponse) String() string {
 func (*GetWorktreeListResponse) ProtoMessage() {}
 
 func (x *GetWorktreeListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[33]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1934,7 +2027,7 @@ func (x *GetWorktreeListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorktreeListResponse.ProtoReflect.Descriptor instead.
 func (*GetWorktreeListResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{33}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *GetWorktreeListResponse) GetWorktrees() []*WorktreeInfo {
@@ -1942,6 +2035,222 @@ func (x *GetWorktreeListResponse) GetWorktrees() []*WorktreeInfo {
 		return x.Worktrees
 	}
 	return nil
+}
+
+type RequestWorktreeDeleteRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	WorktreeName  string                 `protobuf:"bytes,2,opt,name=worktree_name,json=worktreeName,proto3" json:"worktree_name,omitempty"`
+	Force         bool                   `protobuf:"varint,3,opt,name=force,proto3" json:"force,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestWorktreeDeleteRequest) Reset() {
+	*x = RequestWorktreeDeleteRequest{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestWorktreeDeleteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestWorktreeDeleteRequest) ProtoMessage() {}
+
+func (x *RequestWorktreeDeleteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestWorktreeDeleteRequest.ProtoReflect.Descriptor instead.
+func (*RequestWorktreeDeleteRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *RequestWorktreeDeleteRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *RequestWorktreeDeleteRequest) GetWorktreeName() string {
+	if x != nil {
+		return x.WorktreeName
+	}
+	return ""
+}
+
+func (x *RequestWorktreeDeleteRequest) GetForce() bool {
+	if x != nil {
+		return x.Force
+	}
+	return false
+}
+
+type RequestWorktreeDeleteResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestWorktreeDeleteResponse) Reset() {
+	*x = RequestWorktreeDeleteResponse{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestWorktreeDeleteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestWorktreeDeleteResponse) ProtoMessage() {}
+
+func (x *RequestWorktreeDeleteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestWorktreeDeleteResponse.ProtoReflect.Descriptor instead.
+func (*RequestWorktreeDeleteResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *RequestWorktreeDeleteResponse) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+type ReportWorktreeDeleteResultRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	ProjectName   string                 `protobuf:"bytes,2,opt,name=project_name,json=projectName,proto3" json:"project_name,omitempty"`
+	WorktreeName  string                 `protobuf:"bytes,3,opt,name=worktree_name,json=worktreeName,proto3" json:"worktree_name,omitempty"`
+	Success       bool                   `protobuf:"varint,4,opt,name=success,proto3" json:"success,omitempty"`
+	ErrorMessage  string                 `protobuf:"bytes,5,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportWorktreeDeleteResultRequest) Reset() {
+	*x = ReportWorktreeDeleteResultRequest{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportWorktreeDeleteResultRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportWorktreeDeleteResultRequest) ProtoMessage() {}
+
+func (x *ReportWorktreeDeleteResultRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportWorktreeDeleteResultRequest.ProtoReflect.Descriptor instead.
+func (*ReportWorktreeDeleteResultRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *ReportWorktreeDeleteResultRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *ReportWorktreeDeleteResultRequest) GetProjectName() string {
+	if x != nil {
+		return x.ProjectName
+	}
+	return ""
+}
+
+func (x *ReportWorktreeDeleteResultRequest) GetWorktreeName() string {
+	if x != nil {
+		return x.WorktreeName
+	}
+	return ""
+}
+
+func (x *ReportWorktreeDeleteResultRequest) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *ReportWorktreeDeleteResultRequest) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
+type ReportWorktreeDeleteResultResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportWorktreeDeleteResultResponse) Reset() {
+	*x = ReportWorktreeDeleteResultResponse{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportWorktreeDeleteResultResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportWorktreeDeleteResultResponse) ProtoMessage() {}
+
+func (x *ReportWorktreeDeleteResultResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportWorktreeDeleteResultResponse.ProtoReflect.Descriptor instead.
+func (*ReportWorktreeDeleteResultResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{38}
 }
 
 var File_taskguild_v1_agent_manager_proto protoreflect.FileDescriptor
@@ -1952,7 +2261,7 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\x1cAgentManagerSubscribeRequest\x12(\n" +
 	"\x10agent_manager_id\x18\x01 \x01(\tR\x0eagentManagerId\x12!\n" +
 	"\fproject_name\x18\x02 \x01(\tR\vprojectName\x120\n" +
-	"\x14max_concurrent_tasks\x18\x03 \x01(\x05R\x12maxConcurrentTasks\"\xb1\x04\n" +
+	"\x14max_concurrent_tasks\x18\x03 \x01(\x05R\x12maxConcurrentTasks\"\x81\x05\n" +
 	"\fAgentCommand\x12K\n" +
 	"\x0etask_available\x18\x01 \x01(\v2\".taskguild.v1.TaskAvailableCommandH\x00R\rtaskAvailable\x12B\n" +
 	"\vassign_task\x18\x02 \x01(\v2\x1f.taskguild.v1.AssignTaskCommandH\x00R\n" +
@@ -1963,7 +2272,8 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\vsync_agents\x18\x05 \x01(\v2\x1f.taskguild.v1.SyncAgentsCommandH\x00R\n" +
 	"syncAgents\x12Q\n" +
 	"\x10sync_permissions\x18\x06 \x01(\v2$.taskguild.v1.SyncPermissionsCommandH\x00R\x0fsyncPermissions\x12K\n" +
-	"\x0elist_worktrees\x18\a \x01(\v2\".taskguild.v1.ListWorktreesCommandH\x00R\rlistWorktreesB\t\n" +
+	"\x0elist_worktrees\x18\a \x01(\v2\".taskguild.v1.ListWorktreesCommandH\x00R\rlistWorktrees\x12N\n" +
+	"\x0fdelete_worktree\x18\b \x01(\v2#.taskguild.v1.DeleteWorktreeCommandH\x00R\x0edeleteWorktreeB\t\n" +
 	"\acommand\"\xf8\x01\n" +
 	"\x14TaskAvailableCommand\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x14\n" +
@@ -2055,11 +2365,19 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x17\n" +
-	"\x15ReportTaskLogResponse\"S\n" +
+	"\x15ReportTaskLogResponse\"\x99\x01\n" +
 	"\fWorktreeInfo\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06branch\x18\x02 \x01(\tR\x06branch\x12\x17\n" +
-	"\atask_id\x18\x03 \x01(\tR\x06taskId\"\x97\x01\n" +
+	"\atask_id\x18\x03 \x01(\tR\x06taskId\x12\x1f\n" +
+	"\vhas_changes\x18\x04 \x01(\bR\n" +
+	"hasChanges\x12#\n" +
+	"\rchanged_files\x18\x05 \x03(\tR\fchangedFiles\"q\n" +
+	"\x15DeleteWorktreeCommand\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12#\n" +
+	"\rworktree_name\x18\x02 \x01(\tR\fworktreeName\x12\x14\n" +
+	"\x05force\x18\x03 \x01(\bR\x05force\"\x97\x01\n" +
 	"\x19ReportWorktreeListRequest\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x12!\n" +
@@ -2076,13 +2394,29 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\"S\n" +
 	"\x17GetWorktreeListResponse\x128\n" +
-	"\tworktrees\x18\x01 \x03(\v2\x1a.taskguild.v1.WorktreeInfoR\tworktrees*\x8e\x01\n" +
+	"\tworktrees\x18\x01 \x03(\v2\x1a.taskguild.v1.WorktreeInfoR\tworktrees\"x\n" +
+	"\x1cRequestWorktreeDeleteRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12#\n" +
+	"\rworktree_name\x18\x02 \x01(\tR\fworktreeName\x12\x14\n" +
+	"\x05force\x18\x03 \x01(\bR\x05force\">\n" +
+	"\x1dRequestWorktreeDeleteResponse\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\"\xc9\x01\n" +
+	"!ReportWorktreeDeleteResultRequest\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12!\n" +
+	"\fproject_name\x18\x02 \x01(\tR\vprojectName\x12#\n" +
+	"\rworktree_name\x18\x03 \x01(\tR\fworktreeName\x12\x18\n" +
+	"\asuccess\x18\x04 \x01(\bR\asuccess\x12#\n" +
+	"\rerror_message\x18\x05 \x01(\tR\ferrorMessage\"$\n" +
+	"\"ReportWorktreeDeleteResultResponse*\x8e\x01\n" +
 	"\vAgentStatus\x12\x1c\n" +
 	"\x18AGENT_STATUS_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11AGENT_STATUS_IDLE\x10\x01\x12\x18\n" +
 	"\x14AGENT_STATUS_RUNNING\x10\x02\x12\x18\n" +
 	"\x14AGENT_STATUS_WAITING\x10\x03\x12\x16\n" +
-	"\x12AGENT_STATUS_ERROR\x10\x042\xec\t\n" +
+	"\x12AGENT_STATUS_ERROR\x10\x042\xdf\v\n" +
 	"\x13AgentManagerService\x12U\n" +
 	"\tSubscribe\x12*.taskguild.v1.AgentManagerSubscribeRequest\x1a\x1a.taskguild.v1.AgentCommand0\x01\x12L\n" +
 	"\tClaimTask\x12\x1e.taskguild.v1.ClaimTaskRequest\x1a\x1f.taskguild.v1.ClaimTaskResponse\x12a\n" +
@@ -2097,7 +2431,9 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\x0fSyncPermissions\x12$.taskguild.v1.SyncPermissionsRequest\x1a%.taskguild.v1.SyncPermissionsResponse\x12g\n" +
 	"\x12ReportWorktreeList\x12'.taskguild.v1.ReportWorktreeListRequest\x1a(.taskguild.v1.ReportWorktreeListResponse\x12j\n" +
 	"\x13RequestWorktreeList\x12(.taskguild.v1.RequestWorktreeListRequest\x1a).taskguild.v1.RequestWorktreeListResponse\x12^\n" +
-	"\x0fGetWorktreeList\x12$.taskguild.v1.GetWorktreeListRequest\x1a%.taskguild.v1.GetWorktreeListResponseB\xbf\x01\n" +
+	"\x0fGetWorktreeList\x12$.taskguild.v1.GetWorktreeListRequest\x1a%.taskguild.v1.GetWorktreeListResponse\x12p\n" +
+	"\x15RequestWorktreeDelete\x12*.taskguild.v1.RequestWorktreeDeleteRequest\x1a+.taskguild.v1.RequestWorktreeDeleteResponse\x12\x7f\n" +
+	"\x1aReportWorktreeDeleteResult\x12/.taskguild.v1.ReportWorktreeDeleteResultRequest\x1a0.taskguild.v1.ReportWorktreeDeleteResultResponseB\xbf\x01\n" +
 	"\x10com.taskguild.v1B\x11AgentManagerProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
@@ -2113,55 +2449,60 @@ func file_taskguild_v1_agent_manager_proto_rawDescGZIP() []byte {
 }
 
 var file_taskguild_v1_agent_manager_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_taskguild_v1_agent_manager_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
+var file_taskguild_v1_agent_manager_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
 var file_taskguild_v1_agent_manager_proto_goTypes = []any{
-	(AgentStatus)(0),                       // 0: taskguild.v1.AgentStatus
-	(*AgentManagerSubscribeRequest)(nil),   // 1: taskguild.v1.AgentManagerSubscribeRequest
-	(*AgentCommand)(nil),                   // 2: taskguild.v1.AgentCommand
-	(*TaskAvailableCommand)(nil),           // 3: taskguild.v1.TaskAvailableCommand
-	(*AssignTaskCommand)(nil),              // 4: taskguild.v1.AssignTaskCommand
-	(*CancelTaskCommand)(nil),              // 5: taskguild.v1.CancelTaskCommand
-	(*InteractionResponseCommand)(nil),     // 6: taskguild.v1.InteractionResponseCommand
-	(*SyncAgentsCommand)(nil),              // 7: taskguild.v1.SyncAgentsCommand
-	(*SyncPermissionsCommand)(nil),         // 8: taskguild.v1.SyncPermissionsCommand
-	(*ListWorktreesCommand)(nil),           // 9: taskguild.v1.ListWorktreesCommand
-	(*ClaimTaskRequest)(nil),               // 10: taskguild.v1.ClaimTaskRequest
-	(*ClaimTaskResponse)(nil),              // 11: taskguild.v1.ClaimTaskResponse
-	(*ReportTaskResultRequest)(nil),        // 12: taskguild.v1.ReportTaskResultRequest
-	(*ReportTaskResultResponse)(nil),       // 13: taskguild.v1.ReportTaskResultResponse
-	(*ReportAgentStatusRequest)(nil),       // 14: taskguild.v1.ReportAgentStatusRequest
-	(*ReportAgentStatusResponse)(nil),      // 15: taskguild.v1.ReportAgentStatusResponse
-	(*HeartbeatRequest)(nil),               // 16: taskguild.v1.HeartbeatRequest
-	(*HeartbeatResponse)(nil),              // 17: taskguild.v1.HeartbeatResponse
-	(*CreateInteractionRequest)(nil),       // 18: taskguild.v1.CreateInteractionRequest
-	(*CreateInteractionResponse)(nil),      // 19: taskguild.v1.CreateInteractionResponse
-	(*GetInteractionResponseRequest)(nil),  // 20: taskguild.v1.GetInteractionResponseRequest
-	(*GetInteractionResponseResponse)(nil), // 21: taskguild.v1.GetInteractionResponseResponse
-	(*SyncAgentsRequest)(nil),              // 22: taskguild.v1.SyncAgentsRequest
-	(*SyncAgentsResponse)(nil),             // 23: taskguild.v1.SyncAgentsResponse
-	(*SyncPermissionsRequest)(nil),         // 24: taskguild.v1.SyncPermissionsRequest
-	(*SyncPermissionsResponse)(nil),        // 25: taskguild.v1.SyncPermissionsResponse
-	(*ReportTaskLogRequest)(nil),           // 26: taskguild.v1.ReportTaskLogRequest
-	(*ReportTaskLogResponse)(nil),          // 27: taskguild.v1.ReportTaskLogResponse
-	(*WorktreeInfo)(nil),                   // 28: taskguild.v1.WorktreeInfo
-	(*ReportWorktreeListRequest)(nil),      // 29: taskguild.v1.ReportWorktreeListRequest
-	(*ReportWorktreeListResponse)(nil),     // 30: taskguild.v1.ReportWorktreeListResponse
-	(*RequestWorktreeListRequest)(nil),     // 31: taskguild.v1.RequestWorktreeListRequest
-	(*RequestWorktreeListResponse)(nil),    // 32: taskguild.v1.RequestWorktreeListResponse
-	(*GetWorktreeListRequest)(nil),         // 33: taskguild.v1.GetWorktreeListRequest
-	(*GetWorktreeListResponse)(nil),        // 34: taskguild.v1.GetWorktreeListResponse
-	nil,                                    // 35: taskguild.v1.TaskAvailableCommand.MetadataEntry
-	nil,                                    // 36: taskguild.v1.AssignTaskCommand.MetadataEntry
-	nil,                                    // 37: taskguild.v1.ClaimTaskResponse.MetadataEntry
-	nil,                                    // 38: taskguild.v1.ReportTaskLogRequest.MetadataEntry
-	(*timestamppb.Timestamp)(nil),          // 39: google.protobuf.Timestamp
-	(InteractionType)(0),                   // 40: taskguild.v1.InteractionType
-	(*InteractionOption)(nil),              // 41: taskguild.v1.InteractionOption
-	(*Interaction)(nil),                    // 42: taskguild.v1.Interaction
-	(*AgentDefinition)(nil),                // 43: taskguild.v1.AgentDefinition
-	(*PermissionSet)(nil),                  // 44: taskguild.v1.PermissionSet
-	(TaskLogLevel)(0),                      // 45: taskguild.v1.TaskLogLevel
-	(TaskLogCategory)(0),                   // 46: taskguild.v1.TaskLogCategory
+	(AgentStatus)(0),                           // 0: taskguild.v1.AgentStatus
+	(*AgentManagerSubscribeRequest)(nil),       // 1: taskguild.v1.AgentManagerSubscribeRequest
+	(*AgentCommand)(nil),                       // 2: taskguild.v1.AgentCommand
+	(*TaskAvailableCommand)(nil),               // 3: taskguild.v1.TaskAvailableCommand
+	(*AssignTaskCommand)(nil),                  // 4: taskguild.v1.AssignTaskCommand
+	(*CancelTaskCommand)(nil),                  // 5: taskguild.v1.CancelTaskCommand
+	(*InteractionResponseCommand)(nil),         // 6: taskguild.v1.InteractionResponseCommand
+	(*SyncAgentsCommand)(nil),                  // 7: taskguild.v1.SyncAgentsCommand
+	(*SyncPermissionsCommand)(nil),             // 8: taskguild.v1.SyncPermissionsCommand
+	(*ListWorktreesCommand)(nil),               // 9: taskguild.v1.ListWorktreesCommand
+	(*ClaimTaskRequest)(nil),                   // 10: taskguild.v1.ClaimTaskRequest
+	(*ClaimTaskResponse)(nil),                  // 11: taskguild.v1.ClaimTaskResponse
+	(*ReportTaskResultRequest)(nil),            // 12: taskguild.v1.ReportTaskResultRequest
+	(*ReportTaskResultResponse)(nil),           // 13: taskguild.v1.ReportTaskResultResponse
+	(*ReportAgentStatusRequest)(nil),           // 14: taskguild.v1.ReportAgentStatusRequest
+	(*ReportAgentStatusResponse)(nil),          // 15: taskguild.v1.ReportAgentStatusResponse
+	(*HeartbeatRequest)(nil),                   // 16: taskguild.v1.HeartbeatRequest
+	(*HeartbeatResponse)(nil),                  // 17: taskguild.v1.HeartbeatResponse
+	(*CreateInteractionRequest)(nil),           // 18: taskguild.v1.CreateInteractionRequest
+	(*CreateInteractionResponse)(nil),          // 19: taskguild.v1.CreateInteractionResponse
+	(*GetInteractionResponseRequest)(nil),      // 20: taskguild.v1.GetInteractionResponseRequest
+	(*GetInteractionResponseResponse)(nil),     // 21: taskguild.v1.GetInteractionResponseResponse
+	(*SyncAgentsRequest)(nil),                  // 22: taskguild.v1.SyncAgentsRequest
+	(*SyncAgentsResponse)(nil),                 // 23: taskguild.v1.SyncAgentsResponse
+	(*SyncPermissionsRequest)(nil),             // 24: taskguild.v1.SyncPermissionsRequest
+	(*SyncPermissionsResponse)(nil),            // 25: taskguild.v1.SyncPermissionsResponse
+	(*ReportTaskLogRequest)(nil),               // 26: taskguild.v1.ReportTaskLogRequest
+	(*ReportTaskLogResponse)(nil),              // 27: taskguild.v1.ReportTaskLogResponse
+	(*WorktreeInfo)(nil),                       // 28: taskguild.v1.WorktreeInfo
+	(*DeleteWorktreeCommand)(nil),              // 29: taskguild.v1.DeleteWorktreeCommand
+	(*ReportWorktreeListRequest)(nil),          // 30: taskguild.v1.ReportWorktreeListRequest
+	(*ReportWorktreeListResponse)(nil),         // 31: taskguild.v1.ReportWorktreeListResponse
+	(*RequestWorktreeListRequest)(nil),         // 32: taskguild.v1.RequestWorktreeListRequest
+	(*RequestWorktreeListResponse)(nil),        // 33: taskguild.v1.RequestWorktreeListResponse
+	(*GetWorktreeListRequest)(nil),             // 34: taskguild.v1.GetWorktreeListRequest
+	(*GetWorktreeListResponse)(nil),            // 35: taskguild.v1.GetWorktreeListResponse
+	(*RequestWorktreeDeleteRequest)(nil),       // 36: taskguild.v1.RequestWorktreeDeleteRequest
+	(*RequestWorktreeDeleteResponse)(nil),      // 37: taskguild.v1.RequestWorktreeDeleteResponse
+	(*ReportWorktreeDeleteResultRequest)(nil),  // 38: taskguild.v1.ReportWorktreeDeleteResultRequest
+	(*ReportWorktreeDeleteResultResponse)(nil), // 39: taskguild.v1.ReportWorktreeDeleteResultResponse
+	nil,                           // 40: taskguild.v1.TaskAvailableCommand.MetadataEntry
+	nil,                           // 41: taskguild.v1.AssignTaskCommand.MetadataEntry
+	nil,                           // 42: taskguild.v1.ClaimTaskResponse.MetadataEntry
+	nil,                           // 43: taskguild.v1.ReportTaskLogRequest.MetadataEntry
+	(*timestamppb.Timestamp)(nil), // 44: google.protobuf.Timestamp
+	(InteractionType)(0),          // 45: taskguild.v1.InteractionType
+	(*InteractionOption)(nil),     // 46: taskguild.v1.InteractionOption
+	(*Interaction)(nil),           // 47: taskguild.v1.Interaction
+	(*AgentDefinition)(nil),       // 48: taskguild.v1.AgentDefinition
+	(*PermissionSet)(nil),         // 49: taskguild.v1.PermissionSet
+	(TaskLogLevel)(0),             // 50: taskguild.v1.TaskLogLevel
+	(TaskLogCategory)(0),          // 51: taskguild.v1.TaskLogCategory
 }
 var file_taskguild_v1_agent_manager_proto_depIdxs = []int32{
 	3,  // 0: taskguild.v1.AgentCommand.task_available:type_name -> taskguild.v1.TaskAvailableCommand
@@ -2171,53 +2512,58 @@ var file_taskguild_v1_agent_manager_proto_depIdxs = []int32{
 	7,  // 4: taskguild.v1.AgentCommand.sync_agents:type_name -> taskguild.v1.SyncAgentsCommand
 	8,  // 5: taskguild.v1.AgentCommand.sync_permissions:type_name -> taskguild.v1.SyncPermissionsCommand
 	9,  // 6: taskguild.v1.AgentCommand.list_worktrees:type_name -> taskguild.v1.ListWorktreesCommand
-	35, // 7: taskguild.v1.TaskAvailableCommand.metadata:type_name -> taskguild.v1.TaskAvailableCommand.MetadataEntry
-	36, // 8: taskguild.v1.AssignTaskCommand.metadata:type_name -> taskguild.v1.AssignTaskCommand.MetadataEntry
-	37, // 9: taskguild.v1.ClaimTaskResponse.metadata:type_name -> taskguild.v1.ClaimTaskResponse.MetadataEntry
-	0,  // 10: taskguild.v1.ReportAgentStatusRequest.status:type_name -> taskguild.v1.AgentStatus
-	39, // 11: taskguild.v1.HeartbeatRequest.timestamp:type_name -> google.protobuf.Timestamp
-	40, // 12: taskguild.v1.CreateInteractionRequest.type:type_name -> taskguild.v1.InteractionType
-	41, // 13: taskguild.v1.CreateInteractionRequest.options:type_name -> taskguild.v1.InteractionOption
-	42, // 14: taskguild.v1.CreateInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
-	42, // 15: taskguild.v1.GetInteractionResponseResponse.interaction:type_name -> taskguild.v1.Interaction
-	43, // 16: taskguild.v1.SyncAgentsResponse.agents:type_name -> taskguild.v1.AgentDefinition
-	44, // 17: taskguild.v1.SyncPermissionsResponse.permissions:type_name -> taskguild.v1.PermissionSet
-	45, // 18: taskguild.v1.ReportTaskLogRequest.level:type_name -> taskguild.v1.TaskLogLevel
-	46, // 19: taskguild.v1.ReportTaskLogRequest.category:type_name -> taskguild.v1.TaskLogCategory
-	38, // 20: taskguild.v1.ReportTaskLogRequest.metadata:type_name -> taskguild.v1.ReportTaskLogRequest.MetadataEntry
-	28, // 21: taskguild.v1.ReportWorktreeListRequest.worktrees:type_name -> taskguild.v1.WorktreeInfo
-	28, // 22: taskguild.v1.GetWorktreeListResponse.worktrees:type_name -> taskguild.v1.WorktreeInfo
-	1,  // 23: taskguild.v1.AgentManagerService.Subscribe:input_type -> taskguild.v1.AgentManagerSubscribeRequest
-	10, // 24: taskguild.v1.AgentManagerService.ClaimTask:input_type -> taskguild.v1.ClaimTaskRequest
-	12, // 25: taskguild.v1.AgentManagerService.ReportTaskResult:input_type -> taskguild.v1.ReportTaskResultRequest
-	14, // 26: taskguild.v1.AgentManagerService.ReportAgentStatus:input_type -> taskguild.v1.ReportAgentStatusRequest
-	16, // 27: taskguild.v1.AgentManagerService.Heartbeat:input_type -> taskguild.v1.HeartbeatRequest
-	18, // 28: taskguild.v1.AgentManagerService.CreateInteraction:input_type -> taskguild.v1.CreateInteractionRequest
-	20, // 29: taskguild.v1.AgentManagerService.GetInteractionResponse:input_type -> taskguild.v1.GetInteractionResponseRequest
-	22, // 30: taskguild.v1.AgentManagerService.SyncAgents:input_type -> taskguild.v1.SyncAgentsRequest
-	26, // 31: taskguild.v1.AgentManagerService.ReportTaskLog:input_type -> taskguild.v1.ReportTaskLogRequest
-	24, // 32: taskguild.v1.AgentManagerService.SyncPermissions:input_type -> taskguild.v1.SyncPermissionsRequest
-	29, // 33: taskguild.v1.AgentManagerService.ReportWorktreeList:input_type -> taskguild.v1.ReportWorktreeListRequest
-	31, // 34: taskguild.v1.AgentManagerService.RequestWorktreeList:input_type -> taskguild.v1.RequestWorktreeListRequest
-	33, // 35: taskguild.v1.AgentManagerService.GetWorktreeList:input_type -> taskguild.v1.GetWorktreeListRequest
-	2,  // 36: taskguild.v1.AgentManagerService.Subscribe:output_type -> taskguild.v1.AgentCommand
-	11, // 37: taskguild.v1.AgentManagerService.ClaimTask:output_type -> taskguild.v1.ClaimTaskResponse
-	13, // 38: taskguild.v1.AgentManagerService.ReportTaskResult:output_type -> taskguild.v1.ReportTaskResultResponse
-	15, // 39: taskguild.v1.AgentManagerService.ReportAgentStatus:output_type -> taskguild.v1.ReportAgentStatusResponse
-	17, // 40: taskguild.v1.AgentManagerService.Heartbeat:output_type -> taskguild.v1.HeartbeatResponse
-	19, // 41: taskguild.v1.AgentManagerService.CreateInteraction:output_type -> taskguild.v1.CreateInteractionResponse
-	21, // 42: taskguild.v1.AgentManagerService.GetInteractionResponse:output_type -> taskguild.v1.GetInteractionResponseResponse
-	23, // 43: taskguild.v1.AgentManagerService.SyncAgents:output_type -> taskguild.v1.SyncAgentsResponse
-	27, // 44: taskguild.v1.AgentManagerService.ReportTaskLog:output_type -> taskguild.v1.ReportTaskLogResponse
-	25, // 45: taskguild.v1.AgentManagerService.SyncPermissions:output_type -> taskguild.v1.SyncPermissionsResponse
-	30, // 46: taskguild.v1.AgentManagerService.ReportWorktreeList:output_type -> taskguild.v1.ReportWorktreeListResponse
-	32, // 47: taskguild.v1.AgentManagerService.RequestWorktreeList:output_type -> taskguild.v1.RequestWorktreeListResponse
-	34, // 48: taskguild.v1.AgentManagerService.GetWorktreeList:output_type -> taskguild.v1.GetWorktreeListResponse
-	36, // [36:49] is the sub-list for method output_type
-	23, // [23:36] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	29, // 7: taskguild.v1.AgentCommand.delete_worktree:type_name -> taskguild.v1.DeleteWorktreeCommand
+	40, // 8: taskguild.v1.TaskAvailableCommand.metadata:type_name -> taskguild.v1.TaskAvailableCommand.MetadataEntry
+	41, // 9: taskguild.v1.AssignTaskCommand.metadata:type_name -> taskguild.v1.AssignTaskCommand.MetadataEntry
+	42, // 10: taskguild.v1.ClaimTaskResponse.metadata:type_name -> taskguild.v1.ClaimTaskResponse.MetadataEntry
+	0,  // 11: taskguild.v1.ReportAgentStatusRequest.status:type_name -> taskguild.v1.AgentStatus
+	44, // 12: taskguild.v1.HeartbeatRequest.timestamp:type_name -> google.protobuf.Timestamp
+	45, // 13: taskguild.v1.CreateInteractionRequest.type:type_name -> taskguild.v1.InteractionType
+	46, // 14: taskguild.v1.CreateInteractionRequest.options:type_name -> taskguild.v1.InteractionOption
+	47, // 15: taskguild.v1.CreateInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
+	47, // 16: taskguild.v1.GetInteractionResponseResponse.interaction:type_name -> taskguild.v1.Interaction
+	48, // 17: taskguild.v1.SyncAgentsResponse.agents:type_name -> taskguild.v1.AgentDefinition
+	49, // 18: taskguild.v1.SyncPermissionsResponse.permissions:type_name -> taskguild.v1.PermissionSet
+	50, // 19: taskguild.v1.ReportTaskLogRequest.level:type_name -> taskguild.v1.TaskLogLevel
+	51, // 20: taskguild.v1.ReportTaskLogRequest.category:type_name -> taskguild.v1.TaskLogCategory
+	43, // 21: taskguild.v1.ReportTaskLogRequest.metadata:type_name -> taskguild.v1.ReportTaskLogRequest.MetadataEntry
+	28, // 22: taskguild.v1.ReportWorktreeListRequest.worktrees:type_name -> taskguild.v1.WorktreeInfo
+	28, // 23: taskguild.v1.GetWorktreeListResponse.worktrees:type_name -> taskguild.v1.WorktreeInfo
+	1,  // 24: taskguild.v1.AgentManagerService.Subscribe:input_type -> taskguild.v1.AgentManagerSubscribeRequest
+	10, // 25: taskguild.v1.AgentManagerService.ClaimTask:input_type -> taskguild.v1.ClaimTaskRequest
+	12, // 26: taskguild.v1.AgentManagerService.ReportTaskResult:input_type -> taskguild.v1.ReportTaskResultRequest
+	14, // 27: taskguild.v1.AgentManagerService.ReportAgentStatus:input_type -> taskguild.v1.ReportAgentStatusRequest
+	16, // 28: taskguild.v1.AgentManagerService.Heartbeat:input_type -> taskguild.v1.HeartbeatRequest
+	18, // 29: taskguild.v1.AgentManagerService.CreateInteraction:input_type -> taskguild.v1.CreateInteractionRequest
+	20, // 30: taskguild.v1.AgentManagerService.GetInteractionResponse:input_type -> taskguild.v1.GetInteractionResponseRequest
+	22, // 31: taskguild.v1.AgentManagerService.SyncAgents:input_type -> taskguild.v1.SyncAgentsRequest
+	26, // 32: taskguild.v1.AgentManagerService.ReportTaskLog:input_type -> taskguild.v1.ReportTaskLogRequest
+	24, // 33: taskguild.v1.AgentManagerService.SyncPermissions:input_type -> taskguild.v1.SyncPermissionsRequest
+	30, // 34: taskguild.v1.AgentManagerService.ReportWorktreeList:input_type -> taskguild.v1.ReportWorktreeListRequest
+	32, // 35: taskguild.v1.AgentManagerService.RequestWorktreeList:input_type -> taskguild.v1.RequestWorktreeListRequest
+	34, // 36: taskguild.v1.AgentManagerService.GetWorktreeList:input_type -> taskguild.v1.GetWorktreeListRequest
+	36, // 37: taskguild.v1.AgentManagerService.RequestWorktreeDelete:input_type -> taskguild.v1.RequestWorktreeDeleteRequest
+	38, // 38: taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult:input_type -> taskguild.v1.ReportWorktreeDeleteResultRequest
+	2,  // 39: taskguild.v1.AgentManagerService.Subscribe:output_type -> taskguild.v1.AgentCommand
+	11, // 40: taskguild.v1.AgentManagerService.ClaimTask:output_type -> taskguild.v1.ClaimTaskResponse
+	13, // 41: taskguild.v1.AgentManagerService.ReportTaskResult:output_type -> taskguild.v1.ReportTaskResultResponse
+	15, // 42: taskguild.v1.AgentManagerService.ReportAgentStatus:output_type -> taskguild.v1.ReportAgentStatusResponse
+	17, // 43: taskguild.v1.AgentManagerService.Heartbeat:output_type -> taskguild.v1.HeartbeatResponse
+	19, // 44: taskguild.v1.AgentManagerService.CreateInteraction:output_type -> taskguild.v1.CreateInteractionResponse
+	21, // 45: taskguild.v1.AgentManagerService.GetInteractionResponse:output_type -> taskguild.v1.GetInteractionResponseResponse
+	23, // 46: taskguild.v1.AgentManagerService.SyncAgents:output_type -> taskguild.v1.SyncAgentsResponse
+	27, // 47: taskguild.v1.AgentManagerService.ReportTaskLog:output_type -> taskguild.v1.ReportTaskLogResponse
+	25, // 48: taskguild.v1.AgentManagerService.SyncPermissions:output_type -> taskguild.v1.SyncPermissionsResponse
+	31, // 49: taskguild.v1.AgentManagerService.ReportWorktreeList:output_type -> taskguild.v1.ReportWorktreeListResponse
+	33, // 50: taskguild.v1.AgentManagerService.RequestWorktreeList:output_type -> taskguild.v1.RequestWorktreeListResponse
+	35, // 51: taskguild.v1.AgentManagerService.GetWorktreeList:output_type -> taskguild.v1.GetWorktreeListResponse
+	37, // 52: taskguild.v1.AgentManagerService.RequestWorktreeDelete:output_type -> taskguild.v1.RequestWorktreeDeleteResponse
+	39, // 53: taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult:output_type -> taskguild.v1.ReportWorktreeDeleteResultResponse
+	39, // [39:54] is the sub-list for method output_type
+	24, // [24:39] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_agent_manager_proto_init() }
@@ -2237,6 +2583,7 @@ func file_taskguild_v1_agent_manager_proto_init() {
 		(*AgentCommand_SyncAgents)(nil),
 		(*AgentCommand_SyncPermissions)(nil),
 		(*AgentCommand_ListWorktrees)(nil),
+		(*AgentCommand_DeleteWorktree)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -2244,7 +2591,7 @@ func file_taskguild_v1_agent_manager_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_agent_manager_proto_rawDesc), len(file_taskguild_v1_agent_manager_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   38,
+			NumMessages:   43,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
