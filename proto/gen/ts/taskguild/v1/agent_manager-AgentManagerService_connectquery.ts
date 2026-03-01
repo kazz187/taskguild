@@ -117,3 +117,18 @@ export const requestGitPullMain = AgentManagerService.method.requestGitPullMain;
  * @generated from rpc taskguild.v1.AgentManagerService.ReportGitPullMainResult
  */
 export const reportGitPullMainResult = AgentManagerService.method.reportGitPullMainResult;
+
+/**
+ * SyncScripts returns all script definitions for a project so the agent can
+ * write them as .claude/scripts/* files locally.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.SyncScripts
+ */
+export const syncScripts = AgentManagerService.method.syncScripts;
+
+/**
+ * ReportScriptExecutionResult reports the outcome of a script execution from the agent.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.ReportScriptExecutionResult
+ */
+export const reportScriptExecutionResult = AgentManagerService.method.reportScriptExecutionResult;

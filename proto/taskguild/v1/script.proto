@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package taskguild.v1;
+
+import "google/protobuf/timestamp.proto";
+import "taskguild/v1/common.proto";
+
+service ScriptService {
+  rpc CreateScript(CreateScriptRequest) returns (CreateScriptResponse);
+  rpc GetScript(GetScriptRequest) returns (GetScriptResponse);
+  rpc ListScripts(ListScriptsRequest) returns (ListScriptsResponse);
+  rpc UpdateScript(UpdateScriptRequest) returns (UpdateScriptResponse);
+  rpc DeleteScript(DeleteScriptRequest) returns (DeleteScriptResponse);
+  // SyncScriptsFromDir scans the given directory for .claude/scripts/* files
+  // and creates/updates scripts for the specified project.
+  rpc SyncScriptsFromDir(SyncScriptsFromDirRequest) returns (SyncScriptsFromDirResponse);
+  // ExecuteScript triggers execution of a script on a connected agent-manager.
+  rpc ExecuteScript(ExecuteScriptRequest) returns (ExecuteScriptResponse);
+  // GetScriptExecutionResult returns the cached result of a script execution.
+  rpc GetScriptExecutionResult(GetScriptExecutionResultRequest) returns (GetScriptExecutionResultResponse);
+}
+
+// ScriptDefinition defines a shell script that can be executed on the agent-manager.
+message ScriptDefinition {
+  // identity
+  string id = 1;
+  string project_id = 2;
+  string name = 3;              // unique name (filename without extension)
+  string description = 4;       // description (set via UI only)
+
+  // script content
+  string filename = 5;          // original filename (e.g. deploy.sh)
+  string content = 6;           // shell script body
+
+  // metadata
+  bool is_synced = 7;           // true if synced from repository .claude/scripts/ directory
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message CreateScriptRequest {
+  string project_id = 1;
+  string name = 2;
+  string description = 3;
+  string filename = 4;
+  string content = 5;
+}
+message CreateScriptResponse {
+  ScriptDefinition script = 1;
+}
+
+message GetScriptRequest {
+  string id = 1;
+}
+message GetScriptResponse {
+  ScriptDefinition script = 1;
+}
+
+message ListScriptsRequest {
+  string project_id = 1;
+  PaginationRequest pagination = 2;
+}
+message ListScriptsResponse {
+  repeated ScriptDefinition scripts = 1;
+  PaginationResponse pagination = 2;
+}
+
+message UpdateScriptRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string filename = 4;
+  string content = 5;
+}
+message UpdateScriptResponse {
+  ScriptDefinition script = 1;
+}
+
+message DeleteScriptRequest {
+  string id = 1;
+}
+message DeleteScriptResponse {}
+
+message SyncScriptsFromDirRequest {
+  string project_id = 1;
+  string directory = 2;  // path to the repository root directory
+}
+message SyncScriptsFromDirResponse {
+  repeated ScriptDefinition scripts = 1;  // scripts that were synced
+  int32 created = 2;
+  int32 updated = 3;
+}
+
+// ExecuteScript triggers execution on a connected agent-manager.
+message ExecuteScriptRequest {
+  string project_id = 1;
+  string script_id = 2;
+}
+message ExecuteScriptResponse {
+  string request_id = 1;  // unique ID for tracking the execution
+}
+
+message GetScriptExecutionResultRequest {
+  string request_id = 1;
+}
+message GetScriptExecutionResultResponse {
+  bool completed = 1;      // true if execution has finished
+  bool success = 2;        // true if exit code == 0
+  int32 exit_code = 3;
+  string stdout = 4;
+  string stderr = 5;
+  string error_message = 6;  // error description if execution failed to start
+}

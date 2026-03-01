@@ -26,12 +26,22 @@ const (
 	HookTriggerAfterWorktreeCreation HookTrigger = "after_worktree_creation"
 )
 
+type HookActionType string
+
+const (
+	HookActionTypeUnspecified HookActionType = ""
+	HookActionTypeSkill       HookActionType = "skill"
+	HookActionTypeScript      HookActionType = "script"
+)
+
 type StatusHook struct {
-	ID      string      `yaml:"id"`
-	SkillID string      `yaml:"skill_id"`
-	Trigger HookTrigger `yaml:"trigger"`
-	Order   int32       `yaml:"order"`
-	Name    string      `yaml:"name"`
+	ID         string         `yaml:"id"`
+	SkillID    string         `yaml:"skill_id"`
+	Trigger    HookTrigger    `yaml:"trigger"`
+	Order      int32          `yaml:"order"`
+	Name       string         `yaml:"name"`
+	ActionType HookActionType `yaml:"action_type,omitempty"`
+	ActionID   string         `yaml:"action_id,omitempty"`
 }
 
 type Status struct {
