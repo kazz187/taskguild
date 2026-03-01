@@ -8,6 +8,8 @@ import "taskguild/v1/common.proto";
 service InteractionService {
   rpc ListInteractions(ListInteractionsRequest) returns (ListInteractionsResponse);
   rpc RespondToInteraction(RespondToInteractionRequest) returns (RespondToInteractionResponse);
+  // ExpireInteraction sets a PENDING interaction to EXPIRED.
+  rpc ExpireInteraction(ExpireInteractionRequest) returns (ExpireInteractionResponse);
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
   rpc SubscribeInteractions(SubscribeInteractionsRequest) returns (stream InteractionEvent);
 }
@@ -89,4 +91,11 @@ message SendMessageResponse {
 
 message SubscribeInteractionsRequest {
   string task_id = 1;
+}
+
+message ExpireInteractionRequest {
+  string id = 1;
+}
+message ExpireInteractionResponse {
+  Interaction interaction = 1;
 }

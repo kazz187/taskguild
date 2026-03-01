@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 
 	"gopkg.in/yaml.v3"
 
@@ -121,4 +122,27 @@ func (r *YAMLRepository) Update(ctx context.Context, i *interaction.Interaction)
 		return cerr.WrapStorageWriteError("interaction", err)
 	}
 	return nil
+}
+
+func (r *YAMLRepository) ExpirePendingByTask(ctx context.Context, taskID string) (int, error) {
+	// List all interactions and find PENDING ones for the given task.
+	all, _, err := r.List(ctx, taskID, nil, 0, 0)
+	if err != nil {
+		return 0, err
+	}
+
+	now := time.Now()
+	count := 0
+	for _, i := range all {
+		if i.Status != interaction.StatusPending {
+			continue
+		}
+		i.Status = interaction.StatusExpired
+		i.RespondedAt = &now
+		if err := r.Update(ctx, i); err != nil {
+			return count, fmt.Errorf("failed to expire interaction %s: %w", i.ID, err)
+		}
+		count++
+	}
+	return count, nil
 }

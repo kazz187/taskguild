@@ -101,6 +101,36 @@ func (s *Server) RespondToInteraction(ctx context.Context, req *connect.Request[
 	}), nil
 }
 
+func (s *Server) ExpireInteraction(ctx context.Context, req *connect.Request[taskguildv1.ExpireInteractionRequest]) (*connect.Response[taskguildv1.ExpireInteractionResponse], error) {
+	inter, err := s.repo.Get(ctx, req.Msg.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	if inter.Status != StatusPending {
+		return nil, cerr.NewError(cerr.FailedPrecondition, "interaction is not pending", nil).ConnectError()
+	}
+
+	now := time.Now()
+	inter.Status = StatusExpired
+	inter.RespondedAt = &now
+
+	if err := s.repo.Update(ctx, inter); err != nil {
+		return nil, err
+	}
+
+	s.eventBus.PublishNew(
+		taskguildv1.EventType_EVENT_TYPE_INTERACTION_RESPONDED,
+		inter.ID,
+		"",
+		map[string]string{"task_id": inter.TaskID, "agent_id": inter.AgentID},
+	)
+
+	return connect.NewResponse(&taskguildv1.ExpireInteractionResponse{
+		Interaction: toProto(inter),
+	}), nil
+}
+
 func (s *Server) SendMessage(ctx context.Context, req *connect.Request[taskguildv1.SendMessageRequest]) (*connect.Response[taskguildv1.SendMessageResponse], error) {
 	if req.Msg.TaskId == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "task_id is required", nil).ConnectError()

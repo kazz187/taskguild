@@ -35,6 +35,15 @@ const (
 	maxConsecutiveErrors = 5
 	initialBackoff       = 5 * time.Second
 	maxBackoff           = 5 * time.Minute
+
+	// waitForUserResponseTimeout is how long to wait for user input before
+	// auto-expiring the interaction and retrying with a prompt that requests
+	// NEXT_STATUS output.
+	waitForUserResponseTimeout = 5 * time.Minute
+
+	// maxUserResponseRetries is the maximum number of auto-expire + retry
+	// cycles before the task is force-completed.
+	maxUserResponseRetries = 2
 )
 
 // interactionWaiter dispatches streamed interaction responses to waiting goroutines.
@@ -516,6 +525,7 @@ func runTask(
 	worktreeHookFired := false
 	consecutiveErrors := 0
 	backoff := initialBackoff
+	userResponseRetries := 0
 
 	for turn := 0; ; turn++ {
 		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, worktreeName, client, ctx, taskID, agentManagerID, waiter)
@@ -703,7 +713,27 @@ func runTask(
 		log.Printf("[task:%s] waiting for user input (turn %d)", taskID, turn)
 		reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "waiting for user input")
 
-		userResponse, err := waitForUserResponse(ctx, client, taskID, agentManagerID, summary, waiter)
+		userResponse, err := waitForUserResponse(ctx, client, interClient, taskID, agentManagerID, summary, waiter)
+		if err == errWaitTimeout {
+			userResponseRetries++
+			if userResponseRetries > maxUserResponseRetries {
+				log.Printf("[task:%s] max user response retries reached (%d), force-completing task", taskID, userResponseRetries-1)
+				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
+					"Max user response retries reached, force-completing task", nil)
+				reportTaskResult(ctx, client, taskID, summary, "")
+				reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task force-completed (no NEXT_STATUS after retries)")
+				return
+			}
+			log.Printf("[task:%s] user response timeout (retry %d/%d), prompting for NEXT_STATUS", taskID, userResponseRetries, maxUserResponseRetries)
+			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
+				fmt.Sprintf("User response timeout, retrying with NEXT_STATUS prompt (retry %d/%d)", userResponseRetries, maxUserResponseRetries), nil)
+			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "retrying: requesting NEXT_STATUS")
+			prompt = "You appear to have completed your work but did not output a NEXT_STATUS directive. " +
+				"Please review the available status transitions and output your chosen next status on the LAST LINE of your response in the format:\n" +
+				"NEXT_STATUS: <status_id>\n\n" +
+				"If you still need user input, clearly state what you need."
+			continue
+		}
 		if err != nil {
 			log.Printf("[task:%s] user response error: %v, completing task", taskID, err)
 			reportTaskResult(ctx, client, taskID, summary, "")
@@ -711,6 +741,8 @@ func runTask(
 			return
 		}
 
+		// Got a valid user response — reset the retry counter.
+		userResponseRetries = 0
 		reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "continuing task")
 		prompt = userResponse
 	}
@@ -886,10 +918,18 @@ func translateToEnglishSlug(ctx context.Context, title, workDir string) string {
 	return slugifyASCII(raw)
 }
 
+// errWaitTimeout is returned by waitForUserResponse when the user does not
+// respond within waitForUserResponseTimeout. The caller should retry with a
+// prompt that explicitly asks for NEXT_STATUS.
+var errWaitTimeout = fmt.Errorf("user response timeout")
+
 // waitForUserResponse creates a QUESTION interaction and waits for a response via the event stream.
+// If the user does not respond within waitForUserResponseTimeout, the interaction is expired
+// and errWaitTimeout is returned so the caller can retry.
 func waitForUserResponse(
 	ctx context.Context,
 	client taskguildv1connect.AgentManagerServiceClient,
+	interClient taskguildv1connect.InteractionServiceClient,
 	taskID string,
 	agentManagerID string,
 	claudeOutput string,
@@ -915,6 +955,15 @@ func waitForUserResponse(
 	select {
 	case <-ctx.Done():
 		return "", ctx.Err()
+	case <-time.After(waitForUserResponseTimeout):
+		log.Printf("[task:%s] user response timeout (interaction: %s), expiring", taskID, interactionID)
+		// Expire the pending interaction so it disappears from the UI.
+		if _, expErr := interClient.ExpireInteraction(ctx, connect.NewRequest(&v1.ExpireInteractionRequest{
+			Id: interactionID,
+		})); expErr != nil {
+			log.Printf("[task:%s] failed to expire interaction %s: %v", taskID, interactionID, expErr)
+		}
+		return "", errWaitTimeout
 	case inter := <-ch:
 		if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
 			return "", fmt.Errorf("interaction expired")
