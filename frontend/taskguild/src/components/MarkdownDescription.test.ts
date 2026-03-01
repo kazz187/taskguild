@@ -238,4 +238,50 @@ describe('tokenizeBashLine', () => {
     const tokens = nonWsTypes(';;')
     expect(tokens).toEqual([['operator', ';;']])
   })
+
+  it('tokenizes subshell parentheses separately', () => {
+    const tokens = nonWsTypes('|| (cat Makefile 2> /dev/null | head -50)')
+    expect(tokens).toEqual([
+      ['operator', '||'],
+      ['operator', '('],
+      ['command', 'cat'],
+      ['text', 'Makefile'],
+      ['redirect', '2>'],
+      ['text', '/dev/null'],
+      ['operator', '|'],
+      ['command', 'head'],
+      ['flag', '-50'],
+      ['operator', ')'],
+    ])
+  })
+
+  it('tokenizes long command with redirect and pipe continuation', () => {
+    // First line: command with redirect ending in continuation
+    const line1Tokens = nonWsTypes('ls /some/long/path 2> /dev/null \\')
+    expect(line1Tokens).toEqual([
+      ['command', 'ls'],
+      ['text', '/some/long/path'],
+      ['redirect', '2>'],
+      ['text', '/dev/null'],
+      ['continuation', '\\'],
+    ])
+    // Second line: pipe continuation
+    const line2Tokens = nonWsTypes('  | head -20')
+    expect(line2Tokens).toEqual([
+      ['operator', '|'],
+      ['command', 'head'],
+      ['flag', '-20'],
+    ])
+  })
+
+  it('tokenizes braces in block commands', () => {
+    const tokens = nonWsTypes('{ echo hello; }')
+    expect(tokens).toEqual([
+      ['operator', '{'],
+      ['command', 'echo'],
+      ['text', 'hello'],
+      ['operator', ';'],
+      ['operator', '}'],
+    ])
+  })
 })

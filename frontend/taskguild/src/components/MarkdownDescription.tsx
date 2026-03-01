@@ -460,8 +460,23 @@ export function tokenizeBashLine(line: string): BashToken[] {
       continue
     }
 
+    // Shell grouping characters: ( ) { }
+    // These are shell metacharacters that delimit subshells and blocks.
+    if (rest[0] === '(' || rest[0] === '{') {
+      pushToken('operator', rest[0])
+      pos += 1
+      expectCommand = true
+      continue
+    }
+    if (rest[0] === ')' || rest[0] === '}') {
+      pushToken('operator', rest[0])
+      pos += 1
+      expectCommand = false
+      continue
+    }
+
     // Word boundary: read a word token (no whitespace, no special chars)
-    const wordMatch = matchAt(/^[^\s'"$|&;><\\#]+/)
+    const wordMatch = matchAt(/^[^\s'"$|&;><\\#(){}]+/)
     if (wordMatch) {
       const word = wordMatch[0]
 
