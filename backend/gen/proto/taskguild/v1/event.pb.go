@@ -37,6 +37,7 @@ const (
 	EventType_EVENT_TYPE_TASK_LOG              EventType = 9
 	EventType_EVENT_TYPE_WORKTREE_LIST         EventType = 10
 	EventType_EVENT_TYPE_WORKTREE_DELETED      EventType = 11
+	EventType_EVENT_TYPE_GIT_PULL_MAIN_RESULT  EventType = 12
 )
 
 // Enum value maps for EventType.
@@ -54,6 +55,7 @@ var (
 		9:  "EVENT_TYPE_TASK_LOG",
 		10: "EVENT_TYPE_WORKTREE_LIST",
 		11: "EVENT_TYPE_WORKTREE_DELETED",
+		12: "EVENT_TYPE_GIT_PULL_MAIN_RESULT",
 	}
 	EventType_value = map[string]int32{
 		"EVENT_TYPE_UNSPECIFIED":           0,
@@ -68,6 +70,7 @@ var (
 		"EVENT_TYPE_TASK_LOG":              9,
 		"EVENT_TYPE_WORKTREE_LIST":         10,
 		"EVENT_TYPE_WORKTREE_DELETED":      11,
+		"EVENT_TYPE_GIT_PULL_MAIN_RESULT":  12,
 	}
 )
 
@@ -255,7 +258,7 @@ const file_taskguild_v1_event_proto_rawDesc = "" +
 	"\vevent_types\x18\x01 \x03(\x0e2\x17.taskguild.v1.EventTypeR\n" +
 	"eventTypes\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x02 \x01(\tR\tprojectId*\x88\x03\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId*\xad\x03\n" +
 	"\tEventType\x12\x1a\n" +
 	"\x16EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17EVENT_TYPE_TASK_CREATED\x10\x01\x12\x1b\n" +
@@ -269,7 +272,8 @@ const file_taskguild_v1_event_proto_rawDesc = "" +
 	"\x13EVENT_TYPE_TASK_LOG\x10\t\x12\x1c\n" +
 	"\x18EVENT_TYPE_WORKTREE_LIST\x10\n" +
 	"\x12\x1f\n" +
-	"\x1bEVENT_TYPE_WORKTREE_DELETED\x10\v2^\n" +
+	"\x1bEVENT_TYPE_WORKTREE_DELETED\x10\v\x12#\n" +
+	"\x1fEVENT_TYPE_GIT_PULL_MAIN_RESULT\x10\f2^\n" +
 	"\fEventService\x12N\n" +
 	"\x0fSubscribeEvents\x12$.taskguild.v1.SubscribeEventsRequest\x1a\x13.taskguild.v1.Event0\x01B\xb8\x01\n" +
 	"\x10com.taskguild.v1B\n" +

@@ -78,6 +78,12 @@ const (
 	// AgentManagerServiceReportWorktreeDeleteResultProcedure is the fully-qualified name of the
 	// AgentManagerService's ReportWorktreeDeleteResult RPC.
 	AgentManagerServiceReportWorktreeDeleteResultProcedure = "/taskguild.v1.AgentManagerService/ReportWorktreeDeleteResult"
+	// AgentManagerServiceRequestGitPullMainProcedure is the fully-qualified name of the
+	// AgentManagerService's RequestGitPullMain RPC.
+	AgentManagerServiceRequestGitPullMainProcedure = "/taskguild.v1.AgentManagerService/RequestGitPullMain"
+	// AgentManagerServiceReportGitPullMainResultProcedure is the fully-qualified name of the
+	// AgentManagerService's ReportGitPullMainResult RPC.
+	AgentManagerServiceReportGitPullMainResultProcedure = "/taskguild.v1.AgentManagerService/ReportGitPullMainResult"
 )
 
 // AgentManagerServiceClient is a client for the taskguild.v1.AgentManagerService service.
@@ -114,6 +120,10 @@ type AgentManagerServiceClient interface {
 	RequestWorktreeDelete(context.Context, *connect.Request[v1.RequestWorktreeDeleteRequest]) (*connect.Response[v1.RequestWorktreeDeleteResponse], error)
 	// ReportWorktreeDeleteResult reports the outcome of a worktree deletion from the agent.
 	ReportWorktreeDeleteResult(context.Context, *connect.Request[v1.ReportWorktreeDeleteResultRequest]) (*connect.Response[v1.ReportWorktreeDeleteResultResponse], error)
+	// RequestGitPullMain triggers a `git pull origin main` on connected agent-managers (called by frontend).
+	RequestGitPullMain(context.Context, *connect.Request[v1.RequestGitPullMainRequest]) (*connect.Response[v1.RequestGitPullMainResponse], error)
+	// ReportGitPullMainResult reports the outcome of a git pull origin main from the agent.
+	ReportGitPullMainResult(context.Context, *connect.Request[v1.ReportGitPullMainResultRequest]) (*connect.Response[v1.ReportGitPullMainResultResponse], error)
 }
 
 // NewAgentManagerServiceClient constructs a client for the taskguild.v1.AgentManagerService
@@ -217,6 +227,18 @@ func NewAgentManagerServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(agentManagerServiceMethods.ByName("ReportWorktreeDeleteResult")),
 			connect.WithClientOptions(opts...),
 		),
+		requestGitPullMain: connect.NewClient[v1.RequestGitPullMainRequest, v1.RequestGitPullMainResponse](
+			httpClient,
+			baseURL+AgentManagerServiceRequestGitPullMainProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("RequestGitPullMain")),
+			connect.WithClientOptions(opts...),
+		),
+		reportGitPullMainResult: connect.NewClient[v1.ReportGitPullMainResultRequest, v1.ReportGitPullMainResultResponse](
+			httpClient,
+			baseURL+AgentManagerServiceReportGitPullMainResultProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("ReportGitPullMainResult")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -237,6 +259,8 @@ type agentManagerServiceClient struct {
 	getWorktreeList            *connect.Client[v1.GetWorktreeListRequest, v1.GetWorktreeListResponse]
 	requestWorktreeDelete      *connect.Client[v1.RequestWorktreeDeleteRequest, v1.RequestWorktreeDeleteResponse]
 	reportWorktreeDeleteResult *connect.Client[v1.ReportWorktreeDeleteResultRequest, v1.ReportWorktreeDeleteResultResponse]
+	requestGitPullMain         *connect.Client[v1.RequestGitPullMainRequest, v1.RequestGitPullMainResponse]
+	reportGitPullMainResult    *connect.Client[v1.ReportGitPullMainResultRequest, v1.ReportGitPullMainResultResponse]
 }
 
 // Subscribe calls taskguild.v1.AgentManagerService.Subscribe.
@@ -314,6 +338,16 @@ func (c *agentManagerServiceClient) ReportWorktreeDeleteResult(ctx context.Conte
 	return c.reportWorktreeDeleteResult.CallUnary(ctx, req)
 }
 
+// RequestGitPullMain calls taskguild.v1.AgentManagerService.RequestGitPullMain.
+func (c *agentManagerServiceClient) RequestGitPullMain(ctx context.Context, req *connect.Request[v1.RequestGitPullMainRequest]) (*connect.Response[v1.RequestGitPullMainResponse], error) {
+	return c.requestGitPullMain.CallUnary(ctx, req)
+}
+
+// ReportGitPullMainResult calls taskguild.v1.AgentManagerService.ReportGitPullMainResult.
+func (c *agentManagerServiceClient) ReportGitPullMainResult(ctx context.Context, req *connect.Request[v1.ReportGitPullMainResultRequest]) (*connect.Response[v1.ReportGitPullMainResultResponse], error) {
+	return c.reportGitPullMainResult.CallUnary(ctx, req)
+}
+
 // AgentManagerServiceHandler is an implementation of the taskguild.v1.AgentManagerService service.
 type AgentManagerServiceHandler interface {
 	// Subscribe opens a server-stream for receiving commands from the backend.
@@ -348,6 +382,10 @@ type AgentManagerServiceHandler interface {
 	RequestWorktreeDelete(context.Context, *connect.Request[v1.RequestWorktreeDeleteRequest]) (*connect.Response[v1.RequestWorktreeDeleteResponse], error)
 	// ReportWorktreeDeleteResult reports the outcome of a worktree deletion from the agent.
 	ReportWorktreeDeleteResult(context.Context, *connect.Request[v1.ReportWorktreeDeleteResultRequest]) (*connect.Response[v1.ReportWorktreeDeleteResultResponse], error)
+	// RequestGitPullMain triggers a `git pull origin main` on connected agent-managers (called by frontend).
+	RequestGitPullMain(context.Context, *connect.Request[v1.RequestGitPullMainRequest]) (*connect.Response[v1.RequestGitPullMainResponse], error)
+	// ReportGitPullMainResult reports the outcome of a git pull origin main from the agent.
+	ReportGitPullMainResult(context.Context, *connect.Request[v1.ReportGitPullMainResultRequest]) (*connect.Response[v1.ReportGitPullMainResultResponse], error)
 }
 
 // NewAgentManagerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -447,6 +485,18 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 		connect.WithSchema(agentManagerServiceMethods.ByName("ReportWorktreeDeleteResult")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentManagerServiceRequestGitPullMainHandler := connect.NewUnaryHandler(
+		AgentManagerServiceRequestGitPullMainProcedure,
+		svc.RequestGitPullMain,
+		connect.WithSchema(agentManagerServiceMethods.ByName("RequestGitPullMain")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentManagerServiceReportGitPullMainResultHandler := connect.NewUnaryHandler(
+		AgentManagerServiceReportGitPullMainResultProcedure,
+		svc.ReportGitPullMainResult,
+		connect.WithSchema(agentManagerServiceMethods.ByName("ReportGitPullMainResult")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/taskguild.v1.AgentManagerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AgentManagerServiceSubscribeProcedure:
@@ -479,6 +529,10 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 			agentManagerServiceRequestWorktreeDeleteHandler.ServeHTTP(w, r)
 		case AgentManagerServiceReportWorktreeDeleteResultProcedure:
 			agentManagerServiceReportWorktreeDeleteResultHandler.ServeHTTP(w, r)
+		case AgentManagerServiceRequestGitPullMainProcedure:
+			agentManagerServiceRequestGitPullMainHandler.ServeHTTP(w, r)
+		case AgentManagerServiceReportGitPullMainResultProcedure:
+			agentManagerServiceReportGitPullMainResultHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -546,4 +600,12 @@ func (UnimplementedAgentManagerServiceHandler) RequestWorktreeDelete(context.Con
 
 func (UnimplementedAgentManagerServiceHandler) ReportWorktreeDeleteResult(context.Context, *connect.Request[v1.ReportWorktreeDeleteResultRequest]) (*connect.Response[v1.ReportWorktreeDeleteResultResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) RequestGitPullMain(context.Context, *connect.Request[v1.RequestGitPullMainRequest]) (*connect.Response[v1.RequestGitPullMainResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.RequestGitPullMain is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) ReportGitPullMainResult(context.Context, *connect.Request[v1.ReportGitPullMainResultRequest]) (*connect.Response[v1.ReportGitPullMainResultResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportGitPullMainResult is not implemented"))
 }

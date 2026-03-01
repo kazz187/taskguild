@@ -1,14 +1,70 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
+import { createClient } from '@connectrpc/connect'
+import { create } from '@bufbuild/protobuf'
 import {
   requestWorktreeList,
   getWorktreeList,
   requestWorktreeDelete,
+  requestGitPullMain,
 } from '@taskguild/proto/taskguild/v1/agent_manager-AgentManagerService_connectquery.ts'
 import type { WorktreeInfo } from '@taskguild/proto/taskguild/v1/agent_manager_pb.ts'
-import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
+import { EventService, EventType, SubscribeEventsRequestSchema } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
-import { GitFork, GitBranch, RefreshCw, Trash2, AlertTriangle, X, FileText } from 'lucide-react'
+import { transport } from '@/lib/transport'
+import { GitFork, GitBranch, RefreshCw, Trash2, AlertTriangle, X, FileText, Home, Download, CheckCircle2, XCircle } from 'lucide-react'
+
+// --- Git pull main result hook ---
+
+interface PullResult {
+  success: boolean
+  output: string
+  errorMessage: string
+  timestamp: Date
+}
+
+function useGitPullMainResult(projectId: string): {
+  result: PullResult | null
+  clearResult: () => void
+} {
+  const [result, setResult] = useState<PullResult | null>(null)
+
+  useEffect(() => {
+    if (!projectId) return
+    const client = createClient(EventService, transport)
+    const controller = new AbortController()
+
+    async function subscribe() {
+      try {
+        const req = create(SubscribeEventsRequestSchema, {
+          eventTypes: [EventType.GIT_PULL_MAIN_RESULT],
+          projectId,
+        })
+        for await (const event of client.subscribeEvents(req, {
+          signal: controller.signal,
+        })) {
+          if (event.type === EventType.GIT_PULL_MAIN_RESULT) {
+            setResult({
+              success: event.metadata['success'] === 'true',
+              output: event.metadata['output'] || '',
+              errorMessage: event.metadata['error_message'] || '',
+              timestamp: new Date(),
+            })
+          }
+        }
+      } catch (e) {
+        if (!controller.signal.aborted) {
+          console.error('Git pull main event subscription error:', e)
+        }
+      }
+    }
+
+    subscribe()
+    return () => controller.abort()
+  }, [projectId])
+
+  return { result, clearResult: () => setResult(null) }
+}
 
 export function WorktreeList({ projectId }: { projectId: string }) {
   const requestListMut = useMutation(requestWorktreeList)
@@ -78,6 +134,9 @@ export function WorktreeList({ projectId }: { projectId: string }) {
         </button>
       </div>
 
+      {/* Main Branch Section */}
+      <MainBranchSection projectId={projectId} />
+
       {/* Worktree Cards */}
       {isLoading && <p className="text-gray-400 text-sm">Loading worktrees...</p>}
 
@@ -109,6 +168,77 @@ export function WorktreeList({ projectId }: { projectId: string }) {
           isPending={requestDeleteMut.isPending}
         />
       )}
+    </div>
+  )
+}
+
+function MainBranchSection({ projectId }: { projectId: string }) {
+  const pullMainMut = useMutation(requestGitPullMain)
+  const { result, clearResult } = useGitPullMainResult(projectId)
+
+  const handlePull = () => {
+    clearResult()
+    pullMainMut.mutate({ projectId })
+  }
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <Home className="w-4 h-4 text-emerald-400" />
+        <h3 className="text-sm font-semibold text-gray-300">Main Branch</h3>
+      </div>
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <GitBranch className="w-5 h-5 text-emerald-400 shrink-0" />
+            <div>
+              <h4 className="text-sm font-semibold text-white">main</h4>
+              <p className="text-xs text-gray-500">git pull origin main</p>
+            </div>
+          </div>
+          <button
+            onClick={handlePull}
+            disabled={pullMainMut.isPending}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-emerald-400 hover:text-white border border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-500/10 rounded-lg transition-colors disabled:opacity-50"
+          >
+            <Download className={`w-3.5 h-3.5 ${pullMainMut.isPending ? 'animate-bounce' : ''}`} />
+            {pullMainMut.isPending ? 'Pulling...' : 'Pull Latest'}
+          </button>
+        </div>
+
+        {/* Result display */}
+        {result && (
+          <div className={`mt-3 rounded-lg p-3 ${
+            result.success
+              ? 'bg-emerald-500/10 border border-emerald-500/20'
+              : 'bg-red-500/10 border border-red-500/20'
+          }`}>
+            <div className="flex items-center gap-1.5 mb-2">
+              {result.success ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              ) : (
+                <XCircle className="w-4 h-4 text-red-400" />
+              )}
+              <span className={`text-xs font-medium ${result.success ? 'text-emerald-400' : 'text-red-400'}`}>
+                {result.success ? 'Pull successful' : 'Pull failed'}
+              </span>
+              <span className="text-[10px] text-gray-500 ml-auto">
+                {result.timestamp.toLocaleTimeString()}
+              </span>
+            </div>
+            {result.output && (
+              <pre className="text-[11px] text-gray-400 font-mono whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
+                {result.output}
+              </pre>
+            )}
+            {result.errorMessage && (
+              <pre className="text-[11px] text-red-300/70 font-mono whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
+                {result.errorMessage}
+              </pre>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

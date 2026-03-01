@@ -43,6 +43,10 @@ service AgentManagerService {
   rpc RequestWorktreeDelete(RequestWorktreeDeleteRequest) returns (RequestWorktreeDeleteResponse);
   // ReportWorktreeDeleteResult reports the outcome of a worktree deletion from the agent.
   rpc ReportWorktreeDeleteResult(ReportWorktreeDeleteResultRequest) returns (ReportWorktreeDeleteResultResponse);
+  // RequestGitPullMain triggers a `git pull origin main` on connected agent-managers (called by frontend).
+  rpc RequestGitPullMain(RequestGitPullMainRequest) returns (RequestGitPullMainResponse);
+  // ReportGitPullMainResult reports the outcome of a git pull origin main from the agent.
+  rpc ReportGitPullMainResult(ReportGitPullMainResultRequest) returns (ReportGitPullMainResultResponse);
 }
 
 // --- Subscribe stream ---
@@ -63,6 +67,7 @@ message AgentCommand {
     SyncPermissionsCommand sync_permissions = 6;
     ListWorktreesCommand list_worktrees = 7;
     DeleteWorktreeCommand delete_worktree = 8;
+    GitPullMainCommand git_pull_main = 9;
   }
 }
 
@@ -263,3 +268,27 @@ message ReportWorktreeDeleteResultRequest {
   string error_message = 5;
 }
 message ReportWorktreeDeleteResultResponse {}
+
+// --- Git pull main ---
+
+// GitPullMainCommand tells the agent to run `git pull origin main`
+// in the main repository working directory.
+message GitPullMainCommand {
+  string request_id = 1;
+}
+
+message RequestGitPullMainRequest {
+  string project_id = 1;
+}
+message RequestGitPullMainResponse {
+  string request_id = 1;
+}
+
+message ReportGitPullMainResultRequest {
+  string request_id = 1;
+  string project_name = 2;
+  bool success = 3;
+  string output = 4;         // stdout/stderr from git pull
+  string error_message = 5;  // error description if failed
+}
+message ReportGitPullMainResultResponse {}
