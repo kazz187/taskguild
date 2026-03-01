@@ -15,6 +15,9 @@ const config = defineConfig({
     tanstackRouter({ target: 'react', autoCodeSplitting: true }),
     viteReact(),
   ],
+  resolve: {
+    dedupe: ['@bufbuild/protobuf'],
+  },
 })
 
 export default config
