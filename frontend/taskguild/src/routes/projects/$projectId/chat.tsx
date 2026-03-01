@@ -121,6 +121,8 @@ function ProjectChatPage() {
               pendingRequests={pendingRequests}
               onRespond={handleRespond}
               isRespondPending={respondMut.isPending}
+              taskMap={taskMap}
+              projectId={projectId}
             />
           </div>
         </div>
