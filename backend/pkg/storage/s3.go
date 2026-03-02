@@ -85,18 +85,26 @@ func (s *S3Storage) List(ctx context.Context, prefix string) ([]string, error) {
 	if !strings.HasSuffix(fullPrefix, "/") {
 		fullPrefix += "/"
 	}
-	out, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
-		Bucket:    aws.String(s.bucket),
-		Prefix:    aws.String(fullPrefix),
-		Delimiter: aws.String("/"),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to list s3://%s/%s: %w", s.bucket, fullPrefix, err)
-	}
 	var paths []string
-	for _, obj := range out.Contents {
-		rel := strings.TrimPrefix(aws.ToString(obj.Key), s.prefix)
-		paths = append(paths, rel)
+	var continuationToken *string
+	for {
+		out, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+			Bucket:            aws.String(s.bucket),
+			Prefix:            aws.String(fullPrefix),
+			Delimiter:         aws.String("/"),
+			ContinuationToken: continuationToken,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to list s3://%s/%s: %w", s.bucket, fullPrefix, err)
+		}
+		for _, obj := range out.Contents {
+			rel := strings.TrimPrefix(aws.ToString(obj.Key), s.prefix)
+			paths = append(paths, rel)
+		}
+		if !aws.ToBool(out.IsTruncated) {
+			break
+		}
+		continuationToken = out.NextContinuationToken
 	}
 	return paths, nil
 }

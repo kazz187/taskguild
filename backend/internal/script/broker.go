@@ -1,6 +1,7 @@
 package script
 
 import (
+	"context"
 	"sync"
 
 	taskguildv1 "github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1"
@@ -209,14 +210,21 @@ func (b *ScriptExecutionBroker) SetDraining(draining bool) {
 	}
 }
 
-// Drain blocks until all active executions have completed. Must call
-// SetDraining(true) before calling Drain.
-func (b *ScriptExecutionBroker) Drain() {
+// Drain blocks until all active executions have completed or the context
+// is cancelled (e.g. timeout). Must call SetDraining(true) before calling
+// Drain. Returns the context error if the context was cancelled before all
+// executions completed, or nil if all executions completed successfully.
+func (b *ScriptExecutionBroker) Drain(ctx context.Context) error {
 	b.mu.Lock()
 	ch := b.drainCh
 	b.mu.Unlock()
 	if ch == nil {
-		return
+		return nil
 	}
-	<-ch
+	select {
+	case <-ch:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

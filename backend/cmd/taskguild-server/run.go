@@ -202,8 +202,15 @@ func runServer() {
 		<-usr1Ch
 		slog.Info("received SIGUSR1 (hot reload), waiting for active script executions to complete...")
 		scriptBroker.SetDraining(true)
-		scriptBroker.Drain()
-		slog.Info("all script executions completed, shutting down for hot reload")
+		// Use a timeout shorter than the sentinel's ScriptWaitTimeout (6 min)
+		// so we shut down gracefully instead of being force-killed.
+		drainCtx, drainCancel := context.WithTimeout(context.Background(), 5*time.Minute+30*time.Second)
+		defer drainCancel()
+		if err := scriptBroker.Drain(drainCtx); err != nil {
+			slog.Warn("drain timed out, forcing shutdown", "active_executions", scriptBroker.ActiveCount())
+		} else {
+			slog.Info("all script executions completed, shutting down for hot reload")
+		}
 		cancel()
 	}()
 
