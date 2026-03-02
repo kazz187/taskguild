@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState, type RefObject } from 'react'
+import { createPortal } from 'react-dom'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { listTasks, updateTaskStatus } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import { listAgents } from '@taskguild/proto/taskguild/v1/agent-AgentService_connectquery.ts'
@@ -28,6 +29,8 @@ import { Plus, ChevronDown, ChevronRight, Sparkles } from 'lucide-react'
 interface TaskBoardProps {
   projectId: string
   workflow: Workflow
+  /** Portal target in the page header for the Clean button */
+  headerActionsRef?: RefObject<HTMLDivElement | null>
 }
 
 const TASK_EVENT_TYPES = [
@@ -49,7 +52,7 @@ interface ForceTransitionState {
   toStatusName: string
 }
 
-export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
+export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardProps) {
   const { data, refetch } = useQuery(listTasks, {
     projectId,
     workflowId: workflow.id,
@@ -335,25 +338,25 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
       onDragEnd={handleDragEnd}
     >
       <div className="flex flex-col flex-1 overflow-hidden">
+        {/* Portal Clean button into page header */}
+        {headerActionsRef?.current && createPortal(
+          <button
+            onClick={() => setShowCleanDialog(true)}
+            disabled={terminalTasks.length === 0}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs md:text-sm md:px-3 text-gray-400 hover:text-amber-300 border border-slate-700 hover:border-amber-500/40 rounded-lg transition-colors disabled:opacity-50 disabled:hover:text-gray-400 disabled:hover:border-slate-700"
+            title={terminalTasks.length > 0 ? `Archive ${terminalTasks.length} completed tasks` : 'No completed tasks to archive'}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span className="hidden sm:inline">Clean</span>
+            {terminalTasks.length > 0 && (
+              <span className="text-[10px] bg-amber-500/20 text-amber-400 rounded-full px-1.5 py-0.5 font-medium">
+                {terminalTasks.length}
+              </span>
+            )}
+          </button>,
+          headerActionsRef.current,
+        )}
         <div className="flex-1 overflow-x-auto p-4 md:p-6">
-          {/* Toolbar with Clean button */}
-          <div className="flex items-center justify-end mb-3">
-            <button
-              onClick={() => setShowCleanDialog(true)}
-              disabled={terminalTasks.length === 0}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs md:text-sm md:px-3 text-gray-400 hover:text-amber-300 border border-slate-700 hover:border-amber-500/40 rounded-lg transition-colors disabled:opacity-50 disabled:hover:text-gray-400 disabled:hover:border-slate-700"
-              title={terminalTasks.length > 0 ? `Archive ${terminalTasks.length} completed tasks` : 'No completed tasks to archive'}
-            >
-              <Sparkles className="w-4 h-4" />
-              <span className="hidden sm:inline">Clean</span>
-              {terminalTasks.length > 0 && (
-                <span className="text-[10px] bg-amber-500/20 text-amber-400 rounded-full px-1.5 py-0.5 font-medium">
-                  {terminalTasks.length}
-                </span>
-              )}
-            </button>
-          </div>
-
           {/* Desktop: horizontal flex; Mobile: vertical stack */}
           <div className="flex flex-col md:flex-row gap-4 md:h-full md:min-w-max">
             {sortedStatuses.map((status) => (
