@@ -361,7 +361,7 @@ func handleStatusTransition(
 func saveSessionID(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, sessionID string) {
 	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
 		Id:       taskID,
-		Metadata: map[string]string{"_session_id": sessionID},
+		Metadata: map[string]string{"session_id": sessionID},
 	}))
 	if err != nil {
 		log.Printf("[task:%s] failed to save session_id: %v", taskID, err)

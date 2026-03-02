@@ -105,7 +105,7 @@ func runTask(
 	waiter := newInteractionWaiter()
 	go runInteractionListener(ctx, interClient, taskID, waiter)
 
-	sessionID := metadata["_session_id"]
+	sessionID := metadata["session_id"]
 	prompt := buildUserPrompt(metadata, workDir)
 	hasTransitions := metadata["_available_transitions"] != ""
 

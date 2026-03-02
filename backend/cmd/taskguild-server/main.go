@@ -12,6 +12,7 @@ var (
 
 	runCmd      = app.Command("run", "Run the server")
 	sentinelCmd = app.Command("sentinel", "Supervisor that manages 'run' with auto-restart and binary watching")
+	migrateCmd  = app.Command("migrate", "Run data migrations")
 )
 
 func main() {
@@ -21,5 +22,7 @@ func main() {
 		runServer()
 	case sentinelCmd.FullCommand():
 		runSentinel()
+	case migrateCmd.FullCommand():
+		runMigrate()
 	}
 }
