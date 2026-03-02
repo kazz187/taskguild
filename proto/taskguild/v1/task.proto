@@ -115,6 +115,9 @@ message DeleteTaskResponse {}
 message UpdateTaskStatusRequest {
   string id = 1;
   string status_id = 2;
+  // When true, bypass workflow transition validation (force move).
+  // Still blocked if an agent is currently running on the task.
+  bool force = 3;
 }
 message UpdateTaskStatusResponse {
   Task task = 1;

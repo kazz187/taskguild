@@ -3,12 +3,13 @@ import { useDraggable } from '@dnd-kit/core'
 import { useNavigate } from '@tanstack/react-router'
 import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { TaskAssignmentStatus } from '@taskguild/proto/taskguild/v1/task_pb.ts'
-import { Bot, Clock, GitBranch, Loader, Pencil, ArrowRight } from 'lucide-react'
+import { Bot, Clock, GitBranch, Loader, Pencil, ArrowRight, AlertTriangle } from 'lucide-react'
 import { shortId } from '@/lib/id'
 
 interface TransitionTarget {
   id: string
   name: string
+  isForce: boolean
 }
 
 interface TaskCardProps {
@@ -18,7 +19,7 @@ interface TaskCardProps {
   /** Available status transitions for this task (mobile UI) */
   transitionTargets?: TransitionTarget[]
   /** Callback when a status transition is selected (mobile UI) */
-  onTransition?: (taskId: string, targetStatusId: string) => void
+  onTransition?: (taskId: string, targetStatusId: string, isForce: boolean) => void
 }
 
 export function TaskCard({ task, onEdit, isDragOverlay, transitionTargets, onTransition }: TaskCardProps) {
@@ -48,6 +49,10 @@ export function TaskCard({ task, onEdit, isDragOverlay, transitionTargets, onTra
   }
 
   const hasTransitions = transitionTargets && transitionTargets.length > 0
+
+  const isAgentRunning =
+    task.assignmentStatus === TaskAssignmentStatus.ASSIGNED ||
+    task.assignmentStatus === TaskAssignmentStatus.PENDING
 
   return (
     <div
@@ -82,21 +87,38 @@ export function TaskCard({ task, onEdit, isDragOverlay, transitionTargets, onTra
               {showTransitionMenu && (
                 <div className="absolute right-0 top-full mt-1 z-30 bg-slate-800 border border-slate-600 rounded-lg shadow-xl py-1 min-w-[160px] animate-fade-in-down">
                   <p className="px-3 py-1.5 text-[10px] text-gray-500 uppercase tracking-wider">Move to</p>
-                  {transitionTargets.map((target) => (
-                    <button
-                      key={target.id}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onTransition(task.id, target.id)
-                        setShowTransitionMenu(false)
-                      }}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-slate-700 hover:text-white transition-colors flex items-center gap-2"
-                    >
-                      <ArrowRight className="w-3 h-3 text-cyan-400" />
-                      {target.name}
-                    </button>
-                  ))}
+                  {transitionTargets.map((target) => {
+                    // Disable force targets when agent is running
+                    const disabled = target.isForce && isAgentRunning
+                    return (
+                      <button
+                        key={target.id}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (disabled) return
+                          onTransition(task.id, target.id, target.isForce)
+                          setShowTransitionMenu(false)
+                        }}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        disabled={disabled}
+                        className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
+                          disabled
+                            ? 'text-gray-600 cursor-not-allowed'
+                            : target.isForce
+                            ? 'text-gray-400 hover:bg-slate-700 hover:text-amber-300'
+                            : 'text-gray-300 hover:bg-slate-700 hover:text-white'
+                        }`}
+                        title={disabled ? 'Cannot force-move while agent is running' : target.isForce ? 'Force move (not defined in workflow)' : undefined}
+                      >
+                        {target.isForce ? (
+                          <AlertTriangle className="w-3 h-3 text-amber-500/70" />
+                        ) : (
+                          <ArrowRight className="w-3 h-3 text-cyan-400" />
+                        )}
+                        {target.name}
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </div>

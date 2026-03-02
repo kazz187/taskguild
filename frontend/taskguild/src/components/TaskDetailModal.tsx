@@ -8,8 +8,9 @@ import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { InteractionStatus, InteractionType } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import type { WorkflowStatus } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
-import { X, Bot, Clock, GitBranch, Loader, Trash2, ArrowRight, MessageSquare, Shield, Bell, RefreshCw } from 'lucide-react'
+import { X, Bot, Clock, GitBranch, Loader, Trash2, ArrowRight, AlertTriangle, MessageSquare, Shield, Bell, RefreshCw } from 'lucide-react'
 import { MarkdownDescription } from './MarkdownDescription'
+import { ForceTransitionDialog } from './ForceTransitionDialog'
 import { shortId } from '@/lib/id'
 
 const TASK_DETAIL_EVENT_TYPES = [
@@ -104,6 +105,18 @@ export function TaskDetailModal({
   const currentStatus = statuses.find((s) => s.id === (task?.statusId ?? currentStatusId))
   const allowedTransitions = currentStatus?.transitionsTo ?? []
 
+  // Force transition targets: all statuses except current and normal transitions
+  const forceTransitions = useMemo(() => {
+    if (!currentStatus) return []
+    const normalSet = new Set(allowedTransitions)
+    return statuses
+      .filter((s) => s.id !== currentStatus.id && !normalSet.has(s.id))
+      .map((s) => ({ id: s.id, name: s.name }))
+  }, [currentStatus, allowedTransitions, statuses])
+
+  // Force-transition confirmation dialog state
+  const [forceTransitionTarget, setForceTransitionTarget] = useState<{ id: string; name: string } | null>(null)
+
   const hasChanges = task ? (
     titleDraft !== task.title ||
     descDraft !== task.description ||
@@ -137,12 +150,26 @@ export function TaskDetailModal({
     onClose()
   }
 
-  const handleStatusChange = (statusId: string) => {
+  const handleStatusChange = (statusId: string, force = false) => {
     if (!task) return
     statusMut.mutate(
-      { id: task.id, statusId },
+      { id: task.id, statusId, force },
       { onSuccess: () => { refetchTask(); onChanged() } },
     )
+  }
+
+  const handleForceTransitionClick = (target: { id: string; name: string }) => {
+    setForceTransitionTarget(target)
+  }
+
+  const handleForceConfirm = () => {
+    if (!forceTransitionTarget) return
+    handleStatusChange(forceTransitionTarget.id, true)
+    setForceTransitionTarget(null)
+  }
+
+  const handleForceCancel = () => {
+    setForceTransitionTarget(null)
   }
 
   const handleDelete = () => {
@@ -310,6 +337,18 @@ export function TaskDetailModal({
                 </button>
               )
             })}
+            {!isTaskLocked && forceTransitions.map((target) => (
+              <button
+                key={target.id}
+                onClick={() => handleForceTransitionClick(target)}
+                disabled={statusMut.isPending}
+                className="flex items-center gap-1 px-3 py-1 text-xs bg-slate-800 border border-slate-700 rounded-lg text-gray-400 hover:border-amber-500/50 hover:text-amber-300 transition-colors disabled:opacity-50"
+                title="Force move (not defined in workflow)"
+              >
+                <AlertTriangle className="w-3 h-3 text-amber-500/70" />
+                {target.name}
+              </button>
+            ))}
             <span className="text-[11px] text-gray-600 font-mono ml-auto hidden sm:inline">{task.id}</span>
           </div>
 
@@ -358,6 +397,16 @@ export function TaskDetailModal({
           </div>
         </div>
       </div>
+
+      {/* Force-transition confirmation dialog */}
+      {forceTransitionTarget && currentStatus && (
+        <ForceTransitionDialog
+          fromStatusName={currentStatus.name}
+          toStatusName={forceTransitionTarget.name}
+          onConfirm={handleForceConfirm}
+          onCancel={handleForceCancel}
+        />
+      )}
     </ModalBackdrop>
   )
 }
