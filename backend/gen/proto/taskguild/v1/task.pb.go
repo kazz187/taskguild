@@ -894,6 +894,398 @@ func (x *UpdateTaskStatusResponse) GetTask() *Task {
 	return nil
 }
 
+type ArchiveTaskRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ArchiveTaskRequest) Reset() {
+	*x = ArchiveTaskRequest{}
+	mi := &file_taskguild_v1_task_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ArchiveTaskRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ArchiveTaskRequest) ProtoMessage() {}
+
+func (x *ArchiveTaskRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_task_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ArchiveTaskRequest.ProtoReflect.Descriptor instead.
+func (*ArchiveTaskRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_task_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ArchiveTaskRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type ArchiveTaskResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Task          *Task                  `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ArchiveTaskResponse) Reset() {
+	*x = ArchiveTaskResponse{}
+	mi := &file_taskguild_v1_task_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ArchiveTaskResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ArchiveTaskResponse) ProtoMessage() {}
+
+func (x *ArchiveTaskResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_task_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ArchiveTaskResponse.ProtoReflect.Descriptor instead.
+func (*ArchiveTaskResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_task_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ArchiveTaskResponse) GetTask() *Task {
+	if x != nil {
+		return x.Task
+	}
+	return nil
+}
+
+type ArchiveTerminalTasksRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	WorkflowId    string                 `protobuf:"bytes,2,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ArchiveTerminalTasksRequest) Reset() {
+	*x = ArchiveTerminalTasksRequest{}
+	mi := &file_taskguild_v1_task_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ArchiveTerminalTasksRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ArchiveTerminalTasksRequest) ProtoMessage() {}
+
+func (x *ArchiveTerminalTasksRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_task_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ArchiveTerminalTasksRequest.ProtoReflect.Descriptor instead.
+func (*ArchiveTerminalTasksRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_task_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ArchiveTerminalTasksRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *ArchiveTerminalTasksRequest) GetWorkflowId() string {
+	if x != nil {
+		return x.WorkflowId
+	}
+	return ""
+}
+
+type ArchiveTerminalTasksResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ArchivedTasks []*Task                `protobuf:"bytes,1,rep,name=archived_tasks,json=archivedTasks,proto3" json:"archived_tasks,omitempty"` // tasks that were archived
+	SkippedTasks  []*Task                `protobuf:"bytes,2,rep,name=skipped_tasks,json=skippedTasks,proto3" json:"skipped_tasks,omitempty"`    // tasks skipped (e.g. agent running)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ArchiveTerminalTasksResponse) Reset() {
+	*x = ArchiveTerminalTasksResponse{}
+	mi := &file_taskguild_v1_task_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ArchiveTerminalTasksResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ArchiveTerminalTasksResponse) ProtoMessage() {}
+
+func (x *ArchiveTerminalTasksResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_task_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ArchiveTerminalTasksResponse.ProtoReflect.Descriptor instead.
+func (*ArchiveTerminalTasksResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_task_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ArchiveTerminalTasksResponse) GetArchivedTasks() []*Task {
+	if x != nil {
+		return x.ArchivedTasks
+	}
+	return nil
+}
+
+func (x *ArchiveTerminalTasksResponse) GetSkippedTasks() []*Task {
+	if x != nil {
+		return x.SkippedTasks
+	}
+	return nil
+}
+
+type UnarchiveTaskRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UnarchiveTaskRequest) Reset() {
+	*x = UnarchiveTaskRequest{}
+	mi := &file_taskguild_v1_task_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnarchiveTaskRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnarchiveTaskRequest) ProtoMessage() {}
+
+func (x *UnarchiveTaskRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_task_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnarchiveTaskRequest.ProtoReflect.Descriptor instead.
+func (*UnarchiveTaskRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_task_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *UnarchiveTaskRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type UnarchiveTaskResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Task          *Task                  `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UnarchiveTaskResponse) Reset() {
+	*x = UnarchiveTaskResponse{}
+	mi := &file_taskguild_v1_task_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnarchiveTaskResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnarchiveTaskResponse) ProtoMessage() {}
+
+func (x *UnarchiveTaskResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_task_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnarchiveTaskResponse.ProtoReflect.Descriptor instead.
+func (*UnarchiveTaskResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_task_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *UnarchiveTaskResponse) GetTask() *Task {
+	if x != nil {
+		return x.Task
+	}
+	return nil
+}
+
+type ListArchivedTasksRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	WorkflowId    string                 `protobuf:"bytes,2,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	Pagination    *PaginationRequest     `protobuf:"bytes,3,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListArchivedTasksRequest) Reset() {
+	*x = ListArchivedTasksRequest{}
+	mi := &file_taskguild_v1_task_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListArchivedTasksRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListArchivedTasksRequest) ProtoMessage() {}
+
+func (x *ListArchivedTasksRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_task_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListArchivedTasksRequest.ProtoReflect.Descriptor instead.
+func (*ListArchivedTasksRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_task_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ListArchivedTasksRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *ListArchivedTasksRequest) GetWorkflowId() string {
+	if x != nil {
+		return x.WorkflowId
+	}
+	return ""
+}
+
+func (x *ListArchivedTasksRequest) GetPagination() *PaginationRequest {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
+type ListArchivedTasksResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tasks         []*Task                `protobuf:"bytes,1,rep,name=tasks,proto3" json:"tasks,omitempty"`
+	Pagination    *PaginationResponse    `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListArchivedTasksResponse) Reset() {
+	*x = ListArchivedTasksResponse{}
+	mi := &file_taskguild_v1_task_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListArchivedTasksResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListArchivedTasksResponse) ProtoMessage() {}
+
+func (x *ListArchivedTasksResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_task_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListArchivedTasksResponse.ProtoReflect.Descriptor instead.
+func (*ListArchivedTasksResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_task_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ListArchivedTasksResponse) GetTasks() []*Task {
+	if x != nil {
+		return x.Tasks
+	}
+	return nil
+}
+
+func (x *ListArchivedTasksResponse) GetPagination() *PaginationResponse {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
 var File_taskguild_v1_task_proto protoreflect.FileDescriptor
 
 const file_taskguild_v1_task_proto_rawDesc = "" +
@@ -979,12 +1371,41 @@ const file_taskguild_v1_task_proto_rawDesc = "" +
 	"\tstatus_id\x18\x02 \x01(\tR\bstatusId\x12\x14\n" +
 	"\x05force\x18\x03 \x01(\bR\x05force\"B\n" +
 	"\x18UpdateTaskStatusResponse\x12&\n" +
-	"\x04task\x18\x01 \x01(\v2\x12.taskguild.v1.TaskR\x04task*\xae\x01\n" +
+	"\x04task\x18\x01 \x01(\v2\x12.taskguild.v1.TaskR\x04task\"$\n" +
+	"\x12ArchiveTaskRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"=\n" +
+	"\x13ArchiveTaskResponse\x12&\n" +
+	"\x04task\x18\x01 \x01(\v2\x12.taskguild.v1.TaskR\x04task\"]\n" +
+	"\x1bArchiveTerminalTasksRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1f\n" +
+	"\vworkflow_id\x18\x02 \x01(\tR\n" +
+	"workflowId\"\x92\x01\n" +
+	"\x1cArchiveTerminalTasksResponse\x129\n" +
+	"\x0earchived_tasks\x18\x01 \x03(\v2\x12.taskguild.v1.TaskR\rarchivedTasks\x127\n" +
+	"\rskipped_tasks\x18\x02 \x03(\v2\x12.taskguild.v1.TaskR\fskippedTasks\"&\n" +
+	"\x14UnarchiveTaskRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"?\n" +
+	"\x15UnarchiveTaskResponse\x12&\n" +
+	"\x04task\x18\x01 \x01(\v2\x12.taskguild.v1.TaskR\x04task\"\x9b\x01\n" +
+	"\x18ListArchivedTasksRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1f\n" +
+	"\vworkflow_id\x18\x02 \x01(\tR\n" +
+	"workflowId\x12?\n" +
+	"\n" +
+	"pagination\x18\x03 \x01(\v2\x1f.taskguild.v1.PaginationRequestR\n" +
+	"pagination\"\x87\x01\n" +
+	"\x19ListArchivedTasksResponse\x12(\n" +
+	"\x05tasks\x18\x01 \x03(\v2\x12.taskguild.v1.TaskR\x05tasks\x12@\n" +
+	"\n" +
+	"pagination\x18\x02 \x01(\v2 .taskguild.v1.PaginationResponseR\n" +
+	"pagination*\xae\x01\n" +
 	"\x14TaskAssignmentStatus\x12&\n" +
 	"\"TASK_ASSIGNMENT_STATUS_UNSPECIFIED\x10\x00\x12%\n" +
 	"!TASK_ASSIGNMENT_STATUS_UNASSIGNED\x10\x01\x12\"\n" +
 	"\x1eTASK_ASSIGNMENT_STATUS_PENDING\x10\x02\x12#\n" +
-	"\x1fTASK_ASSIGNMENT_STATUS_ASSIGNED\x10\x032\xf9\x03\n" +
+	"\x1fTASK_ASSIGNMENT_STATUS_ASSIGNED\x10\x032\xfc\x06\n" +
 	"\vTaskService\x12O\n" +
 	"\n" +
 	"CreateTask\x12\x1f.taskguild.v1.CreateTaskRequest\x1a .taskguild.v1.CreateTaskResponse\x12F\n" +
@@ -994,7 +1415,11 @@ const file_taskguild_v1_task_proto_rawDesc = "" +
 	"UpdateTask\x12\x1f.taskguild.v1.UpdateTaskRequest\x1a .taskguild.v1.UpdateTaskResponse\x12O\n" +
 	"\n" +
 	"DeleteTask\x12\x1f.taskguild.v1.DeleteTaskRequest\x1a .taskguild.v1.DeleteTaskResponse\x12a\n" +
-	"\x10UpdateTaskStatus\x12%.taskguild.v1.UpdateTaskStatusRequest\x1a&.taskguild.v1.UpdateTaskStatusResponseB\xb7\x01\n" +
+	"\x10UpdateTaskStatus\x12%.taskguild.v1.UpdateTaskStatusRequest\x1a&.taskguild.v1.UpdateTaskStatusResponse\x12R\n" +
+	"\vArchiveTask\x12 .taskguild.v1.ArchiveTaskRequest\x1a!.taskguild.v1.ArchiveTaskResponse\x12m\n" +
+	"\x14ArchiveTerminalTasks\x12).taskguild.v1.ArchiveTerminalTasksRequest\x1a*.taskguild.v1.ArchiveTerminalTasksResponse\x12X\n" +
+	"\rUnarchiveTask\x12\".taskguild.v1.UnarchiveTaskRequest\x1a#.taskguild.v1.UnarchiveTaskResponse\x12d\n" +
+	"\x11ListArchivedTasks\x12&.taskguild.v1.ListArchivedTasksRequest\x1a'.taskguild.v1.ListArchivedTasksResponseB\xb7\x01\n" +
 	"\x10com.taskguild.v1B\tTaskProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
@@ -1010,60 +1435,83 @@ func file_taskguild_v1_task_proto_rawDescGZIP() []byte {
 }
 
 var file_taskguild_v1_task_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_taskguild_v1_task_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_taskguild_v1_task_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_taskguild_v1_task_proto_goTypes = []any{
-	(TaskAssignmentStatus)(0),        // 0: taskguild.v1.TaskAssignmentStatus
-	(*Task)(nil),                     // 1: taskguild.v1.Task
-	(*CreateTaskRequest)(nil),        // 2: taskguild.v1.CreateTaskRequest
-	(*CreateTaskResponse)(nil),       // 3: taskguild.v1.CreateTaskResponse
-	(*GetTaskRequest)(nil),           // 4: taskguild.v1.GetTaskRequest
-	(*GetTaskResponse)(nil),          // 5: taskguild.v1.GetTaskResponse
-	(*ListTasksRequest)(nil),         // 6: taskguild.v1.ListTasksRequest
-	(*ListTasksResponse)(nil),        // 7: taskguild.v1.ListTasksResponse
-	(*UpdateTaskRequest)(nil),        // 8: taskguild.v1.UpdateTaskRequest
-	(*UpdateTaskResponse)(nil),       // 9: taskguild.v1.UpdateTaskResponse
-	(*DeleteTaskRequest)(nil),        // 10: taskguild.v1.DeleteTaskRequest
-	(*DeleteTaskResponse)(nil),       // 11: taskguild.v1.DeleteTaskResponse
-	(*UpdateTaskStatusRequest)(nil),  // 12: taskguild.v1.UpdateTaskStatusRequest
-	(*UpdateTaskStatusResponse)(nil), // 13: taskguild.v1.UpdateTaskStatusResponse
-	nil,                              // 14: taskguild.v1.Task.MetadataEntry
-	nil,                              // 15: taskguild.v1.CreateTaskRequest.MetadataEntry
-	nil,                              // 16: taskguild.v1.UpdateTaskRequest.MetadataEntry
-	(*timestamppb.Timestamp)(nil),    // 17: google.protobuf.Timestamp
-	(*PaginationRequest)(nil),        // 18: taskguild.v1.PaginationRequest
-	(*PaginationResponse)(nil),       // 19: taskguild.v1.PaginationResponse
+	(TaskAssignmentStatus)(0),            // 0: taskguild.v1.TaskAssignmentStatus
+	(*Task)(nil),                         // 1: taskguild.v1.Task
+	(*CreateTaskRequest)(nil),            // 2: taskguild.v1.CreateTaskRequest
+	(*CreateTaskResponse)(nil),           // 3: taskguild.v1.CreateTaskResponse
+	(*GetTaskRequest)(nil),               // 4: taskguild.v1.GetTaskRequest
+	(*GetTaskResponse)(nil),              // 5: taskguild.v1.GetTaskResponse
+	(*ListTasksRequest)(nil),             // 6: taskguild.v1.ListTasksRequest
+	(*ListTasksResponse)(nil),            // 7: taskguild.v1.ListTasksResponse
+	(*UpdateTaskRequest)(nil),            // 8: taskguild.v1.UpdateTaskRequest
+	(*UpdateTaskResponse)(nil),           // 9: taskguild.v1.UpdateTaskResponse
+	(*DeleteTaskRequest)(nil),            // 10: taskguild.v1.DeleteTaskRequest
+	(*DeleteTaskResponse)(nil),           // 11: taskguild.v1.DeleteTaskResponse
+	(*UpdateTaskStatusRequest)(nil),      // 12: taskguild.v1.UpdateTaskStatusRequest
+	(*UpdateTaskStatusResponse)(nil),     // 13: taskguild.v1.UpdateTaskStatusResponse
+	(*ArchiveTaskRequest)(nil),           // 14: taskguild.v1.ArchiveTaskRequest
+	(*ArchiveTaskResponse)(nil),          // 15: taskguild.v1.ArchiveTaskResponse
+	(*ArchiveTerminalTasksRequest)(nil),  // 16: taskguild.v1.ArchiveTerminalTasksRequest
+	(*ArchiveTerminalTasksResponse)(nil), // 17: taskguild.v1.ArchiveTerminalTasksResponse
+	(*UnarchiveTaskRequest)(nil),         // 18: taskguild.v1.UnarchiveTaskRequest
+	(*UnarchiveTaskResponse)(nil),        // 19: taskguild.v1.UnarchiveTaskResponse
+	(*ListArchivedTasksRequest)(nil),     // 20: taskguild.v1.ListArchivedTasksRequest
+	(*ListArchivedTasksResponse)(nil),    // 21: taskguild.v1.ListArchivedTasksResponse
+	nil,                                  // 22: taskguild.v1.Task.MetadataEntry
+	nil,                                  // 23: taskguild.v1.CreateTaskRequest.MetadataEntry
+	nil,                                  // 24: taskguild.v1.UpdateTaskRequest.MetadataEntry
+	(*timestamppb.Timestamp)(nil),        // 25: google.protobuf.Timestamp
+	(*PaginationRequest)(nil),            // 26: taskguild.v1.PaginationRequest
+	(*PaginationResponse)(nil),           // 27: taskguild.v1.PaginationResponse
 }
 var file_taskguild_v1_task_proto_depIdxs = []int32{
 	0,  // 0: taskguild.v1.Task.assignment_status:type_name -> taskguild.v1.TaskAssignmentStatus
-	14, // 1: taskguild.v1.Task.metadata:type_name -> taskguild.v1.Task.MetadataEntry
-	17, // 2: taskguild.v1.Task.created_at:type_name -> google.protobuf.Timestamp
-	17, // 3: taskguild.v1.Task.updated_at:type_name -> google.protobuf.Timestamp
-	15, // 4: taskguild.v1.CreateTaskRequest.metadata:type_name -> taskguild.v1.CreateTaskRequest.MetadataEntry
+	22, // 1: taskguild.v1.Task.metadata:type_name -> taskguild.v1.Task.MetadataEntry
+	25, // 2: taskguild.v1.Task.created_at:type_name -> google.protobuf.Timestamp
+	25, // 3: taskguild.v1.Task.updated_at:type_name -> google.protobuf.Timestamp
+	23, // 4: taskguild.v1.CreateTaskRequest.metadata:type_name -> taskguild.v1.CreateTaskRequest.MetadataEntry
 	1,  // 5: taskguild.v1.CreateTaskResponse.task:type_name -> taskguild.v1.Task
 	1,  // 6: taskguild.v1.GetTaskResponse.task:type_name -> taskguild.v1.Task
-	18, // 7: taskguild.v1.ListTasksRequest.pagination:type_name -> taskguild.v1.PaginationRequest
+	26, // 7: taskguild.v1.ListTasksRequest.pagination:type_name -> taskguild.v1.PaginationRequest
 	1,  // 8: taskguild.v1.ListTasksResponse.tasks:type_name -> taskguild.v1.Task
-	19, // 9: taskguild.v1.ListTasksResponse.pagination:type_name -> taskguild.v1.PaginationResponse
-	16, // 10: taskguild.v1.UpdateTaskRequest.metadata:type_name -> taskguild.v1.UpdateTaskRequest.MetadataEntry
+	27, // 9: taskguild.v1.ListTasksResponse.pagination:type_name -> taskguild.v1.PaginationResponse
+	24, // 10: taskguild.v1.UpdateTaskRequest.metadata:type_name -> taskguild.v1.UpdateTaskRequest.MetadataEntry
 	1,  // 11: taskguild.v1.UpdateTaskResponse.task:type_name -> taskguild.v1.Task
 	1,  // 12: taskguild.v1.UpdateTaskStatusResponse.task:type_name -> taskguild.v1.Task
-	2,  // 13: taskguild.v1.TaskService.CreateTask:input_type -> taskguild.v1.CreateTaskRequest
-	4,  // 14: taskguild.v1.TaskService.GetTask:input_type -> taskguild.v1.GetTaskRequest
-	6,  // 15: taskguild.v1.TaskService.ListTasks:input_type -> taskguild.v1.ListTasksRequest
-	8,  // 16: taskguild.v1.TaskService.UpdateTask:input_type -> taskguild.v1.UpdateTaskRequest
-	10, // 17: taskguild.v1.TaskService.DeleteTask:input_type -> taskguild.v1.DeleteTaskRequest
-	12, // 18: taskguild.v1.TaskService.UpdateTaskStatus:input_type -> taskguild.v1.UpdateTaskStatusRequest
-	3,  // 19: taskguild.v1.TaskService.CreateTask:output_type -> taskguild.v1.CreateTaskResponse
-	5,  // 20: taskguild.v1.TaskService.GetTask:output_type -> taskguild.v1.GetTaskResponse
-	7,  // 21: taskguild.v1.TaskService.ListTasks:output_type -> taskguild.v1.ListTasksResponse
-	9,  // 22: taskguild.v1.TaskService.UpdateTask:output_type -> taskguild.v1.UpdateTaskResponse
-	11, // 23: taskguild.v1.TaskService.DeleteTask:output_type -> taskguild.v1.DeleteTaskResponse
-	13, // 24: taskguild.v1.TaskService.UpdateTaskStatus:output_type -> taskguild.v1.UpdateTaskStatusResponse
-	19, // [19:25] is the sub-list for method output_type
-	13, // [13:19] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	1,  // 13: taskguild.v1.ArchiveTaskResponse.task:type_name -> taskguild.v1.Task
+	1,  // 14: taskguild.v1.ArchiveTerminalTasksResponse.archived_tasks:type_name -> taskguild.v1.Task
+	1,  // 15: taskguild.v1.ArchiveTerminalTasksResponse.skipped_tasks:type_name -> taskguild.v1.Task
+	1,  // 16: taskguild.v1.UnarchiveTaskResponse.task:type_name -> taskguild.v1.Task
+	26, // 17: taskguild.v1.ListArchivedTasksRequest.pagination:type_name -> taskguild.v1.PaginationRequest
+	1,  // 18: taskguild.v1.ListArchivedTasksResponse.tasks:type_name -> taskguild.v1.Task
+	27, // 19: taskguild.v1.ListArchivedTasksResponse.pagination:type_name -> taskguild.v1.PaginationResponse
+	2,  // 20: taskguild.v1.TaskService.CreateTask:input_type -> taskguild.v1.CreateTaskRequest
+	4,  // 21: taskguild.v1.TaskService.GetTask:input_type -> taskguild.v1.GetTaskRequest
+	6,  // 22: taskguild.v1.TaskService.ListTasks:input_type -> taskguild.v1.ListTasksRequest
+	8,  // 23: taskguild.v1.TaskService.UpdateTask:input_type -> taskguild.v1.UpdateTaskRequest
+	10, // 24: taskguild.v1.TaskService.DeleteTask:input_type -> taskguild.v1.DeleteTaskRequest
+	12, // 25: taskguild.v1.TaskService.UpdateTaskStatus:input_type -> taskguild.v1.UpdateTaskStatusRequest
+	14, // 26: taskguild.v1.TaskService.ArchiveTask:input_type -> taskguild.v1.ArchiveTaskRequest
+	16, // 27: taskguild.v1.TaskService.ArchiveTerminalTasks:input_type -> taskguild.v1.ArchiveTerminalTasksRequest
+	18, // 28: taskguild.v1.TaskService.UnarchiveTask:input_type -> taskguild.v1.UnarchiveTaskRequest
+	20, // 29: taskguild.v1.TaskService.ListArchivedTasks:input_type -> taskguild.v1.ListArchivedTasksRequest
+	3,  // 30: taskguild.v1.TaskService.CreateTask:output_type -> taskguild.v1.CreateTaskResponse
+	5,  // 31: taskguild.v1.TaskService.GetTask:output_type -> taskguild.v1.GetTaskResponse
+	7,  // 32: taskguild.v1.TaskService.ListTasks:output_type -> taskguild.v1.ListTasksResponse
+	9,  // 33: taskguild.v1.TaskService.UpdateTask:output_type -> taskguild.v1.UpdateTaskResponse
+	11, // 34: taskguild.v1.TaskService.DeleteTask:output_type -> taskguild.v1.DeleteTaskResponse
+	13, // 35: taskguild.v1.TaskService.UpdateTaskStatus:output_type -> taskguild.v1.UpdateTaskStatusResponse
+	15, // 36: taskguild.v1.TaskService.ArchiveTask:output_type -> taskguild.v1.ArchiveTaskResponse
+	17, // 37: taskguild.v1.TaskService.ArchiveTerminalTasks:output_type -> taskguild.v1.ArchiveTerminalTasksResponse
+	19, // 38: taskguild.v1.TaskService.UnarchiveTask:output_type -> taskguild.v1.UnarchiveTaskResponse
+	21, // 39: taskguild.v1.TaskService.ListArchivedTasks:output_type -> taskguild.v1.ListArchivedTasksResponse
+	30, // [30:40] is the sub-list for method output_type
+	20, // [20:30] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_task_proto_init() }
@@ -1080,7 +1528,7 @@ func file_taskguild_v1_task_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_task_proto_rawDesc), len(file_taskguild_v1_task_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   16,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

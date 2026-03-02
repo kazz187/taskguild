@@ -21,7 +21,9 @@ import { TaskCard } from './TaskCard'
 import { TaskDetailModal } from './TaskDetailModal'
 import { TaskCreateModal } from './TaskCreateModal'
 import { ForceTransitionDialog } from './ForceTransitionDialog'
-import { Plus, ChevronDown, ChevronRight } from 'lucide-react'
+import { CleanTasksDialog } from './CleanTasksDialog'
+import { ArchivedTaskList } from './ArchivedTaskList'
+import { Plus, ChevronDown, ChevronRight, Sparkles } from 'lucide-react'
 
 interface TaskBoardProps {
   projectId: string
@@ -35,6 +37,8 @@ const TASK_EVENT_TYPES = [
   EventType.TASK_DELETED,
   EventType.AGENT_ASSIGNED,
   EventType.AGENT_STATUS_CHANGED,
+  EventType.TASK_ARCHIVED,
+  EventType.TASK_UNARCHIVED,
 ]
 
 /** Pending force-move confirmation state */
@@ -60,6 +64,9 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
 
   // Force-transition confirmation dialog state
   const [forceTransition, setForceTransition] = useState<ForceTransitionState | null>(null)
+
+  // Clean (archive) dialog state
+  const [showCleanDialog, setShowCleanDialog] = useState(false)
 
   const statusMut = useMutation(updateTaskStatus)
 
@@ -138,6 +145,14 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
     }
     return map
   }, [tasks, sortedStatuses, pendingMoves])
+
+  // Terminal tasks eligible for archiving (for Clean button)
+  const terminalTasks = useMemo(() => {
+    return tasks.filter((t) => {
+      const status = statusById.get(t.statusId)
+      return status?.isTerminal === true
+    })
+  }, [tasks, statusById])
 
   // Allowed (normal) transition targets for the currently dragged task
   const normalTargetIds = useMemo(() => {
@@ -319,60 +334,99 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex-1 overflow-x-auto p-4 md:p-6">
-        {/* Desktop: horizontal flex; Mobile: vertical stack */}
-        <div className="flex flex-col md:flex-row gap-4 md:h-full md:min-w-max">
-          {sortedStatuses.map((status) => (
-            <StatusColumn
-              key={status.id}
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex-1 overflow-x-auto p-4 md:p-6">
+          {/* Toolbar with Clean button */}
+          <div className="flex items-center justify-end mb-3">
+            <button
+              onClick={() => setShowCleanDialog(true)}
+              disabled={terminalTasks.length === 0}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs md:text-sm md:px-3 text-gray-400 hover:text-amber-300 border border-slate-700 hover:border-amber-500/40 rounded-lg transition-colors disabled:opacity-50 disabled:hover:text-gray-400 disabled:hover:border-slate-700"
+              title={terminalTasks.length > 0 ? `Archive ${terminalTasks.length} completed tasks` : 'No completed tasks to archive'}
+            >
+              <Sparkles className="w-4 h-4" />
+              <span className="hidden sm:inline">Clean</span>
+              {terminalTasks.length > 0 && (
+                <span className="text-[10px] bg-amber-500/20 text-amber-400 rounded-full px-1.5 py-0.5 font-medium">
+                  {terminalTasks.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Desktop: horizontal flex; Mobile: vertical stack */}
+          <div className="flex flex-col md:flex-row gap-4 md:h-full md:min-w-max">
+            {sortedStatuses.map((status) => (
+              <StatusColumn
+                key={status.id}
+                projectId={projectId}
+                workflowId={workflow.id}
+                status={status}
+                tasks={tasksByStatus.get(status.id) ?? []}
+                agentConfigName={agentConfigByStatusId.get(status.id)}
+                onEdit={setEditingTaskId}
+                onCreated={() => refetch()}
+                isNormalTarget={normalTargetIds.has(status.id)}
+                isForceTarget={forceTargetIds.has(status.id)}
+                isDragging={activeTask !== null}
+                transitionTargets={transitionTargetsByStatus.get(status.id) ?? []}
+                onTransition={handleMobileTransition}
+                defaultPermissionMode={workflow.defaultPermissionMode}
+                defaultUseWorktree={workflow.defaultUseWorktree}
+              />
+            ))}
+          </div>
+
+          <DragOverlay
+            dropAnimation={lastDropWasSuccessful.current ? null : undefined}
+          >
+            {activeTask ? (
+              <div className="w-72">
+                <TaskCard task={activeTask} isDragOverlay />
+              </div>
+            ) : null}
+          </DragOverlay>
+
+          {editingTaskId && (
+            <TaskDetailModal
+              taskId={editingTaskId}
+              projectId={projectId}
+              statuses={sortedStatuses}
+              currentStatusId={tasks.find((t) => t.id === editingTaskId)?.statusId ?? ''}
+              onClose={() => setEditingTaskId(null)}
+              onChanged={() => refetch()}
+            />
+          )}
+
+          {/* Force-transition confirmation dialog */}
+          {forceTransition && (
+            <ForceTransitionDialog
+              fromStatusName={forceTransition.fromStatusName}
+              toStatusName={forceTransition.toStatusName}
+              onConfirm={handleForceConfirm}
+              onCancel={handleForceCancel}
+            />
+          )}
+
+          {/* Clean tasks dialog */}
+          {showCleanDialog && (
+            <CleanTasksDialog
               projectId={projectId}
               workflowId={workflow.id}
-              status={status}
-              tasks={tasksByStatus.get(status.id) ?? []}
-              agentConfigName={agentConfigByStatusId.get(status.id)}
-              onEdit={setEditingTaskId}
-              onCreated={() => refetch()}
-              isNormalTarget={normalTargetIds.has(status.id)}
-              isForceTarget={forceTargetIds.has(status.id)}
-              isDragging={activeTask !== null}
-              transitionTargets={transitionTargetsByStatus.get(status.id) ?? []}
-              onTransition={handleMobileTransition}
-              defaultPermissionMode={workflow.defaultPermissionMode}
-              defaultUseWorktree={workflow.defaultUseWorktree}
+              terminalTasks={terminalTasks}
+              statusById={statusById}
+              onClose={() => setShowCleanDialog(false)}
+              onArchived={() => refetch()}
             />
-          ))}
+          )}
         </div>
 
-        <DragOverlay
-          dropAnimation={lastDropWasSuccessful.current ? null : undefined}
-        >
-          {activeTask ? (
-            <div className="w-72">
-              <TaskCard task={activeTask} isDragOverlay />
-            </div>
-          ) : null}
-        </DragOverlay>
-
-        {editingTaskId && (
-          <TaskDetailModal
-            taskId={editingTaskId}
-            projectId={projectId}
-            statuses={sortedStatuses}
-            currentStatusId={tasks.find((t) => t.id === editingTaskId)?.statusId ?? ''}
-            onClose={() => setEditingTaskId(null)}
-            onChanged={() => refetch()}
-          />
-        )}
-
-        {/* Force-transition confirmation dialog */}
-        {forceTransition && (
-          <ForceTransitionDialog
-            fromStatusName={forceTransition.fromStatusName}
-            toStatusName={forceTransition.toStatusName}
-            onConfirm={handleForceConfirm}
-            onCancel={handleForceCancel}
-          />
-        )}
+        {/* Archived tasks section */}
+        <ArchivedTaskList
+          projectId={projectId}
+          workflowId={workflow.id}
+          statusById={statusById}
+        />
       </div>
     </DndContext>
   )

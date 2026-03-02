@@ -19,6 +19,12 @@ service TaskService {
   rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse);
   rpc DeleteTask(DeleteTaskRequest) returns (DeleteTaskResponse);
   rpc UpdateTaskStatus(UpdateTaskStatusRequest) returns (UpdateTaskStatusResponse);
+
+  // Archive operations
+  rpc ArchiveTask(ArchiveTaskRequest) returns (ArchiveTaskResponse);
+  rpc ArchiveTerminalTasks(ArchiveTerminalTasksRequest) returns (ArchiveTerminalTasksResponse);
+  rpc UnarchiveTask(UnarchiveTaskRequest) returns (UnarchiveTaskResponse);
+  rpc ListArchivedTasks(ListArchivedTasksRequest) returns (ListArchivedTasksResponse);
 }
 
 message Task {
@@ -121,4 +127,39 @@ message UpdateTaskStatusRequest {
 }
 message UpdateTaskStatusResponse {
   Task task = 1;
+}
+
+// Archive operations
+
+message ArchiveTaskRequest {
+  string id = 1;
+}
+message ArchiveTaskResponse {
+  Task task = 1;
+}
+
+message ArchiveTerminalTasksRequest {
+  string project_id = 1;
+  string workflow_id = 2;
+}
+message ArchiveTerminalTasksResponse {
+  repeated Task archived_tasks = 1;   // tasks that were archived
+  repeated Task skipped_tasks = 2;    // tasks skipped (e.g. agent running)
+}
+
+message UnarchiveTaskRequest {
+  string id = 1;
+}
+message UnarchiveTaskResponse {
+  Task task = 1;
+}
+
+message ListArchivedTasksRequest {
+  string project_id = 1;
+  string workflow_id = 2;
+  PaginationRequest pagination = 3;
+}
+message ListArchivedTasksResponse {
+  repeated Task tasks = 1;
+  PaginationResponse pagination = 2;
 }

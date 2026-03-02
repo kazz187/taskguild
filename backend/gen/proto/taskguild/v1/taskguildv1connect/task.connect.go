@@ -46,6 +46,17 @@ const (
 	// TaskServiceUpdateTaskStatusProcedure is the fully-qualified name of the TaskService's
 	// UpdateTaskStatus RPC.
 	TaskServiceUpdateTaskStatusProcedure = "/taskguild.v1.TaskService/UpdateTaskStatus"
+	// TaskServiceArchiveTaskProcedure is the fully-qualified name of the TaskService's ArchiveTask RPC.
+	TaskServiceArchiveTaskProcedure = "/taskguild.v1.TaskService/ArchiveTask"
+	// TaskServiceArchiveTerminalTasksProcedure is the fully-qualified name of the TaskService's
+	// ArchiveTerminalTasks RPC.
+	TaskServiceArchiveTerminalTasksProcedure = "/taskguild.v1.TaskService/ArchiveTerminalTasks"
+	// TaskServiceUnarchiveTaskProcedure is the fully-qualified name of the TaskService's UnarchiveTask
+	// RPC.
+	TaskServiceUnarchiveTaskProcedure = "/taskguild.v1.TaskService/UnarchiveTask"
+	// TaskServiceListArchivedTasksProcedure is the fully-qualified name of the TaskService's
+	// ListArchivedTasks RPC.
+	TaskServiceListArchivedTasksProcedure = "/taskguild.v1.TaskService/ListArchivedTasks"
 )
 
 // TaskServiceClient is a client for the taskguild.v1.TaskService service.
@@ -56,6 +67,11 @@ type TaskServiceClient interface {
 	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.UpdateTaskResponse], error)
 	DeleteTask(context.Context, *connect.Request[v1.DeleteTaskRequest]) (*connect.Response[v1.DeleteTaskResponse], error)
 	UpdateTaskStatus(context.Context, *connect.Request[v1.UpdateTaskStatusRequest]) (*connect.Response[v1.UpdateTaskStatusResponse], error)
+	// Archive operations
+	ArchiveTask(context.Context, *connect.Request[v1.ArchiveTaskRequest]) (*connect.Response[v1.ArchiveTaskResponse], error)
+	ArchiveTerminalTasks(context.Context, *connect.Request[v1.ArchiveTerminalTasksRequest]) (*connect.Response[v1.ArchiveTerminalTasksResponse], error)
+	UnarchiveTask(context.Context, *connect.Request[v1.UnarchiveTaskRequest]) (*connect.Response[v1.UnarchiveTaskResponse], error)
+	ListArchivedTasks(context.Context, *connect.Request[v1.ListArchivedTasksRequest]) (*connect.Response[v1.ListArchivedTasksResponse], error)
 }
 
 // NewTaskServiceClient constructs a client for the taskguild.v1.TaskService service. By default, it
@@ -105,17 +121,45 @@ func NewTaskServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(taskServiceMethods.ByName("UpdateTaskStatus")),
 			connect.WithClientOptions(opts...),
 		),
+		archiveTask: connect.NewClient[v1.ArchiveTaskRequest, v1.ArchiveTaskResponse](
+			httpClient,
+			baseURL+TaskServiceArchiveTaskProcedure,
+			connect.WithSchema(taskServiceMethods.ByName("ArchiveTask")),
+			connect.WithClientOptions(opts...),
+		),
+		archiveTerminalTasks: connect.NewClient[v1.ArchiveTerminalTasksRequest, v1.ArchiveTerminalTasksResponse](
+			httpClient,
+			baseURL+TaskServiceArchiveTerminalTasksProcedure,
+			connect.WithSchema(taskServiceMethods.ByName("ArchiveTerminalTasks")),
+			connect.WithClientOptions(opts...),
+		),
+		unarchiveTask: connect.NewClient[v1.UnarchiveTaskRequest, v1.UnarchiveTaskResponse](
+			httpClient,
+			baseURL+TaskServiceUnarchiveTaskProcedure,
+			connect.WithSchema(taskServiceMethods.ByName("UnarchiveTask")),
+			connect.WithClientOptions(opts...),
+		),
+		listArchivedTasks: connect.NewClient[v1.ListArchivedTasksRequest, v1.ListArchivedTasksResponse](
+			httpClient,
+			baseURL+TaskServiceListArchivedTasksProcedure,
+			connect.WithSchema(taskServiceMethods.ByName("ListArchivedTasks")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // taskServiceClient implements TaskServiceClient.
 type taskServiceClient struct {
-	createTask       *connect.Client[v1.CreateTaskRequest, v1.CreateTaskResponse]
-	getTask          *connect.Client[v1.GetTaskRequest, v1.GetTaskResponse]
-	listTasks        *connect.Client[v1.ListTasksRequest, v1.ListTasksResponse]
-	updateTask       *connect.Client[v1.UpdateTaskRequest, v1.UpdateTaskResponse]
-	deleteTask       *connect.Client[v1.DeleteTaskRequest, v1.DeleteTaskResponse]
-	updateTaskStatus *connect.Client[v1.UpdateTaskStatusRequest, v1.UpdateTaskStatusResponse]
+	createTask           *connect.Client[v1.CreateTaskRequest, v1.CreateTaskResponse]
+	getTask              *connect.Client[v1.GetTaskRequest, v1.GetTaskResponse]
+	listTasks            *connect.Client[v1.ListTasksRequest, v1.ListTasksResponse]
+	updateTask           *connect.Client[v1.UpdateTaskRequest, v1.UpdateTaskResponse]
+	deleteTask           *connect.Client[v1.DeleteTaskRequest, v1.DeleteTaskResponse]
+	updateTaskStatus     *connect.Client[v1.UpdateTaskStatusRequest, v1.UpdateTaskStatusResponse]
+	archiveTask          *connect.Client[v1.ArchiveTaskRequest, v1.ArchiveTaskResponse]
+	archiveTerminalTasks *connect.Client[v1.ArchiveTerminalTasksRequest, v1.ArchiveTerminalTasksResponse]
+	unarchiveTask        *connect.Client[v1.UnarchiveTaskRequest, v1.UnarchiveTaskResponse]
+	listArchivedTasks    *connect.Client[v1.ListArchivedTasksRequest, v1.ListArchivedTasksResponse]
 }
 
 // CreateTask calls taskguild.v1.TaskService.CreateTask.
@@ -148,6 +192,26 @@ func (c *taskServiceClient) UpdateTaskStatus(ctx context.Context, req *connect.R
 	return c.updateTaskStatus.CallUnary(ctx, req)
 }
 
+// ArchiveTask calls taskguild.v1.TaskService.ArchiveTask.
+func (c *taskServiceClient) ArchiveTask(ctx context.Context, req *connect.Request[v1.ArchiveTaskRequest]) (*connect.Response[v1.ArchiveTaskResponse], error) {
+	return c.archiveTask.CallUnary(ctx, req)
+}
+
+// ArchiveTerminalTasks calls taskguild.v1.TaskService.ArchiveTerminalTasks.
+func (c *taskServiceClient) ArchiveTerminalTasks(ctx context.Context, req *connect.Request[v1.ArchiveTerminalTasksRequest]) (*connect.Response[v1.ArchiveTerminalTasksResponse], error) {
+	return c.archiveTerminalTasks.CallUnary(ctx, req)
+}
+
+// UnarchiveTask calls taskguild.v1.TaskService.UnarchiveTask.
+func (c *taskServiceClient) UnarchiveTask(ctx context.Context, req *connect.Request[v1.UnarchiveTaskRequest]) (*connect.Response[v1.UnarchiveTaskResponse], error) {
+	return c.unarchiveTask.CallUnary(ctx, req)
+}
+
+// ListArchivedTasks calls taskguild.v1.TaskService.ListArchivedTasks.
+func (c *taskServiceClient) ListArchivedTasks(ctx context.Context, req *connect.Request[v1.ListArchivedTasksRequest]) (*connect.Response[v1.ListArchivedTasksResponse], error) {
+	return c.listArchivedTasks.CallUnary(ctx, req)
+}
+
 // TaskServiceHandler is an implementation of the taskguild.v1.TaskService service.
 type TaskServiceHandler interface {
 	CreateTask(context.Context, *connect.Request[v1.CreateTaskRequest]) (*connect.Response[v1.CreateTaskResponse], error)
@@ -156,6 +220,11 @@ type TaskServiceHandler interface {
 	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.UpdateTaskResponse], error)
 	DeleteTask(context.Context, *connect.Request[v1.DeleteTaskRequest]) (*connect.Response[v1.DeleteTaskResponse], error)
 	UpdateTaskStatus(context.Context, *connect.Request[v1.UpdateTaskStatusRequest]) (*connect.Response[v1.UpdateTaskStatusResponse], error)
+	// Archive operations
+	ArchiveTask(context.Context, *connect.Request[v1.ArchiveTaskRequest]) (*connect.Response[v1.ArchiveTaskResponse], error)
+	ArchiveTerminalTasks(context.Context, *connect.Request[v1.ArchiveTerminalTasksRequest]) (*connect.Response[v1.ArchiveTerminalTasksResponse], error)
+	UnarchiveTask(context.Context, *connect.Request[v1.UnarchiveTaskRequest]) (*connect.Response[v1.UnarchiveTaskResponse], error)
+	ListArchivedTasks(context.Context, *connect.Request[v1.ListArchivedTasksRequest]) (*connect.Response[v1.ListArchivedTasksResponse], error)
 }
 
 // NewTaskServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -201,6 +270,30 @@ func NewTaskServiceHandler(svc TaskServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(taskServiceMethods.ByName("UpdateTaskStatus")),
 		connect.WithHandlerOptions(opts...),
 	)
+	taskServiceArchiveTaskHandler := connect.NewUnaryHandler(
+		TaskServiceArchiveTaskProcedure,
+		svc.ArchiveTask,
+		connect.WithSchema(taskServiceMethods.ByName("ArchiveTask")),
+		connect.WithHandlerOptions(opts...),
+	)
+	taskServiceArchiveTerminalTasksHandler := connect.NewUnaryHandler(
+		TaskServiceArchiveTerminalTasksProcedure,
+		svc.ArchiveTerminalTasks,
+		connect.WithSchema(taskServiceMethods.ByName("ArchiveTerminalTasks")),
+		connect.WithHandlerOptions(opts...),
+	)
+	taskServiceUnarchiveTaskHandler := connect.NewUnaryHandler(
+		TaskServiceUnarchiveTaskProcedure,
+		svc.UnarchiveTask,
+		connect.WithSchema(taskServiceMethods.ByName("UnarchiveTask")),
+		connect.WithHandlerOptions(opts...),
+	)
+	taskServiceListArchivedTasksHandler := connect.NewUnaryHandler(
+		TaskServiceListArchivedTasksProcedure,
+		svc.ListArchivedTasks,
+		connect.WithSchema(taskServiceMethods.ByName("ListArchivedTasks")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/taskguild.v1.TaskService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case TaskServiceCreateTaskProcedure:
@@ -215,6 +308,14 @@ func NewTaskServiceHandler(svc TaskServiceHandler, opts ...connect.HandlerOption
 			taskServiceDeleteTaskHandler.ServeHTTP(w, r)
 		case TaskServiceUpdateTaskStatusProcedure:
 			taskServiceUpdateTaskStatusHandler.ServeHTTP(w, r)
+		case TaskServiceArchiveTaskProcedure:
+			taskServiceArchiveTaskHandler.ServeHTTP(w, r)
+		case TaskServiceArchiveTerminalTasksProcedure:
+			taskServiceArchiveTerminalTasksHandler.ServeHTTP(w, r)
+		case TaskServiceUnarchiveTaskProcedure:
+			taskServiceUnarchiveTaskHandler.ServeHTTP(w, r)
+		case TaskServiceListArchivedTasksProcedure:
+			taskServiceListArchivedTasksHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -246,4 +347,20 @@ func (UnimplementedTaskServiceHandler) DeleteTask(context.Context, *connect.Requ
 
 func (UnimplementedTaskServiceHandler) UpdateTaskStatus(context.Context, *connect.Request[v1.UpdateTaskStatusRequest]) (*connect.Response[v1.UpdateTaskStatusResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.UpdateTaskStatus is not implemented"))
+}
+
+func (UnimplementedTaskServiceHandler) ArchiveTask(context.Context, *connect.Request[v1.ArchiveTaskRequest]) (*connect.Response[v1.ArchiveTaskResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.ArchiveTask is not implemented"))
+}
+
+func (UnimplementedTaskServiceHandler) ArchiveTerminalTasks(context.Context, *connect.Request[v1.ArchiveTerminalTasksRequest]) (*connect.Response[v1.ArchiveTerminalTasksResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.ArchiveTerminalTasks is not implemented"))
+}
+
+func (UnimplementedTaskServiceHandler) UnarchiveTask(context.Context, *connect.Request[v1.UnarchiveTaskRequest]) (*connect.Response[v1.UnarchiveTaskResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.UnarchiveTask is not implemented"))
+}
+
+func (UnimplementedTaskServiceHandler) ListArchivedTasks(context.Context, *connect.Request[v1.ListArchivedTasksRequest]) (*connect.Response[v1.ListArchivedTasksResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.ListArchivedTasks is not implemented"))
 }

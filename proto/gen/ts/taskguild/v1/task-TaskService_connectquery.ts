@@ -33,3 +33,25 @@ export const deleteTask = TaskService.method.deleteTask;
  * @generated from rpc taskguild.v1.TaskService.UpdateTaskStatus
  */
 export const updateTaskStatus = TaskService.method.updateTaskStatus;
+
+/**
+ * Archive operations
+ *
+ * @generated from rpc taskguild.v1.TaskService.ArchiveTask
+ */
+export const archiveTask = TaskService.method.archiveTask;
+
+/**
+ * @generated from rpc taskguild.v1.TaskService.ArchiveTerminalTasks
+ */
+export const archiveTerminalTasks = TaskService.method.archiveTerminalTasks;
+
+/**
+ * @generated from rpc taskguild.v1.TaskService.UnarchiveTask
+ */
+export const unarchiveTask = TaskService.method.unarchiveTask;
+
+/**
+ * @generated from rpc taskguild.v1.TaskService.ListArchivedTasks
+ */
+export const listArchivedTasks = TaskService.method.listArchivedTasks;

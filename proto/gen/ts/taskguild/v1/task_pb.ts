@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file taskguild/v1/task.proto.
  */
 export const file_taskguild_v1_task: GenFile = /*@__PURE__*/
-  fileDesc("Chd0YXNrZ3VpbGQvdjEvdGFzay5wcm90bxIMdGFza2d1aWxkLnYxIsADCgRUYXNrEgoKAmlkGAEgASgJEhIKCnByb2plY3RfaWQYAiABKAkSEwoLd29ya2Zsb3dfaWQYAyABKAkSDQoFdGl0bGUYBCABKAkSEwoLZGVzY3JpcHRpb24YBSABKAkSEQoJc3RhdHVzX2lkGAYgASgJEj0KEWFzc2lnbm1lbnRfc3RhdHVzGAcgASgOMiIudGFza2d1aWxkLnYxLlRhc2tBc3NpZ25tZW50U3RhdHVzEhkKEWFzc2lnbmVkX2FnZW50X2lkGAggASgJEhQKDHVzZV93b3JrdHJlZRgJIAEoCBIXCg9wZXJtaXNzaW9uX21vZGUYCiABKAkSMgoIbWV0YWRhdGEYCyADKAsyIC50YXNrZ3VpbGQudjEuVGFzay5NZXRhZGF0YUVudHJ5Ei4KCmNyZWF0ZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wGi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASKnAgoRQ3JlYXRlVGFza1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRITCgt3b3JrZmxvd19pZBgCIAEoCRINCgV0aXRsZRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIUCgx1c2Vfd29ya3RyZWUYBSABKAgSFwoPcGVybWlzc2lvbl9tb2RlGAYgASgJEj8KCG1ldGFkYXRhGAcgAygLMi0udGFza2d1aWxkLnYxLkNyZWF0ZVRhc2tSZXF1ZXN0Lk1ldGFkYXRhRW50cnkSFgoJc3RhdHVzX2lkGAggASgJSACIAQEaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBQgwKCl9zdGF0dXNfaWQiNgoSQ3JlYXRlVGFza1Jlc3BvbnNlEiAKBHRhc2sYASABKAsyEi50YXNrZ3VpbGQudjEuVGFzayIcCg5HZXRUYXNrUmVxdWVzdBIKCgJpZBgBIAEoCSIzCg9HZXRUYXNrUmVzcG9uc2USIAoEdGFzaxgBIAEoCzISLnRhc2tndWlsZC52MS5UYXNrIoMBChBMaXN0VGFza3NSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSEwoLd29ya2Zsb3dfaWQYAiABKAkSEQoJc3RhdHVzX2lkGAMgASgJEjMKCnBhZ2luYXRpb24YBCABKAsyHy50YXNrZ3VpbGQudjEuUGFnaW5hdGlvblJlcXVlc3QibAoRTGlzdFRhc2tzUmVzcG9uc2USIQoFdGFza3MYASADKAsyEi50YXNrZ3VpbGQudjEuVGFzaxI0CgpwYWdpbmF0aW9uGAIgASgLMiAudGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXNwb25zZSKTAgoRVXBkYXRlVGFza1JlcXVlc3QSCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSGQoMdXNlX3dvcmt0cmVlGAQgASgISACIAQESHAoPcGVybWlzc2lvbl9tb2RlGAUgASgJSAGIAQESPwoIbWV0YWRhdGEYBiADKAsyLS50YXNrZ3VpbGQudjEuVXBkYXRlVGFza1JlcXVlc3QuTWV0YWRhdGFFbnRyeRovCg1NZXRhZGF0YUVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAFCDwoNX3VzZV93b3JrdHJlZUISChBfcGVybWlzc2lvbl9tb2RlIjYKElVwZGF0ZVRhc2tSZXNwb25zZRIgCgR0YXNrGAEgASgLMhIudGFza2d1aWxkLnYxLlRhc2siHwoRRGVsZXRlVGFza1JlcXVlc3QSCgoCaWQYASABKAkiFAoSRGVsZXRlVGFza1Jlc3BvbnNlIkcKF1VwZGF0ZVRhc2tTdGF0dXNSZXF1ZXN0EgoKAmlkGAEgASgJEhEKCXN0YXR1c19pZBgCIAEoCRINCgVmb3JjZRgDIAEoCCI8ChhVcGRhdGVUYXNrU3RhdHVzUmVzcG9uc2USIAoEdGFzaxgBIAEoCzISLnRhc2tndWlsZC52MS5UYXNrKq4BChRUYXNrQXNzaWdubWVudFN0YXR1cxImCiJUQVNLX0FTU0lHTk1FTlRfU1RBVFVTX1VOU1BFQ0lGSUVEEAASJQohVEFTS19BU1NJR05NRU5UX1NUQVRVU19VTkFTU0lHTkVEEAESIgoeVEFTS19BU1NJR05NRU5UX1NUQVRVU19QRU5ESU5HEAISIwofVEFTS19BU1NJR05NRU5UX1NUQVRVU19BU1NJR05FRBADMvkDCgtUYXNrU2VydmljZRJPCgpDcmVhdGVUYXNrEh8udGFza2d1aWxkLnYxLkNyZWF0ZVRhc2tSZXF1ZXN0GiAudGFza2d1aWxkLnYxLkNyZWF0ZVRhc2tSZXNwb25zZRJGCgdHZXRUYXNrEhwudGFza2d1aWxkLnYxLkdldFRhc2tSZXF1ZXN0Gh0udGFza2d1aWxkLnYxLkdldFRhc2tSZXNwb25zZRJMCglMaXN0VGFza3MSHi50YXNrZ3VpbGQudjEuTGlzdFRhc2tzUmVxdWVzdBofLnRhc2tndWlsZC52MS5MaXN0VGFza3NSZXNwb25zZRJPCgpVcGRhdGVUYXNrEh8udGFza2d1aWxkLnYxLlVwZGF0ZVRhc2tSZXF1ZXN0GiAudGFza2d1aWxkLnYxLlVwZGF0ZVRhc2tSZXNwb25zZRJPCgpEZWxldGVUYXNrEh8udGFza2d1aWxkLnYxLkRlbGV0ZVRhc2tSZXF1ZXN0GiAudGFza2d1aWxkLnYxLkRlbGV0ZVRhc2tSZXNwb25zZRJhChBVcGRhdGVUYXNrU3RhdHVzEiUudGFza2d1aWxkLnYxLlVwZGF0ZVRhc2tTdGF0dXNSZXF1ZXN0GiYudGFza2d1aWxkLnYxLlVwZGF0ZVRhc2tTdGF0dXNSZXNwb25zZUK3AQoQY29tLnRhc2tndWlsZC52MUIJVGFza1Byb3RvUAFaR2dpdGh1Yi5jb20va2F6ejE4Ny90YXNrZ3VpbGQvYmFja2VuZC9nZW4vcHJvdG8vdGFza2d1aWxkL3YxO3Rhc2tndWlsZHYxogIDVFhYqgIMVGFza2d1aWxkLlYxygIMVGFza2d1aWxkXFYx4gIYVGFza2d1aWxkXFYxXEdQQk1ldGFkYXRh6gINVGFza2d1aWxkOjpWMWIGcHJvdG8z", [file_google_protobuf_timestamp, file_taskguild_v1_common]);
+  fileDesc("Chd0YXNrZ3VpbGQvdjEvdGFzay5wcm90bxIMdGFza2d1aWxkLnYxIsADCgRUYXNrEgoKAmlkGAEgASgJEhIKCnByb2plY3RfaWQYAiABKAkSEwoLd29ya2Zsb3dfaWQYAyABKAkSDQoFdGl0bGUYBCABKAkSEwoLZGVzY3JpcHRpb24YBSABKAkSEQoJc3RhdHVzX2lkGAYgASgJEj0KEWFzc2lnbm1lbnRfc3RhdHVzGAcgASgOMiIudGFza2d1aWxkLnYxLlRhc2tBc3NpZ25tZW50U3RhdHVzEhkKEWFzc2lnbmVkX2FnZW50X2lkGAggASgJEhQKDHVzZV93b3JrdHJlZRgJIAEoCBIXCg9wZXJtaXNzaW9uX21vZGUYCiABKAkSMgoIbWV0YWRhdGEYCyADKAsyIC50YXNrZ3VpbGQudjEuVGFzay5NZXRhZGF0YUVudHJ5Ei4KCmNyZWF0ZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wGi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASKnAgoRQ3JlYXRlVGFza1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRITCgt3b3JrZmxvd19pZBgCIAEoCRINCgV0aXRsZRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIUCgx1c2Vfd29ya3RyZWUYBSABKAgSFwoPcGVybWlzc2lvbl9tb2RlGAYgASgJEj8KCG1ldGFkYXRhGAcgAygLMi0udGFza2d1aWxkLnYxLkNyZWF0ZVRhc2tSZXF1ZXN0Lk1ldGFkYXRhRW50cnkSFgoJc3RhdHVzX2lkGAggASgJSACIAQEaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBQgwKCl9zdGF0dXNfaWQiNgoSQ3JlYXRlVGFza1Jlc3BvbnNlEiAKBHRhc2sYASABKAsyEi50YXNrZ3VpbGQudjEuVGFzayIcCg5HZXRUYXNrUmVxdWVzdBIKCgJpZBgBIAEoCSIzCg9HZXRUYXNrUmVzcG9uc2USIAoEdGFzaxgBIAEoCzISLnRhc2tndWlsZC52MS5UYXNrIoMBChBMaXN0VGFza3NSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSEwoLd29ya2Zsb3dfaWQYAiABKAkSEQoJc3RhdHVzX2lkGAMgASgJEjMKCnBhZ2luYXRpb24YBCABKAsyHy50YXNrZ3VpbGQudjEuUGFnaW5hdGlvblJlcXVlc3QibAoRTGlzdFRhc2tzUmVzcG9uc2USIQoFdGFza3MYASADKAsyEi50YXNrZ3VpbGQudjEuVGFzaxI0CgpwYWdpbmF0aW9uGAIgASgLMiAudGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXNwb25zZSKTAgoRVXBkYXRlVGFza1JlcXVlc3QSCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSGQoMdXNlX3dvcmt0cmVlGAQgASgISACIAQESHAoPcGVybWlzc2lvbl9tb2RlGAUgASgJSAGIAQESPwoIbWV0YWRhdGEYBiADKAsyLS50YXNrZ3VpbGQudjEuVXBkYXRlVGFza1JlcXVlc3QuTWV0YWRhdGFFbnRyeRovCg1NZXRhZGF0YUVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAFCDwoNX3VzZV93b3JrdHJlZUISChBfcGVybWlzc2lvbl9tb2RlIjYKElVwZGF0ZVRhc2tSZXNwb25zZRIgCgR0YXNrGAEgASgLMhIudGFza2d1aWxkLnYxLlRhc2siHwoRRGVsZXRlVGFza1JlcXVlc3QSCgoCaWQYASABKAkiFAoSRGVsZXRlVGFza1Jlc3BvbnNlIkcKF1VwZGF0ZVRhc2tTdGF0dXNSZXF1ZXN0EgoKAmlkGAEgASgJEhEKCXN0YXR1c19pZBgCIAEoCRINCgVmb3JjZRgDIAEoCCI8ChhVcGRhdGVUYXNrU3RhdHVzUmVzcG9uc2USIAoEdGFzaxgBIAEoCzISLnRhc2tndWlsZC52MS5UYXNrIiAKEkFyY2hpdmVUYXNrUmVxdWVzdBIKCgJpZBgBIAEoCSI3ChNBcmNoaXZlVGFza1Jlc3BvbnNlEiAKBHRhc2sYASABKAsyEi50YXNrZ3VpbGQudjEuVGFzayJGChtBcmNoaXZlVGVybWluYWxUYXNrc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRITCgt3b3JrZmxvd19pZBgCIAEoCSJ1ChxBcmNoaXZlVGVybWluYWxUYXNrc1Jlc3BvbnNlEioKDmFyY2hpdmVkX3Rhc2tzGAEgAygLMhIudGFza2d1aWxkLnYxLlRhc2sSKQoNc2tpcHBlZF90YXNrcxgCIAMoCzISLnRhc2tndWlsZC52MS5UYXNrIiIKFFVuYXJjaGl2ZVRhc2tSZXF1ZXN0EgoKAmlkGAEgASgJIjkKFVVuYXJjaGl2ZVRhc2tSZXNwb25zZRIgCgR0YXNrGAEgASgLMhIudGFza2d1aWxkLnYxLlRhc2sieAoYTGlzdEFyY2hpdmVkVGFza3NSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSEwoLd29ya2Zsb3dfaWQYAiABKAkSMwoKcGFnaW5hdGlvbhgDIAEoCzIfLnRhc2tndWlsZC52MS5QYWdpbmF0aW9uUmVxdWVzdCJ0ChlMaXN0QXJjaGl2ZWRUYXNrc1Jlc3BvbnNlEiEKBXRhc2tzGAEgAygLMhIudGFza2d1aWxkLnYxLlRhc2sSNAoKcGFnaW5hdGlvbhgCIAEoCzIgLnRhc2tndWlsZC52MS5QYWdpbmF0aW9uUmVzcG9uc2UqrgEKFFRhc2tBc3NpZ25tZW50U3RhdHVzEiYKIlRBU0tfQVNTSUdOTUVOVF9TVEFUVVNfVU5TUEVDSUZJRUQQABIlCiFUQVNLX0FTU0lHTk1FTlRfU1RBVFVTX1VOQVNTSUdORUQQARIiCh5UQVNLX0FTU0lHTk1FTlRfU1RBVFVTX1BFTkRJTkcQAhIjCh9UQVNLX0FTU0lHTk1FTlRfU1RBVFVTX0FTU0lHTkVEEAMy/AYKC1Rhc2tTZXJ2aWNlEk8KCkNyZWF0ZVRhc2sSHy50YXNrZ3VpbGQudjEuQ3JlYXRlVGFza1JlcXVlc3QaIC50YXNrZ3VpbGQudjEuQ3JlYXRlVGFza1Jlc3BvbnNlEkYKB0dldFRhc2sSHC50YXNrZ3VpbGQudjEuR2V0VGFza1JlcXVlc3QaHS50YXNrZ3VpbGQudjEuR2V0VGFza1Jlc3BvbnNlEkwKCUxpc3RUYXNrcxIeLnRhc2tndWlsZC52MS5MaXN0VGFza3NSZXF1ZXN0Gh8udGFza2d1aWxkLnYxLkxpc3RUYXNrc1Jlc3BvbnNlEk8KClVwZGF0ZVRhc2sSHy50YXNrZ3VpbGQudjEuVXBkYXRlVGFza1JlcXVlc3QaIC50YXNrZ3VpbGQudjEuVXBkYXRlVGFza1Jlc3BvbnNlEk8KCkRlbGV0ZVRhc2sSHy50YXNrZ3VpbGQudjEuRGVsZXRlVGFza1JlcXVlc3QaIC50YXNrZ3VpbGQudjEuRGVsZXRlVGFza1Jlc3BvbnNlEmEKEFVwZGF0ZVRhc2tTdGF0dXMSJS50YXNrZ3VpbGQudjEuVXBkYXRlVGFza1N0YXR1c1JlcXVlc3QaJi50YXNrZ3VpbGQudjEuVXBkYXRlVGFza1N0YXR1c1Jlc3BvbnNlElIKC0FyY2hpdmVUYXNrEiAudGFza2d1aWxkLnYxLkFyY2hpdmVUYXNrUmVxdWVzdBohLnRhc2tndWlsZC52MS5BcmNoaXZlVGFza1Jlc3BvbnNlEm0KFEFyY2hpdmVUZXJtaW5hbFRhc2tzEikudGFza2d1aWxkLnYxLkFyY2hpdmVUZXJtaW5hbFRhc2tzUmVxdWVzdBoqLnRhc2tndWlsZC52MS5BcmNoaXZlVGVybWluYWxUYXNrc1Jlc3BvbnNlElgKDVVuYXJjaGl2ZVRhc2sSIi50YXNrZ3VpbGQudjEuVW5hcmNoaXZlVGFza1JlcXVlc3QaIy50YXNrZ3VpbGQudjEuVW5hcmNoaXZlVGFza1Jlc3BvbnNlEmQKEUxpc3RBcmNoaXZlZFRhc2tzEiYudGFza2d1aWxkLnYxLkxpc3RBcmNoaXZlZFRhc2tzUmVxdWVzdBonLnRhc2tndWlsZC52MS5MaXN0QXJjaGl2ZWRUYXNrc1Jlc3BvbnNlQrcBChBjb20udGFza2d1aWxkLnYxQglUYXNrUHJvdG9QAVpHZ2l0aHViLmNvbS9rYXp6MTg3L3Rhc2tndWlsZC9iYWNrZW5kL2dlbi9wcm90by90YXNrZ3VpbGQvdjE7dGFza2d1aWxkdjGiAgNUWFiqAgxUYXNrZ3VpbGQuVjHKAgxUYXNrZ3VpbGRcVjHiAhhUYXNrZ3VpbGRcVjFcR1BCTWV0YWRhdGHqAg1UYXNrZ3VpbGQ6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_taskguild_v1_common]);
 
 /**
  * @generated from message taskguild.v1.Task
@@ -421,6 +421,171 @@ export const UpdateTaskStatusResponseSchema: GenMessage<UpdateTaskStatusResponse
   messageDesc(file_taskguild_v1_task, 12);
 
 /**
+ * @generated from message taskguild.v1.ArchiveTaskRequest
+ */
+export type ArchiveTaskRequest = Message<"taskguild.v1.ArchiveTaskRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message taskguild.v1.ArchiveTaskRequest.
+ * Use `create(ArchiveTaskRequestSchema)` to create a new message.
+ */
+export const ArchiveTaskRequestSchema: GenMessage<ArchiveTaskRequest> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_task, 13);
+
+/**
+ * @generated from message taskguild.v1.ArchiveTaskResponse
+ */
+export type ArchiveTaskResponse = Message<"taskguild.v1.ArchiveTaskResponse"> & {
+  /**
+   * @generated from field: taskguild.v1.Task task = 1;
+   */
+  task?: Task;
+};
+
+/**
+ * Describes the message taskguild.v1.ArchiveTaskResponse.
+ * Use `create(ArchiveTaskResponseSchema)` to create a new message.
+ */
+export const ArchiveTaskResponseSchema: GenMessage<ArchiveTaskResponse> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_task, 14);
+
+/**
+ * @generated from message taskguild.v1.ArchiveTerminalTasksRequest
+ */
+export type ArchiveTerminalTasksRequest = Message<"taskguild.v1.ArchiveTerminalTasksRequest"> & {
+  /**
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: string workflow_id = 2;
+   */
+  workflowId: string;
+};
+
+/**
+ * Describes the message taskguild.v1.ArchiveTerminalTasksRequest.
+ * Use `create(ArchiveTerminalTasksRequestSchema)` to create a new message.
+ */
+export const ArchiveTerminalTasksRequestSchema: GenMessage<ArchiveTerminalTasksRequest> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_task, 15);
+
+/**
+ * @generated from message taskguild.v1.ArchiveTerminalTasksResponse
+ */
+export type ArchiveTerminalTasksResponse = Message<"taskguild.v1.ArchiveTerminalTasksResponse"> & {
+  /**
+   * tasks that were archived
+   *
+   * @generated from field: repeated taskguild.v1.Task archived_tasks = 1;
+   */
+  archivedTasks: Task[];
+
+  /**
+   * tasks skipped (e.g. agent running)
+   *
+   * @generated from field: repeated taskguild.v1.Task skipped_tasks = 2;
+   */
+  skippedTasks: Task[];
+};
+
+/**
+ * Describes the message taskguild.v1.ArchiveTerminalTasksResponse.
+ * Use `create(ArchiveTerminalTasksResponseSchema)` to create a new message.
+ */
+export const ArchiveTerminalTasksResponseSchema: GenMessage<ArchiveTerminalTasksResponse> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_task, 16);
+
+/**
+ * @generated from message taskguild.v1.UnarchiveTaskRequest
+ */
+export type UnarchiveTaskRequest = Message<"taskguild.v1.UnarchiveTaskRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message taskguild.v1.UnarchiveTaskRequest.
+ * Use `create(UnarchiveTaskRequestSchema)` to create a new message.
+ */
+export const UnarchiveTaskRequestSchema: GenMessage<UnarchiveTaskRequest> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_task, 17);
+
+/**
+ * @generated from message taskguild.v1.UnarchiveTaskResponse
+ */
+export type UnarchiveTaskResponse = Message<"taskguild.v1.UnarchiveTaskResponse"> & {
+  /**
+   * @generated from field: taskguild.v1.Task task = 1;
+   */
+  task?: Task;
+};
+
+/**
+ * Describes the message taskguild.v1.UnarchiveTaskResponse.
+ * Use `create(UnarchiveTaskResponseSchema)` to create a new message.
+ */
+export const UnarchiveTaskResponseSchema: GenMessage<UnarchiveTaskResponse> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_task, 18);
+
+/**
+ * @generated from message taskguild.v1.ListArchivedTasksRequest
+ */
+export type ListArchivedTasksRequest = Message<"taskguild.v1.ListArchivedTasksRequest"> & {
+  /**
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: string workflow_id = 2;
+   */
+  workflowId: string;
+
+  /**
+   * @generated from field: taskguild.v1.PaginationRequest pagination = 3;
+   */
+  pagination?: PaginationRequest;
+};
+
+/**
+ * Describes the message taskguild.v1.ListArchivedTasksRequest.
+ * Use `create(ListArchivedTasksRequestSchema)` to create a new message.
+ */
+export const ListArchivedTasksRequestSchema: GenMessage<ListArchivedTasksRequest> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_task, 19);
+
+/**
+ * @generated from message taskguild.v1.ListArchivedTasksResponse
+ */
+export type ListArchivedTasksResponse = Message<"taskguild.v1.ListArchivedTasksResponse"> & {
+  /**
+   * @generated from field: repeated taskguild.v1.Task tasks = 1;
+   */
+  tasks: Task[];
+
+  /**
+   * @generated from field: taskguild.v1.PaginationResponse pagination = 2;
+   */
+  pagination?: PaginationResponse;
+};
+
+/**
+ * Describes the message taskguild.v1.ListArchivedTasksResponse.
+ * Use `create(ListArchivedTasksResponseSchema)` to create a new message.
+ */
+export const ListArchivedTasksResponseSchema: GenMessage<ListArchivedTasksResponse> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_task, 20);
+
+/**
  * @generated from enum taskguild.v1.TaskAssignmentStatus
  */
 export enum TaskAssignmentStatus {
@@ -502,6 +667,40 @@ export const TaskService: GenService<{
     methodKind: "unary";
     input: typeof UpdateTaskStatusRequestSchema;
     output: typeof UpdateTaskStatusResponseSchema;
+  },
+  /**
+   * Archive operations
+   *
+   * @generated from rpc taskguild.v1.TaskService.ArchiveTask
+   */
+  archiveTask: {
+    methodKind: "unary";
+    input: typeof ArchiveTaskRequestSchema;
+    output: typeof ArchiveTaskResponseSchema;
+  },
+  /**
+   * @generated from rpc taskguild.v1.TaskService.ArchiveTerminalTasks
+   */
+  archiveTerminalTasks: {
+    methodKind: "unary";
+    input: typeof ArchiveTerminalTasksRequestSchema;
+    output: typeof ArchiveTerminalTasksResponseSchema;
+  },
+  /**
+   * @generated from rpc taskguild.v1.TaskService.UnarchiveTask
+   */
+  unarchiveTask: {
+    methodKind: "unary";
+    input: typeof UnarchiveTaskRequestSchema;
+    output: typeof UnarchiveTaskResponseSchema;
+  },
+  /**
+   * @generated from rpc taskguild.v1.TaskService.ListArchivedTasks
+   */
+  listArchivedTasks: {
+    methodKind: "unary";
+    input: typeof ListArchivedTasksRequestSchema;
+    output: typeof ListArchivedTasksResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_taskguild_v1_task, 0);
