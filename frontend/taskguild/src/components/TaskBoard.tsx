@@ -4,6 +4,7 @@ import { listTasks, updateTaskStatus } from '@taskguild/proto/taskguild/v1/task-
 import { listAgents } from '@taskguild/proto/taskguild/v1/agent-AgentService_connectquery.ts'
 import type { Workflow, WorkflowStatus } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
+import { TaskAssignmentStatus } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import {
   DndContext,
@@ -19,6 +20,7 @@ import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { TaskCard } from './TaskCard'
 import { TaskDetailModal } from './TaskDetailModal'
 import { TaskCreateModal } from './TaskCreateModal'
+import { ForceTransitionDialog } from './ForceTransitionDialog'
 import { Plus, ChevronDown, ChevronRight } from 'lucide-react'
 
 interface TaskBoardProps {
@@ -35,6 +37,14 @@ const TASK_EVENT_TYPES = [
   EventType.AGENT_STATUS_CHANGED,
 ]
 
+/** Pending force-move confirmation state */
+interface ForceTransitionState {
+  task: Task
+  targetStatusId: string
+  fromStatusName: string
+  toStatusName: string
+}
+
 export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
   const { data, refetch } = useQuery(listTasks, {
     projectId,
@@ -47,6 +57,9 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
   const lastDropWasSuccessful = useRef(false)
   // Optimistic moves: taskId -> targetStatusId (applied before API response)
   const [pendingMoves, setPendingMoves] = useState<Map<string, string>>(new Map())
+
+  // Force-transition confirmation dialog state
+  const [forceTransition, setForceTransition] = useState<ForceTransitionState | null>(null)
 
   const statusMut = useMutation(updateTaskStatus)
 
@@ -126,22 +139,50 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
     return map
   }, [tasks, sortedStatuses, pendingMoves])
 
-  const allowedStatusIds = useMemo(() => {
+  // Allowed (normal) transition targets for the currently dragged task
+  const normalTargetIds = useMemo(() => {
     if (!activeTask) return new Set<string>()
     const currentStatus = statusById.get(activeTask.statusId)
     return new Set(currentStatus?.transitionsTo ?? [])
   }, [activeTask, statusById])
 
-  // Build transition targets for each status (for mobile transition buttons)
-  const transitionTargetsByStatus = useMemo(() => {
-    const map = new Map<string, { id: string; name: string }[]>()
+  // Force-move targets: all statuses except the current one and normal targets
+  const forceTargetIds = useMemo(() => {
+    if (!activeTask) return new Set<string>()
+    const isAgentRunning =
+      activeTask.assignmentStatus === TaskAssignmentStatus.ASSIGNED ||
+      activeTask.assignmentStatus === TaskAssignmentStatus.PENDING
+    // Don't allow force targets if agent is running
+    if (isAgentRunning) return new Set<string>()
+    const set = new Set<string>()
     for (const s of sortedStatuses) {
-      const targets = (s.transitionsTo ?? [])
-        .map((toId) => {
-          const toStatus = statusById.get(toId)
-          return toStatus ? { id: toStatus.id, name: toStatus.name } : null
-        })
-        .filter((t): t is { id: string; name: string } => t !== null)
+      if (s.id !== activeTask.statusId && !normalTargetIds.has(s.id)) {
+        set.add(s.id)
+      }
+    }
+    return set
+  }, [activeTask, sortedStatuses, normalTargetIds])
+
+  // Build transition targets for each status (for mobile transition buttons)
+  // Includes both normal and force targets
+  const transitionTargetsByStatus = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; isForce: boolean }[]>()
+    for (const s of sortedStatuses) {
+      const normalIds = new Set(s.transitionsTo ?? [])
+      const targets: { id: string; name: string; isForce: boolean }[] = []
+      // Normal transitions first
+      for (const toId of normalIds) {
+        const toStatus = statusById.get(toId)
+        if (toStatus) {
+          targets.push({ id: toStatus.id, name: toStatus.name, isForce: false })
+        }
+      }
+      // Force transitions (all other statuses)
+      for (const other of sortedStatuses) {
+        if (other.id !== s.id && !normalIds.has(other.id)) {
+          targets.push({ id: other.id, name: other.name, isForce: true })
+        }
+      }
       map.set(s.id, targets)
     }
     return map
@@ -152,6 +193,30 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
     const task = event.active.data.current?.task as Task | undefined
     if (task) setActiveTask(task)
   }, [])
+
+  /** Execute a status transition (normal or force) */
+  const executeTransition = useCallback(
+    (taskId: string, targetStatusId: string, force: boolean) => {
+      // Optimistic update: immediately show the task in the target column
+      setPendingMoves((prev) => new Map(prev).set(taskId, targetStatusId))
+
+      statusMut.mutate(
+        { id: taskId, statusId: targetStatusId, force },
+        {
+          onSettled: () => {
+            // Clear the optimistic move and sync with server state
+            setPendingMoves((prev) => {
+              const next = new Map(prev)
+              next.delete(taskId)
+              return next
+            })
+            refetch()
+          },
+        },
+      )
+    },
+    [statusMut, refetch],
+  )
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -172,59 +237,80 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
       }
 
       const currentStatus = statusById.get(task.statusId)
-      if (!currentStatus?.transitionsTo.includes(targetStatusId)) {
-        lastDropWasSuccessful.current = false
+      const isNormalTransition = currentStatus?.transitionsTo.includes(targetStatusId) ?? false
+
+      if (isNormalTransition) {
+        // Valid normal drop — proceed immediately
+        lastDropWasSuccessful.current = true
+        executeTransition(task.id, targetStatusId, false)
         setActiveTask(null)
         return
       }
 
-      // Valid drop — mark as successful so DragOverlay skips the snap-back animation
-      lastDropWasSuccessful.current = true
+      // Check if this is a valid force-move target
+      if (forceTargetIds.has(targetStatusId)) {
+        // Force drop — show confirmation dialog
+        lastDropWasSuccessful.current = true
+        const fromName = currentStatus?.name ?? task.statusId
+        const toName = statusById.get(targetStatusId)?.name ?? targetStatusId
+        setForceTransition({
+          task,
+          targetStatusId,
+          fromStatusName: fromName,
+          toStatusName: toName,
+        })
+        setActiveTask(null)
+        return
+      }
 
-      // Optimistic update: immediately show the task in the target column
-      setPendingMoves((prev) => new Map(prev).set(task.id, targetStatusId))
-
-      statusMut.mutate(
-        { id: task.id, statusId: targetStatusId },
-        {
-          onSettled: () => {
-            // Clear the optimistic move and sync with server state
-            setPendingMoves((prev) => {
-              const next = new Map(prev)
-              next.delete(task.id)
-              return next
-            })
-            refetch()
-          },
-        },
-      )
-
+      // Invalid drop (e.g., agent running blocks force targets)
+      lastDropWasSuccessful.current = false
       setActiveTask(null)
     },
-    [statusById, statusMut, refetch],
+    [statusById, forceTargetIds, executeTransition],
   )
+
+  /** Confirm force transition from dialog */
+  const handleForceConfirm = useCallback(() => {
+    if (!forceTransition) return
+    executeTransition(forceTransition.task.id, forceTransition.targetStatusId, true)
+    setForceTransition(null)
+  }, [forceTransition, executeTransition])
+
+  /** Cancel force transition dialog */
+  const handleForceCancel = useCallback(() => {
+    setForceTransition(null)
+  }, [])
 
   // Handle mobile transition button tap
   const handleMobileTransition = useCallback(
-    (taskId: string, targetStatusId: string) => {
-      // Optimistic update
-      setPendingMoves((prev) => new Map(prev).set(taskId, targetStatusId))
+    (taskId: string, targetStatusId: string, isForce: boolean) => {
+      if (!isForce) {
+        // Normal transition — execute immediately
+        executeTransition(taskId, targetStatusId, false)
+        return
+      }
 
-      statusMut.mutate(
-        { id: taskId, statusId: targetStatusId },
-        {
-          onSettled: () => {
-            setPendingMoves((prev) => {
-              const next = new Map(prev)
-              next.delete(taskId)
-              return next
-            })
-            refetch()
-          },
-        },
-      )
+      // Force transition — find task and show confirmation dialog
+      const task = tasks.find((t) => t.id === taskId)
+      if (!task) return
+
+      // Block force-move when agent is running
+      const isAgentRunning =
+        task.assignmentStatus === TaskAssignmentStatus.ASSIGNED ||
+        task.assignmentStatus === TaskAssignmentStatus.PENDING
+      if (isAgentRunning) return
+
+      const fromName = statusById.get(task.statusId)?.name ?? task.statusId
+      const toName = statusById.get(targetStatusId)?.name ?? targetStatusId
+      setForceTransition({
+        task,
+        targetStatusId,
+        fromStatusName: fromName,
+        toStatusName: toName,
+      })
     },
-    [statusMut, refetch],
+    [executeTransition, tasks, statusById],
   )
 
   return (
@@ -246,7 +332,8 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
               agentConfigName={agentConfigByStatusId.get(status.id)}
               onEdit={setEditingTaskId}
               onCreated={() => refetch()}
-              isDropTarget={allowedStatusIds.has(status.id)}
+              isNormalTarget={normalTargetIds.has(status.id)}
+              isForceTarget={forceTargetIds.has(status.id)}
               isDragging={activeTask !== null}
               transitionTargets={transitionTargetsByStatus.get(status.id) ?? []}
               onTransition={handleMobileTransition}
@@ -276,6 +363,16 @@ export function TaskBoard({ projectId, workflow }: TaskBoardProps) {
             onChanged={() => refetch()}
           />
         )}
+
+        {/* Force-transition confirmation dialog */}
+        {forceTransition && (
+          <ForceTransitionDialog
+            fromStatusName={forceTransition.fromStatusName}
+            toStatusName={forceTransition.toStatusName}
+            onConfirm={handleForceConfirm}
+            onCancel={handleForceCancel}
+          />
+        )}
       </div>
     </DndContext>
   )
@@ -289,7 +386,8 @@ function StatusColumn({
   agentConfigName,
   onEdit,
   onCreated,
-  isDropTarget,
+  isNormalTarget,
+  isForceTarget,
   isDragging,
   transitionTargets,
   onTransition,
@@ -303,10 +401,11 @@ function StatusColumn({
   agentConfigName?: string
   onEdit: (id: string) => void
   onCreated: () => void
-  isDropTarget: boolean
+  isNormalTarget: boolean
+  isForceTarget: boolean
   isDragging: boolean
-  transitionTargets: { id: string; name: string }[]
-  onTransition: (taskId: string, targetStatusId: string) => void
+  transitionTargets: { id: string; name: string; isForce: boolean }[]
+  onTransition: (taskId: string, targetStatusId: string, isForce: boolean) => void
   defaultPermissionMode?: string
   defaultUseWorktree?: boolean
 }) {
@@ -314,9 +413,14 @@ function StatusColumn({
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
 
+  const isDropTarget = isNormalTarget || isForceTarget
   let borderClass = 'border-slate-800'
   if (isDragging && isDropTarget) {
-    borderClass = isOver ? 'border-cyan-400' : 'border-cyan-500/50'
+    if (isNormalTarget) {
+      borderClass = isOver ? 'border-cyan-400' : 'border-cyan-500/50'
+    } else if (isForceTarget) {
+      borderClass = isOver ? 'border-amber-400' : 'border-amber-500/30'
+    }
   }
 
   return (

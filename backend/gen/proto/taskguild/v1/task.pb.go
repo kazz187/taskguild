@@ -789,9 +789,12 @@ func (*DeleteTaskResponse) Descriptor() ([]byte, []int) {
 }
 
 type UpdateTaskStatusRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	StatusId      string                 `protobuf:"bytes,2,opt,name=status_id,json=statusId,proto3" json:"status_id,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Id       string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	StatusId string                 `protobuf:"bytes,2,opt,name=status_id,json=statusId,proto3" json:"status_id,omitempty"`
+	// When true, bypass workflow transition validation (force move).
+	// Still blocked if an agent is currently running on the task.
+	Force         bool `protobuf:"varint,3,opt,name=force,proto3" json:"force,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -838,6 +841,13 @@ func (x *UpdateTaskStatusRequest) GetStatusId() string {
 		return x.StatusId
 	}
 	return ""
+}
+
+func (x *UpdateTaskStatusRequest) GetForce() bool {
+	if x != nil {
+		return x.Force
+	}
+	return false
 }
 
 type UpdateTaskStatusResponse struct {
@@ -963,10 +973,11 @@ const file_taskguild_v1_task_proto_rawDesc = "" +
 	"\x04task\x18\x01 \x01(\v2\x12.taskguild.v1.TaskR\x04task\"#\n" +
 	"\x11DeleteTaskRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x14\n" +
-	"\x12DeleteTaskResponse\"F\n" +
+	"\x12DeleteTaskResponse\"\\\n" +
 	"\x17UpdateTaskStatusRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
-	"\tstatus_id\x18\x02 \x01(\tR\bstatusId\"B\n" +
+	"\tstatus_id\x18\x02 \x01(\tR\bstatusId\x12\x14\n" +
+	"\x05force\x18\x03 \x01(\bR\x05force\"B\n" +
 	"\x18UpdateTaskStatusResponse\x12&\n" +
 	"\x04task\x18\x01 \x01(\v2\x12.taskguild.v1.TaskR\x04task*\xae\x01\n" +
 	"\x14TaskAssignmentStatus\x12&\n" +

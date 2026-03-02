@@ -202,6 +202,17 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *connect.Request[task
 		return nil, err
 	}
 
+	// Block force-move when an agent is actively running on the task.
+	if req.Msg.Force {
+		if t.AssignmentStatus == AssignmentStatusPending || t.AssignmentStatus == AssignmentStatusAssigned {
+			return nil, cerr.NewError(
+				cerr.FailedPrecondition,
+				fmt.Sprintf("cannot force-move a task while an agent is running (status: %s)", t.AssignmentStatus),
+				nil,
+			).ConnectError()
+		}
+	}
+
 	// Validate transition.
 	wf, err := s.workflowRepo.Get(ctx, t.WorkflowID)
 	if err != nil {
@@ -219,19 +230,38 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *connect.Request[task
 		return nil, cerr.NewError(cerr.Internal, "current status not found in workflow", nil).ConnectError()
 	}
 
-	allowed := false
-	for _, to := range currentStatus.TransitionsTo {
-		if to == req.Msg.StatusId {
-			allowed = true
+	// Validate target status exists in the workflow.
+	targetExists := false
+	for i := range wf.Statuses {
+		if wf.Statuses[i].ID == req.Msg.StatusId {
+			targetExists = true
 			break
 		}
 	}
-	if !allowed {
+	if !targetExists {
 		return nil, cerr.NewError(
-			cerr.FailedPrecondition,
-			fmt.Sprintf("transition from %q to %q is not allowed", currentStatus.Name, req.Msg.StatusId),
+			cerr.InvalidArgument,
+			fmt.Sprintf("target status %q not found in workflow", req.Msg.StatusId),
 			nil,
 		).ConnectError()
+	}
+
+	// When force is false, enforce workflow transition rules.
+	if !req.Msg.Force {
+		allowed := false
+		for _, to := range currentStatus.TransitionsTo {
+			if to == req.Msg.StatusId {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			return nil, cerr.NewError(
+				cerr.FailedPrecondition,
+				fmt.Sprintf("transition from %q to %q is not allowed", currentStatus.Name, req.Msg.StatusId),
+				nil,
+			).ConnectError()
+		}
 	}
 
 	t.StatusID = req.Msg.StatusId
