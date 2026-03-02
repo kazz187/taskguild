@@ -15,6 +15,7 @@ import (
 )
 
 const tasksPrefix = "tasks"
+const archivedPrefix = "tasks/archived"
 
 type YAMLRepository struct {
 	storage storage.Storage
@@ -27,6 +28,10 @@ func NewYAMLRepository(s storage.Storage) *YAMLRepository {
 
 func path(id string) string {
 	return fmt.Sprintf("%s/%s.yaml", tasksPrefix, id)
+}
+
+func archivedPath(id string) string {
+	return fmt.Sprintf("%s/%s.yaml", archivedPrefix, id)
 }
 
 func (r *YAMLRepository) Create(ctx context.Context, t *task.Task) error {
@@ -180,4 +185,98 @@ func (r *YAMLRepository) Claim(ctx context.Context, taskID, agentID string) (*ta
 		return nil, err
 	}
 	return t, nil
+}
+
+func (r *YAMLRepository) Archive(ctx context.Context, id string) error {
+	// Read the task from active path.
+	data, err := r.storage.Read(ctx, path(id))
+	if err != nil {
+		return cerr.WrapStorageReadError("task", err)
+	}
+
+	// Write to archived path.
+	if err := r.storage.Write(ctx, archivedPath(id), data); err != nil {
+		return cerr.WrapStorageWriteError("archived task", err)
+	}
+
+	// Delete from active path.
+	if err := r.storage.Delete(ctx, path(id)); err != nil {
+		// Try to clean up archived copy on failure.
+		_ = r.storage.Delete(ctx, archivedPath(id))
+		return cerr.WrapStorageDeleteError("task", err)
+	}
+
+	return nil
+}
+
+func (r *YAMLRepository) Unarchive(ctx context.Context, id string) error {
+	// Read the task from archived path.
+	data, err := r.storage.Read(ctx, archivedPath(id))
+	if err != nil {
+		return cerr.WrapStorageReadError("archived task", err)
+	}
+
+	// Write to active path.
+	if err := r.storage.Write(ctx, path(id), data); err != nil {
+		return cerr.WrapStorageWriteError("task", err)
+	}
+
+	// Delete from archived path.
+	if err := r.storage.Delete(ctx, archivedPath(id)); err != nil {
+		// Try to clean up active copy on failure.
+		_ = r.storage.Delete(ctx, path(id))
+		return cerr.WrapStorageDeleteError("archived task", err)
+	}
+
+	return nil
+}
+
+func (r *YAMLRepository) GetArchived(ctx context.Context, id string) (*task.Task, error) {
+	data, err := r.storage.Read(ctx, archivedPath(id))
+	if err != nil {
+		return nil, cerr.WrapStorageReadError("archived task", err)
+	}
+	var t task.Task
+	if err := yaml.Unmarshal(data, &t); err != nil {
+		return nil, cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to unmarshal archived task: %w", err))
+	}
+	return &t, nil
+}
+
+func (r *YAMLRepository) ListArchived(ctx context.Context, projectID, workflowID string, limit, offset int) ([]*task.Task, int, error) {
+	paths, err := r.storage.List(ctx, archivedPrefix)
+	if err != nil {
+		return nil, 0, cerr.WrapStorageReadError("archived tasks", err)
+	}
+
+	sort.Strings(paths)
+
+	var all []*task.Task
+	for _, p := range paths {
+		data, err := r.storage.Read(ctx, p)
+		if err != nil {
+			continue
+		}
+		var t task.Task
+		if err := yaml.Unmarshal(data, &t); err != nil {
+			continue
+		}
+		if projectID != "" && t.ProjectID != projectID {
+			continue
+		}
+		if workflowID != "" && t.WorkflowID != workflowID {
+			continue
+		}
+		all = append(all, &t)
+	}
+
+	total := len(all)
+	if offset >= total {
+		return nil, total, nil
+	}
+	all = all[offset:]
+	if limit > 0 && len(all) > limit {
+		all = all[:limit]
+	}
+	return all, total, nil
 }

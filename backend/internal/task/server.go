@@ -286,6 +286,129 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *connect.Request[task
 	}), nil
 }
 
+func (s *Server) ArchiveTask(ctx context.Context, req *connect.Request[taskguildv1.ArchiveTaskRequest]) (*connect.Response[taskguildv1.ArchiveTaskResponse], error) {
+	// Get task before archiving for response and event metadata.
+	t, err := s.repo.Get(ctx, req.Msg.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.Archive(ctx, req.Msg.Id); err != nil {
+		return nil, err
+	}
+
+	s.eventBus.PublishNew(
+		taskguildv1.EventType_EVENT_TYPE_TASK_ARCHIVED,
+		t.ID,
+		"",
+		map[string]string{"project_id": t.ProjectID, "workflow_id": t.WorkflowID},
+	)
+
+	return connect.NewResponse(&taskguildv1.ArchiveTaskResponse{
+		Task: toProto(t),
+	}), nil
+}
+
+func (s *Server) ArchiveTerminalTasks(ctx context.Context, req *connect.Request[taskguildv1.ArchiveTerminalTasksRequest]) (*connect.Response[taskguildv1.ArchiveTerminalTasksResponse], error) {
+	// Fetch workflow to identify terminal statuses.
+	wf, err := s.workflowRepo.Get(ctx, req.Msg.WorkflowId)
+	if err != nil {
+		return nil, err
+	}
+
+	terminalStatusIDs := make(map[string]bool)
+	for _, st := range wf.Statuses {
+		if st.IsTerminal {
+			terminalStatusIDs[st.ID] = true
+		}
+	}
+
+	// List all tasks in this workflow.
+	tasks, _, err := s.repo.List(ctx, req.Msg.ProjectId, req.Msg.WorkflowId, "", 0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	var archived []*taskguildv1.Task
+	var skipped []*taskguildv1.Task
+	for _, t := range tasks {
+		if !terminalStatusIDs[t.StatusID] {
+			continue
+		}
+		// Skip tasks that have agents running (pending or assigned).
+		if t.AssignmentStatus == AssignmentStatusPending || t.AssignmentStatus == AssignmentStatusAssigned {
+			skipped = append(skipped, toProto(t))
+			continue
+		}
+		if err := s.repo.Archive(ctx, t.ID); err != nil {
+			skipped = append(skipped, toProto(t))
+			continue
+		}
+		archived = append(archived, toProto(t))
+
+		s.eventBus.PublishNew(
+			taskguildv1.EventType_EVENT_TYPE_TASK_ARCHIVED,
+			t.ID,
+			"",
+			map[string]string{"project_id": t.ProjectID, "workflow_id": t.WorkflowID},
+		)
+	}
+
+	return connect.NewResponse(&taskguildv1.ArchiveTerminalTasksResponse{
+		ArchivedTasks: archived,
+		SkippedTasks:  skipped,
+	}), nil
+}
+
+func (s *Server) UnarchiveTask(ctx context.Context, req *connect.Request[taskguildv1.UnarchiveTaskRequest]) (*connect.Response[taskguildv1.UnarchiveTaskResponse], error) {
+	// Get archived task before unarchiving for response and event metadata.
+	t, err := s.repo.GetArchived(ctx, req.Msg.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.Unarchive(ctx, req.Msg.Id); err != nil {
+		return nil, err
+	}
+
+	s.eventBus.PublishNew(
+		taskguildv1.EventType_EVENT_TYPE_TASK_UNARCHIVED,
+		t.ID,
+		"",
+		map[string]string{"project_id": t.ProjectID, "workflow_id": t.WorkflowID},
+	)
+
+	return connect.NewResponse(&taskguildv1.UnarchiveTaskResponse{
+		Task: toProto(t),
+	}), nil
+}
+
+func (s *Server) ListArchivedTasks(ctx context.Context, req *connect.Request[taskguildv1.ListArchivedTasksRequest]) (*connect.Response[taskguildv1.ListArchivedTasksResponse], error) {
+	limit, offset := int32(0), int32(0)
+	if req.Msg.Pagination != nil {
+		if req.Msg.Pagination.Limit > 0 {
+			limit = req.Msg.Pagination.Limit
+		}
+		offset = req.Msg.Pagination.Offset
+	}
+	tasks, total, err := s.repo.ListArchived(ctx, req.Msg.ProjectId, req.Msg.WorkflowId, int(limit), int(offset))
+	if err != nil {
+		return nil, err
+	}
+	protos := make([]*taskguildv1.Task, len(tasks))
+	for i, t := range tasks {
+		protos[i] = toProto(t)
+	}
+	return connect.NewResponse(&taskguildv1.ListArchivedTasksResponse{
+		Tasks: protos,
+		Pagination: &taskguildv1.PaginationResponse{
+			Total:  int32(total),
+			Limit:  limit,
+			Offset: offset,
+		},
+	}), nil
+}
+
 func toProto(t *Task) *taskguildv1.Task {
 	return &taskguildv1.Task{
 		Id:               t.ID,
