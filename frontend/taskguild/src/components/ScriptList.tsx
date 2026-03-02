@@ -8,12 +8,14 @@ import {
   syncScriptsFromDir,
   executeScript,
 } from '@taskguild/proto/taskguild/v1/script-ScriptService_connectquery.ts'
+import { saveAsTemplate, listTemplates } from '@taskguild/proto/taskguild/v1/template-TemplateService_connectquery.ts'
 import {
   ScriptService,
   StreamScriptExecutionRequestSchema,
 } from '@taskguild/proto/taskguild/v1/script_pb.ts'
 import type { ScriptDefinition } from '@taskguild/proto/taskguild/v1/script_pb.ts'
-import { Terminal, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud, Play, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import type { Template } from '@taskguild/proto/taskguild/v1/template_pb.ts'
+import { Terminal, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud, Play, CheckCircle, XCircle, Loader2, Layers, Copy } from 'lucide-react'
 import { createClient } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import { transport } from '@/lib/transport'
@@ -59,16 +61,23 @@ export function ScriptList({ projectId }: { projectId: string }) {
   const deleteMut = useMutation(deleteScript)
   const syncMut = useMutation(syncScriptsFromDir)
   const executeMut = useMutation(executeScript)
+  const saveTemplateMut = useMutation(saveAsTemplate)
+  const { data: templatesData, refetch: refetchTemplates } = useQuery(listTemplates, { entityType: 'script' })
 
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<ScriptFormData>(emptyForm)
   const [executionResults, setExecutionResults] = useState<Map<string, ExecutionResult>>(new Map())
 
+  // Template dialog state
+  const [saveTemplateDialog, setSaveTemplateDialog] = useState<{ scriptId: string; name: string; description: string } | null>(null)
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
+
   // Track AbortControllers for active streams.
   const streamAbortRef = useRef<Map<string, AbortController>>(new Map())
 
   const scripts = data?.scripts ?? []
+  const scriptTemplates = templatesData?.templates ?? []
 
   // Cleanup active streams on unmount.
   useEffect(() => {
@@ -121,6 +130,31 @@ export function ScriptList({ projectId }: { projectId: string }) {
       { projectId, directory: '.' },
       { onSuccess: () => refetch() },
     )
+  }
+
+  const handleSaveAsTemplate = (script: ScriptDefinition) => {
+    setSaveTemplateDialog({ scriptId: script.id, name: script.name, description: script.description })
+  }
+
+  const handleSaveTemplateSubmit = () => {
+    if (!saveTemplateDialog) return
+    saveTemplateMut.mutate(
+      { entityType: 'script', entityId: saveTemplateDialog.scriptId, templateName: saveTemplateDialog.name, templateDescription: saveTemplateDialog.description },
+      { onSuccess: () => { setSaveTemplateDialog(null); refetchTemplates() } },
+    )
+  }
+
+  const handleCreateFromTemplate = (tmpl: Template) => {
+    if (!tmpl.scriptConfig) return
+    setTemplatePickerOpen(false)
+    setFormMode('create')
+    setEditingId(null)
+    setForm({
+      name: tmpl.scriptConfig.name,
+      description: tmpl.scriptConfig.description,
+      filename: tmpl.scriptConfig.filename,
+      content: tmpl.scriptConfig.content,
+    })
   }
 
   const startStream = useCallback(async (scriptId: string, requestId: string) => {
@@ -267,6 +301,14 @@ export function ScriptList({ projectId }: { projectId: string }) {
           >
             <RefreshCw className={`w-4 h-4 ${syncMut.isPending ? 'animate-spin' : ''}`} />
             Sync from Repo
+          </button>
+          <button
+            onClick={() => { refetchTemplates(); setTemplatePickerOpen(true) }}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors"
+            title="Create script from template"
+          >
+            <Layers className="w-4 h-4" />
+            From Template
           </button>
           <button
             onClick={openCreate}
@@ -426,6 +468,13 @@ export function ScriptList({ projectId }: { projectId: string }) {
                     Run
                   </button>
                   <button
+                    onClick={() => handleSaveAsTemplate(script)}
+                    className="p-1.5 text-gray-500 hover:text-amber-400 transition-colors rounded-lg hover:bg-slate-800"
+                    title="Save as Template"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
+                  <button
                     onClick={() => openEdit(script)}
                     className="p-1.5 text-gray-500 hover:text-green-400 transition-colors rounded-lg hover:bg-slate-800"
                     title="Edit"
@@ -543,6 +592,68 @@ export function ScriptList({ projectId }: { projectId: string }) {
           </div>
         )}
       </div>
+
+      {/* Template Picker Dialog */}
+      {templatePickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setTemplatePickerOpen(false)}>
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-md w-full mx-4 max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Select Script Template</h3>
+              <button onClick={() => setTemplatePickerOpen(false)} className="text-gray-500 hover:text-gray-300"><X className="w-5 h-5" /></button>
+            </div>
+            {scriptTemplates.length === 0 ? (
+              <p className="text-gray-500 text-sm text-center py-6">No script templates available.</p>
+            ) : (
+              <div className="space-y-2">
+                {scriptTemplates.map(tmpl => (
+                  <button key={tmpl.id} onClick={() => handleCreateFromTemplate(tmpl)} className="w-full text-left p-3 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Terminal className="w-4 h-4 text-green-400" />
+                      <span className="text-sm font-medium text-white">{tmpl.name}</span>
+                    </div>
+                    {tmpl.description && <p className="text-xs text-gray-400 ml-6">{tmpl.description}</p>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Save as Template Dialog */}
+      {saveTemplateDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setSaveTemplateDialog(null)}>
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Save as Template</h3>
+              <button onClick={() => setSaveTemplateDialog(null)} className="text-gray-500 hover:text-gray-300"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Template Name</label>
+                <input type="text" value={saveTemplateDialog.name}
+                  onChange={e => setSaveTemplateDialog(prev => prev ? { ...prev, name: e.target.value } : null)}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-amber-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Template Description</label>
+                <input type="text" value={saveTemplateDialog.description}
+                  onChange={e => setSaveTemplateDialog(prev => prev ? { ...prev, description: e.target.value } : null)}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-amber-500" />
+              </div>
+            </div>
+            {saveTemplateMut.error && <p className="text-red-400 text-sm mt-3">{saveTemplateMut.error.message}</p>}
+            {saveTemplateMut.isSuccess && <p className="text-green-400 text-sm mt-3">Template saved successfully!</p>}
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setSaveTemplateDialog(null)} className="px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors">Cancel</button>
+              <button onClick={handleSaveTemplateSubmit} disabled={saveTemplateMut.isPending || !saveTemplateDialog.name}
+                className="flex items-center gap-1.5 px-4 py-1.5 text-sm bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-lg transition-colors">
+                <Save className="w-3.5 h-3.5" />{saveTemplateMut.isPending ? 'Saving...' : 'Save Template'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

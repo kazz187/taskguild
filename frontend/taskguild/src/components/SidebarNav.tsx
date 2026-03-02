@@ -3,7 +3,7 @@ import { Link, useMatchRoute } from '@tanstack/react-router'
 import { useQuery } from '@connectrpc/connect-query'
 import { listProjects } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
 import { listWorkflows } from '@taskguild/proto/taskguild/v1/workflow-WorkflowService_connectquery.ts'
-import { ChevronRight, ChevronDown, MessageSquare, Bot, Sparkles, Terminal, Shield, Workflow, GitFork } from 'lucide-react'
+import { ChevronRight, ChevronDown, MessageSquare, Bot, Sparkles, Terminal, Shield, Workflow, GitFork, Layers } from 'lucide-react'
 
 export function SidebarNav() {
   const { data } = useQuery(listProjects, {})
@@ -17,6 +17,17 @@ export function SidebarNav() {
       {projects.map((project) => (
         <ProjectNode key={project.id} projectId={project.id} name={project.name} />
       ))}
+
+      <div className="pt-3 mt-3 border-t border-slate-800">
+        <Link
+          to="/templates"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-slate-800/40 rounded-lg transition-colors"
+          activeProps={{ className: 'flex items-center gap-1.5 px-3 py-1.5 text-sm text-white bg-slate-800/60 rounded-lg' }}
+        >
+          <Layers className="w-3.5 h-3.5 text-amber-400" />
+          Templates
+        </Link>
+      </div>
     </div>
   )
 }

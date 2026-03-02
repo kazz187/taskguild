@@ -1,0 +1,158 @@
+syntax = "proto3";
+
+package taskguild.v1;
+
+import "google/protobuf/timestamp.proto";
+import "taskguild/v1/common.proto";
+
+service TemplateService {
+  // Standard CRUD for templates
+  rpc CreateTemplate(CreateTemplateRequest) returns (CreateTemplateResponse);
+  rpc GetTemplate(GetTemplateRequest) returns (GetTemplateResponse);
+  rpc ListTemplates(ListTemplatesRequest) returns (ListTemplatesResponse);
+  rpc UpdateTemplate(UpdateTemplateRequest) returns (UpdateTemplateResponse);
+  rpc DeleteTemplate(DeleteTemplateRequest) returns (DeleteTemplateResponse);
+
+  // SaveAsTemplate saves an existing Agent/Skill/Script as a reusable template.
+  // For agents, optionally includes referenced skills as dependent templates.
+  rpc SaveAsTemplate(SaveAsTemplateRequest) returns (SaveAsTemplateResponse);
+
+  // CreateFromTemplate instantiates a new entity in a target project from a template.
+  // For agent templates, optionally creates dependent skills from their templates.
+  rpc CreateFromTemplate(CreateFromTemplateRequest) returns (CreateFromTemplateResponse);
+}
+
+// Template represents a reusable snapshot of an Agent, Skill, or Script configuration.
+// Templates are global (not project-scoped) and can be used across any project.
+message Template {
+  string id = 1;
+  string name = 2;                     // display name for the template
+  string description = 3;              // description of what this template provides
+  string entity_type = 4;              // "agent", "skill", or "script"
+
+  // Exactly one of the following config fields is populated based on entity_type.
+  AgentTemplateConfig agent_config = 5;
+  SkillTemplateConfig skill_config = 6;
+  ScriptTemplateConfig script_config = 7;
+
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+// AgentTemplateConfig holds the agent-specific configuration snapshot.
+message AgentTemplateConfig {
+  string name = 1;
+  string description = 2;
+  string prompt = 3;
+  repeated string tools = 4;
+  repeated string disallowed_tools = 5;
+  string model = 6;
+  string permission_mode = 7;
+  repeated string skills = 8;
+  string memory = 9;
+}
+
+// SkillTemplateConfig holds the skill-specific configuration snapshot.
+message SkillTemplateConfig {
+  string name = 1;
+  string description = 2;
+  string content = 3;
+  bool disable_model_invocation = 4;
+  bool user_invocable = 5;
+  repeated string allowed_tools = 6;
+  string model = 7;
+  string context = 8;
+  string agent = 9;
+  string argument_hint = 10;
+}
+
+// ScriptTemplateConfig holds the script-specific configuration snapshot.
+message ScriptTemplateConfig {
+  string name = 1;
+  string description = 2;
+  string filename = 3;
+  string content = 4;
+}
+
+// --- Standard CRUD messages ---
+
+message CreateTemplateRequest {
+  string name = 1;
+  string description = 2;
+  string entity_type = 3;              // "agent", "skill", or "script"
+
+  AgentTemplateConfig agent_config = 5;
+  SkillTemplateConfig skill_config = 6;
+  ScriptTemplateConfig script_config = 7;
+}
+message CreateTemplateResponse {
+  Template template = 1;
+}
+
+message GetTemplateRequest {
+  string id = 1;
+}
+message GetTemplateResponse {
+  Template template = 1;
+}
+
+message ListTemplatesRequest {
+  string entity_type = 1;              // optional filter: "agent", "skill", "script", or "" for all
+  PaginationRequest pagination = 2;
+}
+message ListTemplatesResponse {
+  repeated Template templates = 1;
+  PaginationResponse pagination = 2;
+}
+
+message UpdateTemplateRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+
+  AgentTemplateConfig agent_config = 5;
+  SkillTemplateConfig skill_config = 6;
+  ScriptTemplateConfig script_config = 7;
+}
+message UpdateTemplateResponse {
+  Template template = 1;
+}
+
+message DeleteTemplateRequest {
+  string id = 1;
+}
+message DeleteTemplateResponse {}
+
+// --- SaveAsTemplate ---
+
+message SaveAsTemplateRequest {
+  string entity_type = 1;              // "agent", "skill", or "script"
+  string entity_id = 2;               // ID of the existing entity to save as template
+  string template_name = 3;           // display name for the template (defaults to entity name)
+  string template_description = 4;    // description (defaults to entity description)
+  bool include_dependent_skills = 5;  // agent only: also save referenced skills as templates
+}
+message SaveAsTemplateResponse {
+  Template template = 1;                      // the created template
+  repeated Template dependent_templates = 2;  // skill templates created alongside (agent only)
+}
+
+// --- CreateFromTemplate ---
+
+message CreateFromTemplateRequest {
+  string template_id = 1;
+  string project_id = 2;
+  bool create_dependent_skills = 3;    // agent only: auto-create dependent skills from templates
+
+  // The config to use for entity creation (pre-filled from template, possibly edited by user).
+  // Exactly one should be set, matching the template's entity_type.
+  AgentTemplateConfig agent_config = 10;
+  SkillTemplateConfig skill_config = 11;
+  ScriptTemplateConfig script_config = 12;
+}
+message CreateFromTemplateResponse {
+  string created_entity_id = 1;
+  string entity_type = 2;
+  repeated string dependent_skill_ids = 3;  // IDs of auto-created skills (agent only)
+  repeated string warnings = 4;             // e.g. "Skill 'foo' template not found"
+}
