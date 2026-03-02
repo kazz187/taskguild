@@ -132,3 +132,10 @@ export const syncScripts = AgentManagerService.method.syncScripts;
  * @generated from rpc taskguild.v1.AgentManagerService.ReportScriptExecutionResult
  */
 export const reportScriptExecutionResult = AgentManagerService.method.reportScriptExecutionResult;
+
+/**
+ * ReportScriptOutputChunk reports a chunk of real-time script output from the agent.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.ReportScriptOutputChunk
+ */
+export const reportScriptOutputChunk = AgentManagerService.method.reportScriptOutputChunk;

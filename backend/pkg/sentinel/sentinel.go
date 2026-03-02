@@ -53,6 +53,12 @@ type Sentinel struct {
 // for changes, and restarts the child on crash with exponential backoff.
 // This function blocks until SIGINT/SIGTERM is received.
 func Run() {
+	// Prevent sentinel from being terminated by SIGUSR1. The sentinel sends
+	// SIGUSR1 to the child process for graceful hot-reload. Without this,
+	// if SIGUSR1 somehow reaches the sentinel (e.g. process group signal),
+	// Go's default signal handling would terminate the process.
+	signal.Ignore(syscall.SIGUSR1)
+
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	log.SetPrefix("[sentinel] ")
 

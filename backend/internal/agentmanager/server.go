@@ -42,8 +42,8 @@ type Server struct {
 	permissionRepo  permission.Repository
 	eventBus        *eventbus.Bus
 
-	// scriptResultStore stores execution results keyed by request_id.
-	scriptResultStore script.ExecutionResultStore
+	// scriptBroker manages streaming script execution output.
+	scriptBroker *script.ScriptExecutionBroker
 
 	// worktreeCache stores the latest worktree list per project_id,
 	// populated by ReportWorktreeList and read by GetWorktreeList.
@@ -51,21 +51,21 @@ type Server struct {
 	worktreeCache map[string][]*taskguildv1.WorktreeInfo // project_id -> worktrees
 }
 
-func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, projectRepo project.Repository, skillRepo skill.Repository, scriptRepo script.Repository, taskLogRepo tasklog.Repository, permissionRepo permission.Repository, eventBus *eventbus.Bus, scriptResultStore script.ExecutionResultStore) *Server {
+func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, projectRepo project.Repository, skillRepo skill.Repository, scriptRepo script.Repository, taskLogRepo tasklog.Repository, permissionRepo permission.Repository, eventBus *eventbus.Bus, scriptBroker *script.ScriptExecutionBroker) *Server {
 	return &Server{
-		registry:          registry,
-		taskRepo:          taskRepo,
-		workflowRepo:      workflowRepo,
-		agentRepo:         agentRepo,
-		interactionRepo:   interactionRepo,
-		projectRepo:       projectRepo,
-		skillRepo:         skillRepo,
-		scriptRepo:        scriptRepo,
-		taskLogRepo:       taskLogRepo,
-		permissionRepo:    permissionRepo,
-		eventBus:          eventBus,
-		scriptResultStore: scriptResultStore,
-		worktreeCache:     make(map[string][]*taskguildv1.WorktreeInfo),
+		registry:        registry,
+		taskRepo:        taskRepo,
+		workflowRepo:    workflowRepo,
+		agentRepo:       agentRepo,
+		interactionRepo: interactionRepo,
+		projectRepo:     projectRepo,
+		skillRepo:       skillRepo,
+		scriptRepo:      scriptRepo,
+		taskLogRepo:     taskLogRepo,
+		permissionRepo:  permissionRepo,
+		eventBus:        eventBus,
+		scriptBroker:    scriptBroker,
+		worktreeCache:   make(map[string][]*taskguildv1.WorktreeInfo),
 	}
 }
 
@@ -967,19 +967,20 @@ func (s *Server) ReportScriptExecutionResult(ctx context.Context, req *connect.R
 		return nil, cerr.ExtractConnectError(ctx, err)
 	}
 
-	// Store result for polling.
-	if s.scriptResultStore != nil {
-		s.scriptResultStore.StoreResult(req.Msg.RequestId, &taskguildv1.GetScriptExecutionResultResponse{
-			Completed:    true,
-			Success:      req.Msg.Success,
-			ExitCode:     req.Msg.ExitCode,
-			Stdout:       req.Msg.Stdout,
-			Stderr:       req.Msg.Stderr,
-			ErrorMessage: req.Msg.ErrorMessage,
-		})
+	// Complete execution in the broker — this sends the completion event
+	// to all streaming subscribers and closes their channels.
+	if s.scriptBroker != nil {
+		s.scriptBroker.CompleteExecution(
+			req.Msg.RequestId,
+			req.Msg.Success,
+			req.Msg.ExitCode,
+			req.Msg.Stdout,
+			req.Msg.Stderr,
+			req.Msg.ErrorMessage,
+		)
 	}
 
-	// Publish event so frontend can pick up the result.
+	// Publish event so other consumers (e.g. notifications) can react.
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_SCRIPT_EXECUTION_RESULT,
 		req.Msg.RequestId,
@@ -1003,6 +1004,18 @@ func (s *Server) ReportScriptExecutionResult(ctx context.Context, req *connect.R
 	)
 
 	return connect.NewResponse(&taskguildv1.ReportScriptExecutionResultResponse{}), nil
+}
+
+func (s *Server) ReportScriptOutputChunk(ctx context.Context, req *connect.Request[taskguildv1.ReportScriptOutputChunkRequest]) (*connect.Response[taskguildv1.ReportScriptOutputChunkResponse], error) {
+	if req.Msg.ProjectName == "" {
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+	}
+
+	if s.scriptBroker != nil {
+		s.scriptBroker.PushOutput(req.Msg.RequestId, req.Msg.StdoutChunk, req.Msg.StderrChunk)
+	}
+
+	return connect.NewResponse(&taskguildv1.ReportScriptOutputChunkResponse{}), nil
 }
 
 // RequestScriptExecution sends an ExecuteScriptCommand to connected agent-managers

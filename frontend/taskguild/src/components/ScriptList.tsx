@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import {
   listScripts,
@@ -7,13 +7,16 @@ import {
   deleteScript,
   syncScriptsFromDir,
   executeScript,
-  getScriptExecutionResult,
 } from '@taskguild/proto/taskguild/v1/script-ScriptService_connectquery.ts'
+import {
+  ScriptService,
+  StreamScriptExecutionRequestSchema,
+} from '@taskguild/proto/taskguild/v1/script_pb.ts'
 import type { ScriptDefinition } from '@taskguild/proto/taskguild/v1/script_pb.ts'
 import { Terminal, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud, Play, CheckCircle, XCircle, Loader2 } from 'lucide-react'
-import { useTransport } from '@connectrpc/connect-query'
 import { createClient } from '@connectrpc/connect'
-import { ScriptService } from '@taskguild/proto/taskguild/v1/script_pb.ts'
+import { create } from '@bufbuild/protobuf'
+import { transport } from '@/lib/transport'
 
 interface ScriptFormData {
   name: string
@@ -62,15 +65,15 @@ export function ScriptList({ projectId }: { projectId: string }) {
   const [form, setForm] = useState<ScriptFormData>(emptyForm)
   const [executionResults, setExecutionResults] = useState<Map<string, ExecutionResult>>(new Map())
 
-  const transport = useTransport()
-  const pollingRef = useRef<Map<string, NodeJS.Timeout>>(new Map())
+  // Track AbortControllers for active streams.
+  const streamAbortRef = useRef<Map<string, AbortController>>(new Map())
 
   const scripts = data?.scripts ?? []
 
-  // Cleanup polling intervals on unmount
+  // Cleanup active streams on unmount.
   useEffect(() => {
     return () => {
-      pollingRef.current.forEach((interval) => clearInterval(interval))
+      streamAbortRef.current.forEach((controller) => controller.abort())
     }
   }, [])
 
@@ -120,8 +123,70 @@ export function ScriptList({ projectId }: { projectId: string }) {
     )
   }
 
+  const startStream = useCallback(async (scriptId: string, requestId: string) => {
+    const client = createClient(ScriptService, transport)
+    const controller = new AbortController()
+    streamAbortRef.current.set(scriptId, controller)
+
+    try {
+      const req = create(StreamScriptExecutionRequestSchema, { requestId })
+      for await (const event of client.streamScriptExecution(req, {
+        signal: controller.signal,
+      })) {
+        if (event.event.case === 'output') {
+          const chunk = event.event.value
+          setExecutionResults(prev => {
+            const next = new Map(prev)
+            const existing = next.get(scriptId)
+            if (!existing) return next
+            next.set(scriptId, {
+              ...existing,
+              stdout: (existing.stdout ?? '') + chunk.stdout,
+              stderr: (existing.stderr ?? '') + chunk.stderr,
+            })
+            return next
+          })
+        } else if (event.event.case === 'complete') {
+          const result = event.event.value
+          setExecutionResults(prev => {
+            const next = new Map(prev)
+            next.set(scriptId, {
+              scriptId,
+              requestId,
+              completed: true,
+              success: result.success,
+              exitCode: result.exitCode,
+              stdout: result.stdout || prev.get(scriptId)?.stdout || '',
+              stderr: result.stderr || prev.get(scriptId)?.stderr || '',
+              errorMessage: result.errorMessage,
+            })
+            return next
+          })
+        }
+      }
+    } catch (e) {
+      if (controller.signal.aborted) return
+      console.error('Stream error:', e)
+      setExecutionResults(prev => {
+        const next = new Map(prev)
+        const existing = next.get(scriptId)
+        if (existing && !existing.completed) {
+          next.set(scriptId, {
+            ...existing,
+            completed: true,
+            success: false,
+            errorMessage: e instanceof Error ? e.message : 'Stream connection lost',
+          })
+        }
+        return next
+      })
+    } finally {
+      streamAbortRef.current.delete(scriptId)
+    }
+  }, [])
+
   const handleExecute = (script: ScriptDefinition) => {
-    // Set pending state
+    // Set pending state.
     setExecutionResults(prev => {
       const next = new Map(prev)
       next.set(script.id, {
@@ -147,56 +212,8 @@ export function ScriptList({ projectId }: { projectId: string }) {
             return next
           })
 
-          // Poll for result
-          const client = createClient(ScriptService, transport)
-          const pollInterval = setInterval(async () => {
-            try {
-              const result = await client.getScriptExecutionResult({ requestId })
-              if (result.completed) {
-                clearInterval(pollInterval)
-                pollingRef.current.delete(script.id)
-                setExecutionResults(prev => {
-                  const next = new Map(prev)
-                  next.set(script.id, {
-                    scriptId: script.id,
-                    requestId,
-                    completed: true,
-                    success: result.success,
-                    exitCode: result.exitCode,
-                    stdout: result.stdout,
-                    stderr: result.stderr,
-                    errorMessage: result.errorMessage,
-                  })
-                  return next
-                })
-              }
-            } catch {
-              // Continue polling
-            }
-          }, 1000)
-
-          pollingRef.current.set(script.id, pollInterval)
-
-          // Stop polling after 5 minutes
-          setTimeout(() => {
-            if (pollingRef.current.has(script.id)) {
-              clearInterval(pollingRef.current.get(script.id))
-              pollingRef.current.delete(script.id)
-              setExecutionResults(prev => {
-                const next = new Map(prev)
-                const existing = next.get(script.id)
-                if (existing && !existing.completed) {
-                  next.set(script.id, {
-                    ...existing,
-                    completed: true,
-                    success: false,
-                    errorMessage: 'Execution timed out (no result received within 5 minutes)',
-                  })
-                }
-                return next
-              })
-            }
-          }, 5 * 60 * 1000)
+          // Start server stream for real-time output.
+          startStream(script.id, requestId)
         },
         onError: (err) => {
           setExecutionResults(prev => {
@@ -216,6 +233,12 @@ export function ScriptList({ projectId }: { projectId: string }) {
   }
 
   const clearResult = (scriptId: string) => {
+    // Abort any active stream.
+    const controller = streamAbortRef.current.get(scriptId)
+    if (controller) {
+      controller.abort()
+      streamAbortRef.current.delete(scriptId)
+    }
     setExecutionResults(prev => {
       const next = new Map(prev)
       next.delete(scriptId)
@@ -420,7 +443,7 @@ export function ScriptList({ projectId }: { projectId: string }) {
                 </div>
               </div>
 
-              {/* Execution Result */}
+              {/* Execution Result — completed */}
               {result && result.completed && (
                 <div className={`mt-3 border rounded-lg p-3 ${
                   result.success
@@ -454,7 +477,7 @@ export function ScriptList({ projectId }: { projectId: string }) {
                   {result.stdout && (
                     <div className="mb-2">
                       <span className="text-[10px] text-gray-500 uppercase tracking-wider">stdout</span>
-                      <pre className="text-xs text-gray-300 font-mono bg-slate-900/50 rounded p-2 mt-0.5 whitespace-pre-wrap max-h-[200px] overflow-y-auto">
+                      <pre className="text-xs text-gray-300 font-mono bg-slate-900/50 rounded p-2 mt-0.5 whitespace-pre-wrap max-h-[300px] overflow-y-auto">
                         {result.stdout}
                       </pre>
                     </div>
@@ -462,7 +485,7 @@ export function ScriptList({ projectId }: { projectId: string }) {
                   {result.stderr && (
                     <div>
                       <span className="text-[10px] text-gray-500 uppercase tracking-wider">stderr</span>
-                      <pre className="text-xs text-red-300 font-mono bg-slate-900/50 rounded p-2 mt-0.5 whitespace-pre-wrap max-h-[200px] overflow-y-auto">
+                      <pre className="text-xs text-red-300 font-mono bg-slate-900/50 rounded p-2 mt-0.5 whitespace-pre-wrap max-h-[300px] overflow-y-auto">
                         {result.stderr}
                       </pre>
                     </div>
@@ -470,13 +493,42 @@ export function ScriptList({ projectId }: { projectId: string }) {
                 </div>
               )}
 
-              {/* Execution Pending */}
+              {/* Execution in progress — streaming output */}
               {result && !result.completed && (
                 <div className="mt-3 border border-blue-500/20 bg-blue-500/5 rounded-lg p-3">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
-                    <span className="text-sm text-blue-400">Executing script...</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+                      <span className="text-sm text-blue-400">Executing script...</span>
+                    </div>
+                    <button
+                      onClick={() => clearResult(script.id)}
+                      className="text-gray-500 hover:text-gray-300 transition-colors"
+                      title="Cancel stream"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
+                  {(result.stdout || result.stderr) && (
+                    <div className="space-y-2">
+                      {result.stdout && (
+                        <div>
+                          <span className="text-[10px] text-gray-500 uppercase tracking-wider">stdout</span>
+                          <pre className="text-xs text-gray-300 font-mono bg-slate-900/50 rounded p-2 mt-0.5 whitespace-pre-wrap max-h-[300px] overflow-y-auto">
+                            {result.stdout}
+                          </pre>
+                        </div>
+                      )}
+                      {result.stderr && (
+                        <div>
+                          <span className="text-[10px] text-gray-500 uppercase tracking-wider">stderr</span>
+                          <pre className="text-xs text-red-300 font-mono bg-slate-900/50 rounded p-2 mt-0.5 whitespace-pre-wrap max-h-[300px] overflow-y-auto">
+                            {result.stderr}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

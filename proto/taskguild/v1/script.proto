@@ -16,8 +16,8 @@ service ScriptService {
   rpc SyncScriptsFromDir(SyncScriptsFromDirRequest) returns (SyncScriptsFromDirResponse);
   // ExecuteScript triggers execution of a script on a connected agent-manager.
   rpc ExecuteScript(ExecuteScriptRequest) returns (ExecuteScriptResponse);
-  // GetScriptExecutionResult returns the cached result of a script execution.
-  rpc GetScriptExecutionResult(GetScriptExecutionResultRequest) returns (GetScriptExecutionResultResponse);
+  // StreamScriptExecution streams real-time output from a script execution.
+  rpc StreamScriptExecution(StreamScriptExecutionRequest) returns (stream ScriptExecutionEvent);
 }
 
 // ScriptDefinition defines a shell script that can be executed on the agent-manager.
@@ -100,14 +100,27 @@ message ExecuteScriptResponse {
   string request_id = 1;  // unique ID for tracking the execution
 }
 
-message GetScriptExecutionResultRequest {
+// StreamScriptExecution streams real-time output from a script execution.
+message StreamScriptExecutionRequest {
   string request_id = 1;
 }
-message GetScriptExecutionResultResponse {
-  bool completed = 1;      // true if execution has finished
-  bool success = 2;        // true if exit code == 0
-  int32 exit_code = 3;
-  string stdout = 4;
-  string stderr = 5;
-  string error_message = 6;  // error description if execution failed to start
+
+message ScriptExecutionEvent {
+  oneof event {
+    ScriptOutputChunk output = 1;
+    ScriptExecutionComplete complete = 2;
+  }
+}
+
+message ScriptOutputChunk {
+  string stdout = 1;  // incremental stdout chunk
+  string stderr = 2;  // incremental stderr chunk
+}
+
+message ScriptExecutionComplete {
+  bool success = 1;
+  int32 exit_code = 2;
+  string stdout = 3;        // full stdout (for late joiners)
+  string stderr = 4;        // full stderr
+  string error_message = 5;
 }
