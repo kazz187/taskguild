@@ -104,7 +104,7 @@ function ProjectChatPage() {
   }, [respondMut, refetchInteractions])
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-dvh">
       {/* Header */}
       <div className="shrink-0 border-b border-slate-800 px-4 py-3 md:px-6 md:py-4">
         <div className="flex items-center gap-3 text-sm text-gray-400 mb-1">
