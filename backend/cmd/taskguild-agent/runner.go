@@ -462,6 +462,7 @@ func runTask(
 	instructions string,
 	metadata map[string]string,
 	workDir string,
+	permCache *permissionCache,
 ) {
 	reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "starting task")
 
@@ -528,7 +529,7 @@ func runTask(
 	userResponseRetries := 0
 
 	for turn := 0; ; turn++ {
-		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, worktreeName, client, ctx, taskID, agentManagerID, waiter)
+		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, worktreeName, client, ctx, taskID, agentManagerID, waiter, permCache)
 		// Override StderrCallback to also send to task logger.
 		opts.StderrCallback = func(line string) {
 			log.Printf("[task:%s] [claude-stderr] %s", taskID, line)
@@ -760,6 +761,7 @@ func buildClaudeOptions(
 	taskID string,
 	agentManagerID string,
 	waiter *interactionWaiter,
+	permCache *permissionCache,
 ) *claudeagent.ClaudeAgentOptions {
 	// Permission mode from agent config (default if empty)
 	permMode := claudeagent.PermissionModeDefault
@@ -784,7 +786,7 @@ func buildClaudeOptions(
 		Cwd:            cwd,
 		PermissionMode: permMode,
 		CanUseTool: func(toolName string, input map[string]any, toolCtx claudeagent.ToolPermissionContext) (claudeagent.PermissionResult, error) {
-			return handlePermissionRequest(ctx, client, taskID, agentManagerID, toolName, input, waiter, permMode, toolCtx)
+			return handlePermissionRequest(ctx, client, taskID, agentManagerID, toolName, input, waiter, permMode, toolCtx, permCache)
 		},
 		StderrCallback: func(line string) {
 			log.Printf("[task:%s] [claude-stderr] %s", taskID, line)
@@ -1495,6 +1497,7 @@ func handlePermissionRequest(
 	waiter *interactionWaiter,
 	permMode claudeagent.PermissionMode,
 	toolCtx claudeagent.ToolPermissionContext,
+	permCache *permissionCache,
 ) (claudeagent.PermissionResult, error) {
 	// bypassPermissions: allow everything
 	if permMode == claudeagent.PermissionModeBypassPermissions {
@@ -1517,6 +1520,12 @@ func handlePermissionRequest(
 	// AskUserQuestion: present as QUESTION interactions instead of permission request
 	if toolName == "AskUserQuestion" {
 		return handleAskUserQuestion(ctx, client, taskID, agentID, input, waiter)
+	}
+
+	// Check permission cache: auto-allow if a matching "always allow" rule exists.
+	if permCache != nil && permCache.Check(toolName, input) {
+		log.Printf("[task:%s] auto-allowing %s (permission cache hit)", taskID, toolName)
+		return claudeagent.PermissionResultAllow{}, nil
 	}
 
 	description := formatToolDescription(toolName, input)
@@ -1558,6 +1567,13 @@ func handlePermissionRequest(
 		case "always_allow":
 			updates := buildPermissionUpdate(toolName, input, toolCtx.Suggestions)
 			log.Printf("[task:%s] permission granted (always allow) for %s, updating %d rule(s)", taskID, toolName, len(updates))
+
+			// Persist to cache and backend so future calls are auto-allowed.
+			if permCache != nil {
+				ruleStrings := extractRuleStrings(updates)
+				go permCache.AddAndSync(ctx, ruleStrings)
+			}
+
 			return claudeagent.PermissionResultAllow{
 				UpdatedPermissions: updates,
 			}, nil

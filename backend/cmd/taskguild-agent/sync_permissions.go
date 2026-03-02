@@ -13,9 +13,10 @@ import (
 )
 
 // syncPermissions reads local .claude/settings.json permissions, merges them
-// with the backend's stored permissions via the SyncPermissions RPC, and writes
-// the merged result back to .claude/settings.json.
-func syncPermissions(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, cfg *config) {
+// with the backend's stored permissions via the SyncPermissions RPC, writes
+// the merged result back to .claude/settings.json, and updates the in-memory
+// permission cache so that subsequent tool calls can be auto-allowed.
+func syncPermissions(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, cfg *config, cache *permissionCache) {
 	if cfg.ProjectName == "" {
 		log.Println("skipping permission sync: no project name configured")
 		return
@@ -44,6 +45,11 @@ func syncPermissions(ctx context.Context, client taskguildv1connect.AgentManager
 
 	// Write merged permissions back to settings.json.
 	writeLocalPermissions(settingsPath, rawSettings, merged)
+
+	// Update the in-memory permission cache with the merged allow rules.
+	if cache != nil {
+		cache.Update(merged.GetAllow())
+	}
 }
 
 // readLocalPermissions reads the permissions section from a .claude/settings.json file.
