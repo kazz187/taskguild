@@ -166,7 +166,8 @@ func runServer() {
 	vapidEnv := config.VAPIDEnvFromEnv(env)
 	pushSender := pushnotification.NewSender(vapidEnv, pushSubRepo)
 	pushNotificationServer := pushnotification.NewServer(vapidEnv, pushSubRepo, pushSender)
-	pushDispatcher := pushnotification.NewDispatcher(bus, interactionRepo, taskRepo, pushSender)
+	baseEnv := config.BaseEnvFromEnv(env)
+	pushDispatcher := pushnotification.NewDispatcher(bus, interactionRepo, taskRepo, pushSender, baseEnv)
 
 	srv := server.NewServer(
 		env,

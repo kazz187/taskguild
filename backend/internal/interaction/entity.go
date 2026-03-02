@@ -22,17 +22,18 @@ const (
 )
 
 type Interaction struct {
-	ID          string            `yaml:"id"`
-	TaskID      string            `yaml:"task_id"`
-	AgentID     string            `yaml:"agent_id"`
-	Type        InteractionType   `yaml:"type"`
-	Status      InteractionStatus `yaml:"status"`
-	Title       string            `yaml:"title"`
-	Description string            `yaml:"description"`
-	Options     []Option          `yaml:"options"`
-	Response    string            `yaml:"response"`
-	CreatedAt   time.Time         `yaml:"created_at"`
-	RespondedAt *time.Time        `yaml:"responded_at"`
+	ID            string            `yaml:"id"`
+	TaskID        string            `yaml:"task_id"`
+	AgentID       string            `yaml:"agent_id"`
+	Type          InteractionType   `yaml:"type"`
+	Status        InteractionStatus `yaml:"status"`
+	Title         string            `yaml:"title"`
+	Description   string            `yaml:"description"`
+	Options       []Option          `yaml:"options"`
+	Response      string            `yaml:"response"`
+	ResponseToken string            `yaml:"response_token,omitempty"`
+	CreatedAt     time.Time         `yaml:"created_at"`
+	RespondedAt   *time.Time        `yaml:"responded_at"`
 }
 
 type Option struct {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/kazz187/taskguild/backend/internal/config"
 	"github.com/kazz187/taskguild/backend/internal/eventbus"
 	"github.com/kazz187/taskguild/backend/internal/interaction"
 	"github.com/kazz187/taskguild/backend/internal/task"
@@ -16,14 +17,16 @@ type Dispatcher struct {
 	interactionRepo interaction.Repository
 	taskRepo        task.Repository
 	sender          *Sender
+	baseEnv         *config.BaseEnv
 }
 
-func NewDispatcher(eventBus *eventbus.Bus, interactionRepo interaction.Repository, taskRepo task.Repository, sender *Sender) *Dispatcher {
+func NewDispatcher(eventBus *eventbus.Bus, interactionRepo interaction.Repository, taskRepo task.Repository, sender *Sender, baseEnv *config.BaseEnv) *Dispatcher {
 	return &Dispatcher{
 		eventBus:        eventBus,
 		interactionRepo: interactionRepo,
 		taskRepo:        taskRepo,
 		sender:          sender,
+		baseEnv:         baseEnv,
 	}
 }
 
@@ -62,11 +65,14 @@ func (d *Dispatcher) handleInteractionCreated(ctx context.Context, event *taskgu
 
 	// Build notification payload.
 	title := "TaskGuild"
+	var payloadType string
 	switch inter.Type {
 	case interaction.TypePermissionRequest:
 		title = "Permission Request"
+		payloadType = "permission_request"
 	case interaction.TypeQuestion:
 		title = "Question from Agent"
+		payloadType = "question"
 	}
 
 	var url string
@@ -77,10 +83,61 @@ func (d *Dispatcher) handleInteractionCreated(ctx context.Context, event *taskgu
 		}
 	}
 
+	// Build notification actions based on interaction type.
+	actions := d.buildActions(inter)
+
 	d.sender.SendToAll(ctx, &NotificationPayload{
-		Title: title,
-		Body:  inter.Title,
-		URL:   url,
-		Tag:   inter.ID,
+		Title:         title,
+		Body:          inter.Title,
+		URL:           url,
+		Tag:           inter.ID,
+		InteractionID: inter.ID,
+		ResponseToken: inter.ResponseToken,
+		APIBaseURL:    d.baseEnv.GetPublicURL(),
+		Type:          payloadType,
+		Actions:       actions,
 	})
+}
+
+// buildActions constructs notification action buttons based on the interaction type.
+func (d *Dispatcher) buildActions(inter *interaction.Interaction) []NotificationAction {
+	switch inter.Type {
+	case interaction.TypePermissionRequest:
+		// Permission requests always have Allow / Always Allow / Deny.
+		// Chrome Android supports up to 3 action buttons.
+		return []NotificationAction{
+			{Action: "allow", Title: "Allow"},
+			{Action: "always_allow", Title: "Always Allow"},
+			{Action: "deny", Title: "Deny"},
+		}
+
+	case interaction.TypeQuestion:
+		var actions []NotificationAction
+		// Use the first 2 options as action buttons (Web Push limit).
+		// The action name is set to the option's value so the SW can
+		// pass it directly to RespondToInteractionByToken.
+		for i, opt := range inter.Options {
+			if i >= 2 {
+				break
+			}
+			actions = append(actions, NotificationAction{
+				Action: opt.Value,
+				Title:  opt.Label,
+			})
+		}
+		// If the question supports free-text input (has no options or
+		// explicitly includes "Other"), add a text input action for
+		// Chrome Android inline reply support.
+		if len(inter.Options) == 0 {
+			actions = append(actions, NotificationAction{
+				Action: "reply",
+				Title:  "Reply",
+				Type:   "text",
+			})
+		}
+		return actions
+
+	default:
+		return nil
+	}
 }

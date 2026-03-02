@@ -2,6 +2,8 @@ package agentmanager
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -527,6 +529,17 @@ func (s *Server) CreateInteraction(ctx context.Context, req *connect.Request[tas
 			Value:       opt.Value,
 			Description: opt.Description,
 		})
+	}
+
+	// Generate a single-use response token for push notification actions.
+	// This allows the Service Worker to respond to interactions without
+	// exposing the main API key.
+	interType := interaction.InteractionType(req.Msg.Type)
+	if interType == interaction.TypePermissionRequest || interType == interaction.TypeQuestion {
+		tokenBytes := make([]byte, 32)
+		if _, err := rand.Read(tokenBytes); err == nil {
+			inter.ResponseToken = hex.EncodeToString(tokenBytes)
+		}
 	}
 
 	if err := s.interactionRepo.Create(ctx, inter); err != nil {
