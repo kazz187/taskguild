@@ -62,7 +62,7 @@ function ProjectDetailPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-dvh">
       {/* Header */}
       <div className="shrink-0 border-b border-slate-800 px-4 py-3 md:px-6 md:py-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
