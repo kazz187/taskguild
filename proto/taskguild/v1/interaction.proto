@@ -8,6 +8,10 @@ import "taskguild/v1/common.proto";
 service InteractionService {
   rpc ListInteractions(ListInteractionsRequest) returns (ListInteractionsResponse);
   rpc RespondToInteraction(RespondToInteractionRequest) returns (RespondToInteractionResponse);
+  // RespondToInteractionByToken responds to an interaction using a single-use
+  // response token instead of API key authentication. This allows Service
+  // Workers to respond to push notification actions without exposing the API key.
+  rpc RespondToInteractionByToken(RespondToInteractionByTokenRequest) returns (RespondToInteractionByTokenResponse);
   // ExpireInteraction sets a PENDING interaction to EXPIRED.
   rpc ExpireInteraction(ExpireInteractionRequest) returns (ExpireInteractionResponse);
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
@@ -91,6 +95,14 @@ message SendMessageResponse {
 
 message SubscribeInteractionsRequest {
   string task_id = 1;
+}
+
+message RespondToInteractionByTokenRequest {
+  string token = 1;
+  string response = 2;
+}
+message RespondToInteractionByTokenResponse {
+  Interaction interaction = 1;
 }
 
 message ExpireInteractionRequest {

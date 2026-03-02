@@ -124,6 +124,37 @@ func (r *YAMLRepository) Update(ctx context.Context, i *interaction.Interaction)
 	return nil
 }
 
+func (r *YAMLRepository) GetByResponseToken(ctx context.Context, token string) (*interaction.Interaction, error) {
+	if token == "" {
+		return nil, cerr.NewError(cerr.InvalidArgument, "token is required", nil)
+	}
+
+	paths, err := r.storage.List(ctx, interactionsPrefix)
+	if err != nil {
+		return nil, cerr.WrapStorageReadError("interactions", err)
+	}
+
+	// Iterate in reverse order (newest first) since recent interactions
+	// are more likely to have active tokens.
+	sort.Sort(sort.Reverse(sort.StringSlice(paths)))
+
+	for _, p := range paths {
+		data, err := r.storage.Read(ctx, p)
+		if err != nil {
+			continue
+		}
+		var i interaction.Interaction
+		if err := yaml.Unmarshal(data, &i); err != nil {
+			continue
+		}
+		if i.ResponseToken == token && i.Status == interaction.StatusPending {
+			return &i, nil
+		}
+	}
+
+	return nil, cerr.NewError(cerr.NotFound, "interaction not found for token", nil)
+}
+
 func (r *YAMLRepository) ExpirePendingByTask(ctx context.Context, taskID string) (int, error) {
 	// List all interactions and find PENDING ones for the given task.
 	all, _, err := r.List(ctx, taskID, nil, 0, 0)

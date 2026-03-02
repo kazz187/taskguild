@@ -101,6 +101,46 @@ func (s *Server) RespondToInteraction(ctx context.Context, req *connect.Request[
 	}), nil
 }
 
+func (s *Server) RespondToInteractionByToken(ctx context.Context, req *connect.Request[taskguildv1.RespondToInteractionByTokenRequest]) (*connect.Response[taskguildv1.RespondToInteractionByTokenResponse], error) {
+	if req.Msg.Token == "" {
+		return nil, cerr.NewError(cerr.InvalidArgument, "token is required", nil).ConnectError()
+	}
+	if req.Msg.Response == "" {
+		return nil, cerr.NewError(cerr.InvalidArgument, "response is required", nil).ConnectError()
+	}
+
+	inter, err := s.repo.GetByResponseToken(ctx, req.Msg.Token)
+	if err != nil {
+		return nil, err
+	}
+
+	if inter.Status != StatusPending {
+		return nil, cerr.NewError(cerr.FailedPrecondition, "interaction is not pending", nil).ConnectError()
+	}
+
+	now := time.Now()
+	inter.Response = req.Msg.Response
+	inter.Status = StatusResponded
+	inter.RespondedAt = &now
+	// Invalidate the token after use.
+	inter.ResponseToken = ""
+
+	if err := s.repo.Update(ctx, inter); err != nil {
+		return nil, err
+	}
+
+	s.eventBus.PublishNew(
+		taskguildv1.EventType_EVENT_TYPE_INTERACTION_RESPONDED,
+		inter.ID,
+		"",
+		map[string]string{"task_id": inter.TaskID, "agent_id": inter.AgentID},
+	)
+
+	return connect.NewResponse(&taskguildv1.RespondToInteractionByTokenResponse{
+		Interaction: toProto(inter),
+	}), nil
+}
+
 func (s *Server) ExpireInteraction(ctx context.Context, req *connect.Request[taskguildv1.ExpireInteractionRequest]) (*connect.Response[taskguildv1.ExpireInteractionResponse], error) {
 	inter, err := s.repo.Get(ctx, req.Msg.Id)
 	if err != nil {

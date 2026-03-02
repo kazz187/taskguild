@@ -3,16 +3,31 @@ package config
 import (
 	"fmt"
 	"log/slog"
+	"net"
 
 	"github.com/kelseyhightower/envconfig"
 )
 
 type BaseEnv struct {
-	Env      string `envconfig:"ENV" default:"local"`
-	HTTPHost string `envconfig:"HTTP_HOST" default:""`
-	HTTPPort string `envconfig:"HTTP_PORT" default:"3100"`
-	LogLevel string `envconfig:"LOG_LEVEL" default:"debug"`
-	APIKey   string `envconfig:"API_KEY" required:"true"`
+	Env       string `envconfig:"ENV" default:"local"`
+	HTTPHost  string `envconfig:"HTTP_HOST" default:""`
+	HTTPPort  string `envconfig:"HTTP_PORT" default:"3100"`
+	LogLevel  string `envconfig:"LOG_LEVEL" default:"debug"`
+	APIKey    string `envconfig:"API_KEY" required:"true"`
+	PublicURL string `envconfig:"PUBLIC_URL" default:""`
+}
+
+// GetPublicURL returns the configured public URL, or builds a default from
+// the HTTP host and port if not explicitly set.
+func (e *BaseEnv) GetPublicURL() string {
+	if e.PublicURL != "" {
+		return e.PublicURL
+	}
+	host := e.HTTPHost
+	if host == "" || host == "0.0.0.0" {
+		host = "localhost"
+	}
+	return "http://" + net.JoinHostPort(host, e.HTTPPort)
 }
 
 type StorageEnv struct {

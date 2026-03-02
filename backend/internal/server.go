@@ -159,8 +159,9 @@ func (s *Server) interceptors() []connect.Interceptor {
 
 func (s *Server) apiKeyMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Skip API key check for health endpoints.
-		if r.URL.Path == "/health" || r.URL.Path == "/grpc.health.v1.Health/Check" {
+		// Skip API key check for health endpoints and token-based interaction response.
+		if r.URL.Path == "/health" || r.URL.Path == "/grpc.health.v1.Health/Check" ||
+			r.URL.Path == "/taskguild.v1.InteractionService/RespondToInteractionByToken" {
 			next.ServeHTTP(w, r)
 			return
 		}

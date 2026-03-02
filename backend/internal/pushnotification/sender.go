@@ -12,11 +12,27 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/pushsubscription"
 )
 
+// NotificationAction represents an action button on the push notification.
+// On supported platforms (Chrome Android), these render as buttons the user
+// can tap without opening the app.
+type NotificationAction struct {
+	Action string `json:"action"`
+	Title  string `json:"title"`
+	Type   string `json:"type,omitempty"` // "button" (default) or "text" (inline reply)
+}
+
 type NotificationPayload struct {
 	Title string `json:"title"`
 	Body  string `json:"body"`
 	URL   string `json:"url,omitempty"`
 	Tag   string `json:"tag,omitempty"`
+
+	// Enhanced fields for notification action support.
+	InteractionID string               `json:"interactionId,omitempty"`
+	ResponseToken string               `json:"responseToken,omitempty"`
+	APIBaseURL    string               `json:"apiBaseUrl,omitempty"`
+	Type          string               `json:"type,omitempty"` // "permission_request" or "question"
+	Actions       []NotificationAction `json:"actions,omitempty"`
 }
 
 type Sender struct {

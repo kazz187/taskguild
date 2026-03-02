@@ -15,6 +15,15 @@ export const listInteractions = InteractionService.method.listInteractions;
 export const respondToInteraction = InteractionService.method.respondToInteraction;
 
 /**
+ * RespondToInteractionByToken responds to an interaction using a single-use
+ * response token instead of API key authentication. This allows Service
+ * Workers to respond to push notification actions without exposing the API key.
+ *
+ * @generated from rpc taskguild.v1.InteractionService.RespondToInteractionByToken
+ */
+export const respondToInteractionByToken = InteractionService.method.respondToInteractionByToken;
+
+/**
  * ExpireInteraction sets a PENDING interaction to EXPIRED.
  *
  * @generated from rpc taskguild.v1.InteractionService.ExpireInteraction
