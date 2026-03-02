@@ -5,7 +5,7 @@ import { listWorkflows } from '@taskguild/proto/taskguild/v1/workflow-WorkflowSe
 import type { Workflow } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { TaskBoard } from '@/components/TaskBoard'
 import { WorkflowForm } from '@/components/WorkflowForm'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from '@tanstack/react-router'
 import { listAgents } from '@taskguild/proto/taskguild/v1/agent-AgentService_connectquery.ts'
 import { GitBranch, Plus, Settings, Bot } from 'lucide-react'
@@ -24,6 +24,7 @@ function ProjectDetailPage() {
   const { workflowId } = Route.useSearch()
   const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null)
   const [formMode, setFormMode] = useState<FormMode | null>(null)
+  const headerActionsRef = useRef<HTMLDivElement>(null)
 
   const { data: projectData } = useQuery(getProject, { id: projectId })
   const { data: workflowsData, refetch: refetchWorkflows } = useQuery(listWorkflows, {
@@ -120,6 +121,8 @@ function ProjectDetailPage() {
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">New Workflow</span>
             </button>
+            {/* Portal target for TaskBoard header actions (e.g. Clean button) */}
+            <div ref={headerActionsRef} className="flex items-center gap-2 shrink-0" />
           </div>
         </div>
       </div>
@@ -136,6 +139,7 @@ function ProjectDetailPage() {
         <TaskBoard
           projectId={projectId}
           workflow={selectedWorkflow}
+          headerActionsRef={headerActionsRef}
         />
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-6 p-4">
