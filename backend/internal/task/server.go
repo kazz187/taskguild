@@ -109,7 +109,7 @@ func (s *Server) GetTask(ctx context.Context, req *connect.Request[taskguildv1.G
 }
 
 func (s *Server) ListTasks(ctx context.Context, req *connect.Request[taskguildv1.ListTasksRequest]) (*connect.Response[taskguildv1.ListTasksResponse], error) {
-	limit, offset := int32(50), int32(0)
+	limit, offset := int32(0), int32(0)
 	if req.Msg.Pagination != nil {
 		if req.Msg.Pagination.Limit > 0 {
 			limit = req.Msg.Pagination.Limit
