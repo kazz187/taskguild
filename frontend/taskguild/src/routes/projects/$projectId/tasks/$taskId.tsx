@@ -10,6 +10,7 @@ import { InteractionStatus, InteractionType } from '@taskguild/proto/taskguild/v
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { useTaskLogs } from '@/hooks/useTaskLogs'
+import { useNotificationSound } from '@/hooks/useNotificationSound'
 import { TaskDetailModal } from '@/components/TaskDetailModal'
 import { shortId } from '@/lib/id'
 import { InputBar } from '@/components/ChatBubble'
@@ -38,8 +39,6 @@ function TaskDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const timelineScrollRef = useRef<HTMLDivElement>(null)
   const prevTimelineCountRef = useRef(0)
-  const prevPendingCountRef = useRef(0)
-  const bellAudioRef = useRef<HTMLAudioElement | null>(null)
 
   const { data: taskData, refetch: refetchTask } = useQuery(getTask, { id: taskId })
   const { data: projectData } = useQuery(getProject, { id: projectId })
@@ -116,16 +115,7 @@ function TaskDetailPage() {
   }, [timelineItems.length])
 
   // Play notification sound when new pending requests arrive
-  useEffect(() => {
-    if (pendingRequests.length > prevPendingCountRef.current) {
-      if (!bellAudioRef.current) {
-        bellAudioRef.current = new Audio('/bell.mp3')
-      }
-      bellAudioRef.current.currentTime = 0
-      bellAudioRef.current.play().catch(() => {})
-    }
-    prevPendingCountRef.current = pendingRequests.length
-  }, [pendingRequests.length])
+  useNotificationSound(pendingRequests.length)
 
   const handleDeleted = useCallback(() => {
     navigate({

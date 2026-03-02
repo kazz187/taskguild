@@ -7,6 +7,7 @@ import { InteractionStatus, InteractionType } from '@taskguild/proto/taskguild/v
 import { getProject } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
+import { useNotificationSound } from '@/hooks/useNotificationSound'
 import { ChatBubble } from '@/components/ChatBubble'
 import { PendingRequestsPanel } from '@/components/PendingRequestsPanel'
 import { shortId } from '@/lib/id'
@@ -20,8 +21,6 @@ export const Route = createFileRoute('/projects/$projectId/chat')({
 function ProjectChatPage() {
   const { projectId } = Route.useParams()
   const scrollRef = useRef<HTMLDivElement>(null)
-  const bellAudioRef = useRef<HTMLAudioElement | null>(null)
-  const prevPendingCountRef = useRef(0)
 
   const { data: projectData } = useQuery(getProject, { id: projectId })
   const { data: tasksData, refetch: refetchTasks } = useQuery(listTasks, { projectId })
@@ -67,16 +66,7 @@ function ProjectChatPage() {
   const pendingRequestCount = pendingRequests.length
 
   // Play notification sound when new pending requests arrive
-  useEffect(() => {
-    if (pendingRequestCount > prevPendingCountRef.current) {
-      if (!bellAudioRef.current) {
-        bellAudioRef.current = new Audio('/bell.mp3')
-      }
-      bellAudioRef.current.currentTime = 0
-      bellAudioRef.current.play().catch(() => {})
-    }
-    prevPendingCountRef.current = pendingRequestCount
-  }, [pendingRequestCount])
+  useNotificationSound(pendingRequestCount)
 
   // Auto-scroll to bottom when new interactions arrive
   useEffect(() => {
