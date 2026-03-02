@@ -157,6 +157,9 @@ func runAgent() {
 		connect.WithInterceptors(interceptor),
 	)
 
+	// Permission cache: shared across all tasks within this agent-manager.
+	permCache := newPermissionCache(cfg.ProjectName, client)
+
 	// Task tracking
 	var (
 		mu          sync.Mutex
@@ -180,10 +183,10 @@ func runAgent() {
 
 		// Re-sync agents, permissions, and scripts on each reconnection so local files stay up-to-date.
 		syncAgents(ctx, client, cfg)
-		syncPermissions(ctx, client, cfg)
+		syncPermissions(ctx, client, cfg, permCache)
 		syncScripts(ctx, client, cfg)
 
-		err := runSubscribeLoop(ctx, client, taskClient, interClient, cfg, &mu, activeTasks, &wg, sem)
+		err := runSubscribeLoop(ctx, client, taskClient, interClient, cfg, &mu, activeTasks, &wg, sem, permCache)
 		if ctx.Err() != nil {
 			break
 		}
@@ -219,6 +222,7 @@ func runSubscribeLoop(
 	activeTasks map[string]context.CancelFunc,
 	wg *sync.WaitGroup,
 	sem chan struct{},
+	permCache *permissionCache,
 ) error {
 	stream, err := client.Subscribe(ctx, connect.NewRequest(&v1.AgentManagerSubscribeRequest{
 		AgentManagerId:     cfg.AgentManagerID,
@@ -292,7 +296,7 @@ func runSubscribeLoop(
 					taskCancel()
 				}()
 
-				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir)
+				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache)
 			}(taskID)
 
 		case *v1.AgentCommand_ListWorktrees:
@@ -317,7 +321,7 @@ func runSubscribeLoop(
 
 		case *v1.AgentCommand_SyncPermissions:
 			log.Println("received sync permissions command, re-syncing...")
-			syncPermissions(ctx, client, cfg)
+			syncPermissions(ctx, client, cfg, permCache)
 
 		case *v1.AgentCommand_SyncScripts:
 			log.Println("received sync scripts command, re-syncing...")
@@ -381,7 +385,7 @@ func runSubscribeLoop(
 					taskCancel()
 				}()
 
-				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir)
+				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache)
 			}(taskID)
 
 		default:
