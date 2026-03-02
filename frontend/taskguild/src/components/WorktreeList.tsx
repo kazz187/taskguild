@@ -16,7 +16,7 @@ import { listWorkflows } from '@taskguild/proto/taskguild/v1/workflow-WorkflowSe
 import { EventService, EventType, SubscribeEventsRequestSchema } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { transport } from '@/lib/transport'
-import { GitFork, GitBranch, RefreshCw, Trash2, AlertTriangle, X, FileText, Home, Download, CheckCircle2, XCircle, ClipboardList } from 'lucide-react'
+import { GitFork, GitBranch, RefreshCw, Trash2, AlertTriangle, X, FileText, Home, Download, CheckCircle2, XCircle, ClipboardList, Sparkles, ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
 
 // --- Git pull main result hook ---
 
@@ -114,7 +114,35 @@ export function WorktreeList({ projectId }: { projectId: string }) {
     return map
   }, [tasks])
 
+  // Compute cleanable worktrees: no uncommitted changes AND (no tasks OR all tasks terminal)
+  const cleanableWorktrees = useMemo(() => {
+    return worktrees.filter((wt) => {
+      if (wt.hasChanges) return false
+      const associatedTasks = tasksByWorktree.get(wt.name) ?? []
+      if (associatedTasks.length === 0) return true
+      return associatedTasks.every((t) => statusMap.get(t.statusId)?.isTerminal)
+    })
+  }, [worktrees, tasksByWorktree, statusMap])
+
+  // Compute skipped worktrees with reasons
+  const skippedWorktrees = useMemo(() => {
+    return worktrees
+      .filter((wt) => !cleanableWorktrees.includes(wt))
+      .map((wt) => {
+        const reasons: string[] = []
+        if (wt.hasChanges) reasons.push('Uncommitted changes')
+        const associatedTasks = tasksByWorktree.get(wt.name) ?? []
+        if (associatedTasks.length > 0) {
+          const hasActiveTasks = associatedTasks.some((t) => !statusMap.get(t.statusId)?.isTerminal)
+          if (hasActiveTasks) reasons.push('Has active tasks')
+        }
+        return { worktree: wt, reasons }
+      })
+  }, [worktrees, cleanableWorktrees, tasksByWorktree, statusMap])
+
   const [deleteTarget, setDeleteTarget] = useState<WorktreeInfo | null>(null)
+  const [showCleanDialog, setShowCleanDialog] = useState(false)
+  const [cleanProgress, setCleanProgress] = useState<{ current: number; total: number; errors: string[] } | null>(null)
 
   // Subscribe to worktree list events, worktree deleted events, AND task updates
   const eventTypes = useMemo(
@@ -159,6 +187,38 @@ export function WorktreeList({ projectId }: { projectId: string }) {
     )
   }
 
+  const executeClean = async () => {
+    const targets = [...cleanableWorktrees]
+    if (targets.length === 0) return
+
+    setCleanProgress({ current: 0, total: targets.length, errors: [] })
+
+    const errors: string[] = []
+    for (let i = 0; i < targets.length; i++) {
+      setCleanProgress({ current: i + 1, total: targets.length, errors: [...errors] })
+      try {
+        await new Promise<void>((resolve, reject) => {
+          requestDeleteMut.mutate(
+            { projectId, worktreeName: targets[i].name, force: false },
+            {
+              onSuccess: () => resolve(),
+              onError: (err) => reject(err),
+            },
+          )
+        })
+      } catch (err) {
+        errors.push(`${targets[i].name}: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      }
+    }
+
+    if (errors.length === 0) {
+      setShowCleanDialog(false)
+      setCleanProgress(null)
+    } else {
+      setCleanProgress({ current: targets.length, total: targets.length, errors })
+    }
+  }
+
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
       {/* Header */}
@@ -170,15 +230,31 @@ export function WorktreeList({ projectId }: { projectId: string }) {
             {worktrees.length}
           </span>
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={requestListMut.isPending}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs md:text-sm md:px-3 text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors disabled:opacity-50"
-          title="Refresh worktree list"
-        >
-          <RefreshCw className={`w-4 h-4 ${requestListMut.isPending ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">Refresh</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowCleanDialog(true)}
+            disabled={cleanableWorktrees.length === 0 || cleanProgress !== null}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs md:text-sm md:px-3 text-gray-400 hover:text-amber-300 border border-slate-700 hover:border-amber-500/40 rounded-lg transition-colors disabled:opacity-50 disabled:hover:text-gray-400 disabled:hover:border-slate-700"
+            title={cleanableWorktrees.length > 0 ? `Clean ${cleanableWorktrees.length} stale worktrees` : 'No worktrees to clean'}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span className="hidden sm:inline">Clean</span>
+            {cleanableWorktrees.length > 0 && (
+              <span className="text-[10px] bg-amber-500/20 text-amber-400 rounded-full px-1.5 py-0.5 font-medium">
+                {cleanableWorktrees.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={handleRefresh}
+            disabled={requestListMut.isPending}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs md:text-sm md:px-3 text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors disabled:opacity-50"
+            title="Refresh worktree list"
+          >
+            <RefreshCw className={`w-4 h-4 ${requestListMut.isPending ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Branch Section */}
@@ -216,6 +292,19 @@ export function WorktreeList({ projectId }: { projectId: string }) {
           onConfirm={(force) => executeDelete(force)}
           onCancel={() => setDeleteTarget(null)}
           isPending={requestDeleteMut.isPending}
+        />
+      )}
+
+      {/* Clean Confirmation Dialog */}
+      {showCleanDialog && (
+        <CleanWorktreeDialog
+          cleanable={cleanableWorktrees}
+          skipped={skippedWorktrees}
+          tasksByWorktree={tasksByWorktree}
+          statusMap={statusMap}
+          progress={cleanProgress}
+          onConfirm={executeClean}
+          onCancel={() => { setShowCleanDialog(false); setCleanProgress(null) }}
         />
       )}
     </div>
@@ -474,6 +563,155 @@ function DeleteWorktreeDialog({
           >
             {isPending ? 'Deleting...' : hasChanges ? 'Force Delete' : 'Delete'}
           </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function CleanWorktreeDialog({
+  cleanable,
+  skipped,
+  tasksByWorktree,
+  statusMap,
+  progress,
+  onConfirm,
+  onCancel,
+}: {
+  cleanable: WorktreeInfo[]
+  skipped: { worktree: WorktreeInfo; reasons: string[] }[]
+  tasksByWorktree: Map<string, Task[]>
+  statusMap: Map<string, { name: string; isInitial: boolean; isTerminal: boolean }>
+  progress: { current: number; total: number; errors: string[] } | null
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const [showSkipped, setShowSkipped] = useState(false)
+  const isRunning = progress !== null && progress.current < progress.total
+  const isDone = progress !== null && progress.current >= progress.total
+  const hasErrors = progress !== null && progress.errors.length > 0
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+      onMouseDown={(e) => { if (!isRunning && e.target === e.currentTarget) onCancel() }}
+    >
+      <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg shadow-2xl max-h-[80vh] flex flex-col">
+        <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-amber-400" />
+            <h3 className="text-lg font-semibold text-white">Clean Worktrees</h3>
+          </div>
+          {!isRunning && (
+            <button onClick={onCancel} className="text-gray-500 hover:text-gray-300 transition-colors p-1">
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+
+        <div className="px-4 pb-4 space-y-3 overflow-y-auto flex-1 min-h-0">
+          {/* Progress bar during execution */}
+          {progress && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                {isRunning && <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />}
+                {isDone && !hasErrors && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                {isDone && hasErrors && <AlertTriangle className="w-4 h-4 text-yellow-400" />}
+                <span className="text-sm text-gray-300">
+                  {isRunning
+                    ? `Cleaning ${progress.current}/${progress.total}...`
+                    : hasErrors
+                      ? `Completed with ${progress.errors.length} error${progress.errors.length !== 1 ? 's' : ''}`
+                      : 'All worktrees cleaned successfully'}
+                </span>
+              </div>
+              <div className="w-full bg-slate-800 rounded-full h-1.5">
+                <div
+                  className={`h-1.5 rounded-full transition-all duration-300 ${hasErrors ? 'bg-yellow-500' : 'bg-amber-400'}`}
+                  style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                />
+              </div>
+              {hasErrors && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2 space-y-1">
+                  {progress.errors.map((err, i) => (
+                    <p key={i} className="text-[11px] text-red-300/70 font-mono">{err}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Cleanable worktrees list */}
+          {!progress && (
+            <>
+              <p className="text-sm text-gray-400">
+                The following <span className="text-white font-semibold">{cleanable.length}</span> worktree{cleanable.length !== 1 ? 's' : ''} will be deleted:
+              </p>
+
+              <div className="space-y-2">
+                {cleanable.map((wt) => {
+                  const associatedTasks = tasksByWorktree.get(wt.name) ?? []
+                  const hasNoTasks = associatedTasks.length === 0
+                  return (
+                    <div key={wt.name} className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <Trash2 className="w-3.5 h-3.5 text-red-400/60 shrink-0" />
+                        <span className="text-sm text-white font-mono truncate">{wt.name}</span>
+                      </div>
+                      <p className="text-[11px] text-gray-500 mt-1 ml-5.5 pl-[22px]">
+                        {hasNoTasks ? 'No associated tasks' : `All tasks completed (${associatedTasks.map(t => statusMap.get(t.statusId)?.name ?? t.statusId).join(', ')})`}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Skipped worktrees */}
+              {skipped.length > 0 && (
+                <div>
+                  <button
+                    onClick={() => setShowSkipped(!showSkipped)}
+                    className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                  >
+                    {showSkipped
+                      ? <ChevronDown className="w-3.5 h-3.5" />
+                      : <ChevronRight className="w-3.5 h-3.5" />
+                    }
+                    {skipped.length} worktree{skipped.length !== 1 ? 's' : ''} skipped
+                  </button>
+                  {showSkipped && (
+                    <div className="mt-2 space-y-1.5 pl-1">
+                      {skipped.map(({ worktree: wt, reasons }) => (
+                        <div key={wt.name} className="flex items-start gap-2 text-[11px]">
+                          <span className="text-gray-600 font-mono truncate shrink min-w-0">{wt.name}</span>
+                          <span className="text-gray-600 shrink-0">- {reasons.join(', ')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="border-t border-slate-800 px-4 py-3 flex justify-end gap-2 shrink-0">
+          {!isRunning && (
+            <button
+              onClick={onCancel}
+              className="px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors"
+            >
+              {isDone ? 'Close' : 'Cancel'}
+            </button>
+          )}
+          {!progress && (
+            <button
+              onClick={onConfirm}
+              className="px-4 py-1.5 text-xs bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors"
+            >
+              Clean {cleanable.length} Worktree{cleanable.length !== 1 ? 's' : ''}
+            </button>
+          )}
         </div>
       </div>
     </div>
