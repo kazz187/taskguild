@@ -188,61 +188,59 @@ function TaskDetailPage() {
           <span className="text-gray-300 truncate">{task.title}</span>
         </div>
 
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 md:gap-4">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg md:text-xl font-bold text-white">{task.title}</h1>
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                currentStatus?.isInitial ? 'bg-blue-500/20 text-blue-400' :
-                currentStatus?.isTerminal ? 'bg-green-500/20 text-green-400' :
-                'bg-gray-500/20 text-gray-300'
-              }`}>
-                {currentStatus?.name ?? task.statusId}
+        <div>
+          <h1 className="text-lg md:text-xl font-bold text-white">{task.title}</h1>
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+              currentStatus?.isInitial ? 'bg-blue-500/20 text-blue-400' :
+              currentStatus?.isTerminal ? 'bg-green-500/20 text-green-400' :
+              'bg-gray-500/20 text-gray-300'
+            }`}>
+              {currentStatus?.name ?? task.statusId}
+            </span>
+
+            {task.assignmentStatus === TaskAssignmentStatus.ASSIGNED ? (
+              <span className="inline-flex items-center gap-1 text-xs bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-full px-2.5 py-1">
+                <Bot className="w-3 h-3" />
+                {shortId(task.assignedAgentId)}
               </span>
+            ) : task.assignmentStatus === TaskAssignmentStatus.PENDING ? (
+              <span className="inline-flex items-center gap-1 text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded-full px-2.5 py-1">
+                <Loader className="w-3 h-3" />
+                Pending claim
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                <Clock className="w-3 h-3" />
+                Unassigned
+              </span>
+            )}
 
-              {task.assignmentStatus === TaskAssignmentStatus.ASSIGNED ? (
-                <span className="inline-flex items-center gap-1 text-xs bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-full px-2.5 py-1">
-                  <Bot className="w-3 h-3" />
-                  {shortId(task.assignedAgentId)}
-                </span>
-              ) : task.assignmentStatus === TaskAssignmentStatus.PENDING ? (
-                <span className="inline-flex items-center gap-1 text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded-full px-2.5 py-1">
-                  <Loader className="w-3 h-3" />
-                  Pending claim
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-xs text-gray-500">
-                  <Clock className="w-3 h-3" />
-                  Unassigned
-                </span>
-              )}
+            {allowedTransitions.map((toId) => {
+              const toStatus = sortedStatuses.find((s) => s.id === toId)
+              return (
+                <button
+                  key={toId}
+                  onClick={() => handleStatusChange(toId)}
+                  disabled={statusMut.isPending}
+                  className="flex items-center gap-1 px-3 py-1 text-xs bg-slate-800 border border-slate-700 rounded-lg text-gray-300 hover:border-cyan-500/50 hover:text-white transition-colors disabled:opacity-50"
+                >
+                  <ArrowRight className="w-3 h-3" />
+                  {toStatus?.name ?? toId}
+                </button>
+              )
+            })}
 
-              {allowedTransitions.map((toId) => {
-                const toStatus = sortedStatuses.find((s) => s.id === toId)
-                return (
-                  <button
-                    key={toId}
-                    onClick={() => handleStatusChange(toId)}
-                    disabled={statusMut.isPending}
-                    className="flex items-center gap-1 px-3 py-1 text-xs bg-slate-800 border border-slate-700 rounded-lg text-gray-300 hover:border-cyan-500/50 hover:text-white transition-colors disabled:opacity-50"
-                  >
-                    <ArrowRight className="w-3 h-3" />
-                    {toStatus?.name ?? toId}
-                  </button>
-                )
-              })}
+            <span className="text-[11px] text-gray-600 font-mono ml-auto hidden sm:inline">{task.id}</span>
 
-              <span className="text-[11px] text-gray-600 font-mono ml-auto hidden sm:inline">{task.id}</span>
-            </div>
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="flex items-center gap-1 px-3 py-1 text-xs text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors shrink-0"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              Edit
+            </button>
           </div>
-
-          <button
-            onClick={() => setShowEditModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors shrink-0 self-start"
-          >
-            <Pencil className="w-4 h-4" />
-            Edit
-          </button>
         </div>
       </div>
 
