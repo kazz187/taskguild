@@ -57,16 +57,16 @@ function InteractionEntry({ interaction }: { interaction: Interaction }) {
 
   return (
     <div
-      className={`flex items-center gap-2 px-2 py-1 rounded text-xs ${
+      className={`flex items-start gap-2 px-2 py-1 rounded text-xs ${
         isPending ? 'bg-amber-500/5' : 'hover:bg-slate-800/50'
       }`}
     >
-      <span className="text-[11px] text-gray-600 font-mono w-12 shrink-0 text-right">
+      <span className="text-[11px] text-gray-600 font-mono w-12 shrink-0 text-right mt-0.5">
         {interaction.createdAt ? formatTime(interaction.createdAt) : ''}
       </span>
-      <span className="shrink-0">{icon}</span>
-      <span className="text-[11px] text-gray-500 w-16 shrink-0">{typeLabel}</span>
-      <span className="text-gray-300 truncate flex-1 min-w-0">{interaction.title}</span>
+      <span className="shrink-0 mt-0.5">{icon}</span>
+      <span className="text-[11px] text-gray-500 w-16 shrink-0 mt-0.5">{typeLabel}</span>
+      <span className="text-gray-300 flex-1 min-w-0 break-words">{interaction.title}</span>
       {statusBadge}
     </div>
   )

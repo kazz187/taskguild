@@ -67,9 +67,9 @@ export function RequestItem({
       }`}
     >
       {/* Header row: icon + title + timestamp */}
-      <div className="flex items-center gap-2">
-        <span className="shrink-0">{icon}</span>
-        <span className="text-sm font-medium text-white truncate flex-1 min-w-0">
+      <div className="flex items-start gap-2">
+        <span className="shrink-0 mt-0.5">{icon}</span>
+        <span className="text-sm font-medium text-white flex-1 min-w-0 break-words">
           {interaction.title}
         </span>
         {interaction.createdAt && (
@@ -166,9 +166,9 @@ export function RequestItem({
 
       {/* Responded inline */}
       {isResponded && interaction.response && (
-        <div className="flex items-center gap-1.5 mt-1.5 ml-6">
-          <CheckCircle className="w-3 h-3 text-green-400 shrink-0" />
-          <span className="text-xs text-green-400 truncate">{interaction.response}</span>
+        <div className="flex items-start gap-1.5 mt-1.5 ml-6">
+          <CheckCircle className="w-3 h-3 text-green-400 shrink-0 mt-0.5" />
+          <span className="text-xs text-green-400 break-words min-w-0">{interaction.response}</span>
         </div>
       )}
     </div>
