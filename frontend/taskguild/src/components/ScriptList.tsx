@@ -19,6 +19,7 @@ import { Terminal, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud, Play, CheckCi
 import { createClient } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import { transport } from '@/lib/transport'
+import { AutoScrollPre } from './AutoScrollPre'
 
 interface ScriptFormData {
   name: string
@@ -563,17 +564,19 @@ export function ScriptList({ projectId }: { projectId: string }) {
                       {result.stdout && (
                         <div>
                           <span className="text-[10px] text-gray-500 uppercase tracking-wider">stdout</span>
-                          <pre className="text-xs text-gray-300 font-mono bg-slate-900/50 rounded p-2 mt-0.5 whitespace-pre-wrap max-h-[300px] overflow-y-auto">
-                            {result.stdout}
-                          </pre>
+                          <AutoScrollPre
+                            content={result.stdout}
+                            className="text-xs text-gray-300 font-mono bg-slate-900/50 rounded p-2 mt-0.5 whitespace-pre-wrap max-h-[300px] overflow-y-auto"
+                          />
                         </div>
                       )}
                       {result.stderr && (
                         <div>
                           <span className="text-[10px] text-gray-500 uppercase tracking-wider">stderr</span>
-                          <pre className="text-xs text-red-300 font-mono bg-slate-900/50 rounded p-2 mt-0.5 whitespace-pre-wrap max-h-[300px] overflow-y-auto">
-                            {result.stderr}
-                          </pre>
+                          <AutoScrollPre
+                            content={result.stderr}
+                            className="text-xs text-red-300 font-mono bg-slate-900/50 rounded p-2 mt-0.5 whitespace-pre-wrap max-h-[300px] overflow-y-auto"
+                          />
                         </div>
                       )}
                     </div>
