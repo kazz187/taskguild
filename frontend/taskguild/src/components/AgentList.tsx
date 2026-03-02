@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { listAgents, createAgent, updateAgent, deleteAgent, syncAgentsFromDir } from '@taskguild/proto/taskguild/v1/agent-AgentService_connectquery.ts'
+import { saveAsTemplate, listTemplates, createFromTemplate } from '@taskguild/proto/taskguild/v1/template-TemplateService_connectquery.ts'
 import type { AgentDefinition } from '@taskguild/proto/taskguild/v1/agent_pb.ts'
-import { Bot, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud } from 'lucide-react'
+import type { Template } from '@taskguild/proto/taskguild/v1/template_pb.ts'
+import { Bot, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud, Layers, Copy } from 'lucide-react'
 
 const AVAILABLE_TOOLS = [
   'Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash',
@@ -76,13 +78,21 @@ export function AgentList({ projectId }: { projectId: string }) {
   const updateMut = useMutation(updateAgent)
   const deleteMut = useMutation(deleteAgent)
   const syncMut = useMutation(syncAgentsFromDir)
+  const saveTemplateMut = useMutation(saveAsTemplate)
+  const createFromTemplateMut = useMutation(createFromTemplate)
+  const { data: templatesData, refetch: refetchTemplates } = useQuery(listTemplates, { entityType: 'agent' })
 
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<AgentFormData>(emptyForm)
   const [skillInput, setSkillInput] = useState('')
 
+  // Template dialog state
+  const [saveTemplateDialog, setSaveTemplateDialog] = useState<{ agentId: string; name: string; description: string; includeSkills: boolean } | null>(null)
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
+
   const agents = data?.agents ?? []
+  const agentTemplates = templatesData?.templates ?? []
 
   const openCreate = () => {
     setFormMode('create')
@@ -102,6 +112,54 @@ export function AgentList({ projectId }: { projectId: string }) {
     setFormMode(null)
     setEditingId(null)
     setForm(emptyForm)
+    setSkillInput('')
+  }
+
+  // Template handlers
+  const handleSaveAsTemplate = (agent: AgentDefinition) => {
+    setSaveTemplateDialog({
+      agentId: agent.id,
+      name: agent.name,
+      description: agent.description,
+      includeSkills: agent.skills?.length > 0,
+    })
+  }
+
+  const handleSaveTemplateSubmit = () => {
+    if (!saveTemplateDialog) return
+    saveTemplateMut.mutate(
+      {
+        entityType: 'agent',
+        entityId: saveTemplateDialog.agentId,
+        templateName: saveTemplateDialog.name,
+        templateDescription: saveTemplateDialog.description,
+        includeDependentSkills: saveTemplateDialog.includeSkills,
+      },
+      {
+        onSuccess: () => {
+          setSaveTemplateDialog(null)
+          refetchTemplates()
+        },
+      },
+    )
+  }
+
+  const handleCreateFromTemplate = (tmpl: Template) => {
+    if (!tmpl.agentConfig) return
+    setTemplatePickerOpen(false)
+    setFormMode('create')
+    setEditingId(null)
+    setForm({
+      name: tmpl.agentConfig.name,
+      description: tmpl.agentConfig.description,
+      prompt: tmpl.agentConfig.prompt,
+      tools: [...(tmpl.agentConfig.tools ?? [])],
+      disallowedTools: [...(tmpl.agentConfig.disallowedTools ?? [])],
+      model: tmpl.agentConfig.model,
+      permissionMode: tmpl.agentConfig.permissionMode,
+      skills: [...(tmpl.agentConfig.skills ?? [])],
+      memory: tmpl.agentConfig.memory,
+    })
     setSkillInput('')
   }
 
@@ -184,6 +242,15 @@ export function AgentList({ projectId }: { projectId: string }) {
             <RefreshCw className={`w-4 h-4 ${syncMut.isPending ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Sync from Repo</span>
             <span className="sm:hidden">Sync</span>
+          </button>
+          <button
+            onClick={() => { refetchTemplates(); setTemplatePickerOpen(true) }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs md:text-sm md:px-3 text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors"
+            title="Create agent from template"
+          >
+            <Layers className="w-4 h-4" />
+            <span className="hidden sm:inline">From Template</span>
+            <span className="sm:hidden">Tmpl</span>
           </button>
           <button
             onClick={openCreate}
@@ -472,6 +539,13 @@ export function AgentList({ projectId }: { projectId: string }) {
               </div>
               <div className="flex items-center gap-1 shrink-0 ml-2">
                 <button
+                  onClick={() => handleSaveAsTemplate(agent)}
+                  className="p-1.5 text-gray-500 hover:text-amber-400 transition-colors rounded-lg hover:bg-slate-800"
+                  title="Save as Template"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+                <button
                   onClick={() => openEdit(agent)}
                   className="p-1.5 text-gray-500 hover:text-cyan-400 transition-colors rounded-lg hover:bg-slate-800"
                   title="Edit"
@@ -499,6 +573,103 @@ export function AgentList({ projectId }: { projectId: string }) {
           </div>
         )}
       </div>
+
+      {/* Template Picker Dialog */}
+      {templatePickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setTemplatePickerOpen(false)}>
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-md w-full mx-4 max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Select Agent Template</h3>
+              <button onClick={() => setTemplatePickerOpen(false)} className="text-gray-500 hover:text-gray-300">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {agentTemplates.length === 0 ? (
+              <p className="text-gray-500 text-sm text-center py-6">No agent templates available. Save an agent as template first.</p>
+            ) : (
+              <div className="space-y-2">
+                {agentTemplates.map(tmpl => (
+                  <button
+                    key={tmpl.id}
+                    onClick={() => handleCreateFromTemplate(tmpl)}
+                    className="w-full text-left p-3 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Bot className="w-4 h-4 text-cyan-400" />
+                      <span className="text-sm font-medium text-white">{tmpl.name}</span>
+                    </div>
+                    {tmpl.description && (
+                      <p className="text-xs text-gray-400 ml-6">{tmpl.description}</p>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Save as Template Dialog */}
+      {saveTemplateDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setSaveTemplateDialog(null)}>
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Save as Template</h3>
+              <button onClick={() => setSaveTemplateDialog(null)} className="text-gray-500 hover:text-gray-300">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Template Name</label>
+                <input
+                  type="text"
+                  value={saveTemplateDialog.name}
+                  onChange={e => setSaveTemplateDialog(prev => prev ? { ...prev, name: e.target.value } : null)}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-amber-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Template Description</label>
+                <input
+                  type="text"
+                  value={saveTemplateDialog.description}
+                  onChange={e => setSaveTemplateDialog(prev => prev ? { ...prev, description: e.target.value } : null)}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-amber-500"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={saveTemplateDialog.includeSkills}
+                  onChange={e => setSaveTemplateDialog(prev => prev ? { ...prev, includeSkills: e.target.checked } : null)}
+                  className="rounded border-slate-600 bg-slate-800 text-amber-500 focus:ring-amber-500"
+                />
+                <span>Include referenced Skills as templates</span>
+              </label>
+            </div>
+            {saveTemplateMut.error && (
+              <p className="text-red-400 text-sm mt-3">{saveTemplateMut.error.message}</p>
+            )}
+            {saveTemplateMut.isSuccess && (
+              <p className="text-green-400 text-sm mt-3">Template saved successfully!</p>
+            )}
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setSaveTemplateDialog(null)} className="px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTemplateSubmit}
+                disabled={saveTemplateMut.isPending || !saveTemplateDialog.name}
+                className="flex items-center gap-1.5 px-4 py-1.5 text-sm bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-lg transition-colors"
+              >
+                <Save className="w-3.5 h-3.5" />
+                {saveTemplateMut.isPending ? 'Saving...' : 'Save Template'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

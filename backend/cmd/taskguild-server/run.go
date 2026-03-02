@@ -29,6 +29,8 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/skill"
 	skillrepo "github.com/kazz187/taskguild/backend/internal/skill/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/task"
+	tmpl "github.com/kazz187/taskguild/backend/internal/template"
+	tmplrepo "github.com/kazz187/taskguild/backend/internal/template/repositoryimpl"
 	taskrepo "github.com/kazz187/taskguild/backend/internal/task/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/tasklog"
 	tasklogrepo "github.com/kazz187/taskguild/backend/internal/tasklog/repositoryimpl"
@@ -130,6 +132,7 @@ func runServer() {
 	taskLogRepo := tasklogrepo.NewYAMLRepository(store)
 	pushSubRepo := pushsubrepo.NewYAMLRepository(store)
 	permissionRepo := permissionrepo.NewYAMLRepository(store)
+	templateRepo := tmplrepo.NewYAMLRepository(store)
 
 	// Setup agent-manager registry
 	agentManagerRegistry := agentmanager.NewRegistry()
@@ -157,6 +160,7 @@ func runServer() {
 		projectRepo: projectRepo,
 	}
 	permissionServer := permission.NewServer(permissionRepo, permissionChangeNotifier)
+	templateServer := tmpl.NewServer(templateRepo, agentRepo, skillRepo, scriptRepo)
 
 	// Setup push notification
 	vapidEnv := config.VAPIDEnvFromEnv(env)
@@ -178,6 +182,7 @@ func runServer() {
 		taskLogServer,
 		pushNotificationServer,
 		permissionServer,
+		templateServer,
 	)
 
 	// Setup orchestrator
