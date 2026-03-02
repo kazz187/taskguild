@@ -855,27 +855,28 @@ func (x *ExecuteScriptResponse) GetRequestId() string {
 	return ""
 }
 
-type GetScriptExecutionResultRequest struct {
+// StreamScriptExecution streams real-time output from a script execution.
+type StreamScriptExecutionRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetScriptExecutionResultRequest) Reset() {
-	*x = GetScriptExecutionResultRequest{}
+func (x *StreamScriptExecutionRequest) Reset() {
+	*x = StreamScriptExecutionRequest{}
 	mi := &file_taskguild_v1_script_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetScriptExecutionResultRequest) String() string {
+func (x *StreamScriptExecutionRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetScriptExecutionResultRequest) ProtoMessage() {}
+func (*StreamScriptExecutionRequest) ProtoMessage() {}
 
-func (x *GetScriptExecutionResultRequest) ProtoReflect() protoreflect.Message {
+func (x *StreamScriptExecutionRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_taskguild_v1_script_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -887,44 +888,43 @@ func (x *GetScriptExecutionResultRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetScriptExecutionResultRequest.ProtoReflect.Descriptor instead.
-func (*GetScriptExecutionResultRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use StreamScriptExecutionRequest.ProtoReflect.Descriptor instead.
+func (*StreamScriptExecutionRequest) Descriptor() ([]byte, []int) {
 	return file_taskguild_v1_script_proto_rawDescGZIP(), []int{15}
 }
 
-func (x *GetScriptExecutionResultRequest) GetRequestId() string {
+func (x *StreamScriptExecutionRequest) GetRequestId() string {
 	if x != nil {
 		return x.RequestId
 	}
 	return ""
 }
 
-type GetScriptExecutionResultResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Completed     bool                   `protobuf:"varint,1,opt,name=completed,proto3" json:"completed,omitempty"` // true if execution has finished
-	Success       bool                   `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`     // true if exit code == 0
-	ExitCode      int32                  `protobuf:"varint,3,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
-	Stdout        string                 `protobuf:"bytes,4,opt,name=stdout,proto3" json:"stdout,omitempty"`
-	Stderr        string                 `protobuf:"bytes,5,opt,name=stderr,proto3" json:"stderr,omitempty"`
-	ErrorMessage  string                 `protobuf:"bytes,6,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"` // error description if execution failed to start
+type ScriptExecutionEvent struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Event:
+	//
+	//	*ScriptExecutionEvent_Output
+	//	*ScriptExecutionEvent_Complete
+	Event         isScriptExecutionEvent_Event `protobuf_oneof:"event"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetScriptExecutionResultResponse) Reset() {
-	*x = GetScriptExecutionResultResponse{}
+func (x *ScriptExecutionEvent) Reset() {
+	*x = ScriptExecutionEvent{}
 	mi := &file_taskguild_v1_script_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetScriptExecutionResultResponse) String() string {
+func (x *ScriptExecutionEvent) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetScriptExecutionResultResponse) ProtoMessage() {}
+func (*ScriptExecutionEvent) ProtoMessage() {}
 
-func (x *GetScriptExecutionResultResponse) ProtoReflect() protoreflect.Message {
+func (x *ScriptExecutionEvent) ProtoReflect() protoreflect.Message {
 	mi := &file_taskguild_v1_script_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -936,47 +936,174 @@ func (x *GetScriptExecutionResultResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetScriptExecutionResultResponse.ProtoReflect.Descriptor instead.
-func (*GetScriptExecutionResultResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ScriptExecutionEvent.ProtoReflect.Descriptor instead.
+func (*ScriptExecutionEvent) Descriptor() ([]byte, []int) {
 	return file_taskguild_v1_script_proto_rawDescGZIP(), []int{16}
 }
 
-func (x *GetScriptExecutionResultResponse) GetCompleted() bool {
+func (x *ScriptExecutionEvent) GetEvent() isScriptExecutionEvent_Event {
 	if x != nil {
-		return x.Completed
+		return x.Event
 	}
-	return false
+	return nil
 }
 
-func (x *GetScriptExecutionResultResponse) GetSuccess() bool {
+func (x *ScriptExecutionEvent) GetOutput() *ScriptOutputChunk {
 	if x != nil {
-		return x.Success
+		if x, ok := x.Event.(*ScriptExecutionEvent_Output); ok {
+			return x.Output
+		}
 	}
-	return false
+	return nil
 }
 
-func (x *GetScriptExecutionResultResponse) GetExitCode() int32 {
+func (x *ScriptExecutionEvent) GetComplete() *ScriptExecutionComplete {
 	if x != nil {
-		return x.ExitCode
+		if x, ok := x.Event.(*ScriptExecutionEvent_Complete); ok {
+			return x.Complete
+		}
 	}
-	return 0
+	return nil
 }
 
-func (x *GetScriptExecutionResultResponse) GetStdout() string {
+type isScriptExecutionEvent_Event interface {
+	isScriptExecutionEvent_Event()
+}
+
+type ScriptExecutionEvent_Output struct {
+	Output *ScriptOutputChunk `protobuf:"bytes,1,opt,name=output,proto3,oneof"`
+}
+
+type ScriptExecutionEvent_Complete struct {
+	Complete *ScriptExecutionComplete `protobuf:"bytes,2,opt,name=complete,proto3,oneof"`
+}
+
+func (*ScriptExecutionEvent_Output) isScriptExecutionEvent_Event() {}
+
+func (*ScriptExecutionEvent_Complete) isScriptExecutionEvent_Event() {}
+
+type ScriptOutputChunk struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Stdout        string                 `protobuf:"bytes,1,opt,name=stdout,proto3" json:"stdout,omitempty"` // incremental stdout chunk
+	Stderr        string                 `protobuf:"bytes,2,opt,name=stderr,proto3" json:"stderr,omitempty"` // incremental stderr chunk
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ScriptOutputChunk) Reset() {
+	*x = ScriptOutputChunk{}
+	mi := &file_taskguild_v1_script_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ScriptOutputChunk) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ScriptOutputChunk) ProtoMessage() {}
+
+func (x *ScriptOutputChunk) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_script_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ScriptOutputChunk.ProtoReflect.Descriptor instead.
+func (*ScriptOutputChunk) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_script_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ScriptOutputChunk) GetStdout() string {
 	if x != nil {
 		return x.Stdout
 	}
 	return ""
 }
 
-func (x *GetScriptExecutionResultResponse) GetStderr() string {
+func (x *ScriptOutputChunk) GetStderr() string {
 	if x != nil {
 		return x.Stderr
 	}
 	return ""
 }
 
-func (x *GetScriptExecutionResultResponse) GetErrorMessage() string {
+type ScriptExecutionComplete struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	ExitCode      int32                  `protobuf:"varint,2,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
+	Stdout        string                 `protobuf:"bytes,3,opt,name=stdout,proto3" json:"stdout,omitempty"` // full stdout (for late joiners)
+	Stderr        string                 `protobuf:"bytes,4,opt,name=stderr,proto3" json:"stderr,omitempty"` // full stderr
+	ErrorMessage  string                 `protobuf:"bytes,5,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ScriptExecutionComplete) Reset() {
+	*x = ScriptExecutionComplete{}
+	mi := &file_taskguild_v1_script_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ScriptExecutionComplete) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ScriptExecutionComplete) ProtoMessage() {}
+
+func (x *ScriptExecutionComplete) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_script_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ScriptExecutionComplete.ProtoReflect.Descriptor instead.
+func (*ScriptExecutionComplete) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_script_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ScriptExecutionComplete) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *ScriptExecutionComplete) GetExitCode() int32 {
+	if x != nil {
+		return x.ExitCode
+	}
+	return 0
+}
+
+func (x *ScriptExecutionComplete) GetStdout() string {
+	if x != nil {
+		return x.Stdout
+	}
+	return ""
+}
+
+func (x *ScriptExecutionComplete) GetStderr() string {
+	if x != nil {
+		return x.Stderr
+	}
+	return ""
+}
+
+func (x *ScriptExecutionComplete) GetErrorMessage() string {
 	if x != nil {
 		return x.ErrorMessage
 	}
@@ -1050,17 +1177,23 @@ const file_taskguild_v1_script_proto_rawDesc = "" +
 	"\tscript_id\x18\x02 \x01(\tR\bscriptId\"6\n" +
 	"\x15ExecuteScriptResponse\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x01 \x01(\tR\trequestId\"@\n" +
-	"\x1fGetScriptExecutionResultRequest\x12\x1d\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\"=\n" +
+	"\x1cStreamScriptExecutionRequest\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x01 \x01(\tR\trequestId\"\xcc\x01\n" +
-	" GetScriptExecutionResultResponse\x12\x1c\n" +
-	"\tcompleted\x18\x01 \x01(\bR\tcompleted\x12\x18\n" +
-	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x1b\n" +
-	"\texit_code\x18\x03 \x01(\x05R\bexitCode\x12\x16\n" +
-	"\x06stdout\x18\x04 \x01(\tR\x06stdout\x12\x16\n" +
-	"\x06stderr\x18\x05 \x01(\tR\x06stderr\x12#\n" +
-	"\rerror_message\x18\x06 \x01(\tR\ferrorMessage2\xf4\x05\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\"\x9f\x01\n" +
+	"\x14ScriptExecutionEvent\x129\n" +
+	"\x06output\x18\x01 \x01(\v2\x1f.taskguild.v1.ScriptOutputChunkH\x00R\x06output\x12C\n" +
+	"\bcomplete\x18\x02 \x01(\v2%.taskguild.v1.ScriptExecutionCompleteH\x00R\bcompleteB\a\n" +
+	"\x05event\"C\n" +
+	"\x11ScriptOutputChunk\x12\x16\n" +
+	"\x06stdout\x18\x01 \x01(\tR\x06stdout\x12\x16\n" +
+	"\x06stderr\x18\x02 \x01(\tR\x06stderr\"\xa5\x01\n" +
+	"\x17ScriptExecutionComplete\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x1b\n" +
+	"\texit_code\x18\x02 \x01(\x05R\bexitCode\x12\x16\n" +
+	"\x06stdout\x18\x03 \x01(\tR\x06stdout\x12\x16\n" +
+	"\x06stderr\x18\x04 \x01(\tR\x06stderr\x12#\n" +
+	"\rerror_message\x18\x05 \x01(\tR\ferrorMessage2\xe4\x05\n" +
 	"\rScriptService\x12U\n" +
 	"\fCreateScript\x12!.taskguild.v1.CreateScriptRequest\x1a\".taskguild.v1.CreateScriptResponse\x12L\n" +
 	"\tGetScript\x12\x1e.taskguild.v1.GetScriptRequest\x1a\x1f.taskguild.v1.GetScriptResponse\x12R\n" +
@@ -1068,8 +1201,8 @@ const file_taskguild_v1_script_proto_rawDesc = "" +
 	"\fUpdateScript\x12!.taskguild.v1.UpdateScriptRequest\x1a\".taskguild.v1.UpdateScriptResponse\x12U\n" +
 	"\fDeleteScript\x12!.taskguild.v1.DeleteScriptRequest\x1a\".taskguild.v1.DeleteScriptResponse\x12g\n" +
 	"\x12SyncScriptsFromDir\x12'.taskguild.v1.SyncScriptsFromDirRequest\x1a(.taskguild.v1.SyncScriptsFromDirResponse\x12X\n" +
-	"\rExecuteScript\x12\".taskguild.v1.ExecuteScriptRequest\x1a#.taskguild.v1.ExecuteScriptResponse\x12y\n" +
-	"\x18GetScriptExecutionResult\x12-.taskguild.v1.GetScriptExecutionResultRequest\x1a..taskguild.v1.GetScriptExecutionResultResponseB\xb9\x01\n" +
+	"\rExecuteScript\x12\".taskguild.v1.ExecuteScriptRequest\x1a#.taskguild.v1.ExecuteScriptResponse\x12i\n" +
+	"\x15StreamScriptExecution\x12*.taskguild.v1.StreamScriptExecutionRequest\x1a\".taskguild.v1.ScriptExecutionEvent0\x01B\xb9\x01\n" +
 	"\x10com.taskguild.v1B\vScriptProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
@@ -1084,60 +1217,64 @@ func file_taskguild_v1_script_proto_rawDescGZIP() []byte {
 	return file_taskguild_v1_script_proto_rawDescData
 }
 
-var file_taskguild_v1_script_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_taskguild_v1_script_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_taskguild_v1_script_proto_goTypes = []any{
-	(*ScriptDefinition)(nil),                 // 0: taskguild.v1.ScriptDefinition
-	(*CreateScriptRequest)(nil),              // 1: taskguild.v1.CreateScriptRequest
-	(*CreateScriptResponse)(nil),             // 2: taskguild.v1.CreateScriptResponse
-	(*GetScriptRequest)(nil),                 // 3: taskguild.v1.GetScriptRequest
-	(*GetScriptResponse)(nil),                // 4: taskguild.v1.GetScriptResponse
-	(*ListScriptsRequest)(nil),               // 5: taskguild.v1.ListScriptsRequest
-	(*ListScriptsResponse)(nil),              // 6: taskguild.v1.ListScriptsResponse
-	(*UpdateScriptRequest)(nil),              // 7: taskguild.v1.UpdateScriptRequest
-	(*UpdateScriptResponse)(nil),             // 8: taskguild.v1.UpdateScriptResponse
-	(*DeleteScriptRequest)(nil),              // 9: taskguild.v1.DeleteScriptRequest
-	(*DeleteScriptResponse)(nil),             // 10: taskguild.v1.DeleteScriptResponse
-	(*SyncScriptsFromDirRequest)(nil),        // 11: taskguild.v1.SyncScriptsFromDirRequest
-	(*SyncScriptsFromDirResponse)(nil),       // 12: taskguild.v1.SyncScriptsFromDirResponse
-	(*ExecuteScriptRequest)(nil),             // 13: taskguild.v1.ExecuteScriptRequest
-	(*ExecuteScriptResponse)(nil),            // 14: taskguild.v1.ExecuteScriptResponse
-	(*GetScriptExecutionResultRequest)(nil),  // 15: taskguild.v1.GetScriptExecutionResultRequest
-	(*GetScriptExecutionResultResponse)(nil), // 16: taskguild.v1.GetScriptExecutionResultResponse
-	(*timestamppb.Timestamp)(nil),            // 17: google.protobuf.Timestamp
-	(*PaginationRequest)(nil),                // 18: taskguild.v1.PaginationRequest
-	(*PaginationResponse)(nil),               // 19: taskguild.v1.PaginationResponse
+	(*ScriptDefinition)(nil),             // 0: taskguild.v1.ScriptDefinition
+	(*CreateScriptRequest)(nil),          // 1: taskguild.v1.CreateScriptRequest
+	(*CreateScriptResponse)(nil),         // 2: taskguild.v1.CreateScriptResponse
+	(*GetScriptRequest)(nil),             // 3: taskguild.v1.GetScriptRequest
+	(*GetScriptResponse)(nil),            // 4: taskguild.v1.GetScriptResponse
+	(*ListScriptsRequest)(nil),           // 5: taskguild.v1.ListScriptsRequest
+	(*ListScriptsResponse)(nil),          // 6: taskguild.v1.ListScriptsResponse
+	(*UpdateScriptRequest)(nil),          // 7: taskguild.v1.UpdateScriptRequest
+	(*UpdateScriptResponse)(nil),         // 8: taskguild.v1.UpdateScriptResponse
+	(*DeleteScriptRequest)(nil),          // 9: taskguild.v1.DeleteScriptRequest
+	(*DeleteScriptResponse)(nil),         // 10: taskguild.v1.DeleteScriptResponse
+	(*SyncScriptsFromDirRequest)(nil),    // 11: taskguild.v1.SyncScriptsFromDirRequest
+	(*SyncScriptsFromDirResponse)(nil),   // 12: taskguild.v1.SyncScriptsFromDirResponse
+	(*ExecuteScriptRequest)(nil),         // 13: taskguild.v1.ExecuteScriptRequest
+	(*ExecuteScriptResponse)(nil),        // 14: taskguild.v1.ExecuteScriptResponse
+	(*StreamScriptExecutionRequest)(nil), // 15: taskguild.v1.StreamScriptExecutionRequest
+	(*ScriptExecutionEvent)(nil),         // 16: taskguild.v1.ScriptExecutionEvent
+	(*ScriptOutputChunk)(nil),            // 17: taskguild.v1.ScriptOutputChunk
+	(*ScriptExecutionComplete)(nil),      // 18: taskguild.v1.ScriptExecutionComplete
+	(*timestamppb.Timestamp)(nil),        // 19: google.protobuf.Timestamp
+	(*PaginationRequest)(nil),            // 20: taskguild.v1.PaginationRequest
+	(*PaginationResponse)(nil),           // 21: taskguild.v1.PaginationResponse
 }
 var file_taskguild_v1_script_proto_depIdxs = []int32{
-	17, // 0: taskguild.v1.ScriptDefinition.created_at:type_name -> google.protobuf.Timestamp
-	17, // 1: taskguild.v1.ScriptDefinition.updated_at:type_name -> google.protobuf.Timestamp
+	19, // 0: taskguild.v1.ScriptDefinition.created_at:type_name -> google.protobuf.Timestamp
+	19, // 1: taskguild.v1.ScriptDefinition.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 2: taskguild.v1.CreateScriptResponse.script:type_name -> taskguild.v1.ScriptDefinition
 	0,  // 3: taskguild.v1.GetScriptResponse.script:type_name -> taskguild.v1.ScriptDefinition
-	18, // 4: taskguild.v1.ListScriptsRequest.pagination:type_name -> taskguild.v1.PaginationRequest
+	20, // 4: taskguild.v1.ListScriptsRequest.pagination:type_name -> taskguild.v1.PaginationRequest
 	0,  // 5: taskguild.v1.ListScriptsResponse.scripts:type_name -> taskguild.v1.ScriptDefinition
-	19, // 6: taskguild.v1.ListScriptsResponse.pagination:type_name -> taskguild.v1.PaginationResponse
+	21, // 6: taskguild.v1.ListScriptsResponse.pagination:type_name -> taskguild.v1.PaginationResponse
 	0,  // 7: taskguild.v1.UpdateScriptResponse.script:type_name -> taskguild.v1.ScriptDefinition
 	0,  // 8: taskguild.v1.SyncScriptsFromDirResponse.scripts:type_name -> taskguild.v1.ScriptDefinition
-	1,  // 9: taskguild.v1.ScriptService.CreateScript:input_type -> taskguild.v1.CreateScriptRequest
-	3,  // 10: taskguild.v1.ScriptService.GetScript:input_type -> taskguild.v1.GetScriptRequest
-	5,  // 11: taskguild.v1.ScriptService.ListScripts:input_type -> taskguild.v1.ListScriptsRequest
-	7,  // 12: taskguild.v1.ScriptService.UpdateScript:input_type -> taskguild.v1.UpdateScriptRequest
-	9,  // 13: taskguild.v1.ScriptService.DeleteScript:input_type -> taskguild.v1.DeleteScriptRequest
-	11, // 14: taskguild.v1.ScriptService.SyncScriptsFromDir:input_type -> taskguild.v1.SyncScriptsFromDirRequest
-	13, // 15: taskguild.v1.ScriptService.ExecuteScript:input_type -> taskguild.v1.ExecuteScriptRequest
-	15, // 16: taskguild.v1.ScriptService.GetScriptExecutionResult:input_type -> taskguild.v1.GetScriptExecutionResultRequest
-	2,  // 17: taskguild.v1.ScriptService.CreateScript:output_type -> taskguild.v1.CreateScriptResponse
-	4,  // 18: taskguild.v1.ScriptService.GetScript:output_type -> taskguild.v1.GetScriptResponse
-	6,  // 19: taskguild.v1.ScriptService.ListScripts:output_type -> taskguild.v1.ListScriptsResponse
-	8,  // 20: taskguild.v1.ScriptService.UpdateScript:output_type -> taskguild.v1.UpdateScriptResponse
-	10, // 21: taskguild.v1.ScriptService.DeleteScript:output_type -> taskguild.v1.DeleteScriptResponse
-	12, // 22: taskguild.v1.ScriptService.SyncScriptsFromDir:output_type -> taskguild.v1.SyncScriptsFromDirResponse
-	14, // 23: taskguild.v1.ScriptService.ExecuteScript:output_type -> taskguild.v1.ExecuteScriptResponse
-	16, // 24: taskguild.v1.ScriptService.GetScriptExecutionResult:output_type -> taskguild.v1.GetScriptExecutionResultResponse
-	17, // [17:25] is the sub-list for method output_type
-	9,  // [9:17] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	17, // 9: taskguild.v1.ScriptExecutionEvent.output:type_name -> taskguild.v1.ScriptOutputChunk
+	18, // 10: taskguild.v1.ScriptExecutionEvent.complete:type_name -> taskguild.v1.ScriptExecutionComplete
+	1,  // 11: taskguild.v1.ScriptService.CreateScript:input_type -> taskguild.v1.CreateScriptRequest
+	3,  // 12: taskguild.v1.ScriptService.GetScript:input_type -> taskguild.v1.GetScriptRequest
+	5,  // 13: taskguild.v1.ScriptService.ListScripts:input_type -> taskguild.v1.ListScriptsRequest
+	7,  // 14: taskguild.v1.ScriptService.UpdateScript:input_type -> taskguild.v1.UpdateScriptRequest
+	9,  // 15: taskguild.v1.ScriptService.DeleteScript:input_type -> taskguild.v1.DeleteScriptRequest
+	11, // 16: taskguild.v1.ScriptService.SyncScriptsFromDir:input_type -> taskguild.v1.SyncScriptsFromDirRequest
+	13, // 17: taskguild.v1.ScriptService.ExecuteScript:input_type -> taskguild.v1.ExecuteScriptRequest
+	15, // 18: taskguild.v1.ScriptService.StreamScriptExecution:input_type -> taskguild.v1.StreamScriptExecutionRequest
+	2,  // 19: taskguild.v1.ScriptService.CreateScript:output_type -> taskguild.v1.CreateScriptResponse
+	4,  // 20: taskguild.v1.ScriptService.GetScript:output_type -> taskguild.v1.GetScriptResponse
+	6,  // 21: taskguild.v1.ScriptService.ListScripts:output_type -> taskguild.v1.ListScriptsResponse
+	8,  // 22: taskguild.v1.ScriptService.UpdateScript:output_type -> taskguild.v1.UpdateScriptResponse
+	10, // 23: taskguild.v1.ScriptService.DeleteScript:output_type -> taskguild.v1.DeleteScriptResponse
+	12, // 24: taskguild.v1.ScriptService.SyncScriptsFromDir:output_type -> taskguild.v1.SyncScriptsFromDirResponse
+	14, // 25: taskguild.v1.ScriptService.ExecuteScript:output_type -> taskguild.v1.ExecuteScriptResponse
+	16, // 26: taskguild.v1.ScriptService.StreamScriptExecution:output_type -> taskguild.v1.ScriptExecutionEvent
+	19, // [19:27] is the sub-list for method output_type
+	11, // [11:19] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_script_proto_init() }
@@ -1146,13 +1283,17 @@ func file_taskguild_v1_script_proto_init() {
 		return
 	}
 	file_taskguild_v1_common_proto_init()
+	file_taskguild_v1_script_proto_msgTypes[16].OneofWrappers = []any{
+		(*ScriptExecutionEvent_Output)(nil),
+		(*ScriptExecutionEvent_Complete)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_script_proto_rawDesc), len(file_taskguild_v1_script_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

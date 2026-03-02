@@ -90,6 +90,9 @@ const (
 	// AgentManagerServiceReportScriptExecutionResultProcedure is the fully-qualified name of the
 	// AgentManagerService's ReportScriptExecutionResult RPC.
 	AgentManagerServiceReportScriptExecutionResultProcedure = "/taskguild.v1.AgentManagerService/ReportScriptExecutionResult"
+	// AgentManagerServiceReportScriptOutputChunkProcedure is the fully-qualified name of the
+	// AgentManagerService's ReportScriptOutputChunk RPC.
+	AgentManagerServiceReportScriptOutputChunkProcedure = "/taskguild.v1.AgentManagerService/ReportScriptOutputChunk"
 )
 
 // AgentManagerServiceClient is a client for the taskguild.v1.AgentManagerService service.
@@ -135,6 +138,8 @@ type AgentManagerServiceClient interface {
 	SyncScripts(context.Context, *connect.Request[v1.SyncScriptsRequest]) (*connect.Response[v1.SyncScriptsResponse], error)
 	// ReportScriptExecutionResult reports the outcome of a script execution from the agent.
 	ReportScriptExecutionResult(context.Context, *connect.Request[v1.ReportScriptExecutionResultRequest]) (*connect.Response[v1.ReportScriptExecutionResultResponse], error)
+	// ReportScriptOutputChunk reports a chunk of real-time script output from the agent.
+	ReportScriptOutputChunk(context.Context, *connect.Request[v1.ReportScriptOutputChunkRequest]) (*connect.Response[v1.ReportScriptOutputChunkResponse], error)
 }
 
 // NewAgentManagerServiceClient constructs a client for the taskguild.v1.AgentManagerService
@@ -262,6 +267,12 @@ func NewAgentManagerServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(agentManagerServiceMethods.ByName("ReportScriptExecutionResult")),
 			connect.WithClientOptions(opts...),
 		),
+		reportScriptOutputChunk: connect.NewClient[v1.ReportScriptOutputChunkRequest, v1.ReportScriptOutputChunkResponse](
+			httpClient,
+			baseURL+AgentManagerServiceReportScriptOutputChunkProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("ReportScriptOutputChunk")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -286,6 +297,7 @@ type agentManagerServiceClient struct {
 	reportGitPullMainResult     *connect.Client[v1.ReportGitPullMainResultRequest, v1.ReportGitPullMainResultResponse]
 	syncScripts                 *connect.Client[v1.SyncScriptsRequest, v1.SyncScriptsResponse]
 	reportScriptExecutionResult *connect.Client[v1.ReportScriptExecutionResultRequest, v1.ReportScriptExecutionResultResponse]
+	reportScriptOutputChunk     *connect.Client[v1.ReportScriptOutputChunkRequest, v1.ReportScriptOutputChunkResponse]
 }
 
 // Subscribe calls taskguild.v1.AgentManagerService.Subscribe.
@@ -383,6 +395,11 @@ func (c *agentManagerServiceClient) ReportScriptExecutionResult(ctx context.Cont
 	return c.reportScriptExecutionResult.CallUnary(ctx, req)
 }
 
+// ReportScriptOutputChunk calls taskguild.v1.AgentManagerService.ReportScriptOutputChunk.
+func (c *agentManagerServiceClient) ReportScriptOutputChunk(ctx context.Context, req *connect.Request[v1.ReportScriptOutputChunkRequest]) (*connect.Response[v1.ReportScriptOutputChunkResponse], error) {
+	return c.reportScriptOutputChunk.CallUnary(ctx, req)
+}
+
 // AgentManagerServiceHandler is an implementation of the taskguild.v1.AgentManagerService service.
 type AgentManagerServiceHandler interface {
 	// Subscribe opens a server-stream for receiving commands from the backend.
@@ -426,6 +443,8 @@ type AgentManagerServiceHandler interface {
 	SyncScripts(context.Context, *connect.Request[v1.SyncScriptsRequest]) (*connect.Response[v1.SyncScriptsResponse], error)
 	// ReportScriptExecutionResult reports the outcome of a script execution from the agent.
 	ReportScriptExecutionResult(context.Context, *connect.Request[v1.ReportScriptExecutionResultRequest]) (*connect.Response[v1.ReportScriptExecutionResultResponse], error)
+	// ReportScriptOutputChunk reports a chunk of real-time script output from the agent.
+	ReportScriptOutputChunk(context.Context, *connect.Request[v1.ReportScriptOutputChunkRequest]) (*connect.Response[v1.ReportScriptOutputChunkResponse], error)
 }
 
 // NewAgentManagerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -549,6 +568,12 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 		connect.WithSchema(agentManagerServiceMethods.ByName("ReportScriptExecutionResult")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentManagerServiceReportScriptOutputChunkHandler := connect.NewUnaryHandler(
+		AgentManagerServiceReportScriptOutputChunkProcedure,
+		svc.ReportScriptOutputChunk,
+		connect.WithSchema(agentManagerServiceMethods.ByName("ReportScriptOutputChunk")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/taskguild.v1.AgentManagerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AgentManagerServiceSubscribeProcedure:
@@ -589,6 +614,8 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 			agentManagerServiceSyncScriptsHandler.ServeHTTP(w, r)
 		case AgentManagerServiceReportScriptExecutionResultProcedure:
 			agentManagerServiceReportScriptExecutionResultHandler.ServeHTTP(w, r)
+		case AgentManagerServiceReportScriptOutputChunkProcedure:
+			agentManagerServiceReportScriptOutputChunkHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -672,4 +699,8 @@ func (UnimplementedAgentManagerServiceHandler) SyncScripts(context.Context, *con
 
 func (UnimplementedAgentManagerServiceHandler) ReportScriptExecutionResult(context.Context, *connect.Request[v1.ReportScriptExecutionResultRequest]) (*connect.Response[v1.ReportScriptExecutionResultResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportScriptExecutionResult is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) ReportScriptOutputChunk(context.Context, *connect.Request[v1.ReportScriptOutputChunkRequest]) (*connect.Response[v1.ReportScriptOutputChunkResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportScriptOutputChunk is not implemented"))
 }

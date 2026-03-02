@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file taskguild/v1/script.proto.
  */
 export const file_taskguild_v1_script: GenFile = /*@__PURE__*/
-  fileDesc("Chl0YXNrZ3VpbGQvdjEvc2NyaXB0LnByb3RvEgx0YXNrZ3VpbGQudjEi6wEKEFNjcmlwdERlZmluaXRpb24SCgoCaWQYASABKAkSEgoKcHJvamVjdF9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEhAKCGZpbGVuYW1lGAUgASgJEg8KB2NvbnRlbnQYBiABKAkSEQoJaXNfc3luY2VkGAcgASgIEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIm8KE0NyZWF0ZVNjcmlwdFJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEhAKCGZpbGVuYW1lGAQgASgJEg8KB2NvbnRlbnQYBSABKAkiRgoUQ3JlYXRlU2NyaXB0UmVzcG9uc2USLgoGc2NyaXB0GAEgASgLMh4udGFza2d1aWxkLnYxLlNjcmlwdERlZmluaXRpb24iHgoQR2V0U2NyaXB0UmVxdWVzdBIKCgJpZBgBIAEoCSJDChFHZXRTY3JpcHRSZXNwb25zZRIuCgZzY3JpcHQYASABKAsyHi50YXNrZ3VpbGQudjEuU2NyaXB0RGVmaW5pdGlvbiJdChJMaXN0U2NyaXB0c1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIzCgpwYWdpbmF0aW9uGAIgASgLMh8udGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXF1ZXN0InwKE0xpc3RTY3JpcHRzUmVzcG9uc2USLwoHc2NyaXB0cxgBIAMoCzIeLnRhc2tndWlsZC52MS5TY3JpcHREZWZpbml0aW9uEjQKCnBhZ2luYXRpb24YAiABKAsyIC50YXNrZ3VpbGQudjEuUGFnaW5hdGlvblJlc3BvbnNlImcKE1VwZGF0ZVNjcmlwdFJlcXVlc3QSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIQCghmaWxlbmFtZRgEIAEoCRIPCgdjb250ZW50GAUgASgJIkYKFFVwZGF0ZVNjcmlwdFJlc3BvbnNlEi4KBnNjcmlwdBgBIAEoCzIeLnRhc2tndWlsZC52MS5TY3JpcHREZWZpbml0aW9uIiEKE0RlbGV0ZVNjcmlwdFJlcXVlc3QSCgoCaWQYASABKAkiFgoURGVsZXRlU2NyaXB0UmVzcG9uc2UiQgoZU3luY1NjcmlwdHNGcm9tRGlyUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhEKCWRpcmVjdG9yeRgCIAEoCSJvChpTeW5jU2NyaXB0c0Zyb21EaXJSZXNwb25zZRIvCgdzY3JpcHRzGAEgAygLMh4udGFza2d1aWxkLnYxLlNjcmlwdERlZmluaXRpb24SDwoHY3JlYXRlZBgCIAEoBRIPCgd1cGRhdGVkGAMgASgFIj0KFEV4ZWN1dGVTY3JpcHRSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSEQoJc2NyaXB0X2lkGAIgASgJIisKFUV4ZWN1dGVTY3JpcHRSZXNwb25zZRISCgpyZXF1ZXN0X2lkGAEgASgJIjUKH0dldFNjcmlwdEV4ZWN1dGlvblJlc3VsdFJlcXVlc3QSEgoKcmVxdWVzdF9pZBgBIAEoCSKQAQogR2V0U2NyaXB0RXhlY3V0aW9uUmVzdWx0UmVzcG9uc2USEQoJY29tcGxldGVkGAEgASgIEg8KB3N1Y2Nlc3MYAiABKAgSEQoJZXhpdF9jb2RlGAMgASgFEg4KBnN0ZG91dBgEIAEoCRIOCgZzdGRlcnIYBSABKAkSFQoNZXJyb3JfbWVzc2FnZRgGIAEoCTL0BQoNU2NyaXB0U2VydmljZRJVCgxDcmVhdGVTY3JpcHQSIS50YXNrZ3VpbGQudjEuQ3JlYXRlU2NyaXB0UmVxdWVzdBoiLnRhc2tndWlsZC52MS5DcmVhdGVTY3JpcHRSZXNwb25zZRJMCglHZXRTY3JpcHQSHi50YXNrZ3VpbGQudjEuR2V0U2NyaXB0UmVxdWVzdBofLnRhc2tndWlsZC52MS5HZXRTY3JpcHRSZXNwb25zZRJSCgtMaXN0U2NyaXB0cxIgLnRhc2tndWlsZC52MS5MaXN0U2NyaXB0c1JlcXVlc3QaIS50YXNrZ3VpbGQudjEuTGlzdFNjcmlwdHNSZXNwb25zZRJVCgxVcGRhdGVTY3JpcHQSIS50YXNrZ3VpbGQudjEuVXBkYXRlU2NyaXB0UmVxdWVzdBoiLnRhc2tndWlsZC52MS5VcGRhdGVTY3JpcHRSZXNwb25zZRJVCgxEZWxldGVTY3JpcHQSIS50YXNrZ3VpbGQudjEuRGVsZXRlU2NyaXB0UmVxdWVzdBoiLnRhc2tndWlsZC52MS5EZWxldGVTY3JpcHRSZXNwb25zZRJnChJTeW5jU2NyaXB0c0Zyb21EaXISJy50YXNrZ3VpbGQudjEuU3luY1NjcmlwdHNGcm9tRGlyUmVxdWVzdBooLnRhc2tndWlsZC52MS5TeW5jU2NyaXB0c0Zyb21EaXJSZXNwb25zZRJYCg1FeGVjdXRlU2NyaXB0EiIudGFza2d1aWxkLnYxLkV4ZWN1dGVTY3JpcHRSZXF1ZXN0GiMudGFza2d1aWxkLnYxLkV4ZWN1dGVTY3JpcHRSZXNwb25zZRJ5ChhHZXRTY3JpcHRFeGVjdXRpb25SZXN1bHQSLS50YXNrZ3VpbGQudjEuR2V0U2NyaXB0RXhlY3V0aW9uUmVzdWx0UmVxdWVzdBouLnRhc2tndWlsZC52MS5HZXRTY3JpcHRFeGVjdXRpb25SZXN1bHRSZXNwb25zZUK5AQoQY29tLnRhc2tndWlsZC52MUILU2NyaXB0UHJvdG9QAVpHZ2l0aHViLmNvbS9rYXp6MTg3L3Rhc2tndWlsZC9iYWNrZW5kL2dlbi9wcm90by90YXNrZ3VpbGQvdjE7dGFza2d1aWxkdjGiAgNUWFiqAgxUYXNrZ3VpbGQuVjHKAgxUYXNrZ3VpbGRcVjHiAhhUYXNrZ3VpbGRcVjFcR1BCTWV0YWRhdGHqAg1UYXNrZ3VpbGQ6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_taskguild_v1_common]);
+  fileDesc("Chl0YXNrZ3VpbGQvdjEvc2NyaXB0LnByb3RvEgx0YXNrZ3VpbGQudjEi6wEKEFNjcmlwdERlZmluaXRpb24SCgoCaWQYASABKAkSEgoKcHJvamVjdF9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEhAKCGZpbGVuYW1lGAUgASgJEg8KB2NvbnRlbnQYBiABKAkSEQoJaXNfc3luY2VkGAcgASgIEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIm8KE0NyZWF0ZVNjcmlwdFJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEhAKCGZpbGVuYW1lGAQgASgJEg8KB2NvbnRlbnQYBSABKAkiRgoUQ3JlYXRlU2NyaXB0UmVzcG9uc2USLgoGc2NyaXB0GAEgASgLMh4udGFza2d1aWxkLnYxLlNjcmlwdERlZmluaXRpb24iHgoQR2V0U2NyaXB0UmVxdWVzdBIKCgJpZBgBIAEoCSJDChFHZXRTY3JpcHRSZXNwb25zZRIuCgZzY3JpcHQYASABKAsyHi50YXNrZ3VpbGQudjEuU2NyaXB0RGVmaW5pdGlvbiJdChJMaXN0U2NyaXB0c1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIzCgpwYWdpbmF0aW9uGAIgASgLMh8udGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXF1ZXN0InwKE0xpc3RTY3JpcHRzUmVzcG9uc2USLwoHc2NyaXB0cxgBIAMoCzIeLnRhc2tndWlsZC52MS5TY3JpcHREZWZpbml0aW9uEjQKCnBhZ2luYXRpb24YAiABKAsyIC50YXNrZ3VpbGQudjEuUGFnaW5hdGlvblJlc3BvbnNlImcKE1VwZGF0ZVNjcmlwdFJlcXVlc3QSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIQCghmaWxlbmFtZRgEIAEoCRIPCgdjb250ZW50GAUgASgJIkYKFFVwZGF0ZVNjcmlwdFJlc3BvbnNlEi4KBnNjcmlwdBgBIAEoCzIeLnRhc2tndWlsZC52MS5TY3JpcHREZWZpbml0aW9uIiEKE0RlbGV0ZVNjcmlwdFJlcXVlc3QSCgoCaWQYASABKAkiFgoURGVsZXRlU2NyaXB0UmVzcG9uc2UiQgoZU3luY1NjcmlwdHNGcm9tRGlyUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhEKCWRpcmVjdG9yeRgCIAEoCSJvChpTeW5jU2NyaXB0c0Zyb21EaXJSZXNwb25zZRIvCgdzY3JpcHRzGAEgAygLMh4udGFza2d1aWxkLnYxLlNjcmlwdERlZmluaXRpb24SDwoHY3JlYXRlZBgCIAEoBRIPCgd1cGRhdGVkGAMgASgFIj0KFEV4ZWN1dGVTY3JpcHRSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSEQoJc2NyaXB0X2lkGAIgASgJIisKFUV4ZWN1dGVTY3JpcHRSZXNwb25zZRISCgpyZXF1ZXN0X2lkGAEgASgJIjIKHFN0cmVhbVNjcmlwdEV4ZWN1dGlvblJlcXVlc3QSEgoKcmVxdWVzdF9pZBgBIAEoCSKNAQoUU2NyaXB0RXhlY3V0aW9uRXZlbnQSMQoGb3V0cHV0GAEgASgLMh8udGFza2d1aWxkLnYxLlNjcmlwdE91dHB1dENodW5rSAASOQoIY29tcGxldGUYAiABKAsyJS50YXNrZ3VpbGQudjEuU2NyaXB0RXhlY3V0aW9uQ29tcGxldGVIAEIHCgVldmVudCIzChFTY3JpcHRPdXRwdXRDaHVuaxIOCgZzdGRvdXQYASABKAkSDgoGc3RkZXJyGAIgASgJInQKF1NjcmlwdEV4ZWN1dGlvbkNvbXBsZXRlEg8KB3N1Y2Nlc3MYASABKAgSEQoJZXhpdF9jb2RlGAIgASgFEg4KBnN0ZG91dBgDIAEoCRIOCgZzdGRlcnIYBCABKAkSFQoNZXJyb3JfbWVzc2FnZRgFIAEoCTLkBQoNU2NyaXB0U2VydmljZRJVCgxDcmVhdGVTY3JpcHQSIS50YXNrZ3VpbGQudjEuQ3JlYXRlU2NyaXB0UmVxdWVzdBoiLnRhc2tndWlsZC52MS5DcmVhdGVTY3JpcHRSZXNwb25zZRJMCglHZXRTY3JpcHQSHi50YXNrZ3VpbGQudjEuR2V0U2NyaXB0UmVxdWVzdBofLnRhc2tndWlsZC52MS5HZXRTY3JpcHRSZXNwb25zZRJSCgtMaXN0U2NyaXB0cxIgLnRhc2tndWlsZC52MS5MaXN0U2NyaXB0c1JlcXVlc3QaIS50YXNrZ3VpbGQudjEuTGlzdFNjcmlwdHNSZXNwb25zZRJVCgxVcGRhdGVTY3JpcHQSIS50YXNrZ3VpbGQudjEuVXBkYXRlU2NyaXB0UmVxdWVzdBoiLnRhc2tndWlsZC52MS5VcGRhdGVTY3JpcHRSZXNwb25zZRJVCgxEZWxldGVTY3JpcHQSIS50YXNrZ3VpbGQudjEuRGVsZXRlU2NyaXB0UmVxdWVzdBoiLnRhc2tndWlsZC52MS5EZWxldGVTY3JpcHRSZXNwb25zZRJnChJTeW5jU2NyaXB0c0Zyb21EaXISJy50YXNrZ3VpbGQudjEuU3luY1NjcmlwdHNGcm9tRGlyUmVxdWVzdBooLnRhc2tndWlsZC52MS5TeW5jU2NyaXB0c0Zyb21EaXJSZXNwb25zZRJYCg1FeGVjdXRlU2NyaXB0EiIudGFza2d1aWxkLnYxLkV4ZWN1dGVTY3JpcHRSZXF1ZXN0GiMudGFza2d1aWxkLnYxLkV4ZWN1dGVTY3JpcHRSZXNwb25zZRJpChVTdHJlYW1TY3JpcHRFeGVjdXRpb24SKi50YXNrZ3VpbGQudjEuU3RyZWFtU2NyaXB0RXhlY3V0aW9uUmVxdWVzdBoiLnRhc2tndWlsZC52MS5TY3JpcHRFeGVjdXRpb25FdmVudDABQrkBChBjb20udGFza2d1aWxkLnYxQgtTY3JpcHRQcm90b1ABWkdnaXRodWIuY29tL2thenoxODcvdGFza2d1aWxkL2JhY2tlbmQvZ2VuL3Byb3RvL3Rhc2tndWlsZC92MTt0YXNrZ3VpbGR2MaICA1RYWKoCDFRhc2tndWlsZC5WMcoCDFRhc2tndWlsZFxWMeICGFRhc2tndWlsZFxWMVxHUEJNZXRhZGF0YeoCDVRhc2tndWlsZDo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_taskguild_v1_common]);
 
 /**
  * ScriptDefinition defines a shell script that can be executed on the agent-manager.
@@ -404,9 +404,11 @@ export const ExecuteScriptResponseSchema: GenMessage<ExecuteScriptResponse> = /*
   messageDesc(file_taskguild_v1_script, 14);
 
 /**
- * @generated from message taskguild.v1.GetScriptExecutionResultRequest
+ * StreamScriptExecution streams real-time output from a script execution.
+ *
+ * @generated from message taskguild.v1.StreamScriptExecutionRequest
  */
-export type GetScriptExecutionResultRequest = Message<"taskguild.v1.GetScriptExecutionResultRequest"> & {
+export type StreamScriptExecutionRequest = Message<"taskguild.v1.StreamScriptExecutionRequest"> & {
   /**
    * @generated from field: string request_id = 1;
    */
@@ -414,59 +416,107 @@ export type GetScriptExecutionResultRequest = Message<"taskguild.v1.GetScriptExe
 };
 
 /**
- * Describes the message taskguild.v1.GetScriptExecutionResultRequest.
- * Use `create(GetScriptExecutionResultRequestSchema)` to create a new message.
+ * Describes the message taskguild.v1.StreamScriptExecutionRequest.
+ * Use `create(StreamScriptExecutionRequestSchema)` to create a new message.
  */
-export const GetScriptExecutionResultRequestSchema: GenMessage<GetScriptExecutionResultRequest> = /*@__PURE__*/
+export const StreamScriptExecutionRequestSchema: GenMessage<StreamScriptExecutionRequest> = /*@__PURE__*/
   messageDesc(file_taskguild_v1_script, 15);
 
 /**
- * @generated from message taskguild.v1.GetScriptExecutionResultResponse
+ * @generated from message taskguild.v1.ScriptExecutionEvent
  */
-export type GetScriptExecutionResultResponse = Message<"taskguild.v1.GetScriptExecutionResultResponse"> & {
+export type ScriptExecutionEvent = Message<"taskguild.v1.ScriptExecutionEvent"> & {
   /**
-   * true if execution has finished
+   * @generated from oneof taskguild.v1.ScriptExecutionEvent.event
+   */
+  event: {
+    /**
+     * @generated from field: taskguild.v1.ScriptOutputChunk output = 1;
+     */
+    value: ScriptOutputChunk;
+    case: "output";
+  } | {
+    /**
+     * @generated from field: taskguild.v1.ScriptExecutionComplete complete = 2;
+     */
+    value: ScriptExecutionComplete;
+    case: "complete";
+  } | { case: undefined; value?: undefined };
+};
+
+/**
+ * Describes the message taskguild.v1.ScriptExecutionEvent.
+ * Use `create(ScriptExecutionEventSchema)` to create a new message.
+ */
+export const ScriptExecutionEventSchema: GenMessage<ScriptExecutionEvent> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_script, 16);
+
+/**
+ * @generated from message taskguild.v1.ScriptOutputChunk
+ */
+export type ScriptOutputChunk = Message<"taskguild.v1.ScriptOutputChunk"> & {
+  /**
+   * incremental stdout chunk
    *
-   * @generated from field: bool completed = 1;
-   */
-  completed: boolean;
-
-  /**
-   * true if exit code == 0
-   *
-   * @generated from field: bool success = 2;
-   */
-  success: boolean;
-
-  /**
-   * @generated from field: int32 exit_code = 3;
-   */
-  exitCode: number;
-
-  /**
-   * @generated from field: string stdout = 4;
+   * @generated from field: string stdout = 1;
    */
   stdout: string;
 
   /**
-   * @generated from field: string stderr = 5;
+   * incremental stderr chunk
+   *
+   * @generated from field: string stderr = 2;
+   */
+  stderr: string;
+};
+
+/**
+ * Describes the message taskguild.v1.ScriptOutputChunk.
+ * Use `create(ScriptOutputChunkSchema)` to create a new message.
+ */
+export const ScriptOutputChunkSchema: GenMessage<ScriptOutputChunk> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_script, 17);
+
+/**
+ * @generated from message taskguild.v1.ScriptExecutionComplete
+ */
+export type ScriptExecutionComplete = Message<"taskguild.v1.ScriptExecutionComplete"> & {
+  /**
+   * @generated from field: bool success = 1;
+   */
+  success: boolean;
+
+  /**
+   * @generated from field: int32 exit_code = 2;
+   */
+  exitCode: number;
+
+  /**
+   * full stdout (for late joiners)
+   *
+   * @generated from field: string stdout = 3;
+   */
+  stdout: string;
+
+  /**
+   * full stderr
+   *
+   * @generated from field: string stderr = 4;
    */
   stderr: string;
 
   /**
-   * error description if execution failed to start
-   *
-   * @generated from field: string error_message = 6;
+   * @generated from field: string error_message = 5;
    */
   errorMessage: string;
 };
 
 /**
- * Describes the message taskguild.v1.GetScriptExecutionResultResponse.
- * Use `create(GetScriptExecutionResultResponseSchema)` to create a new message.
+ * Describes the message taskguild.v1.ScriptExecutionComplete.
+ * Use `create(ScriptExecutionCompleteSchema)` to create a new message.
  */
-export const GetScriptExecutionResultResponseSchema: GenMessage<GetScriptExecutionResultResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_script, 16);
+export const ScriptExecutionCompleteSchema: GenMessage<ScriptExecutionComplete> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_script, 18);
 
 /**
  * @generated from service taskguild.v1.ScriptService
@@ -534,14 +584,14 @@ export const ScriptService: GenService<{
     output: typeof ExecuteScriptResponseSchema;
   },
   /**
-   * GetScriptExecutionResult returns the cached result of a script execution.
+   * StreamScriptExecution streams real-time output from a script execution.
    *
-   * @generated from rpc taskguild.v1.ScriptService.GetScriptExecutionResult
+   * @generated from rpc taskguild.v1.ScriptService.StreamScriptExecution
    */
-  getScriptExecutionResult: {
-    methodKind: "unary";
-    input: typeof GetScriptExecutionResultRequestSchema;
-    output: typeof GetScriptExecutionResultResponseSchema;
+  streamScriptExecution: {
+    methodKind: "server_streaming";
+    input: typeof StreamScriptExecutionRequestSchema;
+    output: typeof ScriptExecutionEventSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_taskguild_v1_script, 0);

@@ -53,6 +53,8 @@ service AgentManagerService {
   rpc SyncScripts(SyncScriptsRequest) returns (SyncScriptsResponse);
   // ReportScriptExecutionResult reports the outcome of a script execution from the agent.
   rpc ReportScriptExecutionResult(ReportScriptExecutionResultRequest) returns (ReportScriptExecutionResultResponse);
+  // ReportScriptOutputChunk reports a chunk of real-time script output from the agent.
+  rpc ReportScriptOutputChunk(ReportScriptOutputChunkRequest) returns (ReportScriptOutputChunkResponse);
 }
 
 // --- Subscribe stream ---
@@ -332,3 +334,12 @@ message ReportScriptExecutionResultRequest {
   string error_message = 8;   // error description if execution failed to start
 }
 message ReportScriptExecutionResultResponse {}
+
+// ReportScriptOutputChunk reports a chunk of real-time script output.
+message ReportScriptOutputChunkRequest {
+  string request_id = 1;
+  string project_name = 2;
+  string stdout_chunk = 3;  // incremental stdout since last chunk
+  string stderr_chunk = 4;  // incremental stderr since last chunk
+}
+message ReportScriptOutputChunkResponse {}

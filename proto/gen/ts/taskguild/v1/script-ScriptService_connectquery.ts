@@ -43,10 +43,3 @@ export const syncScriptsFromDir = ScriptService.method.syncScriptsFromDir;
  * @generated from rpc taskguild.v1.ScriptService.ExecuteScript
  */
 export const executeScript = ScriptService.method.executeScript;
-
-/**
- * GetScriptExecutionResult returns the cached result of a script execution.
- *
- * @generated from rpc taskguild.v1.ScriptService.GetScriptExecutionResult
- */
-export const getScriptExecutionResult = ScriptService.method.getScriptExecutionResult;

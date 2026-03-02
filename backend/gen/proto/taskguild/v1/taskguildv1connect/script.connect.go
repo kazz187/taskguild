@@ -53,9 +53,9 @@ const (
 	// ScriptServiceExecuteScriptProcedure is the fully-qualified name of the ScriptService's
 	// ExecuteScript RPC.
 	ScriptServiceExecuteScriptProcedure = "/taskguild.v1.ScriptService/ExecuteScript"
-	// ScriptServiceGetScriptExecutionResultProcedure is the fully-qualified name of the ScriptService's
-	// GetScriptExecutionResult RPC.
-	ScriptServiceGetScriptExecutionResultProcedure = "/taskguild.v1.ScriptService/GetScriptExecutionResult"
+	// ScriptServiceStreamScriptExecutionProcedure is the fully-qualified name of the ScriptService's
+	// StreamScriptExecution RPC.
+	ScriptServiceStreamScriptExecutionProcedure = "/taskguild.v1.ScriptService/StreamScriptExecution"
 )
 
 // ScriptServiceClient is a client for the taskguild.v1.ScriptService service.
@@ -70,8 +70,8 @@ type ScriptServiceClient interface {
 	SyncScriptsFromDir(context.Context, *connect.Request[v1.SyncScriptsFromDirRequest]) (*connect.Response[v1.SyncScriptsFromDirResponse], error)
 	// ExecuteScript triggers execution of a script on a connected agent-manager.
 	ExecuteScript(context.Context, *connect.Request[v1.ExecuteScriptRequest]) (*connect.Response[v1.ExecuteScriptResponse], error)
-	// GetScriptExecutionResult returns the cached result of a script execution.
-	GetScriptExecutionResult(context.Context, *connect.Request[v1.GetScriptExecutionResultRequest]) (*connect.Response[v1.GetScriptExecutionResultResponse], error)
+	// StreamScriptExecution streams real-time output from a script execution.
+	StreamScriptExecution(context.Context, *connect.Request[v1.StreamScriptExecutionRequest]) (*connect.ServerStreamForClient[v1.ScriptExecutionEvent], error)
 }
 
 // NewScriptServiceClient constructs a client for the taskguild.v1.ScriptService service. By
@@ -127,10 +127,10 @@ func NewScriptServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(scriptServiceMethods.ByName("ExecuteScript")),
 			connect.WithClientOptions(opts...),
 		),
-		getScriptExecutionResult: connect.NewClient[v1.GetScriptExecutionResultRequest, v1.GetScriptExecutionResultResponse](
+		streamScriptExecution: connect.NewClient[v1.StreamScriptExecutionRequest, v1.ScriptExecutionEvent](
 			httpClient,
-			baseURL+ScriptServiceGetScriptExecutionResultProcedure,
-			connect.WithSchema(scriptServiceMethods.ByName("GetScriptExecutionResult")),
+			baseURL+ScriptServiceStreamScriptExecutionProcedure,
+			connect.WithSchema(scriptServiceMethods.ByName("StreamScriptExecution")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -138,14 +138,14 @@ func NewScriptServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 
 // scriptServiceClient implements ScriptServiceClient.
 type scriptServiceClient struct {
-	createScript             *connect.Client[v1.CreateScriptRequest, v1.CreateScriptResponse]
-	getScript                *connect.Client[v1.GetScriptRequest, v1.GetScriptResponse]
-	listScripts              *connect.Client[v1.ListScriptsRequest, v1.ListScriptsResponse]
-	updateScript             *connect.Client[v1.UpdateScriptRequest, v1.UpdateScriptResponse]
-	deleteScript             *connect.Client[v1.DeleteScriptRequest, v1.DeleteScriptResponse]
-	syncScriptsFromDir       *connect.Client[v1.SyncScriptsFromDirRequest, v1.SyncScriptsFromDirResponse]
-	executeScript            *connect.Client[v1.ExecuteScriptRequest, v1.ExecuteScriptResponse]
-	getScriptExecutionResult *connect.Client[v1.GetScriptExecutionResultRequest, v1.GetScriptExecutionResultResponse]
+	createScript          *connect.Client[v1.CreateScriptRequest, v1.CreateScriptResponse]
+	getScript             *connect.Client[v1.GetScriptRequest, v1.GetScriptResponse]
+	listScripts           *connect.Client[v1.ListScriptsRequest, v1.ListScriptsResponse]
+	updateScript          *connect.Client[v1.UpdateScriptRequest, v1.UpdateScriptResponse]
+	deleteScript          *connect.Client[v1.DeleteScriptRequest, v1.DeleteScriptResponse]
+	syncScriptsFromDir    *connect.Client[v1.SyncScriptsFromDirRequest, v1.SyncScriptsFromDirResponse]
+	executeScript         *connect.Client[v1.ExecuteScriptRequest, v1.ExecuteScriptResponse]
+	streamScriptExecution *connect.Client[v1.StreamScriptExecutionRequest, v1.ScriptExecutionEvent]
 }
 
 // CreateScript calls taskguild.v1.ScriptService.CreateScript.
@@ -183,9 +183,9 @@ func (c *scriptServiceClient) ExecuteScript(ctx context.Context, req *connect.Re
 	return c.executeScript.CallUnary(ctx, req)
 }
 
-// GetScriptExecutionResult calls taskguild.v1.ScriptService.GetScriptExecutionResult.
-func (c *scriptServiceClient) GetScriptExecutionResult(ctx context.Context, req *connect.Request[v1.GetScriptExecutionResultRequest]) (*connect.Response[v1.GetScriptExecutionResultResponse], error) {
-	return c.getScriptExecutionResult.CallUnary(ctx, req)
+// StreamScriptExecution calls taskguild.v1.ScriptService.StreamScriptExecution.
+func (c *scriptServiceClient) StreamScriptExecution(ctx context.Context, req *connect.Request[v1.StreamScriptExecutionRequest]) (*connect.ServerStreamForClient[v1.ScriptExecutionEvent], error) {
+	return c.streamScriptExecution.CallServerStream(ctx, req)
 }
 
 // ScriptServiceHandler is an implementation of the taskguild.v1.ScriptService service.
@@ -200,8 +200,8 @@ type ScriptServiceHandler interface {
 	SyncScriptsFromDir(context.Context, *connect.Request[v1.SyncScriptsFromDirRequest]) (*connect.Response[v1.SyncScriptsFromDirResponse], error)
 	// ExecuteScript triggers execution of a script on a connected agent-manager.
 	ExecuteScript(context.Context, *connect.Request[v1.ExecuteScriptRequest]) (*connect.Response[v1.ExecuteScriptResponse], error)
-	// GetScriptExecutionResult returns the cached result of a script execution.
-	GetScriptExecutionResult(context.Context, *connect.Request[v1.GetScriptExecutionResultRequest]) (*connect.Response[v1.GetScriptExecutionResultResponse], error)
+	// StreamScriptExecution streams real-time output from a script execution.
+	StreamScriptExecution(context.Context, *connect.Request[v1.StreamScriptExecutionRequest], *connect.ServerStream[v1.ScriptExecutionEvent]) error
 }
 
 // NewScriptServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -253,10 +253,10 @@ func NewScriptServiceHandler(svc ScriptServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(scriptServiceMethods.ByName("ExecuteScript")),
 		connect.WithHandlerOptions(opts...),
 	)
-	scriptServiceGetScriptExecutionResultHandler := connect.NewUnaryHandler(
-		ScriptServiceGetScriptExecutionResultProcedure,
-		svc.GetScriptExecutionResult,
-		connect.WithSchema(scriptServiceMethods.ByName("GetScriptExecutionResult")),
+	scriptServiceStreamScriptExecutionHandler := connect.NewServerStreamHandler(
+		ScriptServiceStreamScriptExecutionProcedure,
+		svc.StreamScriptExecution,
+		connect.WithSchema(scriptServiceMethods.ByName("StreamScriptExecution")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/taskguild.v1.ScriptService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -275,8 +275,8 @@ func NewScriptServiceHandler(svc ScriptServiceHandler, opts ...connect.HandlerOp
 			scriptServiceSyncScriptsFromDirHandler.ServeHTTP(w, r)
 		case ScriptServiceExecuteScriptProcedure:
 			scriptServiceExecuteScriptHandler.ServeHTTP(w, r)
-		case ScriptServiceGetScriptExecutionResultProcedure:
-			scriptServiceGetScriptExecutionResultHandler.ServeHTTP(w, r)
+		case ScriptServiceStreamScriptExecutionProcedure:
+			scriptServiceStreamScriptExecutionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -314,6 +314,6 @@ func (UnimplementedScriptServiceHandler) ExecuteScript(context.Context, *connect
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScriptService.ExecuteScript is not implemented"))
 }
 
-func (UnimplementedScriptServiceHandler) GetScriptExecutionResult(context.Context, *connect.Request[v1.GetScriptExecutionResultRequest]) (*connect.Response[v1.GetScriptExecutionResultResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScriptService.GetScriptExecutionResult is not implemented"))
+func (UnimplementedScriptServiceHandler) StreamScriptExecution(context.Context, *connect.Request[v1.StreamScriptExecutionRequest], *connect.ServerStream[v1.ScriptExecutionEvent]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScriptService.StreamScriptExecution is not implemented"))
 }

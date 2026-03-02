@@ -25,20 +25,14 @@ type ExecutionRequester interface {
 	RequestScriptExecution(projectID string, script *Script) (string, error)
 }
 
-// ExecutionResultStore stores and retrieves script execution results.
-type ExecutionResultStore interface {
-	StoreResult(requestID string, result *taskguildv1.GetScriptExecutionResultResponse)
-	GetResult(requestID string) (*taskguildv1.GetScriptExecutionResultResponse, bool)
-}
-
 type Server struct {
-	repo       Repository
-	execReq    ExecutionRequester
-	resultStore ExecutionResultStore
+	repo   Repository
+	execReq ExecutionRequester
+	broker  *ScriptExecutionBroker
 }
 
-func NewServer(repo Repository, execReq ExecutionRequester, resultStore ExecutionResultStore) *Server {
-	return &Server{repo: repo, execReq: execReq, resultStore: resultStore}
+func NewServer(repo Repository, execReq ExecutionRequester, broker *ScriptExecutionBroker) *Server {
+	return &Server{repo: repo, execReq: execReq, broker: broker}
 }
 
 func (s *Server) CreateScript(ctx context.Context, req *connect.Request[taskguildv1.CreateScriptRequest]) (*connect.Response[taskguildv1.CreateScriptResponse], error) {
@@ -222,6 +216,10 @@ func (s *Server) SyncScriptsFromDir(ctx context.Context, req *connect.Request[ta
 
 // ExecuteScript triggers execution of a script on a connected agent-manager.
 func (s *Server) ExecuteScript(ctx context.Context, req *connect.Request[taskguildv1.ExecuteScriptRequest]) (*connect.Response[taskguildv1.ExecuteScriptResponse], error) {
+	if s.broker.IsDraining() {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("server is shutting down; cannot accept new script executions"))
+	}
+
 	sc, err := s.repo.Get(ctx, req.Msg.ScriptId)
 	if err != nil {
 		return nil, err
@@ -232,21 +230,36 @@ func (s *Server) ExecuteScript(ctx context.Context, req *connect.Request[taskgui
 		return nil, fmt.Errorf("failed to request script execution: %w", err)
 	}
 
+	// Register execution in the broker so subscribers can stream output.
+	s.broker.RegisterExecution(requestID)
+
 	return connect.NewResponse(&taskguildv1.ExecuteScriptResponse{
 		RequestId: requestID,
 	}), nil
 }
 
-// GetScriptExecutionResult returns the cached result of a script execution.
-func (s *Server) GetScriptExecutionResult(ctx context.Context, req *connect.Request[taskguildv1.GetScriptExecutionResultRequest]) (*connect.Response[taskguildv1.GetScriptExecutionResultResponse], error) {
-	result, ok := s.resultStore.GetResult(req.Msg.RequestId)
-	if !ok {
-		// Not completed yet.
-		return connect.NewResponse(&taskguildv1.GetScriptExecutionResultResponse{
-			Completed: false,
-		}), nil
+// StreamScriptExecution streams real-time output from a script execution.
+func (s *Server) StreamScriptExecution(ctx context.Context, req *connect.Request[taskguildv1.StreamScriptExecutionRequest], stream *connect.ServerStream[taskguildv1.ScriptExecutionEvent]) error {
+	ch, unsubscribe := s.broker.Subscribe(req.Msg.RequestId)
+	if ch == nil {
+		return connect.NewError(connect.CodeNotFound, fmt.Errorf("unknown execution request_id: %s", req.Msg.RequestId))
 	}
-	return connect.NewResponse(result), nil
+	defer unsubscribe()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case event, ok := <-ch:
+			if !ok {
+				// Channel closed — execution completed and all events sent.
+				return nil
+			}
+			if err := stream.Send(event); err != nil {
+				return err
+			}
+		}
+	}
 }
 
 func toProto(s *Script) *taskguildv1.ScriptDefinition {

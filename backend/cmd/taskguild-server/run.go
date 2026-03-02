@@ -134,20 +134,22 @@ func runServer() {
 	// Setup agent-manager registry
 	agentManagerRegistry := agentmanager.NewRegistry()
 
+	// Setup script execution broker for real-time streaming
+	scriptBroker := script.NewScriptExecutionBroker()
+
 	// Setup servers
 	projectServer := project.NewServer(projectRepo)
 	workflowServer := workflow.NewServer(workflowRepo)
 	taskServer := task.NewServer(taskRepo, workflowRepo, bus)
 	interactionServer := interaction.NewServer(interactionRepo, taskRepo, bus)
-	scriptResultStore := script.NewInMemoryResultStore()
-	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, projectRepo, skillRepo, scriptRepo, taskLogRepo, permissionRepo, bus, scriptResultStore)
+	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, projectRepo, skillRepo, scriptRepo, taskLogRepo, permissionRepo, bus, scriptBroker)
 	agentChangeNotifier := &agentChangeNotifier{
 		registry:    agentManagerRegistry,
 		projectRepo: projectRepo,
 	}
 	agentServer := agent.NewServer(agentRepo, agentChangeNotifier)
 	skillServer := skill.NewServer(skillRepo)
-	scriptServer := script.NewServer(scriptRepo, agentManagerServer, scriptResultStore)
+	scriptServer := script.NewServer(scriptRepo, agentManagerServer, scriptBroker)
 	taskLogServer := tasklog.NewServer(taskLogRepo)
 	eventServer := event.NewServer(bus)
 	permissionChangeNotifier := &permissionChangeNotifier{
@@ -181,9 +183,24 @@ func runServer() {
 	// Setup orchestrator
 	orch := orchestrator.New(bus, taskRepo, workflowRepo, projectRepo, agentManagerRegistry)
 
-	// Graceful shutdown
+	// Graceful shutdown context: responds to SIGTERM and SIGINT.
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
+
+	// Handle SIGUSR1 for graceful hot-reload.
+	// When the sentinel detects a binary update it sends SIGUSR1 instead of
+	// SIGTERM. This handler stops accepting new script executions and waits
+	// for active ones to complete before triggering the normal shutdown flow.
+	usr1Ch := make(chan os.Signal, 1)
+	signal.Notify(usr1Ch, syscall.SIGUSR1)
+	go func() {
+		<-usr1Ch
+		slog.Info("received SIGUSR1 (hot reload), waiting for active script executions to complete...")
+		scriptBroker.SetDraining(true)
+		scriptBroker.Drain()
+		slog.Info("all script executions completed, shutting down for hot reload")
+		cancel()
+	}()
 
 	go orch.Start(ctx)
 	go pushDispatcher.Start(ctx)
