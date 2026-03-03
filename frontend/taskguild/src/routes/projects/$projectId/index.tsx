@@ -8,6 +8,7 @@ import { WorkflowForm } from '@/components/WorkflowForm'
 import { useState, useEffect, useRef } from 'react'
 import { Link } from '@tanstack/react-router'
 import { listAgents } from '@taskguild/proto/taskguild/v1/agent-AgentService_connectquery.ts'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { GitBranch, Plus, Settings, Bot } from 'lucide-react'
 
 type FormMode = { kind: 'create' } | { kind: 'edit'; workflow: Workflow }
@@ -34,6 +35,8 @@ function ProjectDetailPage() {
 
   const project = projectData?.project
   const workflows = workflowsData?.workflows ?? []
+
+  useDocumentTitle(project?.name)
 
   // Select workflow from search params or auto-select first.
   // Always sync selectedWorkflow with the latest workflows data so that
