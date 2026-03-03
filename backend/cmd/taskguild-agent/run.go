@@ -175,7 +175,13 @@ func runAgent() {
 		heartbeat(ctx, client, cfg.AgentManagerID)
 	}()
 
-	// Subscribe loop with reconnection
+	// Subscribe loop with reconnection and exponential backoff.
+	const (
+		subscribeInitialBackoff = 5 * time.Second
+		subscribeMaxBackoff     = 5 * time.Minute
+	)
+	subscribeBackoff := subscribeInitialBackoff
+
 	for {
 		if ctx.Err() != nil {
 			break
@@ -191,11 +197,19 @@ func runAgent() {
 			break
 		}
 		if err != nil {
-			log.Printf("subscribe stream error: %v, reconnecting in 5s...", err)
+			log.Printf("subscribe stream error: %v, reconnecting in %s...", err, subscribeBackoff)
 			select {
-			case <-time.After(5 * time.Second):
+			case <-time.After(subscribeBackoff):
 			case <-ctx.Done():
 			}
+			// Exponential backoff, capped.
+			subscribeBackoff *= 2
+			if subscribeBackoff > subscribeMaxBackoff {
+				subscribeBackoff = subscribeMaxBackoff
+			}
+		} else {
+			// Successful connection (clean disconnect) — reset backoff.
+			subscribeBackoff = subscribeInitialBackoff
 		}
 	}
 

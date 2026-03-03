@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -187,6 +188,19 @@ func runTask(
 		}
 
 		if isError {
+			// Authentication errors (e.g. expired OAuth token) are not
+			// recoverable by retrying. Fail immediately and tell the user
+			// to run 'claude login' to re-authenticate.
+			if isAuthenticationError(errMsg) {
+				authErrMsg := fmt.Sprintf("Authentication failed: %s\nRun 'claude login' to re-authenticate.", errMsg)
+				log.Printf("[task:%s] authentication error detected, not retrying: %s", taskID, errMsg)
+				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_ERROR, v1.TaskLogLevel_TASK_LOG_LEVEL_ERROR,
+					authErrMsg, nil)
+				reportTaskResult(ctx, client, taskID, "", authErrMsg)
+				reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_ERROR, authErrMsg)
+				return
+			}
+
 			consecutiveErrors++
 			log.Printf("[task:%s] error (%d/%d): %s", taskID, consecutiveErrors, maxConsecutiveErrors, errMsg)
 
@@ -438,4 +452,24 @@ func reportAgentStatus(
 	if err != nil {
 		log.Printf("[task:%s] failed to report agent status: %v", taskID, err)
 	}
+}
+
+// isAuthenticationError checks whether an error message from Claude CLI
+// indicates an authentication failure (e.g. expired OAuth token).
+// These errors cannot be resolved by retrying and require the user to
+// run 'claude login' to re-authenticate.
+func isAuthenticationError(errMsg string) bool {
+	lower := strings.ToLower(errMsg)
+	authPatterns := []string{
+		"authentication_error",
+		"authentication_failed",
+		"oauth token has expired",
+		"failed to authenticate",
+	}
+	for _, pattern := range authPatterns {
+		if strings.Contains(lower, pattern) {
+			return true
+		}
+	}
+	return false
 }
