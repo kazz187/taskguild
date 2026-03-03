@@ -69,37 +69,130 @@ func (w *interactionWaiter) Deliver(inter *v1.Interaction) {
 }
 
 // runInteractionListener subscribes to interaction events for a task and delivers
-// responded interactions to the waiter. It returns when the stream ends or ctx is cancelled.
-func runInteractionListener(ctx context.Context, interClient taskguildv1connect.InteractionServiceClient, taskID string, waiter *interactionWaiter) {
+// responded interactions to the waiter. It automatically reconnects on stream
+// errors with exponential backoff. It also runs a polling fallback to catch
+// responses that may have been missed during disconnections.
+// It returns only when ctx is cancelled (task finished).
+func runInteractionListener(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, interClient taskguildv1connect.InteractionServiceClient, taskID string, waiter *interactionWaiter) {
+	// Start a polling fallback that periodically checks pending interactions.
+	// This ensures responses are delivered even if the stream is temporarily down.
+	go runInteractionPoller(ctx, client, taskID, waiter)
+
+	backoff := 1 * time.Second
+	const maxBackoff = 30 * time.Second
+
+	for {
+		if ctx.Err() != nil {
+			return
+		}
+
+		err := runInteractionStream(ctx, interClient, taskID, waiter)
+		if ctx.Err() != nil {
+			return
+		}
+		if err != nil {
+			log.Printf("[task:%s] interaction stream error: %v, reconnecting in %s...", taskID, err, backoff)
+		} else {
+			log.Printf("[task:%s] interaction stream ended, reconnecting in %s...", taskID, backoff)
+		}
+
+		select {
+		case <-time.After(backoff):
+		case <-ctx.Done():
+			return
+		}
+
+		// Exponential backoff capped at maxBackoff, reset on successful connection.
+		backoff *= 2
+		if backoff > maxBackoff {
+			backoff = maxBackoff
+		}
+	}
+}
+
+// runInteractionStream connects once and processes interaction events until
+// the stream ends or ctx is cancelled. Returns the stream error (if any).
+func runInteractionStream(ctx context.Context, interClient taskguildv1connect.InteractionServiceClient, taskID string, waiter *interactionWaiter) error {
 	stream, err := interClient.SubscribeInteractions(ctx, connect.NewRequest(&v1.SubscribeInteractionsRequest{
 		TaskId: taskID,
 	}))
 	if err != nil {
-		log.Printf("[task:%s] interaction stream error: %v", taskID, err)
-		return
+		return fmt.Errorf("failed to subscribe: %w", err)
 	}
 	defer stream.Close()
 
 	log.Printf("[task:%s] interaction stream connected", taskID)
 
 	for stream.Receive() {
-		event := stream.Msg()
-		inter := event.GetInteraction()
-		if inter == nil {
-			continue
-		}
-		switch inter.GetStatus() {
-		case v1.InteractionStatus_INTERACTION_STATUS_RESPONDED:
-			log.Printf("[task:%s] interaction %s responded via stream", taskID, inter.GetId())
-			waiter.Deliver(inter)
-		case v1.InteractionStatus_INTERACTION_STATUS_EXPIRED:
-			log.Printf("[task:%s] interaction %s expired via stream", taskID, inter.GetId())
-			waiter.Deliver(inter)
-		}
+		deliverInteraction(taskID, stream.Msg().GetInteraction(), waiter, "stream")
 	}
 
 	if err := stream.Err(); err != nil && ctx.Err() == nil {
-		log.Printf("[task:%s] interaction stream ended: %v", taskID, err)
+		return fmt.Errorf("stream error: %w", err)
+	}
+	return nil
+}
+
+// runInteractionPoller periodically polls for responded/expired interactions
+// for pending waiters. This is a safety net for when the stream is disconnected
+// and events are missed.
+func runInteractionPoller(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, taskID string, waiter *interactionWaiter) {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			pollPendingInteractions(ctx, client, taskID, waiter)
+		}
+	}
+}
+
+// pollPendingInteractions checks each pending waiter's interaction status via
+// the GetInteractionResponse RPC. If the interaction has been responded to or
+// expired, it delivers the result.
+func pollPendingInteractions(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, taskID string, waiter *interactionWaiter) {
+	waiter.mu.Lock()
+	ids := make([]string, 0, len(waiter.waiters))
+	for id := range waiter.waiters {
+		ids = append(ids, id)
+	}
+	waiter.mu.Unlock()
+
+	for _, id := range ids {
+		if ctx.Err() != nil {
+			return
+		}
+		resp, err := client.GetInteractionResponse(ctx, connect.NewRequest(&v1.GetInteractionResponseRequest{
+			InteractionId: id,
+		}))
+		if err != nil {
+			// Don't log errors during polling — they're expected during brief disconnects.
+			continue
+		}
+		inter := resp.Msg.GetInteraction()
+		if inter == nil {
+			continue
+		}
+		deliverInteraction(taskID, inter, waiter, "poll")
+	}
+}
+
+// deliverInteraction checks the interaction status and delivers responded/expired
+// interactions to the waiter.
+func deliverInteraction(taskID string, inter *v1.Interaction, waiter *interactionWaiter, source string) {
+	if inter == nil {
+		return
+	}
+	switch inter.GetStatus() {
+	case v1.InteractionStatus_INTERACTION_STATUS_RESPONDED:
+		log.Printf("[task:%s] interaction %s responded via %s", taskID, inter.GetId(), source)
+		waiter.Deliver(inter)
+	case v1.InteractionStatus_INTERACTION_STATUS_EXPIRED:
+		log.Printf("[task:%s] interaction %s expired via %s", taskID, inter.GetId(), source)
+		waiter.Deliver(inter)
 	}
 }
 

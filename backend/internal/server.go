@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"time"
 
 	"connectrpc.com/connect"
 	"connectrpc.com/grpchealth"
@@ -126,6 +127,17 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	addr := net.JoinHostPort(s.env.HTTPHost, s.env.HTTPPort)
 	slog.Info("starting server", "addr", addr)
 
+	h2s := &http2.Server{
+		// MaxConcurrentStreams limits how many streams a single connection can
+		// open. The default (250) is fine for most workloads; set explicitly to
+		// make the setting visible.
+		MaxConcurrentStreams: 250,
+		// IdleTimeout prevents the server from closing idle connections too
+		// quickly. Long-lived streaming RPCs (Subscribe, SubscribeInteractions)
+		// may be idle for minutes between messages.
+		IdleTimeout: 10 * time.Minute,
+	}
+
 	s.server = &http.Server{
 		Addr: addr,
 		Handler: h2c.NewHandler(cors.New(cors.Options{
@@ -133,8 +145,12 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 			AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodOptions},
 			AllowedHeaders:   []string{"*"},
 			AllowCredentials: true,
-		}).Handler(s.apiKeyMiddleware(mux)), &http2.Server{}),
+		}).Handler(s.apiKeyMiddleware(mux)), h2s),
 		BaseContext: func(_ net.Listener) context.Context { return ctx },
+		// IdleTimeout for HTTP/1.1 connections; HTTP/2 idle is controlled by
+		// h2s.IdleTimeout above. Set a generous value so reverse proxies and
+		// keep-alive connections are not reaped prematurely.
+		IdleTimeout: 10 * time.Minute,
 	}
 
 	return s.server.ListenAndServe()

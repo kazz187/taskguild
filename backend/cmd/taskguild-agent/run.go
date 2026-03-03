@@ -224,10 +224,24 @@ func runSubscribeLoop(
 	sem chan struct{},
 	permCache *permissionCache,
 ) error {
+	// Collect active task IDs so the server knows which tasks are still running
+	// and should NOT be released during reconnection.
+	mu.Lock()
+	activeTaskIDs := make([]string, 0, len(activeTasks))
+	for taskID := range activeTasks {
+		activeTaskIDs = append(activeTaskIDs, taskID)
+	}
+	mu.Unlock()
+
+	if len(activeTaskIDs) > 0 {
+		log.Printf("reconnecting with %d active task(s): %v", len(activeTaskIDs), activeTaskIDs)
+	}
+
 	stream, err := client.Subscribe(ctx, connect.NewRequest(&v1.AgentManagerSubscribeRequest{
 		AgentManagerId:     cfg.AgentManagerID,
 		MaxConcurrentTasks: int32(cfg.MaxConcurrentTasks),
 		ProjectName:        cfg.ProjectName,
+		ActiveTaskIds:      activeTaskIDs,
 	}))
 	if err != nil {
 		return fmt.Errorf("failed to subscribe: %w", err)
@@ -387,6 +401,9 @@ func runSubscribeLoop(
 
 				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache)
 			}(taskID)
+
+		case *v1.AgentCommand_Ping:
+			// Server-side keepalive ping — silently ignore.
 
 		default:
 			log.Printf("unknown command type: %T", cmd.GetCommand())

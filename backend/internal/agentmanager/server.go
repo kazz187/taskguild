@@ -78,19 +78,41 @@ func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1
 	}
 
 	projectName := req.Msg.ProjectName
-	slog.Info("agent-manager connected", "agent_manager_id", agentManagerID, "max_concurrent_tasks", req.Msg.MaxConcurrentTasks, "project_name", projectName)
+	activeTaskIDs := req.Msg.ActiveTaskIds
+	slog.Info("agent-manager connected",
+		"agent_manager_id", agentManagerID,
+		"max_concurrent_tasks", req.Msg.MaxConcurrentTasks,
+		"project_name", projectName,
+		"active_tasks", len(activeTaskIDs),
+	)
 
-	// On (re-)connect, release any tasks still assigned to this agent.
-	// The agent starts fresh and does not retain tasks from a previous session.
-	s.releaseAgentTasks(ctx, agentManagerID)
+	// On (re-)connect, release tasks that are no longer active on this agent.
+	// If the agent sends active_task_ids, only tasks NOT in that list are released.
+	// This prevents disrupting tasks that are still running locally after a
+	// transient stream disconnection.
+	s.releaseAgentTasksExcept(ctx, agentManagerID, activeTaskIDs)
 
 	commandCh := s.registry.Register(agentManagerID, req.Msg.MaxConcurrentTasks, projectName)
 	defer func() {
 		s.registry.Unregister(agentManagerID)
 		// On disconnect, release assigned tasks so other agents can pick them up.
+		// We release ALL tasks here (no exceptions) because the agent is actually
+		// disconnecting. If it reconnects, it will send active_task_ids to reclaim.
 		s.releaseAgentTasks(context.Background(), agentManagerID)
 		slog.Info("agent-manager disconnected", "agent_manager_id", agentManagerID)
 	}()
+
+	// Server-side keepalive: send a PingCommand every 30 seconds to keep the
+	// HTTP/2 stream active and detect dead connections faster. This prevents
+	// intermediaries (proxies, load balancers) and OS-level TCP timeouts from
+	// silently closing the stream.
+	pingTicker := time.NewTicker(30 * time.Second)
+	defer pingTicker.Stop()
+	pingCmd := &taskguildv1.AgentCommand{
+		Command: &taskguildv1.AgentCommand_Ping{
+			Ping: &taskguildv1.PingCommand{},
+		},
+	}
 
 	for {
 		select {
@@ -103,7 +125,44 @@ func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1
 			if err := stream.Send(cmd); err != nil {
 				return err
 			}
+		case <-pingTicker.C:
+			if err := stream.Send(pingCmd); err != nil {
+				return err
+			}
 		}
+	}
+}
+
+// releaseAgentTasksExcept releases tasks assigned to the agent EXCEPT those
+// in the keepTaskIDs set. This is used during reconnection to avoid disrupting
+// tasks that are still actively running on the agent.
+func (s *Server) releaseAgentTasksExcept(ctx context.Context, agentManagerID string, keepTaskIDs []string) {
+	if len(keepTaskIDs) == 0 {
+		// No active tasks — release everything (original behavior).
+		s.releaseAgentTasks(ctx, agentManagerID)
+		return
+	}
+
+	keepSet := make(map[string]struct{}, len(keepTaskIDs))
+	for _, id := range keepTaskIDs {
+		keepSet[id] = struct{}{}
+	}
+
+	released, err := s.taskRepo.ReleaseByAgentExcept(ctx, agentManagerID, keepSet)
+	if err != nil {
+		slog.Error("failed to release tasks for agent (except active)",
+			"agent_manager_id", agentManagerID, "error", err)
+		return
+	}
+
+	slog.Info("reconnection: released orphaned tasks, kept active tasks",
+		"agent_manager_id", agentManagerID,
+		"released", len(released),
+		"kept", len(keepTaskIDs),
+	)
+
+	for _, t := range released {
+		s.handleReleasedTask(ctx, agentManagerID, t)
 	}
 }
 
@@ -116,84 +175,90 @@ func (s *Server) releaseAgentTasks(ctx context.Context, agentManagerID string) {
 		return
 	}
 	for _, t := range released {
-		slog.Info("released task from agent",
-			"task_id", t.ID,
-			"agent_manager_id", agentManagerID,
-		)
+		s.handleReleasedTask(ctx, agentManagerID, t)
+	}
+}
 
-		// Expire any orphaned PENDING interactions for the released task
-		// so they no longer show in the UI.
-		if expired, err := s.interactionRepo.ExpirePendingByTask(ctx, t.ID); err != nil {
-			slog.Error("failed to expire pending interactions for released task",
-				"task_id", t.ID, "error", err)
-		} else if expired > 0 {
-			slog.Info("expired orphaned pending interactions",
-				"task_id", t.ID, "count", expired)
-			// Publish events so the frontend removes them from the pending list.
-			s.eventBus.PublishNew(
-				taskguildv1.EventType_EVENT_TYPE_INTERACTION_RESPONDED,
-				t.ID,
-				"",
-				map[string]string{
-					"task_id": t.ID,
-					"reason":  "agent_released",
-				},
-			)
-		}
+// handleReleasedTask handles a single released task: expires orphaned interactions,
+// re-broadcasts the task, and publishes events.
+func (s *Server) handleReleasedTask(ctx context.Context, agentManagerID string, t *task.Task) {
+	slog.Info("released task from agent",
+		"task_id", t.ID,
+		"agent_manager_id", agentManagerID,
+	)
 
-		// Look up agent config to build the broadcast command.
-		wf, err := s.workflowRepo.Get(ctx, t.WorkflowID)
-		if err != nil {
-			slog.Error("failed to get workflow for released task", "task_id", t.ID, "error", err)
-			continue
-		}
-		var agentConfigID string
-		// Try new approach: status-level agent_id.
-		for _, st := range wf.Statuses {
-			if st.ID == t.StatusID && st.AgentID != "" {
-				agentConfigID = st.AgentID
-				break
-			}
-		}
-		// Fall back to legacy AgentConfig list.
-		if agentConfigID == "" {
-			for _, cfg := range wf.AgentConfigs {
-				if cfg.WorkflowStatusID == t.StatusID {
-					agentConfigID = cfg.ID
-					break
-				}
-			}
-		}
-
-		// Resolve project name for filtered broadcast.
-		var projectName string
-		if p, pErr := s.projectRepo.Get(ctx, t.ProjectID); pErr == nil {
-			projectName = p.Name
-		}
-
-		// Broadcast so other connected agents (same project) can claim the task.
-		s.registry.BroadcastCommandToProject(projectName, &taskguildv1.AgentCommand{
-			Command: &taskguildv1.AgentCommand_TaskAvailable{
-				TaskAvailable: &taskguildv1.TaskAvailableCommand{
-					TaskId:        t.ID,
-					AgentConfigId: agentConfigID,
-					Title:         t.Title,
-					Metadata:      t.Metadata,
-				},
-			},
-		})
-
+	// Expire any orphaned PENDING interactions for the released task
+	// so they no longer show in the UI.
+	if expired, err := s.interactionRepo.ExpirePendingByTask(ctx, t.ID); err != nil {
+		slog.Error("failed to expire pending interactions for released task",
+			"task_id", t.ID, "error", err)
+	} else if expired > 0 {
+		slog.Info("expired orphaned pending interactions",
+			"task_id", t.ID, "count", expired)
+		// Publish events so the frontend removes them from the pending list.
 		s.eventBus.PublishNew(
-			taskguildv1.EventType_EVENT_TYPE_TASK_UPDATED,
+			taskguildv1.EventType_EVENT_TYPE_INTERACTION_RESPONDED,
 			t.ID,
 			"",
 			map[string]string{
-				"project_id":  t.ProjectID,
-				"workflow_id": t.WorkflowID,
-				"reason":      "agent_released",
+				"task_id": t.ID,
+				"reason":  "agent_released",
 			},
 		)
 	}
+
+	// Look up agent config to build the broadcast command.
+	wf, err := s.workflowRepo.Get(ctx, t.WorkflowID)
+	if err != nil {
+		slog.Error("failed to get workflow for released task", "task_id", t.ID, "error", err)
+		return
+	}
+	var agentConfigID string
+	// Try new approach: status-level agent_id.
+	for _, st := range wf.Statuses {
+		if st.ID == t.StatusID && st.AgentID != "" {
+			agentConfigID = st.AgentID
+			break
+		}
+	}
+	// Fall back to legacy AgentConfig list.
+	if agentConfigID == "" {
+		for _, cfg := range wf.AgentConfigs {
+			if cfg.WorkflowStatusID == t.StatusID {
+				agentConfigID = cfg.ID
+				break
+			}
+		}
+	}
+
+	// Resolve project name for filtered broadcast.
+	var projectName string
+	if p, pErr := s.projectRepo.Get(ctx, t.ProjectID); pErr == nil {
+		projectName = p.Name
+	}
+
+	// Broadcast so other connected agents (same project) can claim the task.
+	s.registry.BroadcastCommandToProject(projectName, &taskguildv1.AgentCommand{
+		Command: &taskguildv1.AgentCommand_TaskAvailable{
+			TaskAvailable: &taskguildv1.TaskAvailableCommand{
+				TaskId:        t.ID,
+				AgentConfigId: agentConfigID,
+				Title:         t.Title,
+				Metadata:      t.Metadata,
+			},
+		},
+	})
+
+	s.eventBus.PublishNew(
+		taskguildv1.EventType_EVENT_TYPE_TASK_UPDATED,
+		t.ID,
+		"",
+		map[string]string{
+			"project_id":  t.ProjectID,
+			"workflow_id": t.WorkflowID,
+			"reason":      "agent_released",
+		},
+	)
 }
 
 func (s *Server) Heartbeat(ctx context.Context, req *connect.Request[taskguildv1.HeartbeatRequest]) (*connect.Response[taskguildv1.HeartbeatResponse], error) {
