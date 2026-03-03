@@ -270,6 +270,7 @@ func runSubscribeLoop(
 		// Skip empty commands (e.g. caused by proxy-injected frames or
 		// partial envelope reads from intermediaries).
 		if cmd.GetCommand() == nil {
+			log.Println("skipping empty command (nil oneof)")
 			continue
 		}
 
@@ -432,6 +433,11 @@ func runSubscribeLoop(
 			// Server-side keepalive ping — silently ignore.
 
 		default:
+			// Nil should be caught by the guard above; if it still reaches
+			// here, silently skip to avoid noisy logs from proxy artefacts.
+			if cmd.GetCommand() == nil {
+				continue
+			}
 			log.Printf("unknown command type: %T", cmd.GetCommand())
 		}
 	}
