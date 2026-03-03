@@ -22,7 +22,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file taskguild/v1/agent_manager.proto.
  */
 export const file_taskguild_v1_agent_manager: GenFile = /*@__PURE__*/
-  fileDesc("CiB0YXNrZ3VpbGQvdjEvYWdlbnRfbWFuYWdlci5wcm90bxIMdGFza2d1aWxkLnYxImwKHEFnZW50TWFuYWdlclN1YnNjcmliZVJlcXVlc3QSGAoQYWdlbnRfbWFuYWdlcl9pZBgBIAEoCRIUCgxwcm9qZWN0X25hbWUYAiABKAkSHAoUbWF4X2NvbmN1cnJlbnRfdGFza3MYAyABKAUivAUKDEFnZW50Q29tbWFuZBI8Cg50YXNrX2F2YWlsYWJsZRgBIAEoCzIiLnRhc2tndWlsZC52MS5UYXNrQXZhaWxhYmxlQ29tbWFuZEgAEjYKC2Fzc2lnbl90YXNrGAIgASgLMh8udGFza2d1aWxkLnYxLkFzc2lnblRhc2tDb21tYW5kSAASNgoLY2FuY2VsX3Rhc2sYAyABKAsyHy50YXNrZ3VpbGQudjEuQ2FuY2VsVGFza0NvbW1hbmRIABJIChRpbnRlcmFjdGlvbl9yZXNwb25zZRgEIAEoCzIoLnRhc2tndWlsZC52MS5JbnRlcmFjdGlvblJlc3BvbnNlQ29tbWFuZEgAEjYKC3N5bmNfYWdlbnRzGAUgASgLMh8udGFza2d1aWxkLnYxLlN5bmNBZ2VudHNDb21tYW5kSAASQAoQc3luY19wZXJtaXNzaW9ucxgGIAEoCzIkLnRhc2tndWlsZC52MS5TeW5jUGVybWlzc2lvbnNDb21tYW5kSAASPAoObGlzdF93b3JrdHJlZXMYByABKAsyIi50YXNrZ3VpbGQudjEuTGlzdFdvcmt0cmVlc0NvbW1hbmRIABI+Cg9kZWxldGVfd29ya3RyZWUYCCABKAsyIy50YXNrZ3VpbGQudjEuRGVsZXRlV29ya3RyZWVDb21tYW5kSAASOQoNZ2l0X3B1bGxfbWFpbhgJIAEoCzIgLnRhc2tndWlsZC52MS5HaXRQdWxsTWFpbkNvbW1hbmRIABI4CgxzeW5jX3NjcmlwdHMYCiABKAsyIC50YXNrZ3VpbGQudjEuU3luY1NjcmlwdHNDb21tYW5kSAASPAoOZXhlY3V0ZV9zY3JpcHQYCyABKAsyIi50YXNrZ3VpbGQudjEuRXhlY3V0ZVNjcmlwdENvbW1hbmRIAEIJCgdjb21tYW5kIsQBChRUYXNrQXZhaWxhYmxlQ29tbWFuZBIPCgd0YXNrX2lkGAEgASgJEg0KBXRpdGxlGAIgASgJEhcKD2FnZW50X2NvbmZpZ19pZBgDIAEoCRJCCghtZXRhZGF0YRgEIAMoCzIwLnRhc2tndWlsZC52MS5UYXNrQXZhaWxhYmxlQ29tbWFuZC5NZXRhZGF0YUVudHJ5Gi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASLeAQoRQXNzaWduVGFza0NvbW1hbmQSDwoHdGFza19pZBgBIAEoCRIXCg9hZ2VudF9jb25maWdfaWQYAiABKAkSFAoMaW5zdHJ1Y3Rpb25zGAMgASgJEhcKD3dvcmt0cmVlX2JyYW5jaBgEIAEoCRI/CghtZXRhZGF0YRgFIAMoCzItLnRhc2tndWlsZC52MS5Bc3NpZ25UYXNrQ29tbWFuZC5NZXRhZGF0YUVudHJ5Gi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASI0ChFDYW5jZWxUYXNrQ29tbWFuZBIPCgd0YXNrX2lkGAEgASgJEg4KBnJlYXNvbhgCIAEoCSJGChpJbnRlcmFjdGlvblJlc3BvbnNlQ29tbWFuZBIWCg5pbnRlcmFjdGlvbl9pZBgBIAEoCRIQCghyZXNwb25zZRgCIAEoCSITChFTeW5jQWdlbnRzQ29tbWFuZCIYChZTeW5jUGVybWlzc2lvbnNDb21tYW5kIioKFExpc3RXb3JrdHJlZXNDb21tYW5kEhIKCnJlcXVlc3RfaWQYASABKAkiPQoQQ2xhaW1UYXNrUmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJEhgKEGFnZW50X21hbmFnZXJfaWQYAiABKAkixQEKEUNsYWltVGFza1Jlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSFwoPYWdlbnRfY29uZmlnX2lkGAIgASgJEhQKDGluc3RydWN0aW9ucxgDIAEoCRI/CghtZXRhZGF0YRgEIAMoCzItLnRhc2tndWlsZC52MS5DbGFpbVRhc2tSZXNwb25zZS5NZXRhZGF0YUVudHJ5Gi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJgChdSZXBvcnRUYXNrUmVzdWx0UmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJEg8KB3N1bW1hcnkYAyABKAkSFQoNZXJyb3JfbWVzc2FnZRgEIAEoCUoECAIQA1IGc3RhdHVzIhoKGFJlcG9ydFRhc2tSZXN1bHRSZXNwb25zZSKBAQoYUmVwb3J0QWdlbnRTdGF0dXNSZXF1ZXN0EhgKEGFnZW50X21hbmFnZXJfaWQYASABKAkSDwoHdGFza19pZBgCIAEoCRIpCgZzdGF0dXMYAyABKA4yGS50YXNrZ3VpbGQudjEuQWdlbnRTdGF0dXMSDwoHbWVzc2FnZRgEIAEoCSIbChlSZXBvcnRBZ2VudFN0YXR1c1Jlc3BvbnNlInEKEEhlYXJ0YmVhdFJlcXVlc3QSGAoQYWdlbnRfbWFuYWdlcl9pZBgBIAEoCRIUCgxhY3RpdmVfdGFza3MYAiABKAUSLQoJdGltZXN0YW1wGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCITChFIZWFydGJlYXRSZXNwb25zZSLAAQoYQ3JlYXRlSW50ZXJhY3Rpb25SZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkSEAoIYWdlbnRfaWQYAiABKAkSKwoEdHlwZRgDIAEoDjIdLnRhc2tndWlsZC52MS5JbnRlcmFjdGlvblR5cGUSDQoFdGl0bGUYBCABKAkSEwoLZGVzY3JpcHRpb24YBSABKAkSMAoHb3B0aW9ucxgGIAMoCzIfLnRhc2tndWlsZC52MS5JbnRlcmFjdGlvbk9wdGlvbiJLChlDcmVhdGVJbnRlcmFjdGlvblJlc3BvbnNlEi4KC2ludGVyYWN0aW9uGAEgASgLMhkudGFza2d1aWxkLnYxLkludGVyYWN0aW9uIjcKHUdldEludGVyYWN0aW9uUmVzcG9uc2VSZXF1ZXN0EhYKDmludGVyYWN0aW9uX2lkGAEgASgJIlAKHkdldEludGVyYWN0aW9uUmVzcG9uc2VSZXNwb25zZRIuCgtpbnRlcmFjdGlvbhgBIAEoCzIZLnRhc2tndWlsZC52MS5JbnRlcmFjdGlvbiIpChFTeW5jQWdlbnRzUmVxdWVzdBIUCgxwcm9qZWN0X25hbWUYASABKAkiQwoSU3luY0FnZW50c1Jlc3BvbnNlEi0KBmFnZW50cxgBIAMoCzIdLnRhc2tndWlsZC52MS5BZ2VudERlZmluaXRpb24iagoWU3luY1Blcm1pc3Npb25zUmVxdWVzdBIUCgxwcm9qZWN0X25hbWUYASABKAkSEwoLbG9jYWxfYWxsb3cYAiADKAkSEQoJbG9jYWxfYXNrGAMgAygJEhIKCmxvY2FsX2RlbnkYBCADKAkiSwoXU3luY1Blcm1pc3Npb25zUmVzcG9uc2USMAoLcGVybWlzc2lvbnMYASABKAsyGy50YXNrZ3VpbGQudjEuUGVybWlzc2lvblNldCKJAgoUUmVwb3J0VGFza0xvZ1JlcXVlc3QSDwoHdGFza19pZBgBIAEoCRIpCgVsZXZlbBgCIAEoDjIaLnRhc2tndWlsZC52MS5UYXNrTG9nTGV2ZWwSLwoIY2F0ZWdvcnkYAyABKA4yHS50YXNrZ3VpbGQudjEuVGFza0xvZ0NhdGVnb3J5Eg8KB21lc3NhZ2UYBCABKAkSQgoIbWV0YWRhdGEYBSADKAsyMC50YXNrZ3VpbGQudjEuUmVwb3J0VGFza0xvZ1JlcXVlc3QuTWV0YWRhdGFFbnRyeRovCg1NZXRhZGF0YUVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiFwoVUmVwb3J0VGFza0xvZ1Jlc3BvbnNlImkKDFdvcmt0cmVlSW5mbxIMCgRuYW1lGAEgASgJEg4KBmJyYW5jaBgCIAEoCRIPCgd0YXNrX2lkGAMgASgJEhMKC2hhc19jaGFuZ2VzGAQgASgIEhUKDWNoYW5nZWRfZmlsZXMYBSADKAkiUQoVRGVsZXRlV29ya3RyZWVDb21tYW5kEhIKCnJlcXVlc3RfaWQYASABKAkSFQoNd29ya3RyZWVfbmFtZRgCIAEoCRINCgVmb3JjZRgDIAEoCCJ0ChlSZXBvcnRXb3JrdHJlZUxpc3RSZXF1ZXN0EhIKCnJlcXVlc3RfaWQYASABKAkSFAoMcHJvamVjdF9uYW1lGAIgASgJEi0KCXdvcmt0cmVlcxgDIAMoCzIaLnRhc2tndWlsZC52MS5Xb3JrdHJlZUluZm8iHAoaUmVwb3J0V29ya3RyZWVMaXN0UmVzcG9uc2UiMAoaUmVxdWVzdFdvcmt0cmVlTGlzdFJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCSIxChtSZXF1ZXN0V29ya3RyZWVMaXN0UmVzcG9uc2USEgoKcmVxdWVzdF9pZBgBIAEoCSIsChZHZXRXb3JrdHJlZUxpc3RSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkiSAoXR2V0V29ya3RyZWVMaXN0UmVzcG9uc2USLQoJd29ya3RyZWVzGAEgAygLMhoudGFza2d1aWxkLnYxLldvcmt0cmVlSW5mbyJYChxSZXF1ZXN0V29ya3RyZWVEZWxldGVSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSFQoNd29ya3RyZWVfbmFtZRgCIAEoCRINCgVmb3JjZRgDIAEoCCIzCh1SZXF1ZXN0V29ya3RyZWVEZWxldGVSZXNwb25zZRISCgpyZXF1ZXN0X2lkGAEgASgJIowBCiFSZXBvcnRXb3JrdHJlZURlbGV0ZVJlc3VsdFJlcXVlc3QSEgoKcmVxdWVzdF9pZBgBIAEoCRIUCgxwcm9qZWN0X25hbWUYAiABKAkSFQoNd29ya3RyZWVfbmFtZRgDIAEoCRIPCgdzdWNjZXNzGAQgASgIEhUKDWVycm9yX21lc3NhZ2UYBSABKAkiJAoiUmVwb3J0V29ya3RyZWVEZWxldGVSZXN1bHRSZXNwb25zZSIoChJHaXRQdWxsTWFpbkNvbW1hbmQSEgoKcmVxdWVzdF9pZBgBIAEoCSIvChlSZXF1ZXN0R2l0UHVsbE1haW5SZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkiMAoaUmVxdWVzdEdpdFB1bGxNYWluUmVzcG9uc2USEgoKcmVxdWVzdF9pZBgBIAEoCSKCAQoeUmVwb3J0R2l0UHVsbE1haW5SZXN1bHRSZXF1ZXN0EhIKCnJlcXVlc3RfaWQYASABKAkSFAoMcHJvamVjdF9uYW1lGAIgASgJEg8KB3N1Y2Nlc3MYAyABKAgSDgoGb3V0cHV0GAQgASgJEhUKDWVycm9yX21lc3NhZ2UYBSABKAkiIQofUmVwb3J0R2l0UHVsbE1haW5SZXN1bHRSZXNwb25zZSIUChJTeW5jU2NyaXB0c0NvbW1hbmQiYAoURXhlY3V0ZVNjcmlwdENvbW1hbmQSEgoKcmVxdWVzdF9pZBgBIAEoCRIRCglzY3JpcHRfaWQYAiABKAkSEAoIZmlsZW5hbWUYAyABKAkSDwoHY29udGVudBgEIAEoCSIqChJTeW5jU2NyaXB0c1JlcXVlc3QSFAoMcHJvamVjdF9uYW1lGAEgASgJIkYKE1N5bmNTY3JpcHRzUmVzcG9uc2USLwoHc2NyaXB0cxgBIAMoCzIeLnRhc2tndWlsZC52MS5TY3JpcHREZWZpbml0aW9uIrwBCiJSZXBvcnRTY3JpcHRFeGVjdXRpb25SZXN1bHRSZXF1ZXN0EhIKCnJlcXVlc3RfaWQYASABKAkSFAoMcHJvamVjdF9uYW1lGAIgASgJEhEKCXNjcmlwdF9pZBgDIAEoCRIPCgdzdWNjZXNzGAQgASgIEhEKCWV4aXRfY29kZRgFIAEoBRIOCgZzdGRvdXQYBiABKAkSDgoGc3RkZXJyGAcgASgJEhUKDWVycm9yX21lc3NhZ2UYCCABKAkiJQojUmVwb3J0U2NyaXB0RXhlY3V0aW9uUmVzdWx0UmVzcG9uc2UidgoeUmVwb3J0U2NyaXB0T3V0cHV0Q2h1bmtSZXF1ZXN0EhIKCnJlcXVlc3RfaWQYASABKAkSFAoMcHJvamVjdF9uYW1lGAIgASgJEhQKDHN0ZG91dF9jaHVuaxgDIAEoCRIUCgxzdGRlcnJfY2h1bmsYBCABKAkiIQofUmVwb3J0U2NyaXB0T3V0cHV0Q2h1bmtSZXNwb25zZSqOAQoLQWdlbnRTdGF0dXMSHAoYQUdFTlRfU1RBVFVTX1VOU1BFQ0lGSUVEEAASFQoRQUdFTlRfU1RBVFVTX0lETEUQARIYChRBR0VOVF9TVEFUVVNfUlVOTklORxACEhgKFEFHRU5UX1NUQVRVU19XQUlUSU5HEAMSFgoSQUdFTlRfU1RBVFVTX0VSUk9SEAQykRAKE0FnZW50TWFuYWdlclNlcnZpY2USVQoJU3Vic2NyaWJlEioudGFza2d1aWxkLnYxLkFnZW50TWFuYWdlclN1YnNjcmliZVJlcXVlc3QaGi50YXNrZ3VpbGQudjEuQWdlbnRDb21tYW5kMAESTAoJQ2xhaW1UYXNrEh4udGFza2d1aWxkLnYxLkNsYWltVGFza1JlcXVlc3QaHy50YXNrZ3VpbGQudjEuQ2xhaW1UYXNrUmVzcG9uc2USYQoQUmVwb3J0VGFza1Jlc3VsdBIlLnRhc2tndWlsZC52MS5SZXBvcnRUYXNrUmVzdWx0UmVxdWVzdBomLnRhc2tndWlsZC52MS5SZXBvcnRUYXNrUmVzdWx0UmVzcG9uc2USZAoRUmVwb3J0QWdlbnRTdGF0dXMSJi50YXNrZ3VpbGQudjEuUmVwb3J0QWdlbnRTdGF0dXNSZXF1ZXN0GicudGFza2d1aWxkLnYxLlJlcG9ydEFnZW50U3RhdHVzUmVzcG9uc2USTAoJSGVhcnRiZWF0Eh4udGFza2d1aWxkLnYxLkhlYXJ0YmVhdFJlcXVlc3QaHy50YXNrZ3VpbGQudjEuSGVhcnRiZWF0UmVzcG9uc2USZAoRQ3JlYXRlSW50ZXJhY3Rpb24SJi50YXNrZ3VpbGQudjEuQ3JlYXRlSW50ZXJhY3Rpb25SZXF1ZXN0GicudGFza2d1aWxkLnYxLkNyZWF0ZUludGVyYWN0aW9uUmVzcG9uc2UScwoWR2V0SW50ZXJhY3Rpb25SZXNwb25zZRIrLnRhc2tndWlsZC52MS5HZXRJbnRlcmFjdGlvblJlc3BvbnNlUmVxdWVzdBosLnRhc2tndWlsZC52MS5HZXRJbnRlcmFjdGlvblJlc3BvbnNlUmVzcG9uc2USTwoKU3luY0FnZW50cxIfLnRhc2tndWlsZC52MS5TeW5jQWdlbnRzUmVxdWVzdBogLnRhc2tndWlsZC52MS5TeW5jQWdlbnRzUmVzcG9uc2USWAoNUmVwb3J0VGFza0xvZxIiLnRhc2tndWlsZC52MS5SZXBvcnRUYXNrTG9nUmVxdWVzdBojLnRhc2tndWlsZC52MS5SZXBvcnRUYXNrTG9nUmVzcG9uc2USXgoPU3luY1Blcm1pc3Npb25zEiQudGFza2d1aWxkLnYxLlN5bmNQZXJtaXNzaW9uc1JlcXVlc3QaJS50YXNrZ3VpbGQudjEuU3luY1Blcm1pc3Npb25zUmVzcG9uc2USZwoSUmVwb3J0V29ya3RyZWVMaXN0EicudGFza2d1aWxkLnYxLlJlcG9ydFdvcmt0cmVlTGlzdFJlcXVlc3QaKC50YXNrZ3VpbGQudjEuUmVwb3J0V29ya3RyZWVMaXN0UmVzcG9uc2USagoTUmVxdWVzdFdvcmt0cmVlTGlzdBIoLnRhc2tndWlsZC52MS5SZXF1ZXN0V29ya3RyZWVMaXN0UmVxdWVzdBopLnRhc2tndWlsZC52MS5SZXF1ZXN0V29ya3RyZWVMaXN0UmVzcG9uc2USXgoPR2V0V29ya3RyZWVMaXN0EiQudGFza2d1aWxkLnYxLkdldFdvcmt0cmVlTGlzdFJlcXVlc3QaJS50YXNrZ3VpbGQudjEuR2V0V29ya3RyZWVMaXN0UmVzcG9uc2UScAoVUmVxdWVzdFdvcmt0cmVlRGVsZXRlEioudGFza2d1aWxkLnYxLlJlcXVlc3RXb3JrdHJlZURlbGV0ZVJlcXVlc3QaKy50YXNrZ3VpbGQudjEuUmVxdWVzdFdvcmt0cmVlRGVsZXRlUmVzcG9uc2USfwoaUmVwb3J0V29ya3RyZWVEZWxldGVSZXN1bHQSLy50YXNrZ3VpbGQudjEuUmVwb3J0V29ya3RyZWVEZWxldGVSZXN1bHRSZXF1ZXN0GjAudGFza2d1aWxkLnYxLlJlcG9ydFdvcmt0cmVlRGVsZXRlUmVzdWx0UmVzcG9uc2USZwoSUmVxdWVzdEdpdFB1bGxNYWluEicudGFza2d1aWxkLnYxLlJlcXVlc3RHaXRQdWxsTWFpblJlcXVlc3QaKC50YXNrZ3VpbGQudjEuUmVxdWVzdEdpdFB1bGxNYWluUmVzcG9uc2USdgoXUmVwb3J0R2l0UHVsbE1haW5SZXN1bHQSLC50YXNrZ3VpbGQudjEuUmVwb3J0R2l0UHVsbE1haW5SZXN1bHRSZXF1ZXN0Gi0udGFza2d1aWxkLnYxLlJlcG9ydEdpdFB1bGxNYWluUmVzdWx0UmVzcG9uc2USUgoLU3luY1NjcmlwdHMSIC50YXNrZ3VpbGQudjEuU3luY1NjcmlwdHNSZXF1ZXN0GiEudGFza2d1aWxkLnYxLlN5bmNTY3JpcHRzUmVzcG9uc2USggEKG1JlcG9ydFNjcmlwdEV4ZWN1dGlvblJlc3VsdBIwLnRhc2tndWlsZC52MS5SZXBvcnRTY3JpcHRFeGVjdXRpb25SZXN1bHRSZXF1ZXN0GjEudGFza2d1aWxkLnYxLlJlcG9ydFNjcmlwdEV4ZWN1dGlvblJlc3VsdFJlc3BvbnNlEnYKF1JlcG9ydFNjcmlwdE91dHB1dENodW5rEiwudGFza2d1aWxkLnYxLlJlcG9ydFNjcmlwdE91dHB1dENodW5rUmVxdWVzdBotLnRhc2tndWlsZC52MS5SZXBvcnRTY3JpcHRPdXRwdXRDaHVua1Jlc3BvbnNlQr8BChBjb20udGFza2d1aWxkLnYxQhFBZ2VudE1hbmFnZXJQcm90b1ABWkdnaXRodWIuY29tL2thenoxODcvdGFza2d1aWxkL2JhY2tlbmQvZ2VuL3Byb3RvL3Rhc2tndWlsZC92MTt0YXNrZ3VpbGR2MaICA1RYWKoCDFRhc2tndWlsZC5WMcoCDFRhc2tndWlsZFxWMeICGFRhc2tndWlsZFxWMVxHUEJNZXRhZGF0YeoCDVRhc2tndWlsZDo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_taskguild_v1_agent, file_taskguild_v1_interaction, file_taskguild_v1_permission, file_taskguild_v1_script, file_taskguild_v1_task_log]);
+  fileDesc("CiB0YXNrZ3VpbGQvdjEvYWdlbnRfbWFuYWdlci5wcm90bxIMdGFza2d1aWxkLnYxIoUBChxBZ2VudE1hbmFnZXJTdWJzY3JpYmVSZXF1ZXN0EhgKEGFnZW50X21hbmFnZXJfaWQYASABKAkSFAoMcHJvamVjdF9uYW1lGAIgASgJEhwKFG1heF9jb25jdXJyZW50X3Rhc2tzGAMgASgFEhcKD2FjdGl2ZV90YXNrX2lkcxgEIAMoCSLnBQoMQWdlbnRDb21tYW5kEjwKDnRhc2tfYXZhaWxhYmxlGAEgASgLMiIudGFza2d1aWxkLnYxLlRhc2tBdmFpbGFibGVDb21tYW5kSAASNgoLYXNzaWduX3Rhc2sYAiABKAsyHy50YXNrZ3VpbGQudjEuQXNzaWduVGFza0NvbW1hbmRIABI2CgtjYW5jZWxfdGFzaxgDIAEoCzIfLnRhc2tndWlsZC52MS5DYW5jZWxUYXNrQ29tbWFuZEgAEkgKFGludGVyYWN0aW9uX3Jlc3BvbnNlGAQgASgLMigudGFza2d1aWxkLnYxLkludGVyYWN0aW9uUmVzcG9uc2VDb21tYW5kSAASNgoLc3luY19hZ2VudHMYBSABKAsyHy50YXNrZ3VpbGQudjEuU3luY0FnZW50c0NvbW1hbmRIABJAChBzeW5jX3Blcm1pc3Npb25zGAYgASgLMiQudGFza2d1aWxkLnYxLlN5bmNQZXJtaXNzaW9uc0NvbW1hbmRIABI8Cg5saXN0X3dvcmt0cmVlcxgHIAEoCzIiLnRhc2tndWlsZC52MS5MaXN0V29ya3RyZWVzQ29tbWFuZEgAEj4KD2RlbGV0ZV93b3JrdHJlZRgIIAEoCzIjLnRhc2tndWlsZC52MS5EZWxldGVXb3JrdHJlZUNvbW1hbmRIABI5Cg1naXRfcHVsbF9tYWluGAkgASgLMiAudGFza2d1aWxkLnYxLkdpdFB1bGxNYWluQ29tbWFuZEgAEjgKDHN5bmNfc2NyaXB0cxgKIAEoCzIgLnRhc2tndWlsZC52MS5TeW5jU2NyaXB0c0NvbW1hbmRIABI8Cg5leGVjdXRlX3NjcmlwdBgLIAEoCzIiLnRhc2tndWlsZC52MS5FeGVjdXRlU2NyaXB0Q29tbWFuZEgAEikKBHBpbmcYDCABKAsyGS50YXNrZ3VpbGQudjEuUGluZ0NvbW1hbmRIAEIJCgdjb21tYW5kIg0KC1BpbmdDb21tYW5kIsQBChRUYXNrQXZhaWxhYmxlQ29tbWFuZBIPCgd0YXNrX2lkGAEgASgJEg0KBXRpdGxlGAIgASgJEhcKD2FnZW50X2NvbmZpZ19pZBgDIAEoCRJCCghtZXRhZGF0YRgEIAMoCzIwLnRhc2tndWlsZC52MS5UYXNrQXZhaWxhYmxlQ29tbWFuZC5NZXRhZGF0YUVudHJ5Gi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASLeAQoRQXNzaWduVGFza0NvbW1hbmQSDwoHdGFza19pZBgBIAEoCRIXCg9hZ2VudF9jb25maWdfaWQYAiABKAkSFAoMaW5zdHJ1Y3Rpb25zGAMgASgJEhcKD3dvcmt0cmVlX2JyYW5jaBgEIAEoCRI/CghtZXRhZGF0YRgFIAMoCzItLnRhc2tndWlsZC52MS5Bc3NpZ25UYXNrQ29tbWFuZC5NZXRhZGF0YUVudHJ5Gi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASI0ChFDYW5jZWxUYXNrQ29tbWFuZBIPCgd0YXNrX2lkGAEgASgJEg4KBnJlYXNvbhgCIAEoCSJGChpJbnRlcmFjdGlvblJlc3BvbnNlQ29tbWFuZBIWCg5pbnRlcmFjdGlvbl9pZBgBIAEoCRIQCghyZXNwb25zZRgCIAEoCSITChFTeW5jQWdlbnRzQ29tbWFuZCIYChZTeW5jUGVybWlzc2lvbnNDb21tYW5kIioKFExpc3RXb3JrdHJlZXNDb21tYW5kEhIKCnJlcXVlc3RfaWQYASABKAkiPQoQQ2xhaW1UYXNrUmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJEhgKEGFnZW50X21hbmFnZXJfaWQYAiABKAkixQEKEUNsYWltVGFza1Jlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSFwoPYWdlbnRfY29uZmlnX2lkGAIgASgJEhQKDGluc3RydWN0aW9ucxgDIAEoCRI/CghtZXRhZGF0YRgEIAMoCzItLnRhc2tndWlsZC52MS5DbGFpbVRhc2tSZXNwb25zZS5NZXRhZGF0YUVudHJ5Gi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJgChdSZXBvcnRUYXNrUmVzdWx0UmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJEg8KB3N1bW1hcnkYAyABKAkSFQoNZXJyb3JfbWVzc2FnZRgEIAEoCUoECAIQA1IGc3RhdHVzIhoKGFJlcG9ydFRhc2tSZXN1bHRSZXNwb25zZSKBAQoYUmVwb3J0QWdlbnRTdGF0dXNSZXF1ZXN0EhgKEGFnZW50X21hbmFnZXJfaWQYASABKAkSDwoHdGFza19pZBgCIAEoCRIpCgZzdGF0dXMYAyABKA4yGS50YXNrZ3VpbGQudjEuQWdlbnRTdGF0dXMSDwoHbWVzc2FnZRgEIAEoCSIbChlSZXBvcnRBZ2VudFN0YXR1c1Jlc3BvbnNlInEKEEhlYXJ0YmVhdFJlcXVlc3QSGAoQYWdlbnRfbWFuYWdlcl9pZBgBIAEoCRIUCgxhY3RpdmVfdGFza3MYAiABKAUSLQoJdGltZXN0YW1wGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCITChFIZWFydGJlYXRSZXNwb25zZSLAAQoYQ3JlYXRlSW50ZXJhY3Rpb25SZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkSEAoIYWdlbnRfaWQYAiABKAkSKwoEdHlwZRgDIAEoDjIdLnRhc2tndWlsZC52MS5JbnRlcmFjdGlvblR5cGUSDQoFdGl0bGUYBCABKAkSEwoLZGVzY3JpcHRpb24YBSABKAkSMAoHb3B0aW9ucxgGIAMoCzIfLnRhc2tndWlsZC52MS5JbnRlcmFjdGlvbk9wdGlvbiJLChlDcmVhdGVJbnRlcmFjdGlvblJlc3BvbnNlEi4KC2ludGVyYWN0aW9uGAEgASgLMhkudGFza2d1aWxkLnYxLkludGVyYWN0aW9uIjcKHUdldEludGVyYWN0aW9uUmVzcG9uc2VSZXF1ZXN0EhYKDmludGVyYWN0aW9uX2lkGAEgASgJIlAKHkdldEludGVyYWN0aW9uUmVzcG9uc2VSZXNwb25zZRIuCgtpbnRlcmFjdGlvbhgBIAEoCzIZLnRhc2tndWlsZC52MS5JbnRlcmFjdGlvbiIpChFTeW5jQWdlbnRzUmVxdWVzdBIUCgxwcm9qZWN0X25hbWUYASABKAkiQwoSU3luY0FnZW50c1Jlc3BvbnNlEi0KBmFnZW50cxgBIAMoCzIdLnRhc2tndWlsZC52MS5BZ2VudERlZmluaXRpb24iagoWU3luY1Blcm1pc3Npb25zUmVxdWVzdBIUCgxwcm9qZWN0X25hbWUYASABKAkSEwoLbG9jYWxfYWxsb3cYAiADKAkSEQoJbG9jYWxfYXNrGAMgAygJEhIKCmxvY2FsX2RlbnkYBCADKAkiSwoXU3luY1Blcm1pc3Npb25zUmVzcG9uc2USMAoLcGVybWlzc2lvbnMYASABKAsyGy50YXNrZ3VpbGQudjEuUGVybWlzc2lvblNldCKJAgoUUmVwb3J0VGFza0xvZ1JlcXVlc3QSDwoHdGFza19pZBgBIAEoCRIpCgVsZXZlbBgCIAEoDjIaLnRhc2tndWlsZC52MS5UYXNrTG9nTGV2ZWwSLwoIY2F0ZWdvcnkYAyABKA4yHS50YXNrZ3VpbGQudjEuVGFza0xvZ0NhdGVnb3J5Eg8KB21lc3NhZ2UYBCABKAkSQgoIbWV0YWRhdGEYBSADKAsyMC50YXNrZ3VpbGQudjEuUmVwb3J0VGFza0xvZ1JlcXVlc3QuTWV0YWRhdGFFbnRyeRovCg1NZXRhZGF0YUVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiFwoVUmVwb3J0VGFza0xvZ1Jlc3BvbnNlImkKDFdvcmt0cmVlSW5mbxIMCgRuYW1lGAEgASgJEg4KBmJyYW5jaBgCIAEoCRIPCgd0YXNrX2lkGAMgASgJEhMKC2hhc19jaGFuZ2VzGAQgASgIEhUKDWNoYW5nZWRfZmlsZXMYBSADKAkiUQoVRGVsZXRlV29ya3RyZWVDb21tYW5kEhIKCnJlcXVlc3RfaWQYASABKAkSFQoNd29ya3RyZWVfbmFtZRgCIAEoCRINCgVmb3JjZRgDIAEoCCJ0ChlSZXBvcnRXb3JrdHJlZUxpc3RSZXF1ZXN0EhIKCnJlcXVlc3RfaWQYASABKAkSFAoMcHJvamVjdF9uYW1lGAIgASgJEi0KCXdvcmt0cmVlcxgDIAMoCzIaLnRhc2tndWlsZC52MS5Xb3JrdHJlZUluZm8iHAoaUmVwb3J0V29ya3RyZWVMaXN0UmVzcG9uc2UiMAoaUmVxdWVzdFdvcmt0cmVlTGlzdFJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCSIxChtSZXF1ZXN0V29ya3RyZWVMaXN0UmVzcG9uc2USEgoKcmVxdWVzdF9pZBgBIAEoCSIsChZHZXRXb3JrdHJlZUxpc3RSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkiSAoXR2V0V29ya3RyZWVMaXN0UmVzcG9uc2USLQoJd29ya3RyZWVzGAEgAygLMhoudGFza2d1aWxkLnYxLldvcmt0cmVlSW5mbyJYChxSZXF1ZXN0V29ya3RyZWVEZWxldGVSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSFQoNd29ya3RyZWVfbmFtZRgCIAEoCRINCgVmb3JjZRgDIAEoCCIzCh1SZXF1ZXN0V29ya3RyZWVEZWxldGVSZXNwb25zZRISCgpyZXF1ZXN0X2lkGAEgASgJIowBCiFSZXBvcnRXb3JrdHJlZURlbGV0ZVJlc3VsdFJlcXVlc3QSEgoKcmVxdWVzdF9pZBgBIAEoCRIUCgxwcm9qZWN0X25hbWUYAiABKAkSFQoNd29ya3RyZWVfbmFtZRgDIAEoCRIPCgdzdWNjZXNzGAQgASgIEhUKDWVycm9yX21lc3NhZ2UYBSABKAkiJAoiUmVwb3J0V29ya3RyZWVEZWxldGVSZXN1bHRSZXNwb25zZSIoChJHaXRQdWxsTWFpbkNvbW1hbmQSEgoKcmVxdWVzdF9pZBgBIAEoCSIvChlSZXF1ZXN0R2l0UHVsbE1haW5SZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkiMAoaUmVxdWVzdEdpdFB1bGxNYWluUmVzcG9uc2USEgoKcmVxdWVzdF9pZBgBIAEoCSKCAQoeUmVwb3J0R2l0UHVsbE1haW5SZXN1bHRSZXF1ZXN0EhIKCnJlcXVlc3RfaWQYASABKAkSFAoMcHJvamVjdF9uYW1lGAIgASgJEg8KB3N1Y2Nlc3MYAyABKAgSDgoGb3V0cHV0GAQgASgJEhUKDWVycm9yX21lc3NhZ2UYBSABKAkiIQofUmVwb3J0R2l0UHVsbE1haW5SZXN1bHRSZXNwb25zZSIUChJTeW5jU2NyaXB0c0NvbW1hbmQiYAoURXhlY3V0ZVNjcmlwdENvbW1hbmQSEgoKcmVxdWVzdF9pZBgBIAEoCRIRCglzY3JpcHRfaWQYAiABKAkSEAoIZmlsZW5hbWUYAyABKAkSDwoHY29udGVudBgEIAEoCSIqChJTeW5jU2NyaXB0c1JlcXVlc3QSFAoMcHJvamVjdF9uYW1lGAEgASgJIkYKE1N5bmNTY3JpcHRzUmVzcG9uc2USLwoHc2NyaXB0cxgBIAMoCzIeLnRhc2tndWlsZC52MS5TY3JpcHREZWZpbml0aW9uIrwBCiJSZXBvcnRTY3JpcHRFeGVjdXRpb25SZXN1bHRSZXF1ZXN0EhIKCnJlcXVlc3RfaWQYASABKAkSFAoMcHJvamVjdF9uYW1lGAIgASgJEhEKCXNjcmlwdF9pZBgDIAEoCRIPCgdzdWNjZXNzGAQgASgIEhEKCWV4aXRfY29kZRgFIAEoBRIOCgZzdGRvdXQYBiABKAkSDgoGc3RkZXJyGAcgASgJEhUKDWVycm9yX21lc3NhZ2UYCCABKAkiJQojUmVwb3J0U2NyaXB0RXhlY3V0aW9uUmVzdWx0UmVzcG9uc2UidgoeUmVwb3J0U2NyaXB0T3V0cHV0Q2h1bmtSZXF1ZXN0EhIKCnJlcXVlc3RfaWQYASABKAkSFAoMcHJvamVjdF9uYW1lGAIgASgJEhQKDHN0ZG91dF9jaHVuaxgDIAEoCRIUCgxzdGRlcnJfY2h1bmsYBCABKAkiIQofUmVwb3J0U2NyaXB0T3V0cHV0Q2h1bmtSZXNwb25zZSqOAQoLQWdlbnRTdGF0dXMSHAoYQUdFTlRfU1RBVFVTX1VOU1BFQ0lGSUVEEAASFQoRQUdFTlRfU1RBVFVTX0lETEUQARIYChRBR0VOVF9TVEFUVVNfUlVOTklORxACEhgKFEFHRU5UX1NUQVRVU19XQUlUSU5HEAMSFgoSQUdFTlRfU1RBVFVTX0VSUk9SEAQykRAKE0FnZW50TWFuYWdlclNlcnZpY2USVQoJU3Vic2NyaWJlEioudGFza2d1aWxkLnYxLkFnZW50TWFuYWdlclN1YnNjcmliZVJlcXVlc3QaGi50YXNrZ3VpbGQudjEuQWdlbnRDb21tYW5kMAESTAoJQ2xhaW1UYXNrEh4udGFza2d1aWxkLnYxLkNsYWltVGFza1JlcXVlc3QaHy50YXNrZ3VpbGQudjEuQ2xhaW1UYXNrUmVzcG9uc2USYQoQUmVwb3J0VGFza1Jlc3VsdBIlLnRhc2tndWlsZC52MS5SZXBvcnRUYXNrUmVzdWx0UmVxdWVzdBomLnRhc2tndWlsZC52MS5SZXBvcnRUYXNrUmVzdWx0UmVzcG9uc2USZAoRUmVwb3J0QWdlbnRTdGF0dXMSJi50YXNrZ3VpbGQudjEuUmVwb3J0QWdlbnRTdGF0dXNSZXF1ZXN0GicudGFza2d1aWxkLnYxLlJlcG9ydEFnZW50U3RhdHVzUmVzcG9uc2USTAoJSGVhcnRiZWF0Eh4udGFza2d1aWxkLnYxLkhlYXJ0YmVhdFJlcXVlc3QaHy50YXNrZ3VpbGQudjEuSGVhcnRiZWF0UmVzcG9uc2USZAoRQ3JlYXRlSW50ZXJhY3Rpb24SJi50YXNrZ3VpbGQudjEuQ3JlYXRlSW50ZXJhY3Rpb25SZXF1ZXN0GicudGFza2d1aWxkLnYxLkNyZWF0ZUludGVyYWN0aW9uUmVzcG9uc2UScwoWR2V0SW50ZXJhY3Rpb25SZXNwb25zZRIrLnRhc2tndWlsZC52MS5HZXRJbnRlcmFjdGlvblJlc3BvbnNlUmVxdWVzdBosLnRhc2tndWlsZC52MS5HZXRJbnRlcmFjdGlvblJlc3BvbnNlUmVzcG9uc2USTwoKU3luY0FnZW50cxIfLnRhc2tndWlsZC52MS5TeW5jQWdlbnRzUmVxdWVzdBogLnRhc2tndWlsZC52MS5TeW5jQWdlbnRzUmVzcG9uc2USWAoNUmVwb3J0VGFza0xvZxIiLnRhc2tndWlsZC52MS5SZXBvcnRUYXNrTG9nUmVxdWVzdBojLnRhc2tndWlsZC52MS5SZXBvcnRUYXNrTG9nUmVzcG9uc2USXgoPU3luY1Blcm1pc3Npb25zEiQudGFza2d1aWxkLnYxLlN5bmNQZXJtaXNzaW9uc1JlcXVlc3QaJS50YXNrZ3VpbGQudjEuU3luY1Blcm1pc3Npb25zUmVzcG9uc2USZwoSUmVwb3J0V29ya3RyZWVMaXN0EicudGFza2d1aWxkLnYxLlJlcG9ydFdvcmt0cmVlTGlzdFJlcXVlc3QaKC50YXNrZ3VpbGQudjEuUmVwb3J0V29ya3RyZWVMaXN0UmVzcG9uc2USagoTUmVxdWVzdFdvcmt0cmVlTGlzdBIoLnRhc2tndWlsZC52MS5SZXF1ZXN0V29ya3RyZWVMaXN0UmVxdWVzdBopLnRhc2tndWlsZC52MS5SZXF1ZXN0V29ya3RyZWVMaXN0UmVzcG9uc2USXgoPR2V0V29ya3RyZWVMaXN0EiQudGFza2d1aWxkLnYxLkdldFdvcmt0cmVlTGlzdFJlcXVlc3QaJS50YXNrZ3VpbGQudjEuR2V0V29ya3RyZWVMaXN0UmVzcG9uc2UScAoVUmVxdWVzdFdvcmt0cmVlRGVsZXRlEioudGFza2d1aWxkLnYxLlJlcXVlc3RXb3JrdHJlZURlbGV0ZVJlcXVlc3QaKy50YXNrZ3VpbGQudjEuUmVxdWVzdFdvcmt0cmVlRGVsZXRlUmVzcG9uc2USfwoaUmVwb3J0V29ya3RyZWVEZWxldGVSZXN1bHQSLy50YXNrZ3VpbGQudjEuUmVwb3J0V29ya3RyZWVEZWxldGVSZXN1bHRSZXF1ZXN0GjAudGFza2d1aWxkLnYxLlJlcG9ydFdvcmt0cmVlRGVsZXRlUmVzdWx0UmVzcG9uc2USZwoSUmVxdWVzdEdpdFB1bGxNYWluEicudGFza2d1aWxkLnYxLlJlcXVlc3RHaXRQdWxsTWFpblJlcXVlc3QaKC50YXNrZ3VpbGQudjEuUmVxdWVzdEdpdFB1bGxNYWluUmVzcG9uc2USdgoXUmVwb3J0R2l0UHVsbE1haW5SZXN1bHQSLC50YXNrZ3VpbGQudjEuUmVwb3J0R2l0UHVsbE1haW5SZXN1bHRSZXF1ZXN0Gi0udGFza2d1aWxkLnYxLlJlcG9ydEdpdFB1bGxNYWluUmVzdWx0UmVzcG9uc2USUgoLU3luY1NjcmlwdHMSIC50YXNrZ3VpbGQudjEuU3luY1NjcmlwdHNSZXF1ZXN0GiEudGFza2d1aWxkLnYxLlN5bmNTY3JpcHRzUmVzcG9uc2USggEKG1JlcG9ydFNjcmlwdEV4ZWN1dGlvblJlc3VsdBIwLnRhc2tndWlsZC52MS5SZXBvcnRTY3JpcHRFeGVjdXRpb25SZXN1bHRSZXF1ZXN0GjEudGFza2d1aWxkLnYxLlJlcG9ydFNjcmlwdEV4ZWN1dGlvblJlc3VsdFJlc3BvbnNlEnYKF1JlcG9ydFNjcmlwdE91dHB1dENodW5rEiwudGFza2d1aWxkLnYxLlJlcG9ydFNjcmlwdE91dHB1dENodW5rUmVxdWVzdBotLnRhc2tndWlsZC52MS5SZXBvcnRTY3JpcHRPdXRwdXRDaHVua1Jlc3BvbnNlQr8BChBjb20udGFza2d1aWxkLnYxQhFBZ2VudE1hbmFnZXJQcm90b1ABWkdnaXRodWIuY29tL2thenoxODcvdGFza2d1aWxkL2JhY2tlbmQvZ2VuL3Byb3RvL3Rhc2tndWlsZC92MTt0YXNrZ3VpbGR2MaICA1RYWKoCDFRhc2tndWlsZC5WMcoCDFRhc2tndWlsZFxWMeICGFRhc2tndWlsZFxWMVxHUEJNZXRhZGF0YeoCDVRhc2tndWlsZDo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_taskguild_v1_agent, file_taskguild_v1_interaction, file_taskguild_v1_permission, file_taskguild_v1_script, file_taskguild_v1_task_log]);
 
 /**
  * @generated from message taskguild.v1.AgentManagerSubscribeRequest
@@ -42,6 +42,16 @@ export type AgentManagerSubscribeRequest = Message<"taskguild.v1.AgentManagerSub
    * @generated from field: int32 max_concurrent_tasks = 3;
    */
   maxConcurrentTasks: number;
+
+  /**
+   * active_task_ids is the list of tasks currently running on this agent.
+   * On reconnection, the server will NOT release these tasks (they are still
+   * being executed locally). Tasks assigned to this agent but NOT in this list
+   * are released and re-broadcast.
+   *
+   * @generated from field: repeated string active_task_ids = 4;
+   */
+  activeTaskIds: string[];
 };
 
 /**
@@ -124,6 +134,15 @@ export type AgentCommand = Message<"taskguild.v1.AgentCommand"> & {
      */
     value: ExecuteScriptCommand;
     case: "executeScript";
+  } | {
+    /**
+     * Ping is a keepalive message sent periodically by the server to prevent
+     * idle stream timeouts from HTTP/2 intermediaries or OS-level TCP settings.
+     *
+     * @generated from field: taskguild.v1.PingCommand ping = 12;
+     */
+    value: PingCommand;
+    case: "ping";
   } | { case: undefined; value?: undefined };
 };
 
@@ -133,6 +152,21 @@ export type AgentCommand = Message<"taskguild.v1.AgentCommand"> & {
  */
 export const AgentCommandSchema: GenMessage<AgentCommand> = /*@__PURE__*/
   messageDesc(file_taskguild_v1_agent_manager, 1);
+
+/**
+ * PingCommand is a keepalive message. The client should silently ignore it.
+ *
+ * @generated from message taskguild.v1.PingCommand
+ */
+export type PingCommand = Message<"taskguild.v1.PingCommand"> & {
+};
+
+/**
+ * Describes the message taskguild.v1.PingCommand.
+ * Use `create(PingCommandSchema)` to create a new message.
+ */
+export const PingCommandSchema: GenMessage<PingCommand> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_agent_manager, 2);
 
 /**
  * @generated from message taskguild.v1.TaskAvailableCommand
@@ -164,7 +198,7 @@ export type TaskAvailableCommand = Message<"taskguild.v1.TaskAvailableCommand"> 
  * Use `create(TaskAvailableCommandSchema)` to create a new message.
  */
 export const TaskAvailableCommandSchema: GenMessage<TaskAvailableCommand> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 2);
+  messageDesc(file_taskguild_v1_agent_manager, 3);
 
 /**
  * @generated from message taskguild.v1.AssignTaskCommand
@@ -201,7 +235,7 @@ export type AssignTaskCommand = Message<"taskguild.v1.AssignTaskCommand"> & {
  * Use `create(AssignTaskCommandSchema)` to create a new message.
  */
 export const AssignTaskCommandSchema: GenMessage<AssignTaskCommand> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 3);
+  messageDesc(file_taskguild_v1_agent_manager, 4);
 
 /**
  * @generated from message taskguild.v1.CancelTaskCommand
@@ -223,7 +257,7 @@ export type CancelTaskCommand = Message<"taskguild.v1.CancelTaskCommand"> & {
  * Use `create(CancelTaskCommandSchema)` to create a new message.
  */
 export const CancelTaskCommandSchema: GenMessage<CancelTaskCommand> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 4);
+  messageDesc(file_taskguild_v1_agent_manager, 5);
 
 /**
  * @generated from message taskguild.v1.InteractionResponseCommand
@@ -245,7 +279,7 @@ export type InteractionResponseCommand = Message<"taskguild.v1.InteractionRespon
  * Use `create(InteractionResponseCommandSchema)` to create a new message.
  */
 export const InteractionResponseCommandSchema: GenMessage<InteractionResponseCommand> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 5);
+  messageDesc(file_taskguild_v1_agent_manager, 6);
 
 /**
  * SyncAgentsCommand tells the agent to re-sync its local .claude/agents/*.md files.
@@ -260,7 +294,7 @@ export type SyncAgentsCommand = Message<"taskguild.v1.SyncAgentsCommand"> & {
  * Use `create(SyncAgentsCommandSchema)` to create a new message.
  */
 export const SyncAgentsCommandSchema: GenMessage<SyncAgentsCommand> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 6);
+  messageDesc(file_taskguild_v1_agent_manager, 7);
 
 /**
  * SyncPermissionsCommand tells the agent to re-sync its local
@@ -276,7 +310,7 @@ export type SyncPermissionsCommand = Message<"taskguild.v1.SyncPermissionsComman
  * Use `create(SyncPermissionsCommandSchema)` to create a new message.
  */
 export const SyncPermissionsCommandSchema: GenMessage<SyncPermissionsCommand> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 7);
+  messageDesc(file_taskguild_v1_agent_manager, 8);
 
 /**
  * ListWorktreesCommand requests the agent-manager to scan and report
@@ -296,7 +330,7 @@ export type ListWorktreesCommand = Message<"taskguild.v1.ListWorktreesCommand"> 
  * Use `create(ListWorktreesCommandSchema)` to create a new message.
  */
 export const ListWorktreesCommandSchema: GenMessage<ListWorktreesCommand> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 8);
+  messageDesc(file_taskguild_v1_agent_manager, 9);
 
 /**
  * @generated from message taskguild.v1.ClaimTaskRequest
@@ -318,7 +352,7 @@ export type ClaimTaskRequest = Message<"taskguild.v1.ClaimTaskRequest"> & {
  * Use `create(ClaimTaskRequestSchema)` to create a new message.
  */
 export const ClaimTaskRequestSchema: GenMessage<ClaimTaskRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 9);
+  messageDesc(file_taskguild_v1_agent_manager, 10);
 
 /**
  * @generated from message taskguild.v1.ClaimTaskResponse
@@ -350,7 +384,7 @@ export type ClaimTaskResponse = Message<"taskguild.v1.ClaimTaskResponse"> & {
  * Use `create(ClaimTaskResponseSchema)` to create a new message.
  */
 export const ClaimTaskResponseSchema: GenMessage<ClaimTaskResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 10);
+  messageDesc(file_taskguild_v1_agent_manager, 11);
 
 /**
  * @generated from message taskguild.v1.ReportTaskResultRequest
@@ -377,7 +411,7 @@ export type ReportTaskResultRequest = Message<"taskguild.v1.ReportTaskResultRequ
  * Use `create(ReportTaskResultRequestSchema)` to create a new message.
  */
 export const ReportTaskResultRequestSchema: GenMessage<ReportTaskResultRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 11);
+  messageDesc(file_taskguild_v1_agent_manager, 12);
 
 /**
  * @generated from message taskguild.v1.ReportTaskResultResponse
@@ -390,7 +424,7 @@ export type ReportTaskResultResponse = Message<"taskguild.v1.ReportTaskResultRes
  * Use `create(ReportTaskResultResponseSchema)` to create a new message.
  */
 export const ReportTaskResultResponseSchema: GenMessage<ReportTaskResultResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 12);
+  messageDesc(file_taskguild_v1_agent_manager, 13);
 
 /**
  * @generated from message taskguild.v1.ReportAgentStatusRequest
@@ -422,7 +456,7 @@ export type ReportAgentStatusRequest = Message<"taskguild.v1.ReportAgentStatusRe
  * Use `create(ReportAgentStatusRequestSchema)` to create a new message.
  */
 export const ReportAgentStatusRequestSchema: GenMessage<ReportAgentStatusRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 13);
+  messageDesc(file_taskguild_v1_agent_manager, 14);
 
 /**
  * @generated from message taskguild.v1.ReportAgentStatusResponse
@@ -435,7 +469,7 @@ export type ReportAgentStatusResponse = Message<"taskguild.v1.ReportAgentStatusR
  * Use `create(ReportAgentStatusResponseSchema)` to create a new message.
  */
 export const ReportAgentStatusResponseSchema: GenMessage<ReportAgentStatusResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 14);
+  messageDesc(file_taskguild_v1_agent_manager, 15);
 
 /**
  * @generated from message taskguild.v1.HeartbeatRequest
@@ -462,7 +496,7 @@ export type HeartbeatRequest = Message<"taskguild.v1.HeartbeatRequest"> & {
  * Use `create(HeartbeatRequestSchema)` to create a new message.
  */
 export const HeartbeatRequestSchema: GenMessage<HeartbeatRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 15);
+  messageDesc(file_taskguild_v1_agent_manager, 16);
 
 /**
  * @generated from message taskguild.v1.HeartbeatResponse
@@ -475,7 +509,7 @@ export type HeartbeatResponse = Message<"taskguild.v1.HeartbeatResponse"> & {
  * Use `create(HeartbeatResponseSchema)` to create a new message.
  */
 export const HeartbeatResponseSchema: GenMessage<HeartbeatResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 16);
+  messageDesc(file_taskguild_v1_agent_manager, 17);
 
 /**
  * @generated from message taskguild.v1.CreateInteractionRequest
@@ -517,7 +551,7 @@ export type CreateInteractionRequest = Message<"taskguild.v1.CreateInteractionRe
  * Use `create(CreateInteractionRequestSchema)` to create a new message.
  */
 export const CreateInteractionRequestSchema: GenMessage<CreateInteractionRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 17);
+  messageDesc(file_taskguild_v1_agent_manager, 18);
 
 /**
  * @generated from message taskguild.v1.CreateInteractionResponse
@@ -534,7 +568,7 @@ export type CreateInteractionResponse = Message<"taskguild.v1.CreateInteractionR
  * Use `create(CreateInteractionResponseSchema)` to create a new message.
  */
 export const CreateInteractionResponseSchema: GenMessage<CreateInteractionResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 18);
+  messageDesc(file_taskguild_v1_agent_manager, 19);
 
 /**
  * @generated from message taskguild.v1.GetInteractionResponseRequest
@@ -551,7 +585,7 @@ export type GetInteractionResponseRequest = Message<"taskguild.v1.GetInteraction
  * Use `create(GetInteractionResponseRequestSchema)` to create a new message.
  */
 export const GetInteractionResponseRequestSchema: GenMessage<GetInteractionResponseRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 19);
+  messageDesc(file_taskguild_v1_agent_manager, 20);
 
 /**
  * @generated from message taskguild.v1.GetInteractionResponseResponse
@@ -568,7 +602,7 @@ export type GetInteractionResponseResponse = Message<"taskguild.v1.GetInteractio
  * Use `create(GetInteractionResponseResponseSchema)` to create a new message.
  */
 export const GetInteractionResponseResponseSchema: GenMessage<GetInteractionResponseResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 20);
+  messageDesc(file_taskguild_v1_agent_manager, 21);
 
 /**
  * @generated from message taskguild.v1.SyncAgentsRequest
@@ -585,7 +619,7 @@ export type SyncAgentsRequest = Message<"taskguild.v1.SyncAgentsRequest"> & {
  * Use `create(SyncAgentsRequestSchema)` to create a new message.
  */
 export const SyncAgentsRequestSchema: GenMessage<SyncAgentsRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 21);
+  messageDesc(file_taskguild_v1_agent_manager, 22);
 
 /**
  * @generated from message taskguild.v1.SyncAgentsResponse
@@ -602,7 +636,7 @@ export type SyncAgentsResponse = Message<"taskguild.v1.SyncAgentsResponse"> & {
  * Use `create(SyncAgentsResponseSchema)` to create a new message.
  */
 export const SyncAgentsResponseSchema: GenMessage<SyncAgentsResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 22);
+  messageDesc(file_taskguild_v1_agent_manager, 23);
 
 /**
  * @generated from message taskguild.v1.SyncPermissionsRequest
@@ -634,7 +668,7 @@ export type SyncPermissionsRequest = Message<"taskguild.v1.SyncPermissionsReques
  * Use `create(SyncPermissionsRequestSchema)` to create a new message.
  */
 export const SyncPermissionsRequestSchema: GenMessage<SyncPermissionsRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 23);
+  messageDesc(file_taskguild_v1_agent_manager, 24);
 
 /**
  * @generated from message taskguild.v1.SyncPermissionsResponse
@@ -651,7 +685,7 @@ export type SyncPermissionsResponse = Message<"taskguild.v1.SyncPermissionsRespo
  * Use `create(SyncPermissionsResponseSchema)` to create a new message.
  */
 export const SyncPermissionsResponseSchema: GenMessage<SyncPermissionsResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 24);
+  messageDesc(file_taskguild_v1_agent_manager, 25);
 
 /**
  * @generated from message taskguild.v1.ReportTaskLogRequest
@@ -688,7 +722,7 @@ export type ReportTaskLogRequest = Message<"taskguild.v1.ReportTaskLogRequest"> 
  * Use `create(ReportTaskLogRequestSchema)` to create a new message.
  */
 export const ReportTaskLogRequestSchema: GenMessage<ReportTaskLogRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 25);
+  messageDesc(file_taskguild_v1_agent_manager, 26);
 
 /**
  * @generated from message taskguild.v1.ReportTaskLogResponse
@@ -701,7 +735,7 @@ export type ReportTaskLogResponse = Message<"taskguild.v1.ReportTaskLogResponse"
  * Use `create(ReportTaskLogResponseSchema)` to create a new message.
  */
 export const ReportTaskLogResponseSchema: GenMessage<ReportTaskLogResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 26);
+  messageDesc(file_taskguild_v1_agent_manager, 27);
 
 /**
  * @generated from message taskguild.v1.WorktreeInfo
@@ -748,7 +782,7 @@ export type WorktreeInfo = Message<"taskguild.v1.WorktreeInfo"> & {
  * Use `create(WorktreeInfoSchema)` to create a new message.
  */
 export const WorktreeInfoSchema: GenMessage<WorktreeInfo> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 27);
+  messageDesc(file_taskguild_v1_agent_manager, 28);
 
 /**
  * DeleteWorktreeCommand tells the agent to remove a git worktree and its branch.
@@ -781,7 +815,7 @@ export type DeleteWorktreeCommand = Message<"taskguild.v1.DeleteWorktreeCommand"
  * Use `create(DeleteWorktreeCommandSchema)` to create a new message.
  */
 export const DeleteWorktreeCommandSchema: GenMessage<DeleteWorktreeCommand> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 28);
+  messageDesc(file_taskguild_v1_agent_manager, 29);
 
 /**
  * @generated from message taskguild.v1.ReportWorktreeListRequest
@@ -808,7 +842,7 @@ export type ReportWorktreeListRequest = Message<"taskguild.v1.ReportWorktreeList
  * Use `create(ReportWorktreeListRequestSchema)` to create a new message.
  */
 export const ReportWorktreeListRequestSchema: GenMessage<ReportWorktreeListRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 29);
+  messageDesc(file_taskguild_v1_agent_manager, 30);
 
 /**
  * @generated from message taskguild.v1.ReportWorktreeListResponse
@@ -821,7 +855,7 @@ export type ReportWorktreeListResponse = Message<"taskguild.v1.ReportWorktreeLis
  * Use `create(ReportWorktreeListResponseSchema)` to create a new message.
  */
 export const ReportWorktreeListResponseSchema: GenMessage<ReportWorktreeListResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 30);
+  messageDesc(file_taskguild_v1_agent_manager, 31);
 
 /**
  * @generated from message taskguild.v1.RequestWorktreeListRequest
@@ -838,7 +872,7 @@ export type RequestWorktreeListRequest = Message<"taskguild.v1.RequestWorktreeLi
  * Use `create(RequestWorktreeListRequestSchema)` to create a new message.
  */
 export const RequestWorktreeListRequestSchema: GenMessage<RequestWorktreeListRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 31);
+  messageDesc(file_taskguild_v1_agent_manager, 32);
 
 /**
  * @generated from message taskguild.v1.RequestWorktreeListResponse
@@ -855,7 +889,7 @@ export type RequestWorktreeListResponse = Message<"taskguild.v1.RequestWorktreeL
  * Use `create(RequestWorktreeListResponseSchema)` to create a new message.
  */
 export const RequestWorktreeListResponseSchema: GenMessage<RequestWorktreeListResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 32);
+  messageDesc(file_taskguild_v1_agent_manager, 33);
 
 /**
  * @generated from message taskguild.v1.GetWorktreeListRequest
@@ -872,7 +906,7 @@ export type GetWorktreeListRequest = Message<"taskguild.v1.GetWorktreeListReques
  * Use `create(GetWorktreeListRequestSchema)` to create a new message.
  */
 export const GetWorktreeListRequestSchema: GenMessage<GetWorktreeListRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 33);
+  messageDesc(file_taskguild_v1_agent_manager, 34);
 
 /**
  * @generated from message taskguild.v1.GetWorktreeListResponse
@@ -889,7 +923,7 @@ export type GetWorktreeListResponse = Message<"taskguild.v1.GetWorktreeListRespo
  * Use `create(GetWorktreeListResponseSchema)` to create a new message.
  */
 export const GetWorktreeListResponseSchema: GenMessage<GetWorktreeListResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 34);
+  messageDesc(file_taskguild_v1_agent_manager, 35);
 
 /**
  * @generated from message taskguild.v1.RequestWorktreeDeleteRequest
@@ -916,7 +950,7 @@ export type RequestWorktreeDeleteRequest = Message<"taskguild.v1.RequestWorktree
  * Use `create(RequestWorktreeDeleteRequestSchema)` to create a new message.
  */
 export const RequestWorktreeDeleteRequestSchema: GenMessage<RequestWorktreeDeleteRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 35);
+  messageDesc(file_taskguild_v1_agent_manager, 36);
 
 /**
  * @generated from message taskguild.v1.RequestWorktreeDeleteResponse
@@ -933,7 +967,7 @@ export type RequestWorktreeDeleteResponse = Message<"taskguild.v1.RequestWorktre
  * Use `create(RequestWorktreeDeleteResponseSchema)` to create a new message.
  */
 export const RequestWorktreeDeleteResponseSchema: GenMessage<RequestWorktreeDeleteResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 36);
+  messageDesc(file_taskguild_v1_agent_manager, 37);
 
 /**
  * @generated from message taskguild.v1.ReportWorktreeDeleteResultRequest
@@ -970,7 +1004,7 @@ export type ReportWorktreeDeleteResultRequest = Message<"taskguild.v1.ReportWork
  * Use `create(ReportWorktreeDeleteResultRequestSchema)` to create a new message.
  */
 export const ReportWorktreeDeleteResultRequestSchema: GenMessage<ReportWorktreeDeleteResultRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 37);
+  messageDesc(file_taskguild_v1_agent_manager, 38);
 
 /**
  * @generated from message taskguild.v1.ReportWorktreeDeleteResultResponse
@@ -983,7 +1017,7 @@ export type ReportWorktreeDeleteResultResponse = Message<"taskguild.v1.ReportWor
  * Use `create(ReportWorktreeDeleteResultResponseSchema)` to create a new message.
  */
 export const ReportWorktreeDeleteResultResponseSchema: GenMessage<ReportWorktreeDeleteResultResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 38);
+  messageDesc(file_taskguild_v1_agent_manager, 39);
 
 /**
  * GitPullMainCommand tells the agent to run `git pull origin main`
@@ -1003,7 +1037,7 @@ export type GitPullMainCommand = Message<"taskguild.v1.GitPullMainCommand"> & {
  * Use `create(GitPullMainCommandSchema)` to create a new message.
  */
 export const GitPullMainCommandSchema: GenMessage<GitPullMainCommand> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 39);
+  messageDesc(file_taskguild_v1_agent_manager, 40);
 
 /**
  * @generated from message taskguild.v1.RequestGitPullMainRequest
@@ -1020,7 +1054,7 @@ export type RequestGitPullMainRequest = Message<"taskguild.v1.RequestGitPullMain
  * Use `create(RequestGitPullMainRequestSchema)` to create a new message.
  */
 export const RequestGitPullMainRequestSchema: GenMessage<RequestGitPullMainRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 40);
+  messageDesc(file_taskguild_v1_agent_manager, 41);
 
 /**
  * @generated from message taskguild.v1.RequestGitPullMainResponse
@@ -1037,7 +1071,7 @@ export type RequestGitPullMainResponse = Message<"taskguild.v1.RequestGitPullMai
  * Use `create(RequestGitPullMainResponseSchema)` to create a new message.
  */
 export const RequestGitPullMainResponseSchema: GenMessage<RequestGitPullMainResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 41);
+  messageDesc(file_taskguild_v1_agent_manager, 42);
 
 /**
  * @generated from message taskguild.v1.ReportGitPullMainResultRequest
@@ -1078,7 +1112,7 @@ export type ReportGitPullMainResultRequest = Message<"taskguild.v1.ReportGitPull
  * Use `create(ReportGitPullMainResultRequestSchema)` to create a new message.
  */
 export const ReportGitPullMainResultRequestSchema: GenMessage<ReportGitPullMainResultRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 42);
+  messageDesc(file_taskguild_v1_agent_manager, 43);
 
 /**
  * @generated from message taskguild.v1.ReportGitPullMainResultResponse
@@ -1091,7 +1125,7 @@ export type ReportGitPullMainResultResponse = Message<"taskguild.v1.ReportGitPul
  * Use `create(ReportGitPullMainResultResponseSchema)` to create a new message.
  */
 export const ReportGitPullMainResultResponseSchema: GenMessage<ReportGitPullMainResultResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 43);
+  messageDesc(file_taskguild_v1_agent_manager, 44);
 
 /**
  * SyncScriptsCommand tells the agent to re-sync its local .claude/scripts/* files.
@@ -1106,7 +1140,7 @@ export type SyncScriptsCommand = Message<"taskguild.v1.SyncScriptsCommand"> & {
  * Use `create(SyncScriptsCommandSchema)` to create a new message.
  */
 export const SyncScriptsCommandSchema: GenMessage<SyncScriptsCommand> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 44);
+  messageDesc(file_taskguild_v1_agent_manager, 45);
 
 /**
  * ExecuteScriptCommand tells the agent to execute a specific script.
@@ -1144,7 +1178,7 @@ export type ExecuteScriptCommand = Message<"taskguild.v1.ExecuteScriptCommand"> 
  * Use `create(ExecuteScriptCommandSchema)` to create a new message.
  */
 export const ExecuteScriptCommandSchema: GenMessage<ExecuteScriptCommand> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 45);
+  messageDesc(file_taskguild_v1_agent_manager, 46);
 
 /**
  * @generated from message taskguild.v1.SyncScriptsRequest
@@ -1161,7 +1195,7 @@ export type SyncScriptsRequest = Message<"taskguild.v1.SyncScriptsRequest"> & {
  * Use `create(SyncScriptsRequestSchema)` to create a new message.
  */
 export const SyncScriptsRequestSchema: GenMessage<SyncScriptsRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 46);
+  messageDesc(file_taskguild_v1_agent_manager, 47);
 
 /**
  * @generated from message taskguild.v1.SyncScriptsResponse
@@ -1178,7 +1212,7 @@ export type SyncScriptsResponse = Message<"taskguild.v1.SyncScriptsResponse"> & 
  * Use `create(SyncScriptsResponseSchema)` to create a new message.
  */
 export const SyncScriptsResponseSchema: GenMessage<SyncScriptsResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 47);
+  messageDesc(file_taskguild_v1_agent_manager, 48);
 
 /**
  * @generated from message taskguild.v1.ReportScriptExecutionResultRequest
@@ -1234,7 +1268,7 @@ export type ReportScriptExecutionResultRequest = Message<"taskguild.v1.ReportScr
  * Use `create(ReportScriptExecutionResultRequestSchema)` to create a new message.
  */
 export const ReportScriptExecutionResultRequestSchema: GenMessage<ReportScriptExecutionResultRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 48);
+  messageDesc(file_taskguild_v1_agent_manager, 49);
 
 /**
  * @generated from message taskguild.v1.ReportScriptExecutionResultResponse
@@ -1247,7 +1281,7 @@ export type ReportScriptExecutionResultResponse = Message<"taskguild.v1.ReportSc
  * Use `create(ReportScriptExecutionResultResponseSchema)` to create a new message.
  */
 export const ReportScriptExecutionResultResponseSchema: GenMessage<ReportScriptExecutionResultResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 49);
+  messageDesc(file_taskguild_v1_agent_manager, 50);
 
 /**
  * ReportScriptOutputChunk reports a chunk of real-time script output.
@@ -1285,7 +1319,7 @@ export type ReportScriptOutputChunkRequest = Message<"taskguild.v1.ReportScriptO
  * Use `create(ReportScriptOutputChunkRequestSchema)` to create a new message.
  */
 export const ReportScriptOutputChunkRequestSchema: GenMessage<ReportScriptOutputChunkRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 50);
+  messageDesc(file_taskguild_v1_agent_manager, 51);
 
 /**
  * @generated from message taskguild.v1.ReportScriptOutputChunkResponse
@@ -1298,7 +1332,7 @@ export type ReportScriptOutputChunkResponse = Message<"taskguild.v1.ReportScript
  * Use `create(ReportScriptOutputChunkResponseSchema)` to create a new message.
  */
 export const ReportScriptOutputChunkResponseSchema: GenMessage<ReportScriptOutputChunkResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 51);
+  messageDesc(file_taskguild_v1_agent_manager, 52);
 
 /**
  * @generated from enum taskguild.v1.AgentStatus

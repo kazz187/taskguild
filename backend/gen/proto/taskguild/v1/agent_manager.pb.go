@@ -82,8 +82,13 @@ type AgentManagerSubscribeRequest struct {
 	AgentManagerId     string                 `protobuf:"bytes,1,opt,name=agent_manager_id,json=agentManagerId,proto3" json:"agent_manager_id,omitempty"`
 	ProjectName        string                 `protobuf:"bytes,2,opt,name=project_name,json=projectName,proto3" json:"project_name,omitempty"`
 	MaxConcurrentTasks int32                  `protobuf:"varint,3,opt,name=max_concurrent_tasks,json=maxConcurrentTasks,proto3" json:"max_concurrent_tasks,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// active_task_ids is the list of tasks currently running on this agent.
+	// On reconnection, the server will NOT release these tasks (they are still
+	// being executed locally). Tasks assigned to this agent but NOT in this list
+	// are released and re-broadcast.
+	ActiveTaskIds []string `protobuf:"bytes,4,rep,name=active_task_ids,json=activeTaskIds,proto3" json:"active_task_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AgentManagerSubscribeRequest) Reset() {
@@ -137,6 +142,13 @@ func (x *AgentManagerSubscribeRequest) GetMaxConcurrentTasks() int32 {
 	return 0
 }
 
+func (x *AgentManagerSubscribeRequest) GetActiveTaskIds() []string {
+	if x != nil {
+		return x.ActiveTaskIds
+	}
+	return nil
+}
+
 type AgentCommand struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Command:
@@ -152,6 +164,7 @@ type AgentCommand struct {
 	//	*AgentCommand_GitPullMain
 	//	*AgentCommand_SyncScripts
 	//	*AgentCommand_ExecuteScript
+	//	*AgentCommand_Ping
 	Command       isAgentCommand_Command `protobuf_oneof:"command"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -293,6 +306,15 @@ func (x *AgentCommand) GetExecuteScript() *ExecuteScriptCommand {
 	return nil
 }
 
+func (x *AgentCommand) GetPing() *PingCommand {
+	if x != nil {
+		if x, ok := x.Command.(*AgentCommand_Ping); ok {
+			return x.Ping
+		}
+	}
+	return nil
+}
+
 type isAgentCommand_Command interface {
 	isAgentCommand_Command()
 }
@@ -341,6 +363,12 @@ type AgentCommand_ExecuteScript struct {
 	ExecuteScript *ExecuteScriptCommand `protobuf:"bytes,11,opt,name=execute_script,json=executeScript,proto3,oneof"`
 }
 
+type AgentCommand_Ping struct {
+	// Ping is a keepalive message sent periodically by the server to prevent
+	// idle stream timeouts from HTTP/2 intermediaries or OS-level TCP settings.
+	Ping *PingCommand `protobuf:"bytes,12,opt,name=ping,proto3,oneof"`
+}
+
 func (*AgentCommand_TaskAvailable) isAgentCommand_Command() {}
 
 func (*AgentCommand_AssignTask) isAgentCommand_Command() {}
@@ -363,6 +391,45 @@ func (*AgentCommand_SyncScripts) isAgentCommand_Command() {}
 
 func (*AgentCommand_ExecuteScript) isAgentCommand_Command() {}
 
+func (*AgentCommand_Ping) isAgentCommand_Command() {}
+
+// PingCommand is a keepalive message. The client should silently ignore it.
+type PingCommand struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PingCommand) Reset() {
+	*x = PingCommand{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PingCommand) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingCommand) ProtoMessage() {}
+
+func (x *PingCommand) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingCommand.ProtoReflect.Descriptor instead.
+func (*PingCommand) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{2}
+}
+
 type TaskAvailableCommand struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
@@ -375,7 +442,7 @@ type TaskAvailableCommand struct {
 
 func (x *TaskAvailableCommand) Reset() {
 	*x = TaskAvailableCommand{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[2]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -387,7 +454,7 @@ func (x *TaskAvailableCommand) String() string {
 func (*TaskAvailableCommand) ProtoMessage() {}
 
 func (x *TaskAvailableCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[2]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -400,7 +467,7 @@ func (x *TaskAvailableCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskAvailableCommand.ProtoReflect.Descriptor instead.
 func (*TaskAvailableCommand) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{2}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *TaskAvailableCommand) GetTaskId() string {
@@ -444,7 +511,7 @@ type AssignTaskCommand struct {
 
 func (x *AssignTaskCommand) Reset() {
 	*x = AssignTaskCommand{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[3]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -456,7 +523,7 @@ func (x *AssignTaskCommand) String() string {
 func (*AssignTaskCommand) ProtoMessage() {}
 
 func (x *AssignTaskCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[3]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -469,7 +536,7 @@ func (x *AssignTaskCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssignTaskCommand.ProtoReflect.Descriptor instead.
 func (*AssignTaskCommand) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{3}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *AssignTaskCommand) GetTaskId() string {
@@ -517,7 +584,7 @@ type CancelTaskCommand struct {
 
 func (x *CancelTaskCommand) Reset() {
 	*x = CancelTaskCommand{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[4]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -529,7 +596,7 @@ func (x *CancelTaskCommand) String() string {
 func (*CancelTaskCommand) ProtoMessage() {}
 
 func (x *CancelTaskCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[4]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -542,7 +609,7 @@ func (x *CancelTaskCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelTaskCommand.ProtoReflect.Descriptor instead.
 func (*CancelTaskCommand) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{4}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *CancelTaskCommand) GetTaskId() string {
@@ -569,7 +636,7 @@ type InteractionResponseCommand struct {
 
 func (x *InteractionResponseCommand) Reset() {
 	*x = InteractionResponseCommand{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[5]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -581,7 +648,7 @@ func (x *InteractionResponseCommand) String() string {
 func (*InteractionResponseCommand) ProtoMessage() {}
 
 func (x *InteractionResponseCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[5]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -594,7 +661,7 @@ func (x *InteractionResponseCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InteractionResponseCommand.ProtoReflect.Descriptor instead.
 func (*InteractionResponseCommand) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{5}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *InteractionResponseCommand) GetInteractionId() string {
@@ -620,7 +687,7 @@ type SyncAgentsCommand struct {
 
 func (x *SyncAgentsCommand) Reset() {
 	*x = SyncAgentsCommand{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[6]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -632,7 +699,7 @@ func (x *SyncAgentsCommand) String() string {
 func (*SyncAgentsCommand) ProtoMessage() {}
 
 func (x *SyncAgentsCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[6]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -645,7 +712,7 @@ func (x *SyncAgentsCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncAgentsCommand.ProtoReflect.Descriptor instead.
 func (*SyncAgentsCommand) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{6}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{7}
 }
 
 // SyncPermissionsCommand tells the agent to re-sync its local
@@ -658,7 +725,7 @@ type SyncPermissionsCommand struct {
 
 func (x *SyncPermissionsCommand) Reset() {
 	*x = SyncPermissionsCommand{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[7]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -670,7 +737,7 @@ func (x *SyncPermissionsCommand) String() string {
 func (*SyncPermissionsCommand) ProtoMessage() {}
 
 func (x *SyncPermissionsCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[7]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -683,7 +750,7 @@ func (x *SyncPermissionsCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncPermissionsCommand.ProtoReflect.Descriptor instead.
 func (*SyncPermissionsCommand) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{7}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{8}
 }
 
 // ListWorktreesCommand requests the agent-manager to scan and report
@@ -697,7 +764,7 @@ type ListWorktreesCommand struct {
 
 func (x *ListWorktreesCommand) Reset() {
 	*x = ListWorktreesCommand{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[8]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -709,7 +776,7 @@ func (x *ListWorktreesCommand) String() string {
 func (*ListWorktreesCommand) ProtoMessage() {}
 
 func (x *ListWorktreesCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[8]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -722,7 +789,7 @@ func (x *ListWorktreesCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWorktreesCommand.ProtoReflect.Descriptor instead.
 func (*ListWorktreesCommand) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{8}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListWorktreesCommand) GetRequestId() string {
@@ -742,7 +809,7 @@ type ClaimTaskRequest struct {
 
 func (x *ClaimTaskRequest) Reset() {
 	*x = ClaimTaskRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[9]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -754,7 +821,7 @@ func (x *ClaimTaskRequest) String() string {
 func (*ClaimTaskRequest) ProtoMessage() {}
 
 func (x *ClaimTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[9]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -767,7 +834,7 @@ func (x *ClaimTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClaimTaskRequest.ProtoReflect.Descriptor instead.
 func (*ClaimTaskRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{9}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ClaimTaskRequest) GetTaskId() string {
@@ -796,7 +863,7 @@ type ClaimTaskResponse struct {
 
 func (x *ClaimTaskResponse) Reset() {
 	*x = ClaimTaskResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[10]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -808,7 +875,7 @@ func (x *ClaimTaskResponse) String() string {
 func (*ClaimTaskResponse) ProtoMessage() {}
 
 func (x *ClaimTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[10]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -821,7 +888,7 @@ func (x *ClaimTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClaimTaskResponse.ProtoReflect.Descriptor instead.
 func (*ClaimTaskResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{10}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ClaimTaskResponse) GetSuccess() bool {
@@ -863,7 +930,7 @@ type ReportTaskResultRequest struct {
 
 func (x *ReportTaskResultRequest) Reset() {
 	*x = ReportTaskResultRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[11]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -875,7 +942,7 @@ func (x *ReportTaskResultRequest) String() string {
 func (*ReportTaskResultRequest) ProtoMessage() {}
 
 func (x *ReportTaskResultRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[11]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -888,7 +955,7 @@ func (x *ReportTaskResultRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportTaskResultRequest.ProtoReflect.Descriptor instead.
 func (*ReportTaskResultRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{11}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ReportTaskResultRequest) GetTaskId() string {
@@ -920,7 +987,7 @@ type ReportTaskResultResponse struct {
 
 func (x *ReportTaskResultResponse) Reset() {
 	*x = ReportTaskResultResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[12]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -932,7 +999,7 @@ func (x *ReportTaskResultResponse) String() string {
 func (*ReportTaskResultResponse) ProtoMessage() {}
 
 func (x *ReportTaskResultResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[12]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -945,7 +1012,7 @@ func (x *ReportTaskResultResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportTaskResultResponse.ProtoReflect.Descriptor instead.
 func (*ReportTaskResultResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{12}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{13}
 }
 
 type ReportAgentStatusRequest struct {
@@ -960,7 +1027,7 @@ type ReportAgentStatusRequest struct {
 
 func (x *ReportAgentStatusRequest) Reset() {
 	*x = ReportAgentStatusRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[13]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -972,7 +1039,7 @@ func (x *ReportAgentStatusRequest) String() string {
 func (*ReportAgentStatusRequest) ProtoMessage() {}
 
 func (x *ReportAgentStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[13]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -985,7 +1052,7 @@ func (x *ReportAgentStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportAgentStatusRequest.ProtoReflect.Descriptor instead.
 func (*ReportAgentStatusRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{13}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ReportAgentStatusRequest) GetAgentManagerId() string {
@@ -1024,7 +1091,7 @@ type ReportAgentStatusResponse struct {
 
 func (x *ReportAgentStatusResponse) Reset() {
 	*x = ReportAgentStatusResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[14]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1036,7 +1103,7 @@ func (x *ReportAgentStatusResponse) String() string {
 func (*ReportAgentStatusResponse) ProtoMessage() {}
 
 func (x *ReportAgentStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[14]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1049,7 +1116,7 @@ func (x *ReportAgentStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportAgentStatusResponse.ProtoReflect.Descriptor instead.
 func (*ReportAgentStatusResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{14}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{15}
 }
 
 type HeartbeatRequest struct {
@@ -1063,7 +1130,7 @@ type HeartbeatRequest struct {
 
 func (x *HeartbeatRequest) Reset() {
 	*x = HeartbeatRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[15]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1075,7 +1142,7 @@ func (x *HeartbeatRequest) String() string {
 func (*HeartbeatRequest) ProtoMessage() {}
 
 func (x *HeartbeatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[15]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1088,7 +1155,7 @@ func (x *HeartbeatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeartbeatRequest.ProtoReflect.Descriptor instead.
 func (*HeartbeatRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{15}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *HeartbeatRequest) GetAgentManagerId() string {
@@ -1120,7 +1187,7 @@ type HeartbeatResponse struct {
 
 func (x *HeartbeatResponse) Reset() {
 	*x = HeartbeatResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[16]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1132,7 +1199,7 @@ func (x *HeartbeatResponse) String() string {
 func (*HeartbeatResponse) ProtoMessage() {}
 
 func (x *HeartbeatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[16]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1145,7 +1212,7 @@ func (x *HeartbeatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeartbeatResponse.ProtoReflect.Descriptor instead.
 func (*HeartbeatResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{16}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{17}
 }
 
 type CreateInteractionRequest struct {
@@ -1162,7 +1229,7 @@ type CreateInteractionRequest struct {
 
 func (x *CreateInteractionRequest) Reset() {
 	*x = CreateInteractionRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[17]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1174,7 +1241,7 @@ func (x *CreateInteractionRequest) String() string {
 func (*CreateInteractionRequest) ProtoMessage() {}
 
 func (x *CreateInteractionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[17]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1187,7 +1254,7 @@ func (x *CreateInteractionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateInteractionRequest.ProtoReflect.Descriptor instead.
 func (*CreateInteractionRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{17}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *CreateInteractionRequest) GetTaskId() string {
@@ -1241,7 +1308,7 @@ type CreateInteractionResponse struct {
 
 func (x *CreateInteractionResponse) Reset() {
 	*x = CreateInteractionResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[18]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1253,7 +1320,7 @@ func (x *CreateInteractionResponse) String() string {
 func (*CreateInteractionResponse) ProtoMessage() {}
 
 func (x *CreateInteractionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[18]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1266,7 +1333,7 @@ func (x *CreateInteractionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateInteractionResponse.ProtoReflect.Descriptor instead.
 func (*CreateInteractionResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{18}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *CreateInteractionResponse) GetInteraction() *Interaction {
@@ -1285,7 +1352,7 @@ type GetInteractionResponseRequest struct {
 
 func (x *GetInteractionResponseRequest) Reset() {
 	*x = GetInteractionResponseRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[19]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1297,7 +1364,7 @@ func (x *GetInteractionResponseRequest) String() string {
 func (*GetInteractionResponseRequest) ProtoMessage() {}
 
 func (x *GetInteractionResponseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[19]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1310,7 +1377,7 @@ func (x *GetInteractionResponseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetInteractionResponseRequest.ProtoReflect.Descriptor instead.
 func (*GetInteractionResponseRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{19}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *GetInteractionResponseRequest) GetInteractionId() string {
@@ -1329,7 +1396,7 @@ type GetInteractionResponseResponse struct {
 
 func (x *GetInteractionResponseResponse) Reset() {
 	*x = GetInteractionResponseResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[20]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1341,7 +1408,7 @@ func (x *GetInteractionResponseResponse) String() string {
 func (*GetInteractionResponseResponse) ProtoMessage() {}
 
 func (x *GetInteractionResponseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[20]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1354,7 +1421,7 @@ func (x *GetInteractionResponseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetInteractionResponseResponse.ProtoReflect.Descriptor instead.
 func (*GetInteractionResponseResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{20}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *GetInteractionResponseResponse) GetInteraction() *Interaction {
@@ -1373,7 +1440,7 @@ type SyncAgentsRequest struct {
 
 func (x *SyncAgentsRequest) Reset() {
 	*x = SyncAgentsRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[21]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1385,7 +1452,7 @@ func (x *SyncAgentsRequest) String() string {
 func (*SyncAgentsRequest) ProtoMessage() {}
 
 func (x *SyncAgentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[21]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1398,7 +1465,7 @@ func (x *SyncAgentsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncAgentsRequest.ProtoReflect.Descriptor instead.
 func (*SyncAgentsRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{21}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *SyncAgentsRequest) GetProjectName() string {
@@ -1417,7 +1484,7 @@ type SyncAgentsResponse struct {
 
 func (x *SyncAgentsResponse) Reset() {
 	*x = SyncAgentsResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[22]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1429,7 +1496,7 @@ func (x *SyncAgentsResponse) String() string {
 func (*SyncAgentsResponse) ProtoMessage() {}
 
 func (x *SyncAgentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[22]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1442,7 +1509,7 @@ func (x *SyncAgentsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncAgentsResponse.ProtoReflect.Descriptor instead.
 func (*SyncAgentsResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{22}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *SyncAgentsResponse) GetAgents() []*AgentDefinition {
@@ -1464,7 +1531,7 @@ type SyncPermissionsRequest struct {
 
 func (x *SyncPermissionsRequest) Reset() {
 	*x = SyncPermissionsRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[23]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1476,7 +1543,7 @@ func (x *SyncPermissionsRequest) String() string {
 func (*SyncPermissionsRequest) ProtoMessage() {}
 
 func (x *SyncPermissionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[23]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1489,7 +1556,7 @@ func (x *SyncPermissionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncPermissionsRequest.ProtoReflect.Descriptor instead.
 func (*SyncPermissionsRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{23}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *SyncPermissionsRequest) GetProjectName() string {
@@ -1529,7 +1596,7 @@ type SyncPermissionsResponse struct {
 
 func (x *SyncPermissionsResponse) Reset() {
 	*x = SyncPermissionsResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[24]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1541,7 +1608,7 @@ func (x *SyncPermissionsResponse) String() string {
 func (*SyncPermissionsResponse) ProtoMessage() {}
 
 func (x *SyncPermissionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[24]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1554,7 +1621,7 @@ func (x *SyncPermissionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncPermissionsResponse.ProtoReflect.Descriptor instead.
 func (*SyncPermissionsResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{24}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *SyncPermissionsResponse) GetPermissions() *PermissionSet {
@@ -1577,7 +1644,7 @@ type ReportTaskLogRequest struct {
 
 func (x *ReportTaskLogRequest) Reset() {
 	*x = ReportTaskLogRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[25]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1589,7 +1656,7 @@ func (x *ReportTaskLogRequest) String() string {
 func (*ReportTaskLogRequest) ProtoMessage() {}
 
 func (x *ReportTaskLogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[25]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1602,7 +1669,7 @@ func (x *ReportTaskLogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportTaskLogRequest.ProtoReflect.Descriptor instead.
 func (*ReportTaskLogRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{25}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ReportTaskLogRequest) GetTaskId() string {
@@ -1648,7 +1715,7 @@ type ReportTaskLogResponse struct {
 
 func (x *ReportTaskLogResponse) Reset() {
 	*x = ReportTaskLogResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[26]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1660,7 +1727,7 @@ func (x *ReportTaskLogResponse) String() string {
 func (*ReportTaskLogResponse) ProtoMessage() {}
 
 func (x *ReportTaskLogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[26]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1673,7 +1740,7 @@ func (x *ReportTaskLogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportTaskLogResponse.ProtoReflect.Descriptor instead.
 func (*ReportTaskLogResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{26}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{27}
 }
 
 type WorktreeInfo struct {
@@ -1689,7 +1756,7 @@ type WorktreeInfo struct {
 
 func (x *WorktreeInfo) Reset() {
 	*x = WorktreeInfo{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[27]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1701,7 +1768,7 @@ func (x *WorktreeInfo) String() string {
 func (*WorktreeInfo) ProtoMessage() {}
 
 func (x *WorktreeInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[27]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1714,7 +1781,7 @@ func (x *WorktreeInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorktreeInfo.ProtoReflect.Descriptor instead.
 func (*WorktreeInfo) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{27}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *WorktreeInfo) GetName() string {
@@ -1764,7 +1831,7 @@ type DeleteWorktreeCommand struct {
 
 func (x *DeleteWorktreeCommand) Reset() {
 	*x = DeleteWorktreeCommand{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[28]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1776,7 +1843,7 @@ func (x *DeleteWorktreeCommand) String() string {
 func (*DeleteWorktreeCommand) ProtoMessage() {}
 
 func (x *DeleteWorktreeCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[28]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1789,7 +1856,7 @@ func (x *DeleteWorktreeCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteWorktreeCommand.ProtoReflect.Descriptor instead.
 func (*DeleteWorktreeCommand) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{28}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *DeleteWorktreeCommand) GetRequestId() string {
@@ -1824,7 +1891,7 @@ type ReportWorktreeListRequest struct {
 
 func (x *ReportWorktreeListRequest) Reset() {
 	*x = ReportWorktreeListRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[29]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1836,7 +1903,7 @@ func (x *ReportWorktreeListRequest) String() string {
 func (*ReportWorktreeListRequest) ProtoMessage() {}
 
 func (x *ReportWorktreeListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[29]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1849,7 +1916,7 @@ func (x *ReportWorktreeListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportWorktreeListRequest.ProtoReflect.Descriptor instead.
 func (*ReportWorktreeListRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{29}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ReportWorktreeListRequest) GetRequestId() string {
@@ -1881,7 +1948,7 @@ type ReportWorktreeListResponse struct {
 
 func (x *ReportWorktreeListResponse) Reset() {
 	*x = ReportWorktreeListResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[30]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1893,7 +1960,7 @@ func (x *ReportWorktreeListResponse) String() string {
 func (*ReportWorktreeListResponse) ProtoMessage() {}
 
 func (x *ReportWorktreeListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[30]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1906,7 +1973,7 @@ func (x *ReportWorktreeListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportWorktreeListResponse.ProtoReflect.Descriptor instead.
 func (*ReportWorktreeListResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{30}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{31}
 }
 
 type RequestWorktreeListRequest struct {
@@ -1918,7 +1985,7 @@ type RequestWorktreeListRequest struct {
 
 func (x *RequestWorktreeListRequest) Reset() {
 	*x = RequestWorktreeListRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[31]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1930,7 +1997,7 @@ func (x *RequestWorktreeListRequest) String() string {
 func (*RequestWorktreeListRequest) ProtoMessage() {}
 
 func (x *RequestWorktreeListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[31]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1943,7 +2010,7 @@ func (x *RequestWorktreeListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestWorktreeListRequest.ProtoReflect.Descriptor instead.
 func (*RequestWorktreeListRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{31}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *RequestWorktreeListRequest) GetProjectId() string {
@@ -1962,7 +2029,7 @@ type RequestWorktreeListResponse struct {
 
 func (x *RequestWorktreeListResponse) Reset() {
 	*x = RequestWorktreeListResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[32]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1974,7 +2041,7 @@ func (x *RequestWorktreeListResponse) String() string {
 func (*RequestWorktreeListResponse) ProtoMessage() {}
 
 func (x *RequestWorktreeListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[32]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1987,7 +2054,7 @@ func (x *RequestWorktreeListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestWorktreeListResponse.ProtoReflect.Descriptor instead.
 func (*RequestWorktreeListResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{32}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *RequestWorktreeListResponse) GetRequestId() string {
@@ -2006,7 +2073,7 @@ type GetWorktreeListRequest struct {
 
 func (x *GetWorktreeListRequest) Reset() {
 	*x = GetWorktreeListRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[33]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2018,7 +2085,7 @@ func (x *GetWorktreeListRequest) String() string {
 func (*GetWorktreeListRequest) ProtoMessage() {}
 
 func (x *GetWorktreeListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[33]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2031,7 +2098,7 @@ func (x *GetWorktreeListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorktreeListRequest.ProtoReflect.Descriptor instead.
 func (*GetWorktreeListRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{33}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *GetWorktreeListRequest) GetProjectId() string {
@@ -2050,7 +2117,7 @@ type GetWorktreeListResponse struct {
 
 func (x *GetWorktreeListResponse) Reset() {
 	*x = GetWorktreeListResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[34]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2062,7 +2129,7 @@ func (x *GetWorktreeListResponse) String() string {
 func (*GetWorktreeListResponse) ProtoMessage() {}
 
 func (x *GetWorktreeListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[34]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2075,7 +2142,7 @@ func (x *GetWorktreeListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorktreeListResponse.ProtoReflect.Descriptor instead.
 func (*GetWorktreeListResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{34}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *GetWorktreeListResponse) GetWorktrees() []*WorktreeInfo {
@@ -2096,7 +2163,7 @@ type RequestWorktreeDeleteRequest struct {
 
 func (x *RequestWorktreeDeleteRequest) Reset() {
 	*x = RequestWorktreeDeleteRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[35]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2108,7 +2175,7 @@ func (x *RequestWorktreeDeleteRequest) String() string {
 func (*RequestWorktreeDeleteRequest) ProtoMessage() {}
 
 func (x *RequestWorktreeDeleteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[35]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2121,7 +2188,7 @@ func (x *RequestWorktreeDeleteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestWorktreeDeleteRequest.ProtoReflect.Descriptor instead.
 func (*RequestWorktreeDeleteRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{35}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *RequestWorktreeDeleteRequest) GetProjectId() string {
@@ -2154,7 +2221,7 @@ type RequestWorktreeDeleteResponse struct {
 
 func (x *RequestWorktreeDeleteResponse) Reset() {
 	*x = RequestWorktreeDeleteResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[36]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2166,7 +2233,7 @@ func (x *RequestWorktreeDeleteResponse) String() string {
 func (*RequestWorktreeDeleteResponse) ProtoMessage() {}
 
 func (x *RequestWorktreeDeleteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[36]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2179,7 +2246,7 @@ func (x *RequestWorktreeDeleteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestWorktreeDeleteResponse.ProtoReflect.Descriptor instead.
 func (*RequestWorktreeDeleteResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{36}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *RequestWorktreeDeleteResponse) GetRequestId() string {
@@ -2202,7 +2269,7 @@ type ReportWorktreeDeleteResultRequest struct {
 
 func (x *ReportWorktreeDeleteResultRequest) Reset() {
 	*x = ReportWorktreeDeleteResultRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[37]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2214,7 +2281,7 @@ func (x *ReportWorktreeDeleteResultRequest) String() string {
 func (*ReportWorktreeDeleteResultRequest) ProtoMessage() {}
 
 func (x *ReportWorktreeDeleteResultRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[37]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2227,7 +2294,7 @@ func (x *ReportWorktreeDeleteResultRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ReportWorktreeDeleteResultRequest.ProtoReflect.Descriptor instead.
 func (*ReportWorktreeDeleteResultRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{37}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ReportWorktreeDeleteResultRequest) GetRequestId() string {
@@ -2273,7 +2340,7 @@ type ReportWorktreeDeleteResultResponse struct {
 
 func (x *ReportWorktreeDeleteResultResponse) Reset() {
 	*x = ReportWorktreeDeleteResultResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[38]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2285,7 +2352,7 @@ func (x *ReportWorktreeDeleteResultResponse) String() string {
 func (*ReportWorktreeDeleteResultResponse) ProtoMessage() {}
 
 func (x *ReportWorktreeDeleteResultResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[38]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2298,7 +2365,7 @@ func (x *ReportWorktreeDeleteResultResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ReportWorktreeDeleteResultResponse.ProtoReflect.Descriptor instead.
 func (*ReportWorktreeDeleteResultResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{38}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{39}
 }
 
 // GitPullMainCommand tells the agent to run `git pull origin main`
@@ -2312,7 +2379,7 @@ type GitPullMainCommand struct {
 
 func (x *GitPullMainCommand) Reset() {
 	*x = GitPullMainCommand{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[39]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2324,7 +2391,7 @@ func (x *GitPullMainCommand) String() string {
 func (*GitPullMainCommand) ProtoMessage() {}
 
 func (x *GitPullMainCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[39]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2337,7 +2404,7 @@ func (x *GitPullMainCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitPullMainCommand.ProtoReflect.Descriptor instead.
 func (*GitPullMainCommand) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{39}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *GitPullMainCommand) GetRequestId() string {
@@ -2356,7 +2423,7 @@ type RequestGitPullMainRequest struct {
 
 func (x *RequestGitPullMainRequest) Reset() {
 	*x = RequestGitPullMainRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[40]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2368,7 +2435,7 @@ func (x *RequestGitPullMainRequest) String() string {
 func (*RequestGitPullMainRequest) ProtoMessage() {}
 
 func (x *RequestGitPullMainRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[40]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2381,7 +2448,7 @@ func (x *RequestGitPullMainRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestGitPullMainRequest.ProtoReflect.Descriptor instead.
 func (*RequestGitPullMainRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{40}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *RequestGitPullMainRequest) GetProjectId() string {
@@ -2400,7 +2467,7 @@ type RequestGitPullMainResponse struct {
 
 func (x *RequestGitPullMainResponse) Reset() {
 	*x = RequestGitPullMainResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[41]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2412,7 +2479,7 @@ func (x *RequestGitPullMainResponse) String() string {
 func (*RequestGitPullMainResponse) ProtoMessage() {}
 
 func (x *RequestGitPullMainResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[41]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2425,7 +2492,7 @@ func (x *RequestGitPullMainResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestGitPullMainResponse.ProtoReflect.Descriptor instead.
 func (*RequestGitPullMainResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{41}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *RequestGitPullMainResponse) GetRequestId() string {
@@ -2448,7 +2515,7 @@ type ReportGitPullMainResultRequest struct {
 
 func (x *ReportGitPullMainResultRequest) Reset() {
 	*x = ReportGitPullMainResultRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[42]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2460,7 +2527,7 @@ func (x *ReportGitPullMainResultRequest) String() string {
 func (*ReportGitPullMainResultRequest) ProtoMessage() {}
 
 func (x *ReportGitPullMainResultRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[42]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2473,7 +2540,7 @@ func (x *ReportGitPullMainResultRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportGitPullMainResultRequest.ProtoReflect.Descriptor instead.
 func (*ReportGitPullMainResultRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{42}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *ReportGitPullMainResultRequest) GetRequestId() string {
@@ -2519,7 +2586,7 @@ type ReportGitPullMainResultResponse struct {
 
 func (x *ReportGitPullMainResultResponse) Reset() {
 	*x = ReportGitPullMainResultResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[43]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2531,7 +2598,7 @@ func (x *ReportGitPullMainResultResponse) String() string {
 func (*ReportGitPullMainResultResponse) ProtoMessage() {}
 
 func (x *ReportGitPullMainResultResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[43]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2544,7 +2611,7 @@ func (x *ReportGitPullMainResultResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportGitPullMainResultResponse.ProtoReflect.Descriptor instead.
 func (*ReportGitPullMainResultResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{43}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{44}
 }
 
 // SyncScriptsCommand tells the agent to re-sync its local .claude/scripts/* files.
@@ -2556,7 +2623,7 @@ type SyncScriptsCommand struct {
 
 func (x *SyncScriptsCommand) Reset() {
 	*x = SyncScriptsCommand{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[44]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2568,7 +2635,7 @@ func (x *SyncScriptsCommand) String() string {
 func (*SyncScriptsCommand) ProtoMessage() {}
 
 func (x *SyncScriptsCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[44]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2581,7 +2648,7 @@ func (x *SyncScriptsCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncScriptsCommand.ProtoReflect.Descriptor instead.
 func (*SyncScriptsCommand) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{44}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{45}
 }
 
 // ExecuteScriptCommand tells the agent to execute a specific script.
@@ -2597,7 +2664,7 @@ type ExecuteScriptCommand struct {
 
 func (x *ExecuteScriptCommand) Reset() {
 	*x = ExecuteScriptCommand{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[45]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2609,7 +2676,7 @@ func (x *ExecuteScriptCommand) String() string {
 func (*ExecuteScriptCommand) ProtoMessage() {}
 
 func (x *ExecuteScriptCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[45]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2622,7 +2689,7 @@ func (x *ExecuteScriptCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecuteScriptCommand.ProtoReflect.Descriptor instead.
 func (*ExecuteScriptCommand) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{45}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *ExecuteScriptCommand) GetRequestId() string {
@@ -2662,7 +2729,7 @@ type SyncScriptsRequest struct {
 
 func (x *SyncScriptsRequest) Reset() {
 	*x = SyncScriptsRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[46]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2674,7 +2741,7 @@ func (x *SyncScriptsRequest) String() string {
 func (*SyncScriptsRequest) ProtoMessage() {}
 
 func (x *SyncScriptsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[46]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2687,7 +2754,7 @@ func (x *SyncScriptsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncScriptsRequest.ProtoReflect.Descriptor instead.
 func (*SyncScriptsRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{46}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *SyncScriptsRequest) GetProjectName() string {
@@ -2706,7 +2773,7 @@ type SyncScriptsResponse struct {
 
 func (x *SyncScriptsResponse) Reset() {
 	*x = SyncScriptsResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[47]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2718,7 +2785,7 @@ func (x *SyncScriptsResponse) String() string {
 func (*SyncScriptsResponse) ProtoMessage() {}
 
 func (x *SyncScriptsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[47]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2731,7 +2798,7 @@ func (x *SyncScriptsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncScriptsResponse.ProtoReflect.Descriptor instead.
 func (*SyncScriptsResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{47}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *SyncScriptsResponse) GetScripts() []*ScriptDefinition {
@@ -2757,7 +2824,7 @@ type ReportScriptExecutionResultRequest struct {
 
 func (x *ReportScriptExecutionResultRequest) Reset() {
 	*x = ReportScriptExecutionResultRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[48]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2769,7 +2836,7 @@ func (x *ReportScriptExecutionResultRequest) String() string {
 func (*ReportScriptExecutionResultRequest) ProtoMessage() {}
 
 func (x *ReportScriptExecutionResultRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[48]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2782,7 +2849,7 @@ func (x *ReportScriptExecutionResultRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ReportScriptExecutionResultRequest.ProtoReflect.Descriptor instead.
 func (*ReportScriptExecutionResultRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{48}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *ReportScriptExecutionResultRequest) GetRequestId() string {
@@ -2849,7 +2916,7 @@ type ReportScriptExecutionResultResponse struct {
 
 func (x *ReportScriptExecutionResultResponse) Reset() {
 	*x = ReportScriptExecutionResultResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[49]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2861,7 +2928,7 @@ func (x *ReportScriptExecutionResultResponse) String() string {
 func (*ReportScriptExecutionResultResponse) ProtoMessage() {}
 
 func (x *ReportScriptExecutionResultResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[49]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2874,7 +2941,7 @@ func (x *ReportScriptExecutionResultResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ReportScriptExecutionResultResponse.ProtoReflect.Descriptor instead.
 func (*ReportScriptExecutionResultResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{49}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{50}
 }
 
 // ReportScriptOutputChunk reports a chunk of real-time script output.
@@ -2890,7 +2957,7 @@ type ReportScriptOutputChunkRequest struct {
 
 func (x *ReportScriptOutputChunkRequest) Reset() {
 	*x = ReportScriptOutputChunkRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[50]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2902,7 +2969,7 @@ func (x *ReportScriptOutputChunkRequest) String() string {
 func (*ReportScriptOutputChunkRequest) ProtoMessage() {}
 
 func (x *ReportScriptOutputChunkRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[50]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2915,7 +2982,7 @@ func (x *ReportScriptOutputChunkRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportScriptOutputChunkRequest.ProtoReflect.Descriptor instead.
 func (*ReportScriptOutputChunkRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{50}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *ReportScriptOutputChunkRequest) GetRequestId() string {
@@ -2954,7 +3021,7 @@ type ReportScriptOutputChunkResponse struct {
 
 func (x *ReportScriptOutputChunkResponse) Reset() {
 	*x = ReportScriptOutputChunkResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[51]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2966,7 +3033,7 @@ func (x *ReportScriptOutputChunkResponse) String() string {
 func (*ReportScriptOutputChunkResponse) ProtoMessage() {}
 
 func (x *ReportScriptOutputChunkResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[51]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2979,18 +3046,19 @@ func (x *ReportScriptOutputChunkResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportScriptOutputChunkResponse.ProtoReflect.Descriptor instead.
 func (*ReportScriptOutputChunkResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{51}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{52}
 }
 
 var File_taskguild_v1_agent_manager_proto protoreflect.FileDescriptor
 
 const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\n" +
-	" taskguild/v1/agent_manager.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x18taskguild/v1/agent.proto\x1a\x1etaskguild/v1/interaction.proto\x1a\x1dtaskguild/v1/permission.proto\x1a\x19taskguild/v1/script.proto\x1a\x1btaskguild/v1/task_log.proto\"\x9d\x01\n" +
+	" taskguild/v1/agent_manager.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x18taskguild/v1/agent.proto\x1a\x1etaskguild/v1/interaction.proto\x1a\x1dtaskguild/v1/permission.proto\x1a\x19taskguild/v1/script.proto\x1a\x1btaskguild/v1/task_log.proto\"\xc5\x01\n" +
 	"\x1cAgentManagerSubscribeRequest\x12(\n" +
 	"\x10agent_manager_id\x18\x01 \x01(\tR\x0eagentManagerId\x12!\n" +
 	"\fproject_name\x18\x02 \x01(\tR\vprojectName\x120\n" +
-	"\x14max_concurrent_tasks\x18\x03 \x01(\x05R\x12maxConcurrentTasks\"\xdd\x06\n" +
+	"\x14max_concurrent_tasks\x18\x03 \x01(\x05R\x12maxConcurrentTasks\x12&\n" +
+	"\x0factive_task_ids\x18\x04 \x03(\tR\ractiveTaskIds\"\x8e\a\n" +
 	"\fAgentCommand\x12K\n" +
 	"\x0etask_available\x18\x01 \x01(\v2\".taskguild.v1.TaskAvailableCommandH\x00R\rtaskAvailable\x12B\n" +
 	"\vassign_task\x18\x02 \x01(\v2\x1f.taskguild.v1.AssignTaskCommandH\x00R\n" +
@@ -3006,8 +3074,10 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\rgit_pull_main\x18\t \x01(\v2 .taskguild.v1.GitPullMainCommandH\x00R\vgitPullMain\x12E\n" +
 	"\fsync_scripts\x18\n" +
 	" \x01(\v2 .taskguild.v1.SyncScriptsCommandH\x00R\vsyncScripts\x12K\n" +
-	"\x0eexecute_script\x18\v \x01(\v2\".taskguild.v1.ExecuteScriptCommandH\x00R\rexecuteScriptB\t\n" +
-	"\acommand\"\xf8\x01\n" +
+	"\x0eexecute_script\x18\v \x01(\v2\".taskguild.v1.ExecuteScriptCommandH\x00R\rexecuteScript\x12/\n" +
+	"\x04ping\x18\f \x01(\v2\x19.taskguild.v1.PingCommandH\x00R\x04pingB\t\n" +
+	"\acommand\"\r\n" +
+	"\vPingCommand\"\xf8\x01\n" +
 	"\x14TaskAvailableCommand\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12&\n" +
@@ -3233,149 +3303,151 @@ func file_taskguild_v1_agent_manager_proto_rawDescGZIP() []byte {
 }
 
 var file_taskguild_v1_agent_manager_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_taskguild_v1_agent_manager_proto_msgTypes = make([]protoimpl.MessageInfo, 56)
+var file_taskguild_v1_agent_manager_proto_msgTypes = make([]protoimpl.MessageInfo, 57)
 var file_taskguild_v1_agent_manager_proto_goTypes = []any{
 	(AgentStatus)(0),                            // 0: taskguild.v1.AgentStatus
 	(*AgentManagerSubscribeRequest)(nil),        // 1: taskguild.v1.AgentManagerSubscribeRequest
 	(*AgentCommand)(nil),                        // 2: taskguild.v1.AgentCommand
-	(*TaskAvailableCommand)(nil),                // 3: taskguild.v1.TaskAvailableCommand
-	(*AssignTaskCommand)(nil),                   // 4: taskguild.v1.AssignTaskCommand
-	(*CancelTaskCommand)(nil),                   // 5: taskguild.v1.CancelTaskCommand
-	(*InteractionResponseCommand)(nil),          // 6: taskguild.v1.InteractionResponseCommand
-	(*SyncAgentsCommand)(nil),                   // 7: taskguild.v1.SyncAgentsCommand
-	(*SyncPermissionsCommand)(nil),              // 8: taskguild.v1.SyncPermissionsCommand
-	(*ListWorktreesCommand)(nil),                // 9: taskguild.v1.ListWorktreesCommand
-	(*ClaimTaskRequest)(nil),                    // 10: taskguild.v1.ClaimTaskRequest
-	(*ClaimTaskResponse)(nil),                   // 11: taskguild.v1.ClaimTaskResponse
-	(*ReportTaskResultRequest)(nil),             // 12: taskguild.v1.ReportTaskResultRequest
-	(*ReportTaskResultResponse)(nil),            // 13: taskguild.v1.ReportTaskResultResponse
-	(*ReportAgentStatusRequest)(nil),            // 14: taskguild.v1.ReportAgentStatusRequest
-	(*ReportAgentStatusResponse)(nil),           // 15: taskguild.v1.ReportAgentStatusResponse
-	(*HeartbeatRequest)(nil),                    // 16: taskguild.v1.HeartbeatRequest
-	(*HeartbeatResponse)(nil),                   // 17: taskguild.v1.HeartbeatResponse
-	(*CreateInteractionRequest)(nil),            // 18: taskguild.v1.CreateInteractionRequest
-	(*CreateInteractionResponse)(nil),           // 19: taskguild.v1.CreateInteractionResponse
-	(*GetInteractionResponseRequest)(nil),       // 20: taskguild.v1.GetInteractionResponseRequest
-	(*GetInteractionResponseResponse)(nil),      // 21: taskguild.v1.GetInteractionResponseResponse
-	(*SyncAgentsRequest)(nil),                   // 22: taskguild.v1.SyncAgentsRequest
-	(*SyncAgentsResponse)(nil),                  // 23: taskguild.v1.SyncAgentsResponse
-	(*SyncPermissionsRequest)(nil),              // 24: taskguild.v1.SyncPermissionsRequest
-	(*SyncPermissionsResponse)(nil),             // 25: taskguild.v1.SyncPermissionsResponse
-	(*ReportTaskLogRequest)(nil),                // 26: taskguild.v1.ReportTaskLogRequest
-	(*ReportTaskLogResponse)(nil),               // 27: taskguild.v1.ReportTaskLogResponse
-	(*WorktreeInfo)(nil),                        // 28: taskguild.v1.WorktreeInfo
-	(*DeleteWorktreeCommand)(nil),               // 29: taskguild.v1.DeleteWorktreeCommand
-	(*ReportWorktreeListRequest)(nil),           // 30: taskguild.v1.ReportWorktreeListRequest
-	(*ReportWorktreeListResponse)(nil),          // 31: taskguild.v1.ReportWorktreeListResponse
-	(*RequestWorktreeListRequest)(nil),          // 32: taskguild.v1.RequestWorktreeListRequest
-	(*RequestWorktreeListResponse)(nil),         // 33: taskguild.v1.RequestWorktreeListResponse
-	(*GetWorktreeListRequest)(nil),              // 34: taskguild.v1.GetWorktreeListRequest
-	(*GetWorktreeListResponse)(nil),             // 35: taskguild.v1.GetWorktreeListResponse
-	(*RequestWorktreeDeleteRequest)(nil),        // 36: taskguild.v1.RequestWorktreeDeleteRequest
-	(*RequestWorktreeDeleteResponse)(nil),       // 37: taskguild.v1.RequestWorktreeDeleteResponse
-	(*ReportWorktreeDeleteResultRequest)(nil),   // 38: taskguild.v1.ReportWorktreeDeleteResultRequest
-	(*ReportWorktreeDeleteResultResponse)(nil),  // 39: taskguild.v1.ReportWorktreeDeleteResultResponse
-	(*GitPullMainCommand)(nil),                  // 40: taskguild.v1.GitPullMainCommand
-	(*RequestGitPullMainRequest)(nil),           // 41: taskguild.v1.RequestGitPullMainRequest
-	(*RequestGitPullMainResponse)(nil),          // 42: taskguild.v1.RequestGitPullMainResponse
-	(*ReportGitPullMainResultRequest)(nil),      // 43: taskguild.v1.ReportGitPullMainResultRequest
-	(*ReportGitPullMainResultResponse)(nil),     // 44: taskguild.v1.ReportGitPullMainResultResponse
-	(*SyncScriptsCommand)(nil),                  // 45: taskguild.v1.SyncScriptsCommand
-	(*ExecuteScriptCommand)(nil),                // 46: taskguild.v1.ExecuteScriptCommand
-	(*SyncScriptsRequest)(nil),                  // 47: taskguild.v1.SyncScriptsRequest
-	(*SyncScriptsResponse)(nil),                 // 48: taskguild.v1.SyncScriptsResponse
-	(*ReportScriptExecutionResultRequest)(nil),  // 49: taskguild.v1.ReportScriptExecutionResultRequest
-	(*ReportScriptExecutionResultResponse)(nil), // 50: taskguild.v1.ReportScriptExecutionResultResponse
-	(*ReportScriptOutputChunkRequest)(nil),      // 51: taskguild.v1.ReportScriptOutputChunkRequest
-	(*ReportScriptOutputChunkResponse)(nil),     // 52: taskguild.v1.ReportScriptOutputChunkResponse
-	nil,                                         // 53: taskguild.v1.TaskAvailableCommand.MetadataEntry
-	nil,                                         // 54: taskguild.v1.AssignTaskCommand.MetadataEntry
-	nil,                                         // 55: taskguild.v1.ClaimTaskResponse.MetadataEntry
-	nil,                                         // 56: taskguild.v1.ReportTaskLogRequest.MetadataEntry
-	(*timestamppb.Timestamp)(nil),               // 57: google.protobuf.Timestamp
-	(InteractionType)(0),                        // 58: taskguild.v1.InteractionType
-	(*InteractionOption)(nil),                   // 59: taskguild.v1.InteractionOption
-	(*Interaction)(nil),                         // 60: taskguild.v1.Interaction
-	(*AgentDefinition)(nil),                     // 61: taskguild.v1.AgentDefinition
-	(*PermissionSet)(nil),                       // 62: taskguild.v1.PermissionSet
-	(TaskLogLevel)(0),                           // 63: taskguild.v1.TaskLogLevel
-	(TaskLogCategory)(0),                        // 64: taskguild.v1.TaskLogCategory
-	(*ScriptDefinition)(nil),                    // 65: taskguild.v1.ScriptDefinition
+	(*PingCommand)(nil),                         // 3: taskguild.v1.PingCommand
+	(*TaskAvailableCommand)(nil),                // 4: taskguild.v1.TaskAvailableCommand
+	(*AssignTaskCommand)(nil),                   // 5: taskguild.v1.AssignTaskCommand
+	(*CancelTaskCommand)(nil),                   // 6: taskguild.v1.CancelTaskCommand
+	(*InteractionResponseCommand)(nil),          // 7: taskguild.v1.InteractionResponseCommand
+	(*SyncAgentsCommand)(nil),                   // 8: taskguild.v1.SyncAgentsCommand
+	(*SyncPermissionsCommand)(nil),              // 9: taskguild.v1.SyncPermissionsCommand
+	(*ListWorktreesCommand)(nil),                // 10: taskguild.v1.ListWorktreesCommand
+	(*ClaimTaskRequest)(nil),                    // 11: taskguild.v1.ClaimTaskRequest
+	(*ClaimTaskResponse)(nil),                   // 12: taskguild.v1.ClaimTaskResponse
+	(*ReportTaskResultRequest)(nil),             // 13: taskguild.v1.ReportTaskResultRequest
+	(*ReportTaskResultResponse)(nil),            // 14: taskguild.v1.ReportTaskResultResponse
+	(*ReportAgentStatusRequest)(nil),            // 15: taskguild.v1.ReportAgentStatusRequest
+	(*ReportAgentStatusResponse)(nil),           // 16: taskguild.v1.ReportAgentStatusResponse
+	(*HeartbeatRequest)(nil),                    // 17: taskguild.v1.HeartbeatRequest
+	(*HeartbeatResponse)(nil),                   // 18: taskguild.v1.HeartbeatResponse
+	(*CreateInteractionRequest)(nil),            // 19: taskguild.v1.CreateInteractionRequest
+	(*CreateInteractionResponse)(nil),           // 20: taskguild.v1.CreateInteractionResponse
+	(*GetInteractionResponseRequest)(nil),       // 21: taskguild.v1.GetInteractionResponseRequest
+	(*GetInteractionResponseResponse)(nil),      // 22: taskguild.v1.GetInteractionResponseResponse
+	(*SyncAgentsRequest)(nil),                   // 23: taskguild.v1.SyncAgentsRequest
+	(*SyncAgentsResponse)(nil),                  // 24: taskguild.v1.SyncAgentsResponse
+	(*SyncPermissionsRequest)(nil),              // 25: taskguild.v1.SyncPermissionsRequest
+	(*SyncPermissionsResponse)(nil),             // 26: taskguild.v1.SyncPermissionsResponse
+	(*ReportTaskLogRequest)(nil),                // 27: taskguild.v1.ReportTaskLogRequest
+	(*ReportTaskLogResponse)(nil),               // 28: taskguild.v1.ReportTaskLogResponse
+	(*WorktreeInfo)(nil),                        // 29: taskguild.v1.WorktreeInfo
+	(*DeleteWorktreeCommand)(nil),               // 30: taskguild.v1.DeleteWorktreeCommand
+	(*ReportWorktreeListRequest)(nil),           // 31: taskguild.v1.ReportWorktreeListRequest
+	(*ReportWorktreeListResponse)(nil),          // 32: taskguild.v1.ReportWorktreeListResponse
+	(*RequestWorktreeListRequest)(nil),          // 33: taskguild.v1.RequestWorktreeListRequest
+	(*RequestWorktreeListResponse)(nil),         // 34: taskguild.v1.RequestWorktreeListResponse
+	(*GetWorktreeListRequest)(nil),              // 35: taskguild.v1.GetWorktreeListRequest
+	(*GetWorktreeListResponse)(nil),             // 36: taskguild.v1.GetWorktreeListResponse
+	(*RequestWorktreeDeleteRequest)(nil),        // 37: taskguild.v1.RequestWorktreeDeleteRequest
+	(*RequestWorktreeDeleteResponse)(nil),       // 38: taskguild.v1.RequestWorktreeDeleteResponse
+	(*ReportWorktreeDeleteResultRequest)(nil),   // 39: taskguild.v1.ReportWorktreeDeleteResultRequest
+	(*ReportWorktreeDeleteResultResponse)(nil),  // 40: taskguild.v1.ReportWorktreeDeleteResultResponse
+	(*GitPullMainCommand)(nil),                  // 41: taskguild.v1.GitPullMainCommand
+	(*RequestGitPullMainRequest)(nil),           // 42: taskguild.v1.RequestGitPullMainRequest
+	(*RequestGitPullMainResponse)(nil),          // 43: taskguild.v1.RequestGitPullMainResponse
+	(*ReportGitPullMainResultRequest)(nil),      // 44: taskguild.v1.ReportGitPullMainResultRequest
+	(*ReportGitPullMainResultResponse)(nil),     // 45: taskguild.v1.ReportGitPullMainResultResponse
+	(*SyncScriptsCommand)(nil),                  // 46: taskguild.v1.SyncScriptsCommand
+	(*ExecuteScriptCommand)(nil),                // 47: taskguild.v1.ExecuteScriptCommand
+	(*SyncScriptsRequest)(nil),                  // 48: taskguild.v1.SyncScriptsRequest
+	(*SyncScriptsResponse)(nil),                 // 49: taskguild.v1.SyncScriptsResponse
+	(*ReportScriptExecutionResultRequest)(nil),  // 50: taskguild.v1.ReportScriptExecutionResultRequest
+	(*ReportScriptExecutionResultResponse)(nil), // 51: taskguild.v1.ReportScriptExecutionResultResponse
+	(*ReportScriptOutputChunkRequest)(nil),      // 52: taskguild.v1.ReportScriptOutputChunkRequest
+	(*ReportScriptOutputChunkResponse)(nil),     // 53: taskguild.v1.ReportScriptOutputChunkResponse
+	nil,                                         // 54: taskguild.v1.TaskAvailableCommand.MetadataEntry
+	nil,                                         // 55: taskguild.v1.AssignTaskCommand.MetadataEntry
+	nil,                                         // 56: taskguild.v1.ClaimTaskResponse.MetadataEntry
+	nil,                                         // 57: taskguild.v1.ReportTaskLogRequest.MetadataEntry
+	(*timestamppb.Timestamp)(nil),               // 58: google.protobuf.Timestamp
+	(InteractionType)(0),                        // 59: taskguild.v1.InteractionType
+	(*InteractionOption)(nil),                   // 60: taskguild.v1.InteractionOption
+	(*Interaction)(nil),                         // 61: taskguild.v1.Interaction
+	(*AgentDefinition)(nil),                     // 62: taskguild.v1.AgentDefinition
+	(*PermissionSet)(nil),                       // 63: taskguild.v1.PermissionSet
+	(TaskLogLevel)(0),                           // 64: taskguild.v1.TaskLogLevel
+	(TaskLogCategory)(0),                        // 65: taskguild.v1.TaskLogCategory
+	(*ScriptDefinition)(nil),                    // 66: taskguild.v1.ScriptDefinition
 }
 var file_taskguild_v1_agent_manager_proto_depIdxs = []int32{
-	3,  // 0: taskguild.v1.AgentCommand.task_available:type_name -> taskguild.v1.TaskAvailableCommand
-	4,  // 1: taskguild.v1.AgentCommand.assign_task:type_name -> taskguild.v1.AssignTaskCommand
-	5,  // 2: taskguild.v1.AgentCommand.cancel_task:type_name -> taskguild.v1.CancelTaskCommand
-	6,  // 3: taskguild.v1.AgentCommand.interaction_response:type_name -> taskguild.v1.InteractionResponseCommand
-	7,  // 4: taskguild.v1.AgentCommand.sync_agents:type_name -> taskguild.v1.SyncAgentsCommand
-	8,  // 5: taskguild.v1.AgentCommand.sync_permissions:type_name -> taskguild.v1.SyncPermissionsCommand
-	9,  // 6: taskguild.v1.AgentCommand.list_worktrees:type_name -> taskguild.v1.ListWorktreesCommand
-	29, // 7: taskguild.v1.AgentCommand.delete_worktree:type_name -> taskguild.v1.DeleteWorktreeCommand
-	40, // 8: taskguild.v1.AgentCommand.git_pull_main:type_name -> taskguild.v1.GitPullMainCommand
-	45, // 9: taskguild.v1.AgentCommand.sync_scripts:type_name -> taskguild.v1.SyncScriptsCommand
-	46, // 10: taskguild.v1.AgentCommand.execute_script:type_name -> taskguild.v1.ExecuteScriptCommand
-	53, // 11: taskguild.v1.TaskAvailableCommand.metadata:type_name -> taskguild.v1.TaskAvailableCommand.MetadataEntry
-	54, // 12: taskguild.v1.AssignTaskCommand.metadata:type_name -> taskguild.v1.AssignTaskCommand.MetadataEntry
-	55, // 13: taskguild.v1.ClaimTaskResponse.metadata:type_name -> taskguild.v1.ClaimTaskResponse.MetadataEntry
-	0,  // 14: taskguild.v1.ReportAgentStatusRequest.status:type_name -> taskguild.v1.AgentStatus
-	57, // 15: taskguild.v1.HeartbeatRequest.timestamp:type_name -> google.protobuf.Timestamp
-	58, // 16: taskguild.v1.CreateInteractionRequest.type:type_name -> taskguild.v1.InteractionType
-	59, // 17: taskguild.v1.CreateInteractionRequest.options:type_name -> taskguild.v1.InteractionOption
-	60, // 18: taskguild.v1.CreateInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
-	60, // 19: taskguild.v1.GetInteractionResponseResponse.interaction:type_name -> taskguild.v1.Interaction
-	61, // 20: taskguild.v1.SyncAgentsResponse.agents:type_name -> taskguild.v1.AgentDefinition
-	62, // 21: taskguild.v1.SyncPermissionsResponse.permissions:type_name -> taskguild.v1.PermissionSet
-	63, // 22: taskguild.v1.ReportTaskLogRequest.level:type_name -> taskguild.v1.TaskLogLevel
-	64, // 23: taskguild.v1.ReportTaskLogRequest.category:type_name -> taskguild.v1.TaskLogCategory
-	56, // 24: taskguild.v1.ReportTaskLogRequest.metadata:type_name -> taskguild.v1.ReportTaskLogRequest.MetadataEntry
-	28, // 25: taskguild.v1.ReportWorktreeListRequest.worktrees:type_name -> taskguild.v1.WorktreeInfo
-	28, // 26: taskguild.v1.GetWorktreeListResponse.worktrees:type_name -> taskguild.v1.WorktreeInfo
-	65, // 27: taskguild.v1.SyncScriptsResponse.scripts:type_name -> taskguild.v1.ScriptDefinition
-	1,  // 28: taskguild.v1.AgentManagerService.Subscribe:input_type -> taskguild.v1.AgentManagerSubscribeRequest
-	10, // 29: taskguild.v1.AgentManagerService.ClaimTask:input_type -> taskguild.v1.ClaimTaskRequest
-	12, // 30: taskguild.v1.AgentManagerService.ReportTaskResult:input_type -> taskguild.v1.ReportTaskResultRequest
-	14, // 31: taskguild.v1.AgentManagerService.ReportAgentStatus:input_type -> taskguild.v1.ReportAgentStatusRequest
-	16, // 32: taskguild.v1.AgentManagerService.Heartbeat:input_type -> taskguild.v1.HeartbeatRequest
-	18, // 33: taskguild.v1.AgentManagerService.CreateInteraction:input_type -> taskguild.v1.CreateInteractionRequest
-	20, // 34: taskguild.v1.AgentManagerService.GetInteractionResponse:input_type -> taskguild.v1.GetInteractionResponseRequest
-	22, // 35: taskguild.v1.AgentManagerService.SyncAgents:input_type -> taskguild.v1.SyncAgentsRequest
-	26, // 36: taskguild.v1.AgentManagerService.ReportTaskLog:input_type -> taskguild.v1.ReportTaskLogRequest
-	24, // 37: taskguild.v1.AgentManagerService.SyncPermissions:input_type -> taskguild.v1.SyncPermissionsRequest
-	30, // 38: taskguild.v1.AgentManagerService.ReportWorktreeList:input_type -> taskguild.v1.ReportWorktreeListRequest
-	32, // 39: taskguild.v1.AgentManagerService.RequestWorktreeList:input_type -> taskguild.v1.RequestWorktreeListRequest
-	34, // 40: taskguild.v1.AgentManagerService.GetWorktreeList:input_type -> taskguild.v1.GetWorktreeListRequest
-	36, // 41: taskguild.v1.AgentManagerService.RequestWorktreeDelete:input_type -> taskguild.v1.RequestWorktreeDeleteRequest
-	38, // 42: taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult:input_type -> taskguild.v1.ReportWorktreeDeleteResultRequest
-	41, // 43: taskguild.v1.AgentManagerService.RequestGitPullMain:input_type -> taskguild.v1.RequestGitPullMainRequest
-	43, // 44: taskguild.v1.AgentManagerService.ReportGitPullMainResult:input_type -> taskguild.v1.ReportGitPullMainResultRequest
-	47, // 45: taskguild.v1.AgentManagerService.SyncScripts:input_type -> taskguild.v1.SyncScriptsRequest
-	49, // 46: taskguild.v1.AgentManagerService.ReportScriptExecutionResult:input_type -> taskguild.v1.ReportScriptExecutionResultRequest
-	51, // 47: taskguild.v1.AgentManagerService.ReportScriptOutputChunk:input_type -> taskguild.v1.ReportScriptOutputChunkRequest
-	2,  // 48: taskguild.v1.AgentManagerService.Subscribe:output_type -> taskguild.v1.AgentCommand
-	11, // 49: taskguild.v1.AgentManagerService.ClaimTask:output_type -> taskguild.v1.ClaimTaskResponse
-	13, // 50: taskguild.v1.AgentManagerService.ReportTaskResult:output_type -> taskguild.v1.ReportTaskResultResponse
-	15, // 51: taskguild.v1.AgentManagerService.ReportAgentStatus:output_type -> taskguild.v1.ReportAgentStatusResponse
-	17, // 52: taskguild.v1.AgentManagerService.Heartbeat:output_type -> taskguild.v1.HeartbeatResponse
-	19, // 53: taskguild.v1.AgentManagerService.CreateInteraction:output_type -> taskguild.v1.CreateInteractionResponse
-	21, // 54: taskguild.v1.AgentManagerService.GetInteractionResponse:output_type -> taskguild.v1.GetInteractionResponseResponse
-	23, // 55: taskguild.v1.AgentManagerService.SyncAgents:output_type -> taskguild.v1.SyncAgentsResponse
-	27, // 56: taskguild.v1.AgentManagerService.ReportTaskLog:output_type -> taskguild.v1.ReportTaskLogResponse
-	25, // 57: taskguild.v1.AgentManagerService.SyncPermissions:output_type -> taskguild.v1.SyncPermissionsResponse
-	31, // 58: taskguild.v1.AgentManagerService.ReportWorktreeList:output_type -> taskguild.v1.ReportWorktreeListResponse
-	33, // 59: taskguild.v1.AgentManagerService.RequestWorktreeList:output_type -> taskguild.v1.RequestWorktreeListResponse
-	35, // 60: taskguild.v1.AgentManagerService.GetWorktreeList:output_type -> taskguild.v1.GetWorktreeListResponse
-	37, // 61: taskguild.v1.AgentManagerService.RequestWorktreeDelete:output_type -> taskguild.v1.RequestWorktreeDeleteResponse
-	39, // 62: taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult:output_type -> taskguild.v1.ReportWorktreeDeleteResultResponse
-	42, // 63: taskguild.v1.AgentManagerService.RequestGitPullMain:output_type -> taskguild.v1.RequestGitPullMainResponse
-	44, // 64: taskguild.v1.AgentManagerService.ReportGitPullMainResult:output_type -> taskguild.v1.ReportGitPullMainResultResponse
-	48, // 65: taskguild.v1.AgentManagerService.SyncScripts:output_type -> taskguild.v1.SyncScriptsResponse
-	50, // 66: taskguild.v1.AgentManagerService.ReportScriptExecutionResult:output_type -> taskguild.v1.ReportScriptExecutionResultResponse
-	52, // 67: taskguild.v1.AgentManagerService.ReportScriptOutputChunk:output_type -> taskguild.v1.ReportScriptOutputChunkResponse
-	48, // [48:68] is the sub-list for method output_type
-	28, // [28:48] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	4,  // 0: taskguild.v1.AgentCommand.task_available:type_name -> taskguild.v1.TaskAvailableCommand
+	5,  // 1: taskguild.v1.AgentCommand.assign_task:type_name -> taskguild.v1.AssignTaskCommand
+	6,  // 2: taskguild.v1.AgentCommand.cancel_task:type_name -> taskguild.v1.CancelTaskCommand
+	7,  // 3: taskguild.v1.AgentCommand.interaction_response:type_name -> taskguild.v1.InteractionResponseCommand
+	8,  // 4: taskguild.v1.AgentCommand.sync_agents:type_name -> taskguild.v1.SyncAgentsCommand
+	9,  // 5: taskguild.v1.AgentCommand.sync_permissions:type_name -> taskguild.v1.SyncPermissionsCommand
+	10, // 6: taskguild.v1.AgentCommand.list_worktrees:type_name -> taskguild.v1.ListWorktreesCommand
+	30, // 7: taskguild.v1.AgentCommand.delete_worktree:type_name -> taskguild.v1.DeleteWorktreeCommand
+	41, // 8: taskguild.v1.AgentCommand.git_pull_main:type_name -> taskguild.v1.GitPullMainCommand
+	46, // 9: taskguild.v1.AgentCommand.sync_scripts:type_name -> taskguild.v1.SyncScriptsCommand
+	47, // 10: taskguild.v1.AgentCommand.execute_script:type_name -> taskguild.v1.ExecuteScriptCommand
+	3,  // 11: taskguild.v1.AgentCommand.ping:type_name -> taskguild.v1.PingCommand
+	54, // 12: taskguild.v1.TaskAvailableCommand.metadata:type_name -> taskguild.v1.TaskAvailableCommand.MetadataEntry
+	55, // 13: taskguild.v1.AssignTaskCommand.metadata:type_name -> taskguild.v1.AssignTaskCommand.MetadataEntry
+	56, // 14: taskguild.v1.ClaimTaskResponse.metadata:type_name -> taskguild.v1.ClaimTaskResponse.MetadataEntry
+	0,  // 15: taskguild.v1.ReportAgentStatusRequest.status:type_name -> taskguild.v1.AgentStatus
+	58, // 16: taskguild.v1.HeartbeatRequest.timestamp:type_name -> google.protobuf.Timestamp
+	59, // 17: taskguild.v1.CreateInteractionRequest.type:type_name -> taskguild.v1.InteractionType
+	60, // 18: taskguild.v1.CreateInteractionRequest.options:type_name -> taskguild.v1.InteractionOption
+	61, // 19: taskguild.v1.CreateInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
+	61, // 20: taskguild.v1.GetInteractionResponseResponse.interaction:type_name -> taskguild.v1.Interaction
+	62, // 21: taskguild.v1.SyncAgentsResponse.agents:type_name -> taskguild.v1.AgentDefinition
+	63, // 22: taskguild.v1.SyncPermissionsResponse.permissions:type_name -> taskguild.v1.PermissionSet
+	64, // 23: taskguild.v1.ReportTaskLogRequest.level:type_name -> taskguild.v1.TaskLogLevel
+	65, // 24: taskguild.v1.ReportTaskLogRequest.category:type_name -> taskguild.v1.TaskLogCategory
+	57, // 25: taskguild.v1.ReportTaskLogRequest.metadata:type_name -> taskguild.v1.ReportTaskLogRequest.MetadataEntry
+	29, // 26: taskguild.v1.ReportWorktreeListRequest.worktrees:type_name -> taskguild.v1.WorktreeInfo
+	29, // 27: taskguild.v1.GetWorktreeListResponse.worktrees:type_name -> taskguild.v1.WorktreeInfo
+	66, // 28: taskguild.v1.SyncScriptsResponse.scripts:type_name -> taskguild.v1.ScriptDefinition
+	1,  // 29: taskguild.v1.AgentManagerService.Subscribe:input_type -> taskguild.v1.AgentManagerSubscribeRequest
+	11, // 30: taskguild.v1.AgentManagerService.ClaimTask:input_type -> taskguild.v1.ClaimTaskRequest
+	13, // 31: taskguild.v1.AgentManagerService.ReportTaskResult:input_type -> taskguild.v1.ReportTaskResultRequest
+	15, // 32: taskguild.v1.AgentManagerService.ReportAgentStatus:input_type -> taskguild.v1.ReportAgentStatusRequest
+	17, // 33: taskguild.v1.AgentManagerService.Heartbeat:input_type -> taskguild.v1.HeartbeatRequest
+	19, // 34: taskguild.v1.AgentManagerService.CreateInteraction:input_type -> taskguild.v1.CreateInteractionRequest
+	21, // 35: taskguild.v1.AgentManagerService.GetInteractionResponse:input_type -> taskguild.v1.GetInteractionResponseRequest
+	23, // 36: taskguild.v1.AgentManagerService.SyncAgents:input_type -> taskguild.v1.SyncAgentsRequest
+	27, // 37: taskguild.v1.AgentManagerService.ReportTaskLog:input_type -> taskguild.v1.ReportTaskLogRequest
+	25, // 38: taskguild.v1.AgentManagerService.SyncPermissions:input_type -> taskguild.v1.SyncPermissionsRequest
+	31, // 39: taskguild.v1.AgentManagerService.ReportWorktreeList:input_type -> taskguild.v1.ReportWorktreeListRequest
+	33, // 40: taskguild.v1.AgentManagerService.RequestWorktreeList:input_type -> taskguild.v1.RequestWorktreeListRequest
+	35, // 41: taskguild.v1.AgentManagerService.GetWorktreeList:input_type -> taskguild.v1.GetWorktreeListRequest
+	37, // 42: taskguild.v1.AgentManagerService.RequestWorktreeDelete:input_type -> taskguild.v1.RequestWorktreeDeleteRequest
+	39, // 43: taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult:input_type -> taskguild.v1.ReportWorktreeDeleteResultRequest
+	42, // 44: taskguild.v1.AgentManagerService.RequestGitPullMain:input_type -> taskguild.v1.RequestGitPullMainRequest
+	44, // 45: taskguild.v1.AgentManagerService.ReportGitPullMainResult:input_type -> taskguild.v1.ReportGitPullMainResultRequest
+	48, // 46: taskguild.v1.AgentManagerService.SyncScripts:input_type -> taskguild.v1.SyncScriptsRequest
+	50, // 47: taskguild.v1.AgentManagerService.ReportScriptExecutionResult:input_type -> taskguild.v1.ReportScriptExecutionResultRequest
+	52, // 48: taskguild.v1.AgentManagerService.ReportScriptOutputChunk:input_type -> taskguild.v1.ReportScriptOutputChunkRequest
+	2,  // 49: taskguild.v1.AgentManagerService.Subscribe:output_type -> taskguild.v1.AgentCommand
+	12, // 50: taskguild.v1.AgentManagerService.ClaimTask:output_type -> taskguild.v1.ClaimTaskResponse
+	14, // 51: taskguild.v1.AgentManagerService.ReportTaskResult:output_type -> taskguild.v1.ReportTaskResultResponse
+	16, // 52: taskguild.v1.AgentManagerService.ReportAgentStatus:output_type -> taskguild.v1.ReportAgentStatusResponse
+	18, // 53: taskguild.v1.AgentManagerService.Heartbeat:output_type -> taskguild.v1.HeartbeatResponse
+	20, // 54: taskguild.v1.AgentManagerService.CreateInteraction:output_type -> taskguild.v1.CreateInteractionResponse
+	22, // 55: taskguild.v1.AgentManagerService.GetInteractionResponse:output_type -> taskguild.v1.GetInteractionResponseResponse
+	24, // 56: taskguild.v1.AgentManagerService.SyncAgents:output_type -> taskguild.v1.SyncAgentsResponse
+	28, // 57: taskguild.v1.AgentManagerService.ReportTaskLog:output_type -> taskguild.v1.ReportTaskLogResponse
+	26, // 58: taskguild.v1.AgentManagerService.SyncPermissions:output_type -> taskguild.v1.SyncPermissionsResponse
+	32, // 59: taskguild.v1.AgentManagerService.ReportWorktreeList:output_type -> taskguild.v1.ReportWorktreeListResponse
+	34, // 60: taskguild.v1.AgentManagerService.RequestWorktreeList:output_type -> taskguild.v1.RequestWorktreeListResponse
+	36, // 61: taskguild.v1.AgentManagerService.GetWorktreeList:output_type -> taskguild.v1.GetWorktreeListResponse
+	38, // 62: taskguild.v1.AgentManagerService.RequestWorktreeDelete:output_type -> taskguild.v1.RequestWorktreeDeleteResponse
+	40, // 63: taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult:output_type -> taskguild.v1.ReportWorktreeDeleteResultResponse
+	43, // 64: taskguild.v1.AgentManagerService.RequestGitPullMain:output_type -> taskguild.v1.RequestGitPullMainResponse
+	45, // 65: taskguild.v1.AgentManagerService.ReportGitPullMainResult:output_type -> taskguild.v1.ReportGitPullMainResultResponse
+	49, // 66: taskguild.v1.AgentManagerService.SyncScripts:output_type -> taskguild.v1.SyncScriptsResponse
+	51, // 67: taskguild.v1.AgentManagerService.ReportScriptExecutionResult:output_type -> taskguild.v1.ReportScriptExecutionResultResponse
+	53, // 68: taskguild.v1.AgentManagerService.ReportScriptOutputChunk:output_type -> taskguild.v1.ReportScriptOutputChunkResponse
+	49, // [49:69] is the sub-list for method output_type
+	29, // [29:49] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_agent_manager_proto_init() }
@@ -3400,6 +3472,7 @@ func file_taskguild_v1_agent_manager_proto_init() {
 		(*AgentCommand_GitPullMain)(nil),
 		(*AgentCommand_SyncScripts)(nil),
 		(*AgentCommand_ExecuteScript)(nil),
+		(*AgentCommand_Ping)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -3407,7 +3480,7 @@ func file_taskguild_v1_agent_manager_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_agent_manager_proto_rawDesc), len(file_taskguild_v1_agent_manager_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   56,
+			NumMessages:   57,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

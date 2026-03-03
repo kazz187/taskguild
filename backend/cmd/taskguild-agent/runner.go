@@ -102,8 +102,10 @@ func runTask(
 	executeHooks(ctx, taskID, "before_task_execution", metadata, workDir, taskClient, tl)
 
 	// Start interaction stream listener for this task.
+	// Passes both the AgentManagerService client (for polling fallback) and
+	// InteractionService client (for the streaming subscription).
 	waiter := newInteractionWaiter()
-	go runInteractionListener(ctx, interClient, taskID, waiter)
+	go runInteractionListener(ctx, client, interClient, taskID, waiter)
 
 	sessionID := metadata["session_id"]
 	prompt := buildUserPrompt(metadata, workDir)

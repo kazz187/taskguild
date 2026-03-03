@@ -63,6 +63,11 @@ message AgentManagerSubscribeRequest {
   string agent_manager_id = 1;
   string project_name = 2;
   int32 max_concurrent_tasks = 3;
+  // active_task_ids is the list of tasks currently running on this agent.
+  // On reconnection, the server will NOT release these tasks (they are still
+  // being executed locally). Tasks assigned to this agent but NOT in this list
+  // are released and re-broadcast.
+  repeated string active_task_ids = 4;
 }
 
 message AgentCommand {
@@ -78,8 +83,14 @@ message AgentCommand {
     GitPullMainCommand git_pull_main = 9;
     SyncScriptsCommand sync_scripts = 10;
     ExecuteScriptCommand execute_script = 11;
+    // Ping is a keepalive message sent periodically by the server to prevent
+    // idle stream timeouts from HTTP/2 intermediaries or OS-level TCP settings.
+    PingCommand ping = 12;
   }
 }
+
+// PingCommand is a keepalive message. The client should silently ignore it.
+message PingCommand {}
 
 // --- Commands ---
 

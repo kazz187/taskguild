@@ -12,6 +12,10 @@ type Repository interface {
 	// ReleaseByAgent unassigns all tasks currently assigned to the given agent,
 	// resetting them to Pending so other agents can claim them.
 	ReleaseByAgent(ctx context.Context, agentID string) ([]*Task, error)
+	// ReleaseByAgentExcept is like ReleaseByAgent but keeps tasks whose IDs
+	// are in the keepSet. This is used during reconnection to avoid disrupting
+	// tasks that are still actively running on the agent.
+	ReleaseByAgentExcept(ctx context.Context, agentID string, keepSet map[string]struct{}) ([]*Task, error)
 
 	// Archive moves a task from tasks/ to tasks/archived/.
 	Archive(ctx context.Context, id string) error
