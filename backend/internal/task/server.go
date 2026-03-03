@@ -203,8 +203,9 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *connect.Request[task
 	}
 
 	// Block force-move when an agent is actively running on the task.
+	// Pending tasks (agent not yet started) are allowed to be force-moved.
 	if req.Msg.Force {
-		if t.AssignmentStatus == AssignmentStatusPending || t.AssignmentStatus == AssignmentStatusAssigned {
+		if t.AssignmentStatus == AssignmentStatusAssigned {
 			return nil, cerr.NewError(
 				cerr.FailedPrecondition,
 				fmt.Sprintf("cannot force-move a task while an agent is running (status: %s)", t.AssignmentStatus),

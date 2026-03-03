@@ -13,6 +13,7 @@ import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { useTaskLogs } from '@/hooks/useTaskLogs'
 import { useNotificationSound } from '@/hooks/useNotificationSound'
 import { TaskDetailModal } from '@/components/TaskDetailModal'
+import { ForceTransitionDialog } from '@/components/ForceTransitionDialog'
 import { shortId } from '@/lib/id'
 import { InputBar } from '@/components/ChatBubble'
 import { MarkdownDescription } from '@/components/MarkdownDescription'
@@ -20,6 +21,7 @@ import { TimelineEntry, type TimelineItem } from '@/components/TimelineEntry'
 import { PendingRequestsPanel } from '@/components/PendingRequestsPanel'
 import { ConnectionIndicator } from '@/components/ConnectionIndicator'
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   Bot,
@@ -61,6 +63,22 @@ function TaskDetailPage() {
   const sortedStatuses = workflow ? [...workflow.statuses].sort((a, b) => a.order - b.order) : []
   const currentStatus = sortedStatuses.find((s) => s.id === task?.statusId)
   const allowedTransitions = currentStatus?.transitionsTo ?? []
+
+  // Force transition targets: all statuses except current and normal transitions
+  const forceTransitions = useMemo(() => {
+    if (!currentStatus) return []
+    const normalSet = new Set(allowedTransitions)
+    return sortedStatuses
+      .filter((s) => s.id !== currentStatus.id && !normalSet.has(s.id))
+      .map((s) => ({ id: s.id, name: s.name }))
+  }, [currentStatus, allowedTransitions, sortedStatuses])
+
+  // Force-move is only blocked when agent is actively running (assigned).
+  // Pending tasks (agent not yet started) are allowed to be force-moved.
+  const isForceMoveBlocked = task?.assignmentStatus === TaskAssignmentStatus.ASSIGNED
+
+  // Force-transition confirmation dialog state
+  const [forceTransitionTarget, setForceTransitionTarget] = useState<{ id: string; name: string } | null>(null)
 
   // Fetch task logs
   const { logs } = useTaskLogs(taskId, projectId)
@@ -128,12 +146,26 @@ function TaskDetailPage() {
     })
   }, [navigate, projectId, task?.workflowId])
 
-  const handleStatusChange = (statusId: string) => {
+  const handleStatusChange = (statusId: string, force = false) => {
     if (!task) return
     statusMut.mutate(
-      { id: task.id, statusId },
+      { id: task.id, statusId, force },
       { onSuccess: () => refetchTask() },
     )
+  }
+
+  const handleForceTransitionClick = (target: { id: string; name: string }) => {
+    setForceTransitionTarget(target)
+  }
+
+  const handleForceConfirm = () => {
+    if (!forceTransitionTarget) return
+    handleStatusChange(forceTransitionTarget.id, true)
+    setForceTransitionTarget(null)
+  }
+
+  const handleForceCancel = () => {
+    setForceTransitionTarget(null)
   }
 
   // Synchronous guard to prevent duplicate responses (survives across renders before mutation state propagates)
@@ -233,6 +265,18 @@ function TaskDetailPage() {
                 </button>
               )
             })}
+            {!isForceMoveBlocked && forceTransitions.map((target) => (
+              <button
+                key={target.id}
+                onClick={() => handleForceTransitionClick(target)}
+                disabled={statusMut.isPending}
+                className="flex items-center gap-1 px-3 py-1 text-xs bg-slate-800 border border-slate-700 rounded-lg text-gray-400 hover:border-amber-500/50 hover:text-amber-300 transition-colors disabled:opacity-50"
+                title="Force move (not defined in workflow)"
+              >
+                <AlertTriangle className="w-3 h-3 text-amber-500/70" />
+                {target.name}
+              </button>
+            ))}
 
             <span className="text-[11px] text-gray-600 font-mono ml-auto hidden sm:inline">{task.id}</span>
 
@@ -358,6 +402,16 @@ function TaskDetailPage() {
           onClose={() => setShowEditModal(false)}
           onChanged={() => refetchTask()}
           onDeleted={handleDeleted}
+        />
+      )}
+
+      {/* Force-transition confirmation dialog */}
+      {forceTransitionTarget && currentStatus && (
+        <ForceTransitionDialog
+          fromStatusName={currentStatus.name}
+          toStatusName={forceTransitionTarget.name}
+          onConfirm={handleForceConfirm}
+          onCancel={handleForceCancel}
         />
       )}
     </div>

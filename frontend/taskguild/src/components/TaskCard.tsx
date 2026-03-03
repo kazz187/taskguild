@@ -50,9 +50,10 @@ export function TaskCard({ task, onEdit, isDragOverlay, transitionTargets, onTra
 
   const hasTransitions = transitionTargets && transitionTargets.length > 0
 
+  // Only block force-move when agent is actively running (assigned).
+  // Pending tasks (agent not yet started) are allowed to be force-moved.
   const isAgentRunning =
-    task.assignmentStatus === TaskAssignmentStatus.ASSIGNED ||
-    task.assignmentStatus === TaskAssignmentStatus.PENDING
+    task.assignmentStatus === TaskAssignmentStatus.ASSIGNED
 
   return (
     <div

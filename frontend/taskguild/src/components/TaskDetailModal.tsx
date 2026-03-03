@@ -60,6 +60,9 @@ export function TaskDetailModal({
   const interactions = interactionsData?.interactions ?? []
 
   const isTaskLocked = task?.assignmentStatus === TaskAssignmentStatus.ASSIGNED || task?.assignmentStatus === TaskAssignmentStatus.PENDING
+  // Force-move is only blocked when agent is actively running (assigned).
+  // Pending tasks (agent not yet started) are allowed to be force-moved.
+  const isForceMoveBlocked = task?.assignmentStatus === TaskAssignmentStatus.ASSIGNED
 
   // Query cached worktree list (only when worktree is enabled and task is not locked)
   const { data: wtData, refetch: refetchWorktrees } = useQuery(getWorktreeList, { projectId }, {
@@ -337,7 +340,7 @@ export function TaskDetailModal({
                 </button>
               )
             })}
-            {!isTaskLocked && forceTransitions.map((target) => (
+            {!isForceMoveBlocked && forceTransitions.map((target) => (
               <button
                 key={target.id}
                 onClick={() => handleForceTransitionClick(target)}
