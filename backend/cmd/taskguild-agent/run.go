@@ -267,6 +267,12 @@ func runSubscribeLoop(
 	for stream.Receive() {
 		cmd := stream.Msg()
 
+		// Skip empty commands (e.g. caused by proxy-injected frames or
+		// partial envelope reads from intermediaries).
+		if cmd.GetCommand() == nil {
+			continue
+		}
+
 		switch c := cmd.GetCommand().(type) {
 		case *v1.AgentCommand_TaskAvailable:
 			taskAvail := c.TaskAvailable
@@ -415,6 +421,12 @@ func runSubscribeLoop(
 
 				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache)
 			}(taskID)
+
+		case *v1.AgentCommand_InteractionResponse:
+			// Interaction responses are handled per-task via SubscribeInteractions.
+			// Log and ignore if received on the global subscribe stream.
+			log.Printf("received interaction_response on subscribe stream (interaction_id: %s), ignoring",
+				c.InteractionResponse.GetInteractionId())
 
 		case *v1.AgentCommand_Ping:
 			// Server-side keepalive ping — silently ignore.
