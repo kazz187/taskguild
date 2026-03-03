@@ -88,19 +88,25 @@ const (
 	TaskLogCategory_TASK_LOG_CATEGORY_STDERR        TaskLogCategory = 5
 	TaskLogCategory_TASK_LOG_CATEGORY_ERROR         TaskLogCategory = 6
 	TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM        TaskLogCategory = 7
+	TaskLogCategory_TASK_LOG_CATEGORY_TOOL_USE      TaskLogCategory = 8
+	TaskLogCategory_TASK_LOG_CATEGORY_AGENT_OUTPUT  TaskLogCategory = 9
+	TaskLogCategory_TASK_LOG_CATEGORY_DIRECTIVE     TaskLogCategory = 10
 )
 
 // Enum value maps for TaskLogCategory.
 var (
 	TaskLogCategory_name = map[int32]string{
-		0: "TASK_LOG_CATEGORY_UNSPECIFIED",
-		1: "TASK_LOG_CATEGORY_TURN_START",
-		2: "TASK_LOG_CATEGORY_TURN_END",
-		3: "TASK_LOG_CATEGORY_STATUS_CHANGE",
-		4: "TASK_LOG_CATEGORY_HOOK",
-		5: "TASK_LOG_CATEGORY_STDERR",
-		6: "TASK_LOG_CATEGORY_ERROR",
-		7: "TASK_LOG_CATEGORY_SYSTEM",
+		0:  "TASK_LOG_CATEGORY_UNSPECIFIED",
+		1:  "TASK_LOG_CATEGORY_TURN_START",
+		2:  "TASK_LOG_CATEGORY_TURN_END",
+		3:  "TASK_LOG_CATEGORY_STATUS_CHANGE",
+		4:  "TASK_LOG_CATEGORY_HOOK",
+		5:  "TASK_LOG_CATEGORY_STDERR",
+		6:  "TASK_LOG_CATEGORY_ERROR",
+		7:  "TASK_LOG_CATEGORY_SYSTEM",
+		8:  "TASK_LOG_CATEGORY_TOOL_USE",
+		9:  "TASK_LOG_CATEGORY_AGENT_OUTPUT",
+		10: "TASK_LOG_CATEGORY_DIRECTIVE",
 	}
 	TaskLogCategory_value = map[string]int32{
 		"TASK_LOG_CATEGORY_UNSPECIFIED":   0,
@@ -111,6 +117,9 @@ var (
 		"TASK_LOG_CATEGORY_STDERR":        5,
 		"TASK_LOG_CATEGORY_ERROR":         6,
 		"TASK_LOG_CATEGORY_SYSTEM":        7,
+		"TASK_LOG_CATEGORY_TOOL_USE":      8,
+		"TASK_LOG_CATEGORY_AGENT_OUTPUT":  9,
+		"TASK_LOG_CATEGORY_DIRECTIVE":     10,
 	}
 )
 
@@ -369,7 +378,7 @@ const file_taskguild_v1_task_log_proto_rawDesc = "" +
 	"\x13TASK_LOG_LEVEL_INFO\x10\x01\x12\x18\n" +
 	"\x14TASK_LOG_LEVEL_DEBUG\x10\x02\x12\x17\n" +
 	"\x13TASK_LOG_LEVEL_WARN\x10\x03\x12\x18\n" +
-	"\x14TASK_LOG_LEVEL_ERROR\x10\x04*\x90\x02\n" +
+	"\x14TASK_LOG_LEVEL_ERROR\x10\x04*\xf5\x02\n" +
 	"\x0fTaskLogCategory\x12!\n" +
 	"\x1dTASK_LOG_CATEGORY_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cTASK_LOG_CATEGORY_TURN_START\x10\x01\x12\x1e\n" +
@@ -378,7 +387,11 @@ const file_taskguild_v1_task_log_proto_rawDesc = "" +
 	"\x16TASK_LOG_CATEGORY_HOOK\x10\x04\x12\x1c\n" +
 	"\x18TASK_LOG_CATEGORY_STDERR\x10\x05\x12\x1b\n" +
 	"\x17TASK_LOG_CATEGORY_ERROR\x10\x06\x12\x1c\n" +
-	"\x18TASK_LOG_CATEGORY_SYSTEM\x10\a2g\n" +
+	"\x18TASK_LOG_CATEGORY_SYSTEM\x10\a\x12\x1e\n" +
+	"\x1aTASK_LOG_CATEGORY_TOOL_USE\x10\b\x12\"\n" +
+	"\x1eTASK_LOG_CATEGORY_AGENT_OUTPUT\x10\t\x12\x1f\n" +
+	"\x1bTASK_LOG_CATEGORY_DIRECTIVE\x10\n" +
+	"2g\n" +
 	"\x0eTaskLogService\x12U\n" +
 	"\fListTaskLogs\x12!.taskguild.v1.ListTaskLogsRequest\x1a\".taskguild.v1.ListTaskLogsResponseB\xba\x01\n" +
 	"\x10com.taskguild.v1B\fTaskLogProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"

@@ -41,6 +41,12 @@ const (
 	maxUserResponseRetries = 2
 )
 
+const (
+	// maxToolOutputSize is the maximum number of characters stored for
+	// tool output in task log metadata.
+	maxToolOutputSize = 10000
+)
+
 func runTask(
 	ctx context.Context,
 	client taskguildv1connect.AgentManagerServiceClient,
@@ -120,7 +126,7 @@ func runTask(
 	userResponseRetries := 0
 
 	for turn := 0; ; turn++ {
-		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, worktreeName, client, ctx, taskID, agentManagerID, waiter, permCache)
+		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, worktreeName, client, ctx, taskID, agentManagerID, waiter, permCache, tl)
 		// Override StderrCallback to also send to task logger.
 		opts.StderrCallback = func(line string) {
 			log.Printf("[task:%s] [claude-stderr] %s", taskID, line)
@@ -254,6 +260,13 @@ func runTask(
 				saveTaskDescription(ctx, taskClient, taskID, newDesc)
 				// Update local metadata so subsequent prompts reflect the new description.
 				metadata["_task_description"] = newDesc
+				// Log the directive execution to timeline.
+				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_DIRECTIVE, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+					"Task description updated",
+					map[string]string{
+						"directive_type": "TASK_DESCRIPTION",
+						"turn":           fmt.Sprintf("%d", turn),
+					})
 			}
 		}
 
@@ -263,6 +276,14 @@ func runTask(
 			for _, d := range ctDirectives {
 				log.Printf("[task:%s] detected CREATE_TASK directive: %q (turn %d)", taskID, d.Title, turn)
 				createTaskFromDirective(ctx, taskClient, taskID, metadata, d)
+				// Log the directive execution to timeline.
+				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_DIRECTIVE, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+					fmt.Sprintf("Task created: %s", d.Title),
+					map[string]string{
+						"directive_type": "CREATE_TASK",
+						"task_title":     d.Title,
+						"turn":           fmt.Sprintf("%d", turn),
+					})
 			}
 		}
 
@@ -282,11 +303,38 @@ func runTask(
 			summary = stripCreateTasks(summary)
 		}
 
+		// Log agent text output for this turn.
+		if summary != "" {
+			// Strip directives for the agent output display.
+			agentText := stripNextStatus(summary)
+			if agentText != "" {
+				preview := truncateText(agentText, 200)
+				fullText := agentText
+				if len(fullText) > maxToolOutputSize {
+					fullText = fullText[:maxToolOutputSize] + "... (truncated)"
+				}
+				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_AGENT_OUTPUT, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+					preview,
+					map[string]string{
+						"full_text": fullText,
+						"turn":      fmt.Sprintf("%d", turn),
+					})
+			}
+		}
+
 		// Check completion: NEXT_STATUS present means task is done.
 		nextStatusID := parseNextStatus(summary)
 		if nextStatusID != "" {
 			displaySummary := stripNextStatus(summary)
 			log.Printf("[task:%s] completed with NEXT_STATUS %q (turn %d)", taskID, nextStatusID, turn)
+			// Log the NEXT_STATUS directive to timeline.
+			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_DIRECTIVE, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+				fmt.Sprintf("Status transition: %s", nextStatusID),
+				map[string]string{
+					"directive_type": "NEXT_STATUS",
+					"next_status":    nextStatusID,
+					"turn":           fmt.Sprintf("%d", turn),
+				})
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Task completed with status transition (turn %d)", turn),
 				map[string]string{"next_status": nextStatusID})
@@ -366,6 +414,7 @@ func buildClaudeOptions(
 	agentManagerID string,
 	waiter *interactionWaiter,
 	permCache *permissionCache,
+	tl *taskLogger,
 ) *claudeagent.ClaudeAgentOptions {
 	// Permission mode from agent config (default if empty)
 	permMode := claudeagent.PermissionModeDefault
@@ -395,6 +444,7 @@ func buildClaudeOptions(
 		StderrCallback: func(line string) {
 			log.Printf("[task:%s] [claude-stderr] %s", taskID, line)
 		},
+		Hooks: buildToolUseHooks(tl, taskID),
 	}
 
 	// Parse and pass sub-agents from metadata.
