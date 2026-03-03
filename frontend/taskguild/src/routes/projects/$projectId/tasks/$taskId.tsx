@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { getTask, updateTaskStatus } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
@@ -53,6 +54,8 @@ function TaskDetailPage() {
   const project = projectData?.project
   const workflows = workflowsData?.workflows ?? []
   const interactions = interactionsData?.interactions ?? []
+
+  useDocumentTitle(task?.title)
 
   const workflow = workflows.find((w) => w.id === task?.workflowId)
   const sortedStatuses = workflow ? [...workflow.statuses].sort((a, b) => a.order - b.order) : []

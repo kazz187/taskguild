@@ -1,12 +1,14 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { listProjects, createProject } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { Folder, ArrowRight, Plus, X } from 'lucide-react'
 import { useState } from 'react'
 
 export const Route = createFileRoute('/')({ component: ProjectsPage })
 
 function ProjectsPage() {
+  useDocumentTitle('Projects')
   const { data, isLoading, error, refetch } = useQuery(listProjects, {})
   const [showForm, setShowForm] = useState(false)
 

@@ -1,4 +1,5 @@
 import { useCallback, useRef, useEffect, useMemo } from 'react'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { listTasks } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
@@ -19,6 +20,7 @@ export const Route = createFileRoute('/projects/$projectId/chat')({
 })
 
 function ProjectChatPage() {
+  useDocumentTitle('Chat')
   const { projectId } = Route.useParams()
   const scrollRef = useRef<HTMLDivElement>(null)
 
