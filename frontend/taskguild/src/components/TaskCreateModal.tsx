@@ -144,23 +144,23 @@ export function TaskCreateModal({ projectId, workflowId, defaultPermissionMode, 
               </select>
             </div>
           )}
-        </div>
 
-        {/* Footer */}
-        <div className="border-t border-slate-800 px-4 py-2 flex justify-end items-center gap-2">
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleCreate}
-            disabled={createMut.isPending || !title.trim()}
-            className="px-4 py-1.5 text-xs bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 transition-colors"
-          >
-            {createMut.isPending ? 'Creating...' : 'Create'}
-          </button>
+          {/* Action buttons */}
+          <div className="border-t border-slate-800 mt-4 pt-3 flex justify-end items-center gap-2">
+            <button
+              onClick={onClose}
+              className="px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleCreate}
+              disabled={createMut.isPending || !title.trim()}
+              className="px-4 py-1.5 text-xs bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 transition-colors"
+            >
+              {createMut.isPending ? 'Creating...' : 'Create'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

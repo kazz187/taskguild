@@ -368,32 +368,32 @@ export function TaskDetailModal({
               </div>
             </div>
           )}
-        </div>
 
-        {/* Footer */}
-        <div className="border-t border-slate-800 px-4 py-2 flex justify-between items-center">
-          <button
-            onClick={handleDelete}
-            disabled={deleteMut.isPending}
-            className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-400 transition-colors disabled:opacity-50 p-1"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            Delete
-          </button>
-          <div className="flex items-center gap-2">
+          {/* Action buttons */}
+          <div className="border-t border-slate-800 mt-4 pt-3 flex justify-between items-center">
             <button
-              onClick={handleCancel}
-              className="px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors"
+              onClick={handleDelete}
+              disabled={deleteMut.isPending}
+              className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-400 transition-colors disabled:opacity-50 p-1"
             >
-              Cancel
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete
             </button>
-            <button
-              onClick={handleSave}
-              disabled={!hasChanges || !titleDraft.trim() || updateMut.isPending}
-              className="px-4 py-1.5 text-xs bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 transition-colors"
-            >
-              {updateMut.isPending ? 'Saving...' : 'Save'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleCancel}
+                className="px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={!hasChanges || !titleDraft.trim() || updateMut.isPending}
+                className="px-4 py-1.5 text-xs bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 transition-colors"
+              >
+                {updateMut.isPending ? 'Saving...' : 'Save'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
