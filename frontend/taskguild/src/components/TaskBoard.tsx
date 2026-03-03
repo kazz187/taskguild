@@ -167,11 +167,9 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
   // Force-move targets: all statuses except the current one and normal targets
   const forceTargetIds = useMemo(() => {
     if (!activeTask) return new Set<string>()
-    const isAgentRunning =
-      activeTask.assignmentStatus === TaskAssignmentStatus.ASSIGNED ||
-      activeTask.assignmentStatus === TaskAssignmentStatus.PENDING
-    // Don't allow force targets if agent is running
-    if (isAgentRunning) return new Set<string>()
+    // Don't allow force targets if agent is actively running (assigned).
+    // Pending tasks (agent not yet started) are allowed to be force-moved.
+    if (activeTask.assignmentStatus === TaskAssignmentStatus.ASSIGNED) return new Set<string>()
     const set = new Set<string>()
     for (const s of sortedStatuses) {
       if (s.id !== activeTask.statusId && !normalTargetIds.has(s.id)) {
@@ -313,11 +311,9 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
       const task = tasks.find((t) => t.id === taskId)
       if (!task) return
 
-      // Block force-move when agent is running
-      const isAgentRunning =
-        task.assignmentStatus === TaskAssignmentStatus.ASSIGNED ||
-        task.assignmentStatus === TaskAssignmentStatus.PENDING
-      if (isAgentRunning) return
+      // Block force-move when agent is actively running (assigned).
+      // Pending tasks (agent not yet started) are allowed to be force-moved.
+      if (task.assignmentStatus === TaskAssignmentStatus.ASSIGNED) return
 
       const fromName = statusById.get(task.statusId)?.name ?? task.statusId
       const toName = statusById.get(targetStatusId)?.name ?? targetStatusId
