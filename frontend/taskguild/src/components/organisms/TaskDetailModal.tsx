@@ -12,6 +12,8 @@ import { X, Bot, Clock, GitBranch, Loader, Trash2, ArrowRight, AlertTriangle, Me
 import { MarkdownDescription } from './MarkdownDescription'
 import { ForceTransitionDialog } from './ForceTransitionDialog'
 import { shortId } from '@/lib/id'
+import { Button, Input, Textarea, Select, Checkbox, Badge } from '../atoms/index.ts'
+import { Modal, FormField, Card } from '../molecules/index.ts'
 
 const TASK_DETAIL_EVENT_TYPES = [
   EventType.TASK_UPDATED,
@@ -203,203 +205,198 @@ export function TaskDetailModal({
 
   if (!task) {
     return (
-      <ModalBackdrop onClose={onClose}>
+      <Modal open={true} onClose={onClose} size="full">
         <div className="p-8 text-gray-400">Loading...</div>
-      </ModalBackdrop>
+      </Modal>
     )
   }
 
   return (
-    <ModalBackdrop onClose={onClose}>
-      <div className="bg-slate-900 border border-slate-700 rounded-none md:rounded-xl w-full h-full md:h-auto md:max-w-2xl md:max-h-[85vh] flex flex-col shadow-2xl">
-        {/* Header */}
-        <div className="flex items-start justify-between px-4 pt-4 pb-1">
-          <div className="flex-1 min-w-0 mr-3">
-            <input
-              autoFocus
-              value={titleDraft}
-              onChange={(e) => setTitleDraft(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleSave() }}
-              className="w-full px-2 py-1 bg-slate-800 border border-slate-600 rounded text-white text-base md:text-lg font-semibold focus:outline-none focus:border-cyan-500"
-              placeholder="Task title..."
-            />
-          </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors shrink-0 mt-1 p-1">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          <textarea
-            value={descDraft}
-            onChange={(e) => setDescDraft(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500 min-h-[150px] md:min-h-[200px]"
-            placeholder="Add description..."
+    <Modal open={true} onClose={onClose} size="full">
+      {/* Header */}
+      <div className="flex items-start justify-between px-4 pt-4 pb-1">
+        <div className="flex-1 min-w-0 mr-3">
+          <Input
+            autoFocus
+            value={titleDraft}
+            onChange={(e) => setTitleDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleSave() }}
+            className="!border-slate-600 text-base md:text-lg font-semibold !rounded"
+            placeholder="Task title..."
           />
+        </div>
+        <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors shrink-0 mt-1 p-1">
+          <X className="w-5 h-5" />
+        </button>
+      </div>
 
-          {/* Agent settings */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <div className="flex-1 w-full sm:w-auto">
-              <label className="block text-xs text-gray-500 mb-1">Permission Mode</label>
-              <select
-                value={permModeDraft}
-                onChange={(e) => setPermModeDraft(e.target.value)}
-                className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-cyan-500"
-              >
-                <option value="">Default (ask for permission)</option>
-                <option value="acceptEdits">Accept Edits (auto-approve file changes)</option>
-                <option value="bypassPermissions">Bypass Permissions (auto-approve all)</option>
-              </select>
-            </div>
-            <label className={`flex items-center gap-1.5 text-xs text-gray-400 sm:pt-4 ${isTaskLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
-              <input
-                type="checkbox"
-                checked={worktreeDraft}
-                onChange={(e) => setWorktreeDraft(e.target.checked)}
-                disabled={isTaskLocked}
-                className="accent-cyan-500"
-              />
-              Use Worktree
-            </label>
-          </div>
+      {/* Body */}
+      <Modal.Body>
+        <Textarea
+          value={descDraft}
+          onChange={(e) => setDescDraft(e.target.value)}
+          textareaSize="md"
+          placeholder="Add description..."
+        />
 
-          {/* Worktree selection / display */}
-          {isTaskLocked && task.metadata?.['worktree'] ? (
-            // Read-only display when task is assigned/pending
-            <div className="flex items-center gap-1.5 text-xs text-gray-400 bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5">
-              <GitBranch className="w-3 h-3 text-gray-500 shrink-0" />
-              <span className="font-mono truncate">{task.metadata['worktree']}</span>
-            </div>
-          ) : !isTaskLocked && worktreeDraft ? (
-            // Editable dropdown when worktree is enabled and task is not locked
-            <div className="pl-6">
-              <div className="flex items-center gap-2 mb-1">
-                <GitBranch className="w-3.5 h-3.5 text-gray-500" />
-                <label className="text-xs text-gray-400">Worktree</label>
-                <button
-                  type="button"
-                  onClick={() => requestWtMut.mutate({ projectId })}
-                  className="text-gray-500 hover:text-gray-300 transition-colors"
-                  title="Refresh worktree list"
-                >
-                  <RefreshCw className={`w-3 h-3 ${requestWtMut.isPending ? 'animate-spin' : ''}`} />
-                </button>
-              </div>
-              <select
-                value={selectedWorktree}
-                onChange={(e) => setSelectedWorktree(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
-              >
-                <option value="">New worktree (auto-generated)</option>
-                {worktrees.map((wt) => (
-                  <option key={wt.name} value={wt.name}>
-                    {wt.name} ({wt.branch})
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
-
-          {/* Status + Agent + Transitions row */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-              currentStatus?.isInitial ? 'bg-blue-500/20 text-blue-400' :
-              currentStatus?.isTerminal ? 'bg-green-500/20 text-green-400' :
-              'bg-gray-500/20 text-gray-300'
-            }`}>
-              {currentStatus?.name ?? task.statusId}
-            </span>
-            {task.assignmentStatus === TaskAssignmentStatus.ASSIGNED ? (
-              <span className="inline-flex items-center gap-1 text-xs bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-full px-2.5 py-1">
-                <Bot className="w-3 h-3" />
-                {shortId(task.assignedAgentId)}
-              </span>
-            ) : task.assignmentStatus === TaskAssignmentStatus.PENDING ? (
-              <span className="inline-flex items-center gap-1 text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded-full px-2.5 py-1">
-                <Loader className="w-3 h-3" />
-                Pending claim
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-xs text-gray-500">
-                <Clock className="w-3 h-3" />
-                Unassigned
-              </span>
-            )}
-            {allowedTransitions.map((toId) => {
-              const toStatus = statuses.find((s) => s.id === toId)
-              return (
-                <button
-                  key={toId}
-                  onClick={() => handleStatusChange(toId)}
-                  disabled={statusMut.isPending}
-                  className="flex items-center gap-1 px-3 py-1 text-xs bg-slate-800 border border-slate-700 rounded-lg text-gray-300 hover:border-cyan-500/50 hover:text-white transition-colors disabled:opacity-50"
-                >
-                  <ArrowRight className="w-3 h-3" />
-                  {toStatus?.name ?? toId}
-                </button>
-              )
-            })}
-            {!isForceMoveBlocked && forceTransitions.map((target) => (
-              <button
-                key={target.id}
-                onClick={() => handleForceTransitionClick(target)}
-                disabled={statusMut.isPending}
-                className="flex items-center gap-1 px-3 py-1 text-xs bg-slate-800 border border-slate-700 rounded-lg text-gray-400 hover:border-amber-500/50 hover:text-amber-300 transition-colors disabled:opacity-50"
-                title="Force move (not defined in workflow)"
-              >
-                <AlertTriangle className="w-3 h-3 text-amber-500/70" />
-                {target.name}
-              </button>
-            ))}
-            <span className="text-[11px] text-gray-600 font-mono ml-auto hidden sm:inline">{task.id}</span>
-          </div>
-
-          {/* Interactions */}
-          {interactions.length > 0 && (
-            <div>
-              <h4 className="text-xs text-gray-500 uppercase tracking-wide mb-2">Interactions</h4>
-              <div className="space-y-2">
-                {interactions.map((interaction) => (
-                  <InteractionItem
-                    key={interaction.id}
-                    interaction={interaction}
-                    onRespond={handleRespond}
-                    isPending={respondMut.isPending}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="border-t border-slate-800 mt-4 pt-3 flex justify-between items-center">
-            <button
-              onClick={handleDelete}
-              disabled={deleteMut.isPending}
-              className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-400 transition-colors disabled:opacity-50 p-1"
+        {/* Agent settings */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <FormField label="Permission Mode" className="flex-1 w-full sm:w-auto" labelSize="xs">
+            <Select
+              value={permModeDraft}
+              onChange={(e) => setPermModeDraft(e.target.value)}
+              selectSize="xs"
+              className="!rounded"
             >
-              <Trash2 className="w-3.5 h-3.5" />
-              Delete
-            </button>
-            <div className="flex items-center gap-2">
+              <option value="">Default (ask for permission)</option>
+              <option value="acceptEdits">Accept Edits (auto-approve file changes)</option>
+              <option value="bypassPermissions">Bypass Permissions (auto-approve all)</option>
+            </Select>
+          </FormField>
+          <Checkbox
+            label="Use Worktree"
+            checked={worktreeDraft}
+            onChange={(e) => setWorktreeDraft(e.target.checked)}
+            disabled={isTaskLocked}
+            className="!text-xs sm:pt-4"
+          />
+        </div>
+
+        {/* Worktree selection / display */}
+        {isTaskLocked && task.metadata?.['worktree'] ? (
+          // Read-only display when task is assigned/pending
+          <div className="flex items-center gap-1.5 text-xs text-gray-400 bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5">
+            <GitBranch className="w-3 h-3 text-gray-500 shrink-0" />
+            <span className="font-mono truncate">{task.metadata['worktree']}</span>
+          </div>
+        ) : !isTaskLocked && worktreeDraft ? (
+          // Editable dropdown when worktree is enabled and task is not locked
+          <div className="pl-6">
+            <div className="flex items-center gap-2 mb-1">
+              <GitBranch className="w-3.5 h-3.5 text-gray-500" />
+              <label className="text-xs text-gray-400">Worktree</label>
               <button
-                onClick={handleCancel}
-                className="px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors"
+                type="button"
+                onClick={() => requestWtMut.mutate({ projectId })}
+                className="text-gray-500 hover:text-gray-300 transition-colors"
+                title="Refresh worktree list"
               >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={!hasChanges || !titleDraft.trim() || updateMut.isPending}
-                className="px-4 py-1.5 text-xs bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 transition-colors"
-              >
-                {updateMut.isPending ? 'Saving...' : 'Save'}
+                <RefreshCw className={`w-3 h-3 ${requestWtMut.isPending ? 'animate-spin' : ''}`} />
               </button>
             </div>
+            <Select
+              value={selectedWorktree}
+              onChange={(e) => setSelectedWorktree(e.target.value)}
+            >
+              <option value="">New worktree (auto-generated)</option>
+              {worktrees.map((wt) => (
+                <option key={wt.name} value={wt.name}>
+                  {wt.name} ({wt.branch})
+                </option>
+              ))}
+            </Select>
+          </div>
+        ) : null}
+
+        {/* Status + Agent + Transitions row */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge
+            color={
+              currentStatus?.isInitial ? 'blue' :
+              currentStatus?.isTerminal ? 'green' :
+              'gray'
+            }
+            pill
+          >
+            {currentStatus?.name ?? task.statusId}
+          </Badge>
+          {task.assignmentStatus === TaskAssignmentStatus.ASSIGNED ? (
+            <Badge color="cyan" variant="outline" pill icon={<Bot className="w-3 h-3" />}>
+              {shortId(task.assignedAgentId)}
+            </Badge>
+          ) : task.assignmentStatus === TaskAssignmentStatus.PENDING ? (
+            <Badge color="yellow" variant="outline" pill icon={<Loader className="w-3 h-3" />}>
+              Pending claim
+            </Badge>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+              <Clock className="w-3 h-3" />
+              Unassigned
+            </span>
+          )}
+          {allowedTransitions.map((toId) => {
+            const toStatus = statuses.find((s) => s.id === toId)
+            return (
+              <button
+                key={toId}
+                onClick={() => handleStatusChange(toId)}
+                disabled={statusMut.isPending}
+                className="flex items-center gap-1 px-3 py-1 text-xs bg-slate-800 border border-slate-700 rounded-lg text-gray-300 hover:border-cyan-500/50 hover:text-white transition-colors disabled:opacity-50"
+              >
+                <ArrowRight className="w-3 h-3" />
+                {toStatus?.name ?? toId}
+              </button>
+            )
+          })}
+          {!isForceMoveBlocked && forceTransitions.map((target) => (
+            <button
+              key={target.id}
+              onClick={() => handleForceTransitionClick(target)}
+              disabled={statusMut.isPending}
+              className="flex items-center gap-1 px-3 py-1 text-xs bg-slate-800 border border-slate-700 rounded-lg text-gray-400 hover:border-amber-500/50 hover:text-amber-300 transition-colors disabled:opacity-50"
+              title="Force move (not defined in workflow)"
+            >
+              <AlertTriangle className="w-3 h-3 text-amber-500/70" />
+              {target.name}
+            </button>
+          ))}
+          <span className="text-[11px] text-gray-600 font-mono ml-auto hidden sm:inline">{task.id}</span>
+        </div>
+
+        {/* Interactions */}
+        {interactions.length > 0 && (
+          <div>
+            <h4 className="text-xs text-gray-500 uppercase tracking-wide mb-2">Interactions</h4>
+            <div className="space-y-2">
+              {interactions.map((interaction) => (
+                <InteractionItem
+                  key={interaction.id}
+                  interaction={interaction}
+                  onRespond={handleRespond}
+                  isPending={respondMut.isPending}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Action buttons */}
+        <div className="border-t border-slate-800 mt-4 pt-3 flex justify-between items-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<Trash2 className="w-3.5 h-3.5" />}
+            onClick={handleDelete}
+            disabled={deleteMut.isPending}
+            className="!text-gray-500 hover:!text-red-400"
+          >
+            Delete
+          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={handleCancel}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleSave}
+              disabled={!hasChanges || !titleDraft.trim() || updateMut.isPending}
+            >
+              {updateMut.isPending ? 'Saving...' : 'Save'}
+            </Button>
           </div>
         </div>
-      </div>
+      </Modal.Body>
 
       {/* Force-transition confirmation dialog */}
       {forceTransitionTarget && currentStatus && (
@@ -410,18 +407,7 @@ export function TaskDetailModal({
           onCancel={handleForceCancel}
         />
       )}
-    </ModalBackdrop>
-  )
-}
-
-function ModalBackdrop({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div
-      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-0 md:p-4"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
-      {children}
-    </div>
+    </Modal>
   )
 }
 
@@ -444,7 +430,7 @@ export function InteractionItem({
     : <Bell className="w-4 h-4 text-gray-400" />
 
   return (
-    <div className={`bg-slate-800 border rounded-lg p-3 ${isPendingStatus ? 'border-amber-500/30' : 'border-slate-700'}`}>
+    <Card variant="nested" className={`!rounded-lg ${isPendingStatus ? '!border-amber-500/30' : ''}`}>
       <div className="flex items-start gap-2">
         <div className="mt-0.5">{icon}</div>
         <div className="flex-1 min-w-0">
@@ -458,33 +444,38 @@ export function InteractionItem({
               {interaction.options.length > 0 ? (
                 <div className="flex gap-2 flex-wrap">
                   {interaction.options.map((opt) => (
-                    <button
+                    <Button
                       key={opt.value}
+                      variant="ghost"
+                      size="sm"
                       onClick={() => onRespond(interaction.id, opt.value)}
                       disabled={isPending}
-                      className="px-3 py-1.5 text-xs bg-slate-700 border border-slate-600 rounded text-gray-200 hover:border-cyan-500/50 hover:text-white transition-colors disabled:opacity-50"
+                      className="!bg-slate-700 !border !border-slate-600 !text-gray-200 hover:!border-cyan-500/50 hover:!text-white"
                       title={opt.description}
                     >
                       {opt.label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               ) : (
                 <div className="flex gap-2">
-                  <input
+                  <Input
                     value={freeText}
                     onChange={(e) => setFreeText(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && freeText.trim()) onRespond(interaction.id, freeText) }}
-                    className="flex-1 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-cyan-500"
+                    inputSize="xs"
+                    className="flex-1 !bg-slate-900 !rounded"
                     placeholder="Type your response..."
                   />
-                  <button
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={() => { if (freeText.trim()) onRespond(interaction.id, freeText) }}
                     disabled={isPending || !freeText.trim()}
-                    className="px-3 py-1.5 text-xs bg-cyan-600 text-white rounded disabled:opacity-50"
+                    className="!rounded"
                   >
                     Send
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -495,6 +486,6 @@ export function InteractionItem({
           )}
         </div>
       </div>
-    </div>
+    </Card>
   )
 }

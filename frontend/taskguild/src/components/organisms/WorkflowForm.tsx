@@ -7,6 +7,8 @@ import { listScripts } from '@taskguild/proto/taskguild/v1/script-ScriptService_
 import type { Workflow } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { HookTrigger, HookActionType } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { X, Plus, Trash2, Bot, ChevronUp, ChevronDown, Zap } from 'lucide-react'
+import { Button, Input, Select, Checkbox, Textarea, Badge } from '../atoms/index.ts'
+import { FormField, Card } from '../molecules/index.ts'
 
 interface HookDraft {
   key: string
@@ -383,38 +385,35 @@ export function WorkflowForm({
           <h2 className="text-lg md:text-xl font-bold text-white">
             {isEdit ? 'Edit Workflow' : 'Create Workflow'}
           </h2>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
+            iconOnly
+            icon={<X className="w-5 h-5" />}
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-300 transition-colors p-1"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          />
         </div>
 
         {/* Basic info */}
         <div className="space-y-3 mb-6 md:mb-8">
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Name *</label>
-            <input
+          <FormField label="Name *" labelSize="sm">
+            <Input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
               placeholder="e.g. Bug Fix Workflow"
             />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Description</label>
-            <input
+          </FormField>
+          <FormField label="Description" labelSize="sm">
+            <Input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
               placeholder="Workflow description"
             />
-          </div>
+          </FormField>
         </div>
 
         {/* Task Defaults */}
@@ -423,40 +422,35 @@ export function WorkflowForm({
             Task Defaults
           </h3>
           <div className="space-y-3">
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Permission Mode</label>
-              <select
+            <FormField label="Permission Mode" labelSize="sm">
+              <Select
                 value={defaultPermissionMode}
                 onChange={(e) => setDefaultPermissionMode(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
               >
                 <option value="">Default (ask for permission)</option>
                 <option value="acceptEdits">Accept Edits (auto-approve file changes)</option>
                 <option value="bypassPermissions">Bypass Permissions (auto-approve all)</option>
-              </select>
-            </div>
-            <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={defaultUseWorktree}
-                onChange={(e) => setDefaultUseWorktree(e.target.checked)}
-                className="accent-cyan-500"
-              />
-              Use Worktree (isolate changes in a git worktree)
-            </label>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Custom Prompt</label>
-              <textarea
+              </Select>
+            </FormField>
+            <Checkbox
+              checked={defaultUseWorktree}
+              onChange={(e) => setDefaultUseWorktree(e.target.checked)}
+              label="Use Worktree (isolate changes in a git worktree)"
+            />
+            <FormField
+              label="Custom Prompt"
+              labelSize="sm"
+              hint="If set, this prompt will be prepended to the agent's instructions when a task is claimed."
+            >
+              <Textarea
                 value={customPrompt}
                 onChange={(e) => setCustomPrompt(e.target.value)}
                 rows={4}
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500 resize-y"
+                textareaSize="sm"
+                className="resize-y"
                 placeholder="Custom prompt prepended to agent instructions for all tasks in this workflow"
               />
-              <p className="text-[11px] text-gray-600 mt-1">
-                If set, this prompt will be prepended to the agent's instructions when a task is claimed.
-              </p>
-            </div>
+            </FormField>
           </div>
         </div>
 
@@ -466,14 +460,16 @@ export function WorkflowForm({
             <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">
               Statuses
             </h3>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="xs"
+              icon={<Plus className="w-3.5 h-3.5" />}
               onClick={addStatus}
-              className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+              className="text-cyan-400 hover:text-cyan-300"
             >
-              <Plus className="w-3.5 h-3.5" />
               Add Status
-            </button>
+            </Button>
           </div>
           <div className="space-y-3">
             {statuses.map((s, index) => {
@@ -481,30 +477,35 @@ export function WorkflowForm({
               // Check for legacy agent config
               const legacyAgent = agentConfigs.find(a => a.statusKey === s.key)
               return (
-                <div
+                <Card
                   key={s.key}
-                  className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4"
+                  variant="default"
+                  className="rounded-lg p-3 md:p-4"
                 >
                   <div className="flex items-center gap-2 md:gap-3 mb-3">
                     <div className="flex flex-col -my-1">
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="xs"
+                        iconOnly
+                        icon={<ChevronUp className="w-4 h-4" />}
                         onClick={() => moveStatus(index, -1)}
                         disabled={index === 0}
-                        className="text-gray-600 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <ChevronUp className="w-4 h-4" />
-                      </button>
-                      <button
+                        className="!p-0 !rounded-none"
+                      />
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="xs"
+                        iconOnly
+                        icon={<ChevronDown className="w-4 h-4" />}
                         onClick={() => moveStatus(index, 1)}
                         disabled={index === statuses.length - 1}
-                        className="text-gray-600 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
+                        className="!p-0 !rounded-none"
+                      />
                     </div>
-                    <input
+                    <Input
                       type="text"
                       required
                       pattern="[a-zA-Z0-9]+"
@@ -513,38 +514,37 @@ export function WorkflowForm({
                         const v = e.target.value.replace(/[^a-zA-Z0-9]/g, '')
                         updateStatus(s.key, { name: v })
                       }}
-                      className="flex-1 min-w-0 px-2 md:px-3 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-sm focus:outline-none focus:border-cyan-500"
+                      inputSize="sm"
+                      className="flex-1 min-w-0 rounded"
                       placeholder="Status name (alphanumeric)"
                     />
                     <div className="flex items-center gap-2 shrink-0">
                       <label className="flex items-center gap-1 text-xs text-gray-400 cursor-pointer">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={s.isInitial}
                           onChange={(e) => updateStatus(s.key, { isInitial: e.target.checked })}
-                          className="accent-cyan-500"
                         />
                         <span className="hidden sm:inline">Initial</span>
                         <span className="sm:hidden">I</span>
                       </label>
                       <label className="flex items-center gap-1 text-xs text-gray-400 cursor-pointer">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={s.isTerminal}
                           onChange={(e) => updateStatus(s.key, { isTerminal: e.target.checked })}
-                          className="accent-cyan-500"
                         />
                         <span className="hidden sm:inline">Terminal</span>
                         <span className="sm:hidden">T</span>
                       </label>
                       {statuses.length > 1 && (
-                        <button
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="xs"
+                          iconOnly
+                          icon={<Trash2 className="w-4 h-4" />}
                           onClick={() => removeStatus(s.key)}
-                          className="text-gray-600 hover:text-red-400 transition-colors p-1"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                          className="text-gray-600 hover:text-red-400"
+                        />
                       )}
                     </div>
                   </div>
@@ -562,13 +562,16 @@ export function WorkflowForm({
                               key={other.key}
                               type="button"
                               onClick={() => toggleTransition(s.key, other.key)}
-                              className={`px-2 py-0.5 text-xs rounded transition-colors ${
-                                active
-                                  ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                                  : 'bg-slate-800 text-gray-500 border border-slate-700 hover:text-gray-300'
-                              }`}
+                              className="transition-colors"
                             >
-                              {other.name || '(unnamed)'}
+                              <Badge
+                                color={active ? 'cyan' : 'gray'}
+                                variant="outline"
+                                size="xs"
+                                className={active ? '' : 'hover:text-gray-300'}
+                              >
+                                {other.name || '(unnamed)'}
+                              </Badge>
                             </button>
                           )
                         })}
@@ -577,15 +580,16 @@ export function WorkflowForm({
 
                   {/* Agent Assignment (dropdown) */}
                   {!s.isTerminal && (
-                    <div className="bg-slate-800/50 border border-slate-700 rounded p-2.5 md:p-3 mt-2">
+                    <Card variant="nested" className="p-2.5 md:p-3 mt-2">
                       <div className="flex items-center gap-2 mb-2">
                         <Bot className="w-3.5 h-3.5 text-cyan-400" />
                         <span className="text-xs text-cyan-400">Assigned Agent</span>
                       </div>
-                      <select
+                      <Select
                         value={s.agentId}
                         onChange={(e) => updateStatus(s.key, { agentId: e.target.value })}
-                        className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-cyan-500"
+                        selectSize="xs"
+                        className="rounded"
                       >
                         <option value="">No agent (manual status)</option>
                         {agents.map(agent => (
@@ -593,7 +597,7 @@ export function WorkflowForm({
                             {agent.name} — {agent.description}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                       {selectedAgent && (
                         <div className="mt-2 text-[11px] text-gray-500">
                           <span className="text-gray-400">Model:</span> {selectedAgent.model || 'inherit'}
@@ -615,25 +619,27 @@ export function WorkflowForm({
                           No agents defined yet. Create agents in the Agents page first.
                         </p>
                       )}
-                    </div>
+                    </Card>
                   )}
 
                   {/* Hooks */}
                   {!s.isTerminal && (
-                    <div className="bg-slate-800/50 border border-slate-700 rounded p-2.5 md:p-3 mt-2">
+                    <Card variant="nested" className="p-2.5 md:p-3 mt-2">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <Zap className="w-3.5 h-3.5 text-amber-400" />
                           <span className="text-xs text-amber-400">Hooks</span>
                         </div>
-                        <button
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="xs"
+                          icon={<Plus className="w-3 h-3" />}
                           onClick={() => addHook(s.key)}
-                          className="flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 transition-colors"
+                          className="text-[11px] text-amber-400 hover:text-amber-300"
                         >
-                          <Plus className="w-3 h-3" />
                           Add Hook
-                        </button>
+                        </Button>
                       </div>
                       {s.hooks.length === 0 && (
                         <p className="text-[11px] text-gray-600">No hooks configured.</p>
@@ -642,35 +648,40 @@ export function WorkflowForm({
                         {s.hooks.map((h, hi) => (
                           <div key={h.key} className="flex items-center gap-2 bg-slate-900/50 rounded p-2">
                             <div className="flex flex-col -my-1">
-                              <button
+                              <Button
                                 type="button"
+                                variant="ghost"
+                                size="xs"
+                                iconOnly
+                                icon={<ChevronUp className="w-3 h-3" />}
                                 onClick={() => moveHook(s.key, hi, -1)}
                                 disabled={hi === 0}
-                                className="text-gray-600 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-                              >
-                                <ChevronUp className="w-3 h-3" />
-                              </button>
-                              <button
+                                className="!p-0 !rounded-none"
+                              />
+                              <Button
                                 type="button"
+                                variant="ghost"
+                                size="xs"
+                                iconOnly
+                                icon={<ChevronDown className="w-3 h-3" />}
                                 onClick={() => moveHook(s.key, hi, 1)}
                                 disabled={hi === s.hooks.length - 1}
-                                className="text-gray-600 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-                              >
-                                <ChevronDown className="w-3 h-3" />
-                              </button>
+                                className="!p-0 !rounded-none"
+                              />
                             </div>
-                            <select
+                            <Select
                               value={h.trigger}
                               onChange={(e) =>
                                 updateHook(s.key, h.key, { trigger: Number(e.target.value) as HookTrigger })
                               }
-                              className="px-1.5 py-1 bg-slate-800 border border-slate-700 rounded text-white text-[11px] focus:outline-none focus:border-cyan-500"
+                              selectSize="xs"
+                              className="w-auto rounded text-[11px]"
                             >
                               <option value={HookTrigger.BEFORE_TASK_EXECUTION}>Before Task</option>
                               <option value={HookTrigger.AFTER_TASK_EXECUTION}>After Task</option>
                               <option value={HookTrigger.AFTER_WORKTREE_CREATION}>After Worktree</option>
-                            </select>
-                            <select
+                            </Select>
+                            <Select
                               value={h.actionType}
                               onChange={(e) => {
                                 const newType = Number(e.target.value) as HookActionType
@@ -681,13 +692,14 @@ export function WorkflowForm({
                                   name: '',
                                 })
                               }}
-                              className="px-1.5 py-1 bg-slate-800 border border-slate-700 rounded text-white text-[11px] focus:outline-none focus:border-cyan-500"
+                              selectSize="xs"
+                              className="w-auto rounded text-[11px]"
                             >
                               <option value={HookActionType.SKILL}>Skill</option>
                               <option value={HookActionType.SCRIPT}>Script</option>
-                            </select>
+                            </Select>
                             {h.actionType === HookActionType.SCRIPT ? (
-                              <select
+                              <Select
                                 value={h.actionId}
                                 onChange={(e) => {
                                   const sc = scripts.find((sc) => sc.id === e.target.value)
@@ -697,17 +709,18 @@ export function WorkflowForm({
                                     name: sc?.name ?? h.name,
                                   })
                                 }}
-                                className="flex-1 min-w-0 px-1.5 py-1 bg-slate-800 border border-slate-700 rounded text-white text-[11px] focus:outline-none focus:border-cyan-500"
+                                selectSize="xs"
+                                className="flex-1 min-w-0 rounded text-[11px]"
                               >
-                                <option value="">Select script…</option>
+                                <option value="">Select script...</option>
                                 {scripts.map((sc) => (
                                   <option key={sc.id} value={sc.id}>
                                     {sc.name}
                                   </option>
                                 ))}
-                              </select>
+                              </Select>
                             ) : (
-                              <select
+                              <Select
                                 value={h.actionId}
                                 onChange={(e) => {
                                   const sk = skills.find((sk) => sk.id === e.target.value)
@@ -717,23 +730,26 @@ export function WorkflowForm({
                                     name: sk?.name ?? h.name,
                                   })
                                 }}
-                                className="flex-1 min-w-0 px-1.5 py-1 bg-slate-800 border border-slate-700 rounded text-white text-[11px] focus:outline-none focus:border-cyan-500"
+                                selectSize="xs"
+                                className="flex-1 min-w-0 rounded text-[11px]"
                               >
-                                <option value="">Select skill…</option>
+                                <option value="">Select skill...</option>
                                 {skills.map((sk) => (
                                   <option key={sk.id} value={sk.id}>
                                     {sk.name}
                                   </option>
                                 ))}
-                              </select>
+                              </Select>
                             )}
-                            <button
+                            <Button
                               type="button"
+                              variant="ghost"
+                              size="xs"
+                              iconOnly
+                              icon={<Trash2 className="w-3.5 h-3.5" />}
                               onClick={() => removeHook(s.key, h.key)}
-                              className="text-gray-600 hover:text-red-400 transition-colors p-0.5 shrink-0"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                              className="text-gray-600 hover:text-red-400 shrink-0"
+                            />
                           </div>
                         ))}
                       </div>
@@ -742,9 +758,9 @@ export function WorkflowForm({
                           No skills or scripts defined yet. Create them in the Skills or Scripts page first.
                         </p>
                       )}
-                    </div>
+                    </Card>
                   )}
-                </div>
+                </Card>
               )
             })}
           </div>
@@ -758,22 +774,25 @@ export function WorkflowForm({
         )}
 
         <div className="flex justify-end gap-2">
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             onClick={onClose}
-            className="px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
+            variant="primary"
+            size="sm"
             disabled={mutation.isPending || !name || statuses.length === 0}
-            className="px-4 py-1.5 text-sm bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            className="px-4"
           >
             {mutation.isPending
               ? isEdit ? 'Saving...' : 'Creating...'
               : isEdit ? 'Save' : 'Create Workflow'}
-          </button>
+          </Button>
         </div>
       </div>
     </form>

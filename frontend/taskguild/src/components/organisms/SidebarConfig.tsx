@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { Settings, X, Server, Key } from 'lucide-react'
-import { useConfig } from './ConfigProvider'
+import { Settings, X } from 'lucide-react'
+import { useConfig } from './ConfigProvider.tsx'
+import { Button, Input } from '../atoms/index.ts'
+import { FormField } from '../molecules/index.ts'
 
 export function SidebarConfig() {
   const { config, updateConfig } = useConfig()
@@ -50,41 +52,37 @@ export function SidebarConfig() {
         </button>
       </div>
 
-      <div>
-        <label className="flex items-center gap-1 text-[11px] text-gray-500 mb-1 px-1">
-          <Server className="w-3 h-3" />
-          URL
-        </label>
-        <input
+      <FormField label="URL" labelSize="xs">
+        <Input
           type="url"
           required
+          inputSize="xs"
           value={apiBaseUrl}
           onChange={(e) => setApiBaseUrl(e.target.value)}
-          className="w-full px-2 py-1 bg-slate-800 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-cyan-500 transition-colors"
+          className="rounded"
         />
-      </div>
+      </FormField>
 
-      <div>
-        <label className="flex items-center gap-1 text-[11px] text-gray-500 mb-1 px-1">
-          <Key className="w-3 h-3" />
-          API Key
-        </label>
-        <input
+      <FormField label="API Key" labelSize="xs">
+        <Input
           type="password"
           required
+          inputSize="xs"
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
-          className="w-full px-2 py-1 bg-slate-800 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-cyan-500 transition-colors"
+          className="rounded"
         />
-      </div>
+      </FormField>
 
-      <button
+      <Button
         type="submit"
+        variant="primary"
+        size="xs"
         disabled={!apiBaseUrl || !apiKey}
-        className="w-full py-1 text-xs font-medium bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white rounded transition-colors"
+        className="w-full font-medium"
       >
         {saved ? 'Saved!' : 'Save'}
-      </button>
+      </Button>
     </form>
   )
 }

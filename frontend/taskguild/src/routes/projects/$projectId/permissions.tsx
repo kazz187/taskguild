@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { PermissionList } from '@/components/PermissionList'
+import { PermissionList } from '@/components/organisms/PermissionList'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export const Route = createFileRoute('/projects/$projectId/permissions')({

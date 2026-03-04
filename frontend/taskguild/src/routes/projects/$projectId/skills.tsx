@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { SkillList } from '@/components/SkillList'
+import { SkillList } from '@/components/organisms/SkillList'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export const Route = createFileRoute('/projects/$projectId/skills')({

@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { AgentList } from '@/components/AgentList'
+import { AgentList } from '@/components/organisms/AgentList'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export const Route = createFileRoute('/projects/$projectId/agents')({

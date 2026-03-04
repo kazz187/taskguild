@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Link, Outlet, createRootRoute, useLocation } from '@tanstack/react-router'
 import { FolderKanban, Menu, X } from 'lucide-react'
-import { SidebarNav } from '@/components/SidebarNav'
-import { SidebarConfig } from '@/components/SidebarConfig'
-import { PushNotificationToggle } from '@/components/PushNotificationToggle'
-import { SetupScreen } from '@/components/SetupScreen'
-import { useConfig } from '@/components/ConfigProvider'
+import { SidebarNav } from '@/components/organisms/SidebarNav'
+import { SidebarConfig } from '@/components/organisms/SidebarConfig'
+import { PushNotificationToggle } from '@/components/organisms/PushNotificationToggle'
+import { SetupScreen } from '@/components/organisms/SetupScreen'
+import { useConfig } from '@/components/organisms/ConfigProvider'
 
 import '../styles.css'
 

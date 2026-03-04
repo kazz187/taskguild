@@ -16,7 +16,9 @@ import { listWorkflows } from '@taskguild/proto/taskguild/v1/workflow-WorkflowSe
 import { EventService, EventType, SubscribeEventsRequestSchema } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { transport } from '@/lib/transport'
-import { GitFork, GitBranch, RefreshCw, Trash2, AlertTriangle, X, FileText, Home, Download, CheckCircle2, XCircle, ClipboardList, Sparkles, ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
+import { GitFork, GitBranch, RefreshCw, Trash2, AlertTriangle, FileText, Home, Download, CheckCircle2, XCircle, ClipboardList, Sparkles, ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
+import { Button, Badge } from '../atoms/index.ts'
+import { Card, Modal } from '../molecules/index.ts'
 
 // --- Git pull main result hook ---
 
@@ -226,34 +228,38 @@ export function WorktreeList({ projectId }: { projectId: string }) {
         <div className="flex items-center gap-2">
           <GitFork className="w-5 h-5 text-cyan-400" />
           <h2 className="text-lg md:text-xl font-bold text-white">Worktrees</h2>
-          <span className="text-xs text-gray-500 bg-slate-800 rounded-full px-2 py-0.5">
+          <Badge color="gray" size="xs" pill variant="outline">
             {worktrees.length}
-          </span>
+          </Badge>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<Sparkles className="w-4 h-4" />}
             onClick={() => setShowCleanDialog(true)}
             disabled={cleanableWorktrees.length === 0 || cleanProgress !== null}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs md:text-sm md:px-3 text-gray-400 hover:text-amber-300 border border-slate-700 hover:border-amber-500/40 rounded-lg transition-colors disabled:opacity-50 disabled:hover:text-gray-400 disabled:hover:border-slate-700"
             title={cleanableWorktrees.length > 0 ? `Clean ${cleanableWorktrees.length} stale worktrees` : 'No worktrees to clean'}
+            className="border border-slate-700 hover:text-amber-300 hover:border-amber-500/40 disabled:hover:text-gray-400 disabled:hover:border-slate-700"
           >
-            <Sparkles className="w-4 h-4" />
             <span className="hidden sm:inline">Clean</span>
             {cleanableWorktrees.length > 0 && (
-              <span className="text-[10px] bg-amber-500/20 text-amber-400 rounded-full px-1.5 py-0.5 font-medium">
+              <Badge color="amber" size="xs" pill>
                 {cleanableWorktrees.length}
-              </span>
+              </Badge>
             )}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<RefreshCw className={`w-4 h-4 ${requestListMut.isPending ? 'animate-spin' : ''}`} />}
             onClick={handleRefresh}
             disabled={requestListMut.isPending}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs md:text-sm md:px-3 text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors disabled:opacity-50"
             title="Refresh worktree list"
+            className="border border-slate-700 hover:border-slate-600"
           >
-            <RefreshCw className={`w-4 h-4 ${requestListMut.isPending ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Refresh</span>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -286,27 +292,24 @@ export function WorktreeList({ projectId }: { projectId: string }) {
       </div>
 
       {/* Delete Confirmation Dialog */}
-      {deleteTarget && (
-        <DeleteWorktreeDialog
-          worktree={deleteTarget}
-          onConfirm={(force) => executeDelete(force)}
-          onCancel={() => setDeleteTarget(null)}
-          isPending={requestDeleteMut.isPending}
-        />
-      )}
+      <DeleteWorktreeDialog
+        worktree={deleteTarget}
+        onConfirm={(force) => executeDelete(force)}
+        onCancel={() => setDeleteTarget(null)}
+        isPending={requestDeleteMut.isPending}
+      />
 
       {/* Clean Confirmation Dialog */}
-      {showCleanDialog && (
-        <CleanWorktreeDialog
-          cleanable={cleanableWorktrees}
-          skipped={skippedWorktrees}
-          tasksByWorktree={tasksByWorktree}
-          statusMap={statusMap}
-          progress={cleanProgress}
-          onConfirm={executeClean}
-          onCancel={() => { setShowCleanDialog(false); setCleanProgress(null) }}
-        />
-      )}
+      <CleanWorktreeDialog
+        open={showCleanDialog}
+        cleanable={cleanableWorktrees}
+        skipped={skippedWorktrees}
+        tasksByWorktree={tasksByWorktree}
+        statusMap={statusMap}
+        progress={cleanProgress}
+        onConfirm={executeClean}
+        onCancel={() => { setShowCleanDialog(false); setCleanProgress(null) }}
+      />
     </div>
   )
 }
@@ -326,7 +329,7 @@ function MainBranchSection({ projectId }: { projectId: string }) {
         <Home className="w-4 h-4 text-emerald-400" />
         <h3 className="text-sm font-semibold text-gray-300">Main Branch</h3>
       </div>
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+      <Card>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <GitBranch className="w-5 h-5 text-emerald-400 shrink-0" />
@@ -335,14 +338,16 @@ function MainBranchSection({ projectId }: { projectId: string }) {
               <p className="text-xs text-gray-500">git pull origin main</p>
             </div>
           </div>
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<Download className={`w-3.5 h-3.5 ${pullMainMut.isPending ? 'animate-bounce' : ''}`} />}
             onClick={handlePull}
             disabled={pullMainMut.isPending}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-emerald-400 hover:text-white border border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-500/10 rounded-lg transition-colors disabled:opacity-50"
+            className="text-emerald-400 hover:text-white border border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-500/10"
           >
-            <Download className={`w-3.5 h-3.5 ${pullMainMut.isPending ? 'animate-bounce' : ''}`} />
             {pullMainMut.isPending ? 'Pulling...' : 'Pull Latest'}
-          </button>
+          </Button>
         </div>
 
         {/* Result display */}
@@ -377,7 +382,7 @@ function MainBranchSection({ projectId }: { projectId: string }) {
             )}
           </div>
         )}
-      </div>
+      </Card>
     </div>
   )
 }
@@ -400,7 +405,7 @@ function WorktreeCard({
   const [showFiles, setShowFiles] = useState(false)
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-slate-700 transition-colors">
+    <Card className="hover:border-slate-700 transition-colors">
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-3 flex-1 min-w-0">
           <GitFork className="w-5 h-5 text-cyan-400 mt-0.5 shrink-0" />
@@ -408,10 +413,9 @@ function WorktreeCard({
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <h3 className="text-sm font-semibold text-white truncate">{worktree.name}</h3>
               {worktree.hasChanges && (
-                <span className="flex items-center gap-0.5 text-[10px] text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-1.5 py-0.5 shrink-0">
-                  <AlertTriangle className="w-2.5 h-2.5" />
+                <Badge color="yellow" size="xs" pill variant="outline" icon={<AlertTriangle className="w-2.5 h-2.5" />}>
                   changes
-                </span>
+                </Badge>
               )}
             </div>
             <div className="flex items-center gap-1.5 text-xs text-gray-400">
@@ -430,11 +434,11 @@ function WorktreeCard({
                   {tasks.map((t) => {
                     const status = statusMap.get(t.statusId)
                     const statusName = status?.name ?? t.statusId
-                    const badgeClass = status?.isInitial
-                      ? 'bg-blue-500/20 text-blue-400'
+                    const badgeColor: 'blue' | 'green' | 'gray' = status?.isInitial
+                      ? 'blue'
                       : status?.isTerminal
-                        ? 'bg-green-500/20 text-green-400'
-                        : 'bg-gray-500/20 text-gray-300'
+                        ? 'green'
+                        : 'gray'
                     return (
                       <Link
                         key={t.id}
@@ -442,9 +446,9 @@ function WorktreeCard({
                         params={{ projectId, taskId: t.id }}
                         className="flex items-center gap-1.5 group"
                       >
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${badgeClass}`}>
+                        <Badge color={badgeColor} size="xs" pill>
                           {statusName}
-                        </span>
+                        </Badge>
                         <span className="text-[11px] text-gray-400 group-hover:text-cyan-400 transition-colors truncate">
                           {t.title}
                         </span>
@@ -481,17 +485,19 @@ function WorktreeCard({
 
         {/* Delete button */}
         <div className="flex items-center gap-1 shrink-0 ml-2">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
+            icon={<Trash2 className="w-3.5 h-3.5" />}
             onClick={onDelete}
             disabled={isDeleting}
-            className="p-1.5 text-gray-500 hover:text-red-400 transition-colors rounded-lg hover:bg-slate-800 disabled:opacity-50"
             title="Delete worktree"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+            className="hover:text-red-400"
+          />
         </div>
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -501,75 +507,71 @@ function DeleteWorktreeDialog({
   onCancel,
   isPending,
 }: {
-  worktree: WorktreeInfo
+  worktree: WorktreeInfo | null
   onConfirm: (force: boolean) => void
   onCancel: () => void
   isPending: boolean
 }) {
-  const hasChanges = worktree.hasChanges
+  const hasChanges = worktree?.hasChanges ?? false
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel() }}
-    >
-      <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md shadow-2xl">
-        <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <h3 className="text-lg font-semibold text-white">Delete Worktree</h3>
-          <button onClick={onCancel} className="text-gray-500 hover:text-gray-300 transition-colors p-1">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <Modal open={worktree !== null} onClose={onCancel} size="sm">
+      <Modal.Header onClose={onCancel}>
+        <h3 className="text-lg font-semibold text-white">Delete Worktree</h3>
+      </Modal.Header>
 
-        <div className="px-4 pb-4 space-y-3">
-          <p className="text-sm text-gray-400">
-            Are you sure you want to delete worktree <span className="text-white font-mono">{worktree.name}</span>?
-          </p>
-          <p className="text-sm text-gray-400">
-            This will also delete branch <span className="text-white font-mono">{worktree.branch}</span>.
-          </p>
+      <Modal.Body>
+        <p className="text-sm text-gray-400">
+          Are you sure you want to delete worktree <span className="text-white font-mono">{worktree?.name}</span>?
+        </p>
+        <p className="text-sm text-gray-400">
+          This will also delete branch <span className="text-white font-mono">{worktree?.branch}</span>.
+        </p>
 
-          {hasChanges && (
-            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
-              <div className="flex items-center gap-1.5 mb-2">
-                <AlertTriangle className="w-4 h-4 text-yellow-400" />
-                <span className="text-sm font-medium text-yellow-400">Uncommitted changes detected</span>
-              </div>
-              <div className="space-y-0.5 max-h-40 overflow-y-auto">
-                {worktree.changedFiles.map((file) => (
-                  <div key={file} className="text-[11px] text-yellow-300/70 font-mono truncate">
-                    {file}
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-yellow-400/70 mt-2">
-                These changes will be permanently lost.
-              </p>
+        {hasChanges && (
+          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+            <div className="flex items-center gap-1.5 mb-2">
+              <AlertTriangle className="w-4 h-4 text-yellow-400" />
+              <span className="text-sm font-medium text-yellow-400">Uncommitted changes detected</span>
             </div>
-          )}
-        </div>
+            <div className="space-y-0.5 max-h-40 overflow-y-auto">
+              {worktree?.changedFiles.map((file) => (
+                <div key={file} className="text-[11px] text-yellow-300/70 font-mono truncate">
+                  {file}
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-yellow-400/70 mt-2">
+              These changes will be permanently lost.
+            </p>
+          </div>
+        )}
+      </Modal.Body>
 
-        <div className="border-t border-slate-800 px-4 py-3 flex justify-end gap-2">
-          <button
-            onClick={onCancel}
-            className="px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => onConfirm(hasChanges)}
-            disabled={isPending}
-            className="px-4 py-1.5 text-xs bg-red-600 hover:bg-red-500 text-white rounded-lg disabled:opacity-50 transition-colors"
-          >
-            {isPending ? 'Deleting...' : hasChanges ? 'Force Delete' : 'Delete'}
-          </button>
-        </div>
-      </div>
-    </div>
+      <Modal.Footer>
+        <Button
+          variant="secondary"
+          size="xs"
+          onClick={onCancel}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="danger"
+          size="xs"
+          onClick={() => onConfirm(hasChanges)}
+          disabled={isPending}
+          className="bg-red-600 hover:bg-red-500"
+        >
+          {isPending ? 'Deleting...' : hasChanges ? 'Force Delete' : 'Delete'}
+        </Button>
+      </Modal.Footer>
+    </Modal>
   )
 }
 
 function CleanWorktreeDialog({
+  open,
   cleanable,
   skipped,
   tasksByWorktree,
@@ -578,6 +580,7 @@ function CleanWorktreeDialog({
   onConfirm,
   onCancel,
 }: {
+  open: boolean
   cleanable: WorktreeInfo[]
   skipped: { worktree: WorktreeInfo; reasons: string[] }[]
   tasksByWorktree: Map<string, Task[]>
@@ -592,128 +595,118 @@ function CleanWorktreeDialog({
   const hasErrors = progress !== null && progress.errors.length > 0
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-      onMouseDown={(e) => { if (!isRunning && e.target === e.currentTarget) onCancel() }}
-    >
-      <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg shadow-2xl max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-400" />
-            <h3 className="text-lg font-semibold text-white">Clean Worktrees</h3>
-          </div>
-          {!isRunning && (
-            <button onClick={onCancel} className="text-gray-500 hover:text-gray-300 transition-colors p-1">
-              <X className="w-5 h-5" />
-            </button>
-          )}
-        </div>
+    <Modal open={open} onClose={onCancel} closeOnBackdrop={!isRunning}>
+      <Modal.Header onClose={!isRunning ? onCancel : undefined}>
+        <Sparkles className="w-5 h-5 text-amber-400" />
+        <h3 className="text-lg font-semibold text-white">Clean Worktrees</h3>
+      </Modal.Header>
 
-        <div className="px-4 pb-4 space-y-3 overflow-y-auto flex-1 min-h-0">
-          {/* Progress bar during execution */}
-          {progress && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                {isRunning && <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />}
-                {isDone && !hasErrors && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-                {isDone && hasErrors && <AlertTriangle className="w-4 h-4 text-yellow-400" />}
-                <span className="text-sm text-gray-300">
-                  {isRunning
-                    ? `Cleaning ${progress.current}/${progress.total}...`
-                    : hasErrors
-                      ? `Completed with ${progress.errors.length} error${progress.errors.length !== 1 ? 's' : ''}`
-                      : 'All worktrees cleaned successfully'}
-                </span>
-              </div>
-              <div className="w-full bg-slate-800 rounded-full h-1.5">
-                <div
-                  className={`h-1.5 rounded-full transition-all duration-300 ${hasErrors ? 'bg-yellow-500' : 'bg-amber-400'}`}
-                  style={{ width: `${(progress.current / progress.total) * 100}%` }}
-                />
-              </div>
-              {hasErrors && (
-                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2 space-y-1">
-                  {progress.errors.map((err, i) => (
-                    <p key={i} className="text-[11px] text-red-300/70 font-mono">{err}</p>
-                  ))}
-                </div>
-              )}
+      <Modal.Body>
+        {/* Progress bar during execution */}
+        {progress && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              {isRunning && <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />}
+              {isDone && !hasErrors && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+              {isDone && hasErrors && <AlertTriangle className="w-4 h-4 text-yellow-400" />}
+              <span className="text-sm text-gray-300">
+                {isRunning
+                  ? `Cleaning ${progress.current}/${progress.total}...`
+                  : hasErrors
+                    ? `Completed with ${progress.errors.length} error${progress.errors.length !== 1 ? 's' : ''}`
+                    : 'All worktrees cleaned successfully'}
+              </span>
             </div>
-          )}
+            <div className="w-full bg-slate-800 rounded-full h-1.5">
+              <div
+                className={`h-1.5 rounded-full transition-all duration-300 ${hasErrors ? 'bg-yellow-500' : 'bg-amber-400'}`}
+                style={{ width: `${(progress.current / progress.total) * 100}%` }}
+              />
+            </div>
+            {hasErrors && (
+              <Card variant="error" className="space-y-1 p-2">
+                {progress.errors.map((err, i) => (
+                  <p key={i} className="text-[11px] text-red-300/70 font-mono">{err}</p>
+                ))}
+              </Card>
+            )}
+          </div>
+        )}
 
-          {/* Cleanable worktrees list */}
-          {!progress && (
-            <>
-              <p className="text-sm text-gray-400">
-                The following <span className="text-white font-semibold">{cleanable.length}</span> worktree{cleanable.length !== 1 ? 's' : ''} will be deleted:
-              </p>
+        {/* Cleanable worktrees list */}
+        {!progress && (
+          <>
+            <p className="text-sm text-gray-400">
+              The following <span className="text-white font-semibold">{cleanable.length}</span> worktree{cleanable.length !== 1 ? 's' : ''} will be deleted:
+            </p>
 
-              <div className="space-y-2">
-                {cleanable.map((wt) => {
-                  const associatedTasks = tasksByWorktree.get(wt.name) ?? []
-                  const hasNoTasks = associatedTasks.length === 0
-                  return (
-                    <div key={wt.name} className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3">
-                      <div className="flex items-center gap-2">
-                        <Trash2 className="w-3.5 h-3.5 text-red-400/60 shrink-0" />
-                        <span className="text-sm text-white font-mono truncate">{wt.name}</span>
+            <div className="space-y-2">
+              {cleanable.map((wt) => {
+                const associatedTasks = tasksByWorktree.get(wt.name) ?? []
+                const hasNoTasks = associatedTasks.length === 0
+                return (
+                  <Card key={wt.name} variant="nested" className="border-slate-700/50">
+                    <div className="flex items-center gap-2">
+                      <Trash2 className="w-3.5 h-3.5 text-red-400/60 shrink-0" />
+                      <span className="text-sm text-white font-mono truncate">{wt.name}</span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1 ml-5.5 pl-[22px]">
+                      {hasNoTasks ? 'No associated tasks' : `All tasks completed (${associatedTasks.map(t => statusMap.get(t.statusId)?.name ?? t.statusId).join(', ')})`}
+                    </p>
+                  </Card>
+                )
+              })}
+            </div>
+
+            {/* Skipped worktrees */}
+            {skipped.length > 0 && (
+              <div>
+                <button
+                  onClick={() => setShowSkipped(!showSkipped)}
+                  className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                >
+                  {showSkipped
+                    ? <ChevronDown className="w-3.5 h-3.5" />
+                    : <ChevronRight className="w-3.5 h-3.5" />
+                  }
+                  {skipped.length} worktree{skipped.length !== 1 ? 's' : ''} skipped
+                </button>
+                {showSkipped && (
+                  <div className="mt-2 space-y-1.5 pl-1">
+                    {skipped.map(({ worktree: wt, reasons }) => (
+                      <div key={wt.name} className="flex items-start gap-2 text-[11px]">
+                        <span className="text-gray-600 font-mono truncate shrink min-w-0">{wt.name}</span>
+                        <span className="text-gray-600 shrink-0">- {reasons.join(', ')}</span>
                       </div>
-                      <p className="text-[11px] text-gray-500 mt-1 ml-5.5 pl-[22px]">
-                        {hasNoTasks ? 'No associated tasks' : `All tasks completed (${associatedTasks.map(t => statusMap.get(t.statusId)?.name ?? t.statusId).join(', ')})`}
-                      </p>
-                    </div>
-                  )
-                })}
+                    ))}
+                  </div>
+                )}
               </div>
+            )}
+          </>
+        )}
+      </Modal.Body>
 
-              {/* Skipped worktrees */}
-              {skipped.length > 0 && (
-                <div>
-                  <button
-                    onClick={() => setShowSkipped(!showSkipped)}
-                    className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors"
-                  >
-                    {showSkipped
-                      ? <ChevronDown className="w-3.5 h-3.5" />
-                      : <ChevronRight className="w-3.5 h-3.5" />
-                    }
-                    {skipped.length} worktree{skipped.length !== 1 ? 's' : ''} skipped
-                  </button>
-                  {showSkipped && (
-                    <div className="mt-2 space-y-1.5 pl-1">
-                      {skipped.map(({ worktree: wt, reasons }) => (
-                        <div key={wt.name} className="flex items-start gap-2 text-[11px]">
-                          <span className="text-gray-600 font-mono truncate shrink min-w-0">{wt.name}</span>
-                          <span className="text-gray-600 shrink-0">- {reasons.join(', ')}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        <div className="border-t border-slate-800 px-4 py-3 flex justify-end gap-2 shrink-0">
-          {!isRunning && (
-            <button
-              onClick={onCancel}
-              className="px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors"
-            >
-              {isDone ? 'Close' : 'Cancel'}
-            </button>
-          )}
-          {!progress && (
-            <button
-              onClick={onConfirm}
-              className="px-4 py-1.5 text-xs bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors"
-            >
-              Clean {cleanable.length} Worktree{cleanable.length !== 1 ? 's' : ''}
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
+      <Modal.Footer>
+        {!isRunning && (
+          <Button
+            variant="secondary"
+            size="xs"
+            onClick={onCancel}
+          >
+            {isDone ? 'Close' : 'Cancel'}
+          </Button>
+        )}
+        {!progress && (
+          <Button
+            variant="danger"
+            size="xs"
+            onClick={onConfirm}
+          >
+            Clean {cleanable.length} Worktree{cleanable.length !== 1 ? 's' : ''}
+          </Button>
+        )}
+      </Modal.Footer>
+    </Modal>
   )
 }

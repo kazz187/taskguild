@@ -3,6 +3,8 @@ import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { listTemplates, createTemplate, updateTemplate, deleteTemplate } from '@taskguild/proto/taskguild/v1/template-TemplateService_connectquery.ts'
 import type { Template } from '@taskguild/proto/taskguild/v1/template_pb.ts'
 import { Layers, Plus, Trash2, Edit2, X, Save, Bot, Sparkles, Terminal } from 'lucide-react'
+import { Button, Input, Textarea, Select, Checkbox, Badge } from '../atoms/index.ts'
+import { Card, FormField } from '../molecules/index.ts'
 
 const AVAILABLE_TOOLS = [
   'Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash',
@@ -303,14 +305,16 @@ export function TemplateList() {
           <Layers className="w-5 h-5 text-amber-400" />
           <h2 className="text-lg md:text-xl font-bold text-white">Templates</h2>
         </div>
-        <button
+        <Button
+          variant="danger"
+          size="sm"
           onClick={openCreate}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs md:text-sm md:px-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors"
+          icon={<Plus className="w-4 h-4" />}
+          className="text-xs md:text-sm md:px-3"
         >
-          <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">New Template</span>
           <span className="sm:hidden">New</span>
-        </button>
+        </Button>
       </div>
 
       {/* Tabs */}
@@ -336,69 +340,68 @@ export function TemplateList() {
 
       {/* Form */}
       {formMode && (
-        <form onSubmit={handleSubmit} className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-5 mb-4 md:mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">
-              {formMode === 'create' ? 'New' : 'Edit'} {activeTabInfo.label.slice(0, -1)} Template
-            </h3>
-            <button type="button" onClick={closeForm} className="text-gray-500 hover:text-gray-300 transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {/* Template Name & Description */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Template Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={form.templateName}
-                  onChange={e => setForm(prev => ({ ...prev, templateName: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-amber-500"
-                  placeholder="e.g. My Code Reviewer Template"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Template Description</label>
-                <input
-                  type="text"
-                  value={form.templateDescription}
-                  onChange={e => setForm(prev => ({ ...prev, templateDescription: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-amber-500"
-                  placeholder="Description of this template"
-                />
-              </div>
+        <form onSubmit={handleSubmit}>
+          <Card className="p-4 md:p-5 mb-4 md:mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">
+                {formMode === 'create' ? 'New' : 'Edit'} {activeTabInfo.label.slice(0, -1)} Template
+              </h3>
+              <Button variant="ghost" size="sm" iconOnly onClick={closeForm} type="button" icon={<X className="w-5 h-5" />} />
             </div>
 
-            <div className="border-t border-slate-800 pt-4">
-              <p className="text-xs text-gray-500 mb-3">Configuration</p>
+            <div className="space-y-4">
+              {/* Template Name & Description */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FormField label="Template Name *">
+                  <Input
+                    type="text"
+                    required
+                    value={form.templateName}
+                    onChange={e => setForm(prev => ({ ...prev, templateName: e.target.value }))}
+                    className="focus:border-amber-500"
+                    placeholder="e.g. My Code Reviewer Template"
+                  />
+                </FormField>
+                <FormField label="Template Description">
+                  <Input
+                    type="text"
+                    value={form.templateDescription}
+                    onChange={e => setForm(prev => ({ ...prev, templateDescription: e.target.value }))}
+                    className="focus:border-amber-500"
+                    placeholder="Description of this template"
+                  />
+                </FormField>
+              </div>
+
+              <div className="border-t border-slate-800 pt-4">
+                <p className="text-xs text-gray-500 mb-3">Configuration</p>
+              </div>
+
+              {/* Entity-specific config form */}
+              {activeTab === 'agent' && <AgentConfigForm form={form} setForm={setForm} skillInput={skillInput} setSkillInput={setSkillInput} toggleTool={toggleTool} toggleDisallowedTool={toggleDisallowedTool} addSkill={addSkill} removeSkill={removeSkill} />}
+              {activeTab === 'skill' && <SkillConfigForm form={form} setForm={setForm} toggleAllowedTool={toggleAllowedTool} />}
+              {activeTab === 'script' && <ScriptConfigForm form={form} setForm={setForm} />}
             </div>
 
-            {/* Entity-specific config form */}
-            {activeTab === 'agent' && <AgentConfigForm form={form} setForm={setForm} skillInput={skillInput} setSkillInput={setSkillInput} toggleTool={toggleTool} toggleDisallowedTool={toggleDisallowedTool} addSkill={addSkill} removeSkill={removeSkill} />}
-            {activeTab === 'skill' && <SkillConfigForm form={form} setForm={setForm} toggleAllowedTool={toggleAllowedTool} />}
-            {activeTab === 'script' && <ScriptConfigForm form={form} setForm={setForm} />}
-          </div>
+            {mutation.error && (
+              <p className="text-red-400 text-sm mt-3">{mutation.error.message}</p>
+            )}
 
-          {mutation.error && (
-            <p className="text-red-400 text-sm mt-3">{mutation.error.message}</p>
-          )}
-
-          <div className="flex justify-end gap-2 mt-4">
-            <button type="button" onClick={closeForm} className="px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors">
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={mutation.isPending || !form.templateName}
-              className="flex items-center gap-1.5 px-4 py-1.5 text-sm bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-            >
-              <Save className="w-3.5 h-3.5" />
-              {mutation.isPending ? 'Saving...' : formMode === 'create' ? 'Create' : 'Save'}
-            </button>
-          </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button type="button" variant="secondary" size="sm" onClick={closeForm}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="danger"
+                size="sm"
+                disabled={mutation.isPending || !form.templateName}
+                icon={<Save className="w-3.5 h-3.5" />}
+              >
+                {mutation.isPending ? 'Saving...' : formMode === 'create' ? 'Create' : 'Save'}
+              </Button>
+            </div>
+          </Card>
         </form>
       )}
 
@@ -454,7 +457,7 @@ function TemplateCard({ template: tmpl, onEdit, onDelete, isDeleting }: {
   })()
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-slate-700 transition-colors">
+    <Card className="hover:border-slate-700 transition-colors">
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-3 flex-1 min-w-0">
           <Icon className={`w-5 h-5 mt-0.5 shrink-0 ${
@@ -465,17 +468,21 @@ function TemplateCard({ template: tmpl, onEdit, onDelete, isDeleting }: {
             <div className="flex items-center gap-2 mb-1">
               <h3 className="text-sm font-semibold text-white truncate">{tmpl.name}</h3>
               {configName && configName !== tmpl.name && (
-                <span className="text-[10px] text-gray-500 bg-slate-800 rounded-full px-1.5 py-0.5 shrink-0">
+                <Badge color="gray" size="xs" pill>
                   {configName}
-                </span>
+                </Badge>
               )}
-              <span className={`text-[10px] rounded-full px-1.5 py-0.5 shrink-0 ${
-                tmpl.entityType === 'agent' ? 'text-cyan-400 bg-cyan-500/10 border border-cyan-500/20' :
-                tmpl.entityType === 'skill' ? 'text-purple-400 bg-purple-500/10 border border-purple-500/20' :
-                'text-green-400 bg-green-500/10 border border-green-500/20'
-              }`}>
+              <Badge
+                color={
+                  tmpl.entityType === 'agent' ? 'cyan' :
+                  tmpl.entityType === 'skill' ? 'purple' : 'green'
+                }
+                size="xs"
+                variant="outline"
+                pill
+              >
                 {tmpl.entityType}
-              </span>
+              </Badge>
             </div>
             {tmpl.description && (
               <p className="text-xs text-gray-400 mb-2">{tmpl.description}</p>
@@ -487,14 +494,18 @@ function TemplateCard({ template: tmpl, onEdit, onDelete, isDeleting }: {
                 {tmpl.agentConfig.tools && tmpl.agentConfig.tools.length > 0 && (
                   <div className="flex flex-wrap gap-1 mb-1">
                     {tmpl.agentConfig.tools.map(tool => (
-                      <span key={tool} className="text-[10px] px-1.5 py-0.5 bg-slate-800 text-gray-500 rounded">{tool}</span>
+                      <Badge key={tool} color="gray" size="xs" className="bg-slate-800 text-gray-500">
+                        {tool}
+                      </Badge>
                     ))}
                   </div>
                 )}
                 {tmpl.agentConfig.skills && tmpl.agentConfig.skills.length > 0 && (
                   <div className="flex flex-wrap gap-1 mb-1">
                     {tmpl.agentConfig.skills.map(skill => (
-                      <span key={skill} className="text-[10px] px-1.5 py-0.5 bg-purple-500/10 text-purple-400 rounded">{skill}</span>
+                      <Badge key={skill} color="purple" size="xs">
+                        {skill}
+                      </Badge>
                     ))}
                   </div>
                 )}
@@ -507,7 +518,9 @@ function TemplateCard({ template: tmpl, onEdit, onDelete, isDeleting }: {
                 {tmpl.skillConfig.allowedTools && tmpl.skillConfig.allowedTools.length > 0 && (
                   <div className="flex flex-wrap gap-1 mb-1">
                     {tmpl.skillConfig.allowedTools.map(tool => (
-                      <span key={tool} className="text-[10px] px-1.5 py-0.5 bg-purple-500/10 text-purple-400 rounded">{tool}</span>
+                      <Badge key={tool} color="purple" size="xs">
+                        {tool}
+                      </Badge>
                     ))}
                   </div>
                 )}
@@ -522,24 +535,28 @@ function TemplateCard({ template: tmpl, onEdit, onDelete, isDeleting }: {
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0 ml-2">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
             onClick={onEdit}
-            className="p-1.5 text-gray-500 hover:text-amber-400 transition-colors rounded-lg hover:bg-slate-800"
             title="Edit"
-          >
-            <Edit2 className="w-3.5 h-3.5" />
-          </button>
-          <button
+            className="hover:text-amber-400"
+            icon={<Edit2 className="w-3.5 h-3.5" />}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
             onClick={onDelete}
             disabled={isDeleting}
-            className="p-1.5 text-gray-500 hover:text-red-400 transition-colors rounded-lg hover:bg-slate-800 disabled:opacity-50"
             title="Delete"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+            className="hover:text-red-400"
+            icon={<Trash2 className="w-3.5 h-3.5" />}
+          />
         </div>
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -561,25 +578,24 @@ function AgentConfigForm({ form, setForm, skillInput, setSkillInput, toggleTool,
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Agent Name *</label>
-          <input type="text" required value={cfg.name} onChange={e => setCfg({ name: e.target.value })}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
+        <FormField label="Agent Name *">
+          <Input type="text" required value={cfg.name} onChange={e => setCfg({ name: e.target.value })}
+            className="focus:border-cyan-500"
             placeholder="e.g. code-reviewer" />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Agent Description</label>
-          <input type="text" value={cfg.description} onChange={e => setCfg({ description: e.target.value })}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
+        </FormField>
+        <FormField label="Agent Description">
+          <Input type="text" value={cfg.description} onChange={e => setCfg({ description: e.target.value })}
+            className="focus:border-cyan-500"
             placeholder="When to delegate to this agent" />
-        </div>
+        </FormField>
       </div>
-      <div>
-        <label className="block text-xs text-gray-400 mb-1">System Prompt</label>
-        <textarea value={cfg.prompt} onChange={e => setCfg({ prompt: e.target.value })}
-          className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500 min-h-[120px] font-mono"
+      <FormField label="System Prompt">
+        <Textarea value={cfg.prompt} onChange={e => setCfg({ prompt: e.target.value })}
+          mono
+          textareaSize="sm"
+          className="focus:border-cyan-500 min-h-[120px]"
           placeholder="You are a code reviewer..." />
-      </div>
+      </FormField>
       <div>
         <label className="block text-xs text-gray-400 mb-1">Allowed Tools</label>
         <div className="flex flex-wrap gap-1.5">
@@ -607,49 +623,50 @@ function AgentConfigForm({ form, setForm, skillInput, setSkillInput, toggleTool,
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Model</label>
-          <select value={cfg.model} onChange={e => setCfg({ model: e.target.value })}
-            className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-cyan-500">
+        <FormField label="Model">
+          <Select value={cfg.model} onChange={e => setCfg({ model: e.target.value })}
+            selectSize="xs"
+            className="rounded focus:border-cyan-500">
             {MODEL_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Permission Mode</label>
-          <select value={cfg.permissionMode} onChange={e => setCfg({ permissionMode: e.target.value })}
-            className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-cyan-500">
+          </Select>
+        </FormField>
+        <FormField label="Permission Mode">
+          <Select value={cfg.permissionMode} onChange={e => setCfg({ permissionMode: e.target.value })}
+            selectSize="xs"
+            className="rounded focus:border-cyan-500">
             {PERMISSION_MODE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Memory</label>
-          <select value={cfg.memory} onChange={e => setCfg({ memory: e.target.value })}
-            className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-cyan-500">
+          </Select>
+        </FormField>
+        <FormField label="Memory">
+          <Select value={cfg.memory} onChange={e => setCfg({ memory: e.target.value })}
+            selectSize="xs"
+            className="rounded focus:border-cyan-500">
             {MEMORY_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-          </select>
-        </div>
+          </Select>
+        </FormField>
       </div>
       <div>
         <label className="block text-xs text-gray-400 mb-1">Skills</label>
         <div className="flex gap-2">
-          <input type="text" value={skillInput} onChange={e => setSkillInput(e.target.value)}
+          <Input type="text" value={skillInput} onChange={e => setSkillInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSkill() } }}
-            className="flex-1 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
+            inputSize="sm"
+            className="focus:border-cyan-500"
             placeholder="e.g. api-conventions" />
-          <button type="button" onClick={addSkill}
-            className="px-3 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-gray-400 hover:text-white hover:border-slate-600 transition-colors">
+          <Button type="button" variant="ghost" size="sm" onClick={addSkill}
+            className="border border-slate-700 hover:border-slate-600 shrink-0">
             Add
-          </button>
+          </Button>
         </div>
         {cfg.skills.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-2">
             {cfg.skills.map(skill => (
-              <span key={skill} className="flex items-center gap-1 px-2 py-0.5 text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-lg">
+              <Badge key={skill} color="purple" size="sm" variant="outline" className="flex items-center gap-1 rounded-lg">
                 {skill}
                 <button type="button" onClick={() => removeSkill(skill)} className="hover:text-purple-200">
                   <X className="w-3 h-3" />
                 </button>
-              </span>
+              </Badge>
             ))}
           </div>
         )}
@@ -671,46 +688,44 @@ function SkillConfigForm({ form, setForm, toggleAllowedTool }: {
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Skill Name *</label>
-          <input type="text" required value={cfg.name} onChange={e => setCfg({ name: e.target.value })}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500"
+        <FormField label="Skill Name *">
+          <Input type="text" required value={cfg.name} onChange={e => setCfg({ name: e.target.value })}
+            className="focus:border-purple-500"
             placeholder="e.g. explain-code" />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Description</label>
-          <input type="text" value={cfg.description} onChange={e => setCfg({ description: e.target.value })}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500"
+        </FormField>
+        <FormField label="Description">
+          <Input type="text" value={cfg.description} onChange={e => setCfg({ description: e.target.value })}
+            className="focus:border-purple-500"
             placeholder="When to use this skill" />
-        </div>
+        </FormField>
       </div>
-      <div>
-        <label className="block text-xs text-gray-400 mb-1">Argument Hint</label>
-        <input type="text" value={cfg.argumentHint} onChange={e => setCfg({ argumentHint: e.target.value })}
-          className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500"
+      <FormField label="Argument Hint">
+        <Input type="text" value={cfg.argumentHint} onChange={e => setCfg({ argumentHint: e.target.value })}
+          className="focus:border-purple-500"
           placeholder="e.g. [issue-number]" />
-      </div>
-      <div>
-        <label className="block text-xs text-gray-400 mb-1">Content *</label>
-        <textarea required value={cfg.content} onChange={e => setCfg({ content: e.target.value })}
-          className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500 min-h-[120px] font-mono"
+      </FormField>
+      <FormField label="Content *">
+        <Textarea required value={cfg.content} onChange={e => setCfg({ content: e.target.value })}
+          mono
+          textareaSize="sm"
+          className="focus:border-purple-500 min-h-[120px]"
           placeholder="Instructions for this skill..." />
-      </div>
+      </FormField>
       <div>
         <label className="block text-xs text-gray-400 mb-2">Invocation Control</label>
         <div className="flex gap-6">
-          <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-            <input type="checkbox" checked={cfg.disableModelInvocation}
-              onChange={e => setCfg({ disableModelInvocation: e.target.checked })}
-              className="rounded border-slate-600 bg-slate-800 text-purple-500 focus:ring-purple-500" />
-            <span>Disable model invocation</span>
-          </label>
-          <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-            <input type="checkbox" checked={cfg.userInvocable}
-              onChange={e => setCfg({ userInvocable: e.target.checked })}
-              className="rounded border-slate-600 bg-slate-800 text-purple-500 focus:ring-purple-500" />
-            <span>User invocable</span>
-          </label>
+          <Checkbox
+            label="Disable model invocation"
+            color="purple"
+            checked={cfg.disableModelInvocation}
+            onChange={e => setCfg({ disableModelInvocation: e.target.checked })}
+          />
+          <Checkbox
+            label="User invocable"
+            color="purple"
+            checked={cfg.userInvocable}
+            onChange={e => setCfg({ userInvocable: e.target.checked })}
+          />
         </div>
       </div>
       <div>
@@ -727,27 +742,27 @@ function SkillConfigForm({ form, setForm, toggleAllowedTool }: {
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Model</label>
-          <select value={cfg.model} onChange={e => setCfg({ model: e.target.value })}
-            className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-purple-500">
+        <FormField label="Model">
+          <Select value={cfg.model} onChange={e => setCfg({ model: e.target.value })}
+            selectSize="xs"
+            className="rounded focus:border-purple-500">
             {MODEL_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Context</label>
-          <select value={cfg.context} onChange={e => setCfg({ context: e.target.value })}
-            className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-purple-500">
+          </Select>
+        </FormField>
+        <FormField label="Context">
+          <Select value={cfg.context} onChange={e => setCfg({ context: e.target.value })}
+            selectSize="xs"
+            className="rounded focus:border-purple-500">
             {CONTEXT_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Agent</label>
-          <select value={cfg.agent} onChange={e => setCfg({ agent: e.target.value })} disabled={cfg.context !== 'fork'}
-            className="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-xs focus:outline-none focus:border-purple-500 disabled:opacity-40 disabled:cursor-not-allowed">
+          </Select>
+        </FormField>
+        <FormField label="Agent">
+          <Select value={cfg.agent} onChange={e => setCfg({ agent: e.target.value })} disabled={cfg.context !== 'fork'}
+            selectSize="xs"
+            className="rounded focus:border-purple-500 disabled:opacity-40 disabled:cursor-not-allowed">
             {AGENT_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-          </select>
-        </div>
+          </Select>
+        </FormField>
       </div>
     </>
   )
@@ -765,31 +780,28 @@ function ScriptConfigForm({ form, setForm }: {
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Script Name *</label>
-          <input type="text" required value={cfg.name} onChange={e => setCfg({ name: e.target.value })}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-green-500"
+        <FormField label="Script Name *">
+          <Input type="text" required value={cfg.name} onChange={e => setCfg({ name: e.target.value })}
+            className="focus:border-green-500"
             placeholder="e.g. deploy" />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Filename</label>
-          <input type="text" value={cfg.filename} onChange={e => setCfg({ filename: e.target.value })}
-            className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-green-500"
+        </FormField>
+        <FormField label="Filename">
+          <Input type="text" value={cfg.filename} onChange={e => setCfg({ filename: e.target.value })}
+            className="focus:border-green-500"
             placeholder="e.g. deploy.sh" />
-        </div>
+        </FormField>
       </div>
-      <div>
-        <label className="block text-xs text-gray-400 mb-1">Description</label>
-        <input type="text" value={cfg.description} onChange={e => setCfg({ description: e.target.value })}
-          className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-green-500"
+      <FormField label="Description">
+        <Input type="text" value={cfg.description} onChange={e => setCfg({ description: e.target.value })}
+          className="focus:border-green-500"
           placeholder="What this script does" />
-      </div>
-      <div>
-        <label className="block text-xs text-gray-400 mb-1">Content *</label>
-        <textarea required value={cfg.content} onChange={e => setCfg({ content: e.target.value })}
-          className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-green-500 min-h-[150px] font-mono"
-          placeholder="#!/bin/bash&#10;echo 'Hello world'" />
-      </div>
+      </FormField>
+      <FormField label="Content *">
+        <Textarea required value={cfg.content} onChange={e => setCfg({ content: e.target.value })}
+          mono
+          className="focus:border-green-500 min-h-[150px]"
+          placeholder={"#!/bin/bash\necho 'Hello world'"} />
+      </FormField>
     </>
   )
 }

@@ -9,6 +9,8 @@ import type { WorkflowStatus } from '@taskguild/proto/taskguild/v1/workflow_pb.t
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { Archive, ChevronDown, ChevronRight, RotateCcw } from 'lucide-react'
+import { Badge } from '../atoms/index.ts'
+import { Button } from '../atoms/index.ts'
 
 interface ArchivedTaskListProps {
   projectId: string
@@ -102,9 +104,9 @@ function ArchivedTaskCard({
         <div className="min-w-0 flex-1">
           <h4 className="text-sm text-gray-400 truncate">{task.title}</h4>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[10px] text-green-400/70 bg-green-500/10 border border-green-500/20 rounded-full px-1.5 py-0.5">
+            <Badge color="green" size="xs" variant="outline" pill>
               {statusName}
-            </span>
+            </Badge>
             {task.updatedAt && (
               <span className="text-[10px] text-gray-600">
                 {new Date(Number(task.updatedAt.seconds) * 1000).toLocaleDateString()}
@@ -113,15 +115,17 @@ function ArchivedTaskCard({
           </div>
         </div>
       </div>
-      <button
+      <Button
+        variant="ghost"
+        size="xs"
+        icon={<RotateCcw className="w-3 h-3" />}
         onClick={onRestore}
         disabled={isRestoring}
-        className="flex items-center gap-1 px-2 py-1 text-[11px] text-gray-500 hover:text-cyan-400 border border-slate-700 hover:border-cyan-500/40 rounded-md transition-colors disabled:opacity-50 shrink-0"
+        className="text-[11px] text-gray-500 hover:text-cyan-400 border border-slate-700 hover:border-cyan-500/40 rounded-md shrink-0"
         title="Restore task"
       >
-        <RotateCcw className="w-3 h-3" />
-        <span>Restore</span>
-      </button>
+        Restore
+      </Button>
     </div>
   )
 }

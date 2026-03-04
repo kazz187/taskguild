@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { getPermissions, updatePermissions, syncPermissionsFromDir } from '@taskguild/proto/taskguild/v1/permission-PermissionService_connectquery.ts'
 import { Shield, Plus, X, Save, RefreshCw } from 'lucide-react'
+import { Button, Input, Select, Badge } from '../atoms/index.ts'
+import { Card } from '../molecules/index.ts'
 
 type PermissionCategory = 'allow' | 'ask' | 'deny'
 
@@ -17,8 +19,7 @@ const CATEGORY_CONFIG: Record<PermissionCategory, {
   bg: string
   border: string
   text: string
-  badgeBg: string
-  badgeBorder: string
+  badgeColor: 'green' | 'amber' | 'red'
 }> = {
   allow: {
     label: 'Allow',
@@ -26,8 +27,7 @@ const CATEGORY_CONFIG: Record<PermissionCategory, {
     bg: 'bg-green-500/10',
     border: 'border-green-500/20',
     text: 'text-green-400',
-    badgeBg: 'bg-green-500/20',
-    badgeBorder: 'border-green-500/30',
+    badgeColor: 'green',
   },
   ask: {
     label: 'Ask',
@@ -35,8 +35,7 @@ const CATEGORY_CONFIG: Record<PermissionCategory, {
     bg: 'bg-amber-500/10',
     border: 'border-amber-500/20',
     text: 'text-amber-400',
-    badgeBg: 'bg-amber-500/20',
-    badgeBorder: 'border-amber-500/30',
+    badgeColor: 'amber',
   },
   deny: {
     label: 'Deny',
@@ -44,8 +43,7 @@ const CATEGORY_CONFIG: Record<PermissionCategory, {
     bg: 'bg-red-500/10',
     border: 'border-red-500/20',
     text: 'text-red-400',
-    badgeBg: 'bg-red-500/20',
-    badgeBorder: 'border-red-500/30',
+    badgeColor: 'red',
   },
 }
 
@@ -145,73 +143,79 @@ export function PermissionList({ projectId }: { projectId: string }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<RefreshCw className={`w-4 h-4 ${syncMut.isPending ? 'animate-spin' : ''}`} />}
             onClick={handleSync}
             disabled={syncMut.isPending}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs md:text-sm md:px-3 text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors disabled:opacity-50"
             title="Sync permissions from .claude/settings.json"
+            className="border border-slate-700 hover:border-slate-600"
           >
-            <RefreshCw className={`w-4 h-4 ${syncMut.isPending ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Sync from Repo</span>
             <span className="sm:hidden">Sync</span>
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
+            size="md"
+            icon={<Save className="w-3.5 h-3.5" />}
             onClick={handleSave}
             disabled={!dirty || updateMut.isPending}
-            className="flex items-center gap-1.5 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:text-gray-500 text-white text-sm font-medium rounded-lg transition-colors"
+            className="font-medium"
           >
-            <Save className="w-3.5 h-3.5" />
             {updateMut.isPending ? 'Saving...' : 'Save'}
-          </button>
+          </Button>
         </div>
       </div>
 
       {updateMut.error && (
-        <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+        <Card variant="error" className="text-sm">
           {updateMut.error.message}
-        </p>
+        </Card>
       )}
 
       {syncMut.error && (
-        <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+        <Card variant="error" className="text-sm">
           {syncMut.error.message}
-        </p>
+        </Card>
       )}
 
       {syncMut.isSuccess && (
-        <div className="px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-sm">
+        <Card variant="success" className="text-sm">
           Synced permissions from .claude/settings.json
-        </div>
+        </Card>
       )}
 
       {/* Add Rule Form */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+      <Card className="space-y-3">
         <h2 className="text-sm font-medium text-gray-300">Add Rule</h2>
         <form onSubmit={handleAddSubmit} className="flex gap-2">
-          <input
-            type="text"
+          <Input
             value={newRule}
             onChange={(e) => setNewRule(e.target.value)}
             placeholder='e.g. Read, Bash(git *), Bash(npm test *)'
-            className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm placeholder:text-gray-500 focus:outline-none focus:border-cyan-500"
+            className="flex-1"
           />
-          <select
+          <Select
+            selectSize="md"
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value as PermissionCategory)}
-            className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500"
+            className="w-auto flex-none"
           >
             <option value="allow">Allow</option>
             <option value="ask">Ask</option>
             <option value="deny">Deny</option>
-          </select>
-          <button
+          </Select>
+          <Button
             type="submit"
+            variant="secondary"
+            size="md"
+            icon={<Plus className="w-3.5 h-3.5" />}
             disabled={!newRule.trim()}
-            className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-sm rounded-lg transition-colors"
+            className="bg-slate-700 hover:bg-slate-600"
           >
-            <Plus className="w-3.5 h-3.5" />
             Add
-          </button>
+          </Button>
         </form>
 
         {/* Quick-add presets */}
@@ -221,19 +225,21 @@ export function PermissionList({ projectId }: { projectId: string }) {
             {COMMON_RULES.map((rule) => {
               const alreadyExists = allow.includes(rule) || ask.includes(rule) || deny.includes(rule)
               return (
-                <button
+                <Button
                   key={rule}
+                  variant="ghost"
+                  size="xs"
                   onClick={() => addRule(rule, newCategory)}
                   disabled={alreadyExists}
-                  className="px-2 py-0.5 text-xs bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 hover:text-white border border-slate-700 rounded transition-colors"
+                  className="bg-slate-800 text-gray-400 hover:text-white border border-slate-700"
                 >
                   {rule}
-                </button>
+                </Button>
               )
             })}
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Loading */}
       {isLoading && (
@@ -269,9 +275,12 @@ export function PermissionList({ projectId }: { projectId: string }) {
                 ) : (
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {rules.map((rule) => (
-                      <span
+                      <Badge
                         key={rule}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 ${config.badgeBg} ${config.text} text-xs border ${config.badgeBorder} rounded-lg`}
+                        color={config.badgeColor}
+                        size="sm"
+                        variant="outline"
+                        className="rounded-lg"
                       >
                         {rule}
                         <button
@@ -280,7 +289,7 @@ export function PermissionList({ projectId }: { projectId: string }) {
                         >
                           <X className="w-3 h-3" />
                         </button>
-                      </span>
+                      </Badge>
                     ))}
                   </div>
                 )}

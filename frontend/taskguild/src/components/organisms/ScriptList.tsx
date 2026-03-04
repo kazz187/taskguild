@@ -20,6 +20,8 @@ import { createClient } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import { transport } from '@/lib/transport'
 import { AutoScrollPre } from './AutoScrollPre'
+import { Button, Input, Textarea, Badge } from '../atoms/index.ts'
+import { Card, FormField, Modal } from '../molecules/index.ts'
 
 interface ScriptFormData {
   name: string
@@ -294,30 +296,36 @@ export function ScriptList({ projectId }: { projectId: string }) {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleSync}
             disabled={syncMut.isPending}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors disabled:opacity-50"
+            icon={<RefreshCw className={`w-4 h-4 ${syncMut.isPending ? 'animate-spin' : ''}`} />}
             title="Sync scripts from .claude/scripts/ directory"
+            className="border border-slate-700 hover:border-slate-600"
           >
-            <RefreshCw className={`w-4 h-4 ${syncMut.isPending ? 'animate-spin' : ''}`} />
             Sync from Repo
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => { refetchTemplates(); setTemplatePickerOpen(true) }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors"
+            icon={<Layers className="w-4 h-4" />}
             title="Create script from template"
+            className="border border-slate-700 hover:border-slate-600"
           >
-            <Layers className="w-4 h-4" />
             From Template
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
             onClick={openCreate}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors"
+            icon={<Plus className="w-4 h-4" />}
+            className="bg-green-600 hover:bg-green-500"
           >
-            <Plus className="w-4 h-4" />
             New Script
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -329,91 +337,88 @@ export function ScriptList({ projectId }: { projectId: string }) {
 
       {/* Script Form */}
       {formMode && (
-        <form onSubmit={handleSubmit} className="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">
-              {formMode === 'create' ? 'New Script' : 'Edit Script'}
-            </h3>
-            <button type="button" onClick={closeForm} className="text-gray-500 hover:text-gray-300 transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+        <form onSubmit={handleSubmit}>
+          <Card className="p-5 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">
+                {formMode === 'create' ? 'New Script' : 'Edit Script'}
+              </h3>
+              <Button variant="ghost" size="sm" iconOnly onClick={closeForm} type="button" icon={<X className="w-5 h-5" />} />
+            </div>
 
-          <div className="space-y-4">
-            {/* Name & Description row */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Name *</label>
-                <input
+            <div className="space-y-4">
+              {/* Name & Description row */}
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label="Name *" hint="Script name (used as identifier)">
+                  <Input
+                    type="text"
+                    required
+                    value={form.name}
+                    onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="focus:border-green-500"
+                    placeholder="e.g. deploy"
+                  />
+                </FormField>
+                <FormField label="Description">
+                  <Input
+                    type="text"
+                    value={form.description}
+                    onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}
+                    className="focus:border-green-500"
+                    placeholder="What this script does"
+                  />
+                </FormField>
+              </div>
+
+              {/* Filename */}
+              <FormField label="Filename" hint="Defaults to name.sh if empty">
+                <Input
                   type="text"
+                  value={form.filename}
+                  onChange={e => setForm(prev => ({ ...prev, filename: e.target.value }))}
+                  className="focus:border-green-500"
+                  placeholder={form.name ? `${form.name}.sh` : 'e.g. deploy.sh'}
+                />
+              </FormField>
+
+              {/* Content */}
+              <FormField label="Script Content *" hint="Shell script to execute on the agent-manager machine.">
+                <Textarea
                   required
-                  value={form.name}
-                  onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-green-500"
-                  placeholder="e.g. deploy"
+                  value={form.content}
+                  onChange={e => setForm(prev => ({ ...prev, content: e.target.value }))}
+                  mono
+                  className="focus:border-green-500 min-h-[200px]"
+                  placeholder={'#!/bin/bash\necho "Hello from script"'}
                 />
-                <p className="text-[10px] text-gray-600 mt-0.5">Script name (used as identifier)</p>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Description</label>
-                <input
-                  type="text"
-                  value={form.description}
-                  onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-green-500"
-                  placeholder="What this script does"
-                />
-              </div>
+              </FormField>
             </div>
 
-            {/* Filename */}
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Filename</label>
-              <input
-                type="text"
-                value={form.filename}
-                onChange={e => setForm(prev => ({ ...prev, filename: e.target.value }))}
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-green-500"
-                placeholder={form.name ? `${form.name}.sh` : 'e.g. deploy.sh'}
-              />
-              <p className="text-[10px] text-gray-600 mt-0.5">Defaults to name.sh if empty</p>
+            {mutation.error && (
+              <p className="text-red-400 text-sm mt-3">{mutation.error.message}</p>
+            )}
+
+            <div className="flex justify-end gap-2 mt-4">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={closeForm}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={mutation.isPending || !form.name || !form.content}
+                icon={<Save className="w-3.5 h-3.5" />}
+                className="bg-green-600 hover:bg-green-500"
+              >
+                {mutation.isPending ? 'Saving...' : formMode === 'create' ? 'Create' : 'Save'}
+              </Button>
             </div>
-
-            {/* Content */}
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Script Content *</label>
-              <textarea
-                required
-                value={form.content}
-                onChange={e => setForm(prev => ({ ...prev, content: e.target.value }))}
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-green-500 min-h-[200px] font-mono"
-                placeholder={'#!/bin/bash\necho "Hello from script"'}
-              />
-              <p className="text-[10px] text-gray-600 mt-0.5">Shell script to execute on the agent-manager machine.</p>
-            </div>
-          </div>
-
-          {mutation.error && (
-            <p className="text-red-400 text-sm mt-3">{mutation.error.message}</p>
-          )}
-
-          <div className="flex justify-end gap-2 mt-4">
-            <button
-              type="button"
-              onClick={closeForm}
-              className="px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={mutation.isPending || !form.name || !form.content}
-              className="flex items-center gap-1.5 px-4 py-1.5 text-sm bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-            >
-              <Save className="w-3.5 h-3.5" />
-              {mutation.isPending ? 'Saving...' : formMode === 'create' ? 'Create' : 'Save'}
-            </button>
-          </div>
+          </Card>
         </form>
       )}
 
@@ -424,9 +429,9 @@ export function ScriptList({ projectId }: { projectId: string }) {
         {scripts.map(script => {
           const result = executionResults.get(script.id)
           return (
-            <div
+            <Card
               key={script.id}
-              className="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-slate-700 transition-colors"
+              className="hover:border-slate-700 transition-colors"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -434,14 +439,13 @@ export function ScriptList({ projectId }: { projectId: string }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="text-sm font-semibold text-white truncate">{script.name}</h3>
-                      <span className="text-[10px] text-gray-500 bg-slate-800 rounded px-1.5 py-0.5 font-mono shrink-0">
+                      <Badge color="gray" size="xs" className="font-mono bg-slate-800 text-gray-500">
                         {script.filename}
-                      </span>
+                      </Badge>
                       {script.isSynced && (
-                        <span className="flex items-center gap-0.5 text-[10px] text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded-full px-1.5 py-0.5 shrink-0">
-                          <Cloud className="w-2.5 h-2.5" />
+                        <Badge color="blue" size="xs" variant="outline" pill icon={<Cloud className="w-2.5 h-2.5" />}>
                           synced
-                        </span>
+                        </Badge>
                       )}
                     </div>
                     {script.description && (
@@ -455,51 +459,55 @@ export function ScriptList({ projectId }: { projectId: string }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0 ml-2">
-                  <button
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={() => handleExecute(script)}
                     disabled={result && !result.completed}
-                    className="flex items-center gap-1 px-2.5 py-1.5 text-sm bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-                    title="Run script"
-                  >
-                    {result && !result.completed ? (
+                    icon={result && !result.completed ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
                       <Play className="w-3.5 h-3.5" />
                     )}
+                    title="Run script"
+                    className="bg-green-600 hover:bg-green-500"
+                  >
                     Run
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    iconOnly
                     onClick={() => handleSaveAsTemplate(script)}
-                    className="p-1.5 text-gray-500 hover:text-amber-400 transition-colors rounded-lg hover:bg-slate-800"
                     title="Save as Template"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
-                  <button
+                    className="hover:text-amber-400"
+                    icon={<Copy className="w-3.5 h-3.5" />}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    iconOnly
                     onClick={() => openEdit(script)}
-                    className="p-1.5 text-gray-500 hover:text-green-400 transition-colors rounded-lg hover:bg-slate-800"
                     title="Edit"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
+                    className="hover:text-green-400"
+                    icon={<Edit2 className="w-3.5 h-3.5" />}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    iconOnly
                     onClick={() => handleDelete(script.id)}
                     disabled={deleteMut.isPending}
-                    className="p-1.5 text-gray-500 hover:text-red-400 transition-colors rounded-lg hover:bg-slate-800 disabled:opacity-50"
                     title="Delete"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                    className="hover:text-red-400"
+                    icon={<Trash2 className="w-3.5 h-3.5" />}
+                  />
                 </div>
               </div>
 
-              {/* Execution Result — completed */}
+              {/* Execution Result -- completed */}
               {result && result.completed && (
-                <div className={`mt-3 border rounded-lg p-3 ${
-                  result.success
-                    ? 'border-green-500/20 bg-green-500/5'
-                    : 'border-red-500/20 bg-red-500/5'
-                }`}>
+                <Card variant={result.success ? 'success' : 'error'} className="mt-3">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       {result.success ? (
@@ -512,12 +520,13 @@ export function ScriptList({ projectId }: { projectId: string }) {
                         {result.exitCode !== undefined && ` (exit code: ${result.exitCode})`}
                       </span>
                     </div>
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      iconOnly
                       onClick={() => clearResult(script.id)}
-                      className="text-gray-500 hover:text-gray-300 transition-colors"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+                      icon={<X className="w-3.5 h-3.5" />}
+                    />
                   </div>
                   {result.errorMessage && (
                     <div className="text-xs text-red-400 font-mono bg-slate-900/50 rounded p-2 mb-2 whitespace-pre-wrap">
@@ -540,10 +549,10 @@ export function ScriptList({ projectId }: { projectId: string }) {
                       </pre>
                     </div>
                   )}
-                </div>
+                </Card>
               )}
 
-              {/* Execution in progress — streaming output */}
+              {/* Execution in progress -- streaming output */}
               {result && !result.completed && (
                 <div className="mt-3 border border-blue-500/20 bg-blue-500/5 rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
@@ -551,13 +560,14 @@ export function ScriptList({ projectId }: { projectId: string }) {
                       <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
                       <span className="text-sm text-blue-400">Executing script...</span>
                     </div>
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      iconOnly
                       onClick={() => clearResult(script.id)}
-                      className="text-gray-500 hover:text-gray-300 transition-colors"
                       title="Cancel stream"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+                      icon={<X className="w-3.5 h-3.5" />}
+                    />
                   </div>
                   {(result.stdout || result.stderr) && (
                     <div className="space-y-2">
@@ -583,7 +593,7 @@ export function ScriptList({ projectId }: { projectId: string }) {
                   )}
                 </div>
               )}
-            </div>
+            </Card>
           )
         })}
 
@@ -597,66 +607,61 @@ export function ScriptList({ projectId }: { projectId: string }) {
       </div>
 
       {/* Template Picker Dialog */}
-      {templatePickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setTemplatePickerOpen(false)}>
-          <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-md w-full mx-4 max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Select Script Template</h3>
-              <button onClick={() => setTemplatePickerOpen(false)} className="text-gray-500 hover:text-gray-300"><X className="w-5 h-5" /></button>
+      <Modal open={templatePickerOpen} onClose={() => setTemplatePickerOpen(false)} size="sm">
+        <Modal.Header onClose={() => setTemplatePickerOpen(false)}>
+          <h3 className="text-lg font-semibold text-white">Select Script Template</h3>
+        </Modal.Header>
+        <Modal.Body>
+          {scriptTemplates.length === 0 ? (
+            <p className="text-gray-500 text-sm text-center py-6">No script templates available.</p>
+          ) : (
+            <div className="space-y-2">
+              {scriptTemplates.map(tmpl => (
+                <button key={tmpl.id} onClick={() => handleCreateFromTemplate(tmpl)} className="w-full text-left p-3 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Terminal className="w-4 h-4 text-green-400" />
+                    <span className="text-sm font-medium text-white">{tmpl.name}</span>
+                  </div>
+                  {tmpl.description && <p className="text-xs text-gray-400 ml-6">{tmpl.description}</p>}
+                </button>
+              ))}
             </div>
-            {scriptTemplates.length === 0 ? (
-              <p className="text-gray-500 text-sm text-center py-6">No script templates available.</p>
-            ) : (
-              <div className="space-y-2">
-                {scriptTemplates.map(tmpl => (
-                  <button key={tmpl.id} onClick={() => handleCreateFromTemplate(tmpl)} className="w-full text-left p-3 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Terminal className="w-4 h-4 text-green-400" />
-                      <span className="text-sm font-medium text-white">{tmpl.name}</span>
-                    </div>
-                    {tmpl.description && <p className="text-xs text-gray-400 ml-6">{tmpl.description}</p>}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+          )}
+        </Modal.Body>
+      </Modal>
 
       {/* Save as Template Dialog */}
-      {saveTemplateDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setSaveTemplateDialog(null)}>
-          <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Save as Template</h3>
-              <button onClick={() => setSaveTemplateDialog(null)} className="text-gray-500 hover:text-gray-300"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Template Name</label>
-                <input type="text" value={saveTemplateDialog.name}
-                  onChange={e => setSaveTemplateDialog(prev => prev ? { ...prev, name: e.target.value } : null)}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-amber-500" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Template Description</label>
-                <input type="text" value={saveTemplateDialog.description}
-                  onChange={e => setSaveTemplateDialog(prev => prev ? { ...prev, description: e.target.value } : null)}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-amber-500" />
-              </div>
-            </div>
-            {saveTemplateMut.error && <p className="text-red-400 text-sm mt-3">{saveTemplateMut.error.message}</p>}
-            {saveTemplateMut.isSuccess && <p className="text-green-400 text-sm mt-3">Template saved successfully!</p>}
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setSaveTemplateDialog(null)} className="px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors">Cancel</button>
-              <button onClick={handleSaveTemplateSubmit} disabled={saveTemplateMut.isPending || !saveTemplateDialog.name}
-                className="flex items-center gap-1.5 px-4 py-1.5 text-sm bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-lg transition-colors">
-                <Save className="w-3.5 h-3.5" />{saveTemplateMut.isPending ? 'Saving...' : 'Save Template'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal open={!!saveTemplateDialog} onClose={() => setSaveTemplateDialog(null)} size="sm">
+        <Modal.Header onClose={() => setSaveTemplateDialog(null)}>
+          <h3 className="text-lg font-semibold text-white">Save as Template</h3>
+        </Modal.Header>
+        <Modal.Body>
+          <FormField label="Template Name">
+            <Input type="text" value={saveTemplateDialog?.name ?? ''}
+              onChange={e => setSaveTemplateDialog(prev => prev ? { ...prev, name: e.target.value } : null)}
+              className="focus:border-amber-500" />
+          </FormField>
+          <FormField label="Template Description">
+            <Input type="text" value={saveTemplateDialog?.description ?? ''}
+              onChange={e => setSaveTemplateDialog(prev => prev ? { ...prev, description: e.target.value } : null)}
+              className="focus:border-amber-500" />
+          </FormField>
+          {saveTemplateMut.error && <p className="text-red-400 text-sm mt-3">{saveTemplateMut.error.message}</p>}
+          {saveTemplateMut.isSuccess && <p className="text-green-400 text-sm mt-3">Template saved successfully!</p>}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" size="sm" onClick={() => setSaveTemplateDialog(null)}>Cancel</Button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={handleSaveTemplateSubmit}
+            disabled={saveTemplateMut.isPending || !saveTemplateDialog?.name}
+            icon={<Save className="w-3.5 h-3.5" />}
+          >
+            {saveTemplateMut.isPending ? 'Saving...' : 'Save Template'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   )
 }
