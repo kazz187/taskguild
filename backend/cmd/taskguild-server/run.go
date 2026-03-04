@@ -34,6 +34,7 @@ import (
 	taskrepo "github.com/kazz187/taskguild/backend/internal/task/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/tasklog"
 	tasklogrepo "github.com/kazz187/taskguild/backend/internal/tasklog/repositoryimpl"
+	"github.com/kazz187/taskguild/backend/internal/version"
 	"github.com/kazz187/taskguild/backend/internal/workflow"
 	workflowrepo "github.com/kazz187/taskguild/backend/internal/workflow/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/pkg/clog"
@@ -100,6 +101,8 @@ func runServer() {
 		handler = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: level})
 	}
 	slog.SetDefault(slog.New(clog.NewAttributesHandler(handler)))
+
+	slog.Info("server starting", "version", version.Short(), "env", env.Env)
 
 	// Setup storage
 	var store storage.Storage

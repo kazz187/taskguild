@@ -68,6 +68,9 @@ message AgentManagerSubscribeRequest {
   // being executed locally). Tasks assigned to this agent but NOT in this list
   // are released and re-broadcast.
   repeated string active_task_ids = 4;
+  // agent_version is the git commit hash (short) of the agent binary.
+  // The server uses this to detect version mismatches and log warnings.
+  string agent_version = 5;
 }
 
 message AgentCommand {

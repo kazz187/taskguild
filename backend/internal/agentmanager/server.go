@@ -23,6 +23,7 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/skill"
 	"github.com/kazz187/taskguild/backend/internal/task"
 	"github.com/kazz187/taskguild/backend/internal/tasklog"
+	"github.com/kazz187/taskguild/backend/internal/version"
 	"github.com/kazz187/taskguild/backend/internal/workflow"
 	"github.com/kazz187/taskguild/backend/pkg/cerr"
 	taskguildv1 "github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1"
@@ -79,12 +80,25 @@ func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1
 
 	projectName := req.Msg.ProjectName
 	activeTaskIDs := req.Msg.ActiveTaskIds
+	agentVersion := req.Msg.AgentVersion
+	serverVersion := version.Short()
+
 	slog.Info("agent-manager connected",
 		"agent_manager_id", agentManagerID,
+		"agent_version", agentVersion,
+		"server_version", serverVersion,
 		"max_concurrent_tasks", req.Msg.MaxConcurrentTasks,
 		"project_name", projectName,
 		"active_tasks", len(activeTaskIDs),
 	)
+
+	if agentVersion != "" && agentVersion != serverVersion {
+		slog.Warn("agent version mismatch: agent may need rebuild",
+			"agent_manager_id", agentManagerID,
+			"agent_version", agentVersion,
+			"server_version", serverVersion,
+		)
+	}
 
 	// On (re-)connect, release tasks that are no longer active on this agent.
 	// If the agent sends active_task_ids, only tasks NOT in that list are released.
