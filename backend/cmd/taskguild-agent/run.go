@@ -3,8 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/exec"
@@ -39,6 +38,8 @@ type config struct {
 	MaxConcurrentTasks int
 	WorkDir            string
 	ProjectName        string
+	Env                string
+	LogLevel           string
 }
 
 func loadConfig() (*config, error) {
@@ -47,6 +48,8 @@ func loadConfig() (*config, error) {
 		AgentManagerID:     ulid.Make().String(),
 		MaxConcurrentTasks: 10,
 		WorkDir:            ".",
+		Env:                "local",
+		LogLevel:           "debug",
 	}
 
 	if v := os.Getenv("TASKGUILD_SERVER_URL"); v != "" {
@@ -85,6 +88,13 @@ func loadConfig() (*config, error) {
 		}
 	}
 
+	if v := os.Getenv("TASKGUILD_ENV"); v != "" {
+		cfg.Env = v
+	}
+	if v := os.Getenv("TASKGUILD_LOG_LEVEL"); v != "" {
+		cfg.LogLevel = v
+	}
+
 	return cfg, nil
 }
 
@@ -92,22 +102,32 @@ func loadConfig() (*config, error) {
 // It contains the original main() logic: connects to the TaskGuild server,
 // subscribes for task assignments, and executes tasks.
 func runAgent() {
-	// Set up log file: write to both stderr and file.
-	logFile, err := os.OpenFile("agent-manager.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		log.Fatalf("failed to open log file: %v", err)
-	}
-	defer logFile.Close()
-	log.SetOutput(io.MultiWriter(os.Stderr, logFile))
-	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
-
 	cfg, err := loadConfig()
 	if err != nil {
-		log.Fatalf("configuration error: %v", err)
+		fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
+		os.Exit(1)
 	}
 
-	log.Printf("agent-manager starting (id: %s, server: %s, max_tasks: %d, work_dir: %s, project_name: %s)",
-		cfg.AgentManagerID, cfg.ServerURL, cfg.MaxConcurrentTasks, cfg.WorkDir, cfg.ProjectName)
+	// Initialize slog.
+	var slogLevel slog.Level
+	if err := slogLevel.UnmarshalText([]byte(cfg.LogLevel)); err != nil {
+		slogLevel = slog.LevelDebug
+	}
+	var handler slog.Handler
+	if cfg.Env == "local" {
+		handler = slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slogLevel})
+	} else {
+		handler = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slogLevel})
+	}
+	slog.SetDefault(slog.New(handler))
+
+	slog.Info("agent-manager starting",
+		"agent_manager_id", cfg.AgentManagerID,
+		"server_url", cfg.ServerURL,
+		"max_tasks", cfg.MaxConcurrentTasks,
+		"work_dir", cfg.WorkDir,
+		"project_name", cfg.ProjectName,
+	)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -117,7 +137,7 @@ func runAgent() {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-sigCh
-		log.Printf("received signal %v, shutting down...", sig)
+		slog.Info("received signal, shutting down", "signal", sig)
 		cancel()
 	}()
 
@@ -129,12 +149,12 @@ func runAgent() {
 	signal.Notify(usr1Ch, syscall.SIGUSR1)
 	go func() {
 		<-usr1Ch
-		log.Println("received SIGUSR1 (hot reload), waiting for running scripts to complete...")
+		slog.Info("received SIGUSR1 (hot reload), waiting for running scripts to complete")
 		scriptTracker.mu.Lock()
 		scriptTracker.reject = true
 		scriptTracker.mu.Unlock()
 		scriptTracker.wg.Wait()
-		log.Println("all scripts completed, shutting down for hot reload restart")
+		slog.Info("all scripts completed, shutting down for hot reload restart")
 		cancel()
 	}()
 
@@ -197,7 +217,7 @@ func runAgent() {
 			break
 		}
 		if err != nil {
-			log.Printf("subscribe stream error: %v, reconnecting in %s...", err, subscribeBackoff)
+			slog.Error("subscribe stream error, reconnecting", "error", err, "backoff", subscribeBackoff)
 			select {
 			case <-time.After(subscribeBackoff):
 			case <-ctx.Done():
@@ -213,17 +233,17 @@ func runAgent() {
 		}
 	}
 
-	log.Println("waiting for active tasks to finish...")
+	slog.Info("waiting for active tasks to finish")
 	// Cancel all active tasks
 	mu.Lock()
 	for taskID, cancelFn := range activeTasks {
-		log.Printf("cancelling task %s", taskID)
+		slog.Info("cancelling task", "task_id", taskID)
 		cancelFn()
 	}
 	mu.Unlock()
 
 	wg.Wait()
-	log.Println("agent-manager stopped")
+	slog.Info("agent-manager stopped")
 }
 
 func runSubscribeLoop(
@@ -248,7 +268,7 @@ func runSubscribeLoop(
 	mu.Unlock()
 
 	if len(activeTaskIDs) > 0 {
-		log.Printf("reconnecting with %d active task(s): %v", len(activeTaskIDs), activeTaskIDs)
+		slog.Info("reconnecting with active tasks", "count", len(activeTaskIDs), "task_ids", activeTaskIDs)
 	}
 
 	stream, err := client.Subscribe(ctx, connect.NewRequest(&v1.AgentManagerSubscribeRequest{
@@ -262,7 +282,7 @@ func runSubscribeLoop(
 	}
 	defer stream.Close()
 
-	log.Println("subscribe stream connected")
+	slog.Info("subscribe stream connected")
 
 	for stream.Receive() {
 		cmd := stream.Msg()
@@ -270,7 +290,7 @@ func runSubscribeLoop(
 		// Skip empty commands (e.g. caused by proxy-injected frames or
 		// partial envelope reads from intermediaries).
 		if cmd.GetCommand() == nil {
-			log.Println("skipping empty command (nil oneof)")
+			slog.Debug("skipping empty command (nil oneof)")
 			continue
 		}
 
@@ -278,13 +298,13 @@ func runSubscribeLoop(
 		case *v1.AgentCommand_TaskAvailable:
 			taskAvail := c.TaskAvailable
 			taskID := taskAvail.GetTaskId()
-			log.Printf("task available: %s (title: %s)", taskID, taskAvail.GetTitle())
+			slog.Info("task available", "task_id", taskID, "title", taskAvail.GetTitle())
 
 			// Skip if this task is already running (prevents semaphore deadlock on re-assignment).
 			mu.Lock()
 			if prevCancel, ok := activeTasks[taskID]; ok {
 				mu.Unlock()
-				log.Printf("task %s already active, cancelling previous run and re-claiming", taskID)
+				slog.Info("task already active, cancelling previous run and re-claiming", "task_id", taskID)
 				prevCancel()
 			} else {
 				mu.Unlock()
@@ -296,15 +316,15 @@ func runSubscribeLoop(
 				AgentManagerId: cfg.AgentManagerID,
 			}))
 			if err != nil {
-				log.Printf("failed to claim task %s: %v", taskID, err)
+				slog.Error("failed to claim task", "task_id", taskID, "error", err)
 				continue
 			}
 			if !claimResp.Msg.GetSuccess() {
-				log.Printf("task %s already claimed by another agent", taskID)
+				slog.Info("task already claimed by another agent", "task_id", taskID)
 				continue
 			}
 
-			log.Printf("claimed task %s", taskID)
+			slog.Info("claimed task", "task_id", taskID)
 			instructions := claimResp.Msg.GetInstructions()
 			metadata := claimResp.Msg.GetMetadata()
 
@@ -336,43 +356,49 @@ func runSubscribeLoop(
 
 		case *v1.AgentCommand_ListWorktrees:
 			listCmd := c.ListWorktrees
-			log.Printf("received list worktrees command (request_id: %s)", listCmd.GetRequestId())
+			slog.Info("received list worktrees command", "request_id", listCmd.GetRequestId())
 			go handleListWorktrees(ctx, client, cfg, listCmd.GetRequestId())
 
 		case *v1.AgentCommand_DeleteWorktree:
 			deleteCmd := c.DeleteWorktree
-			log.Printf("received delete worktree command (request_id: %s, name: %s, force: %v)",
-				deleteCmd.GetRequestId(), deleteCmd.GetWorktreeName(), deleteCmd.GetForce())
+			slog.Info("received delete worktree command",
+				"request_id", deleteCmd.GetRequestId(),
+				"worktree_name", deleteCmd.GetWorktreeName(),
+				"force", deleteCmd.GetForce(),
+			)
 			go handleDeleteWorktree(ctx, client, cfg, deleteCmd)
 
 		case *v1.AgentCommand_GitPullMain:
 			pullCmd := c.GitPullMain
-			log.Printf("received git pull main command (request_id: %s)", pullCmd.GetRequestId())
+			slog.Info("received git pull main command", "request_id", pullCmd.GetRequestId())
 			go handleGitPullMain(ctx, client, cfg, pullCmd.GetRequestId())
 
 		case *v1.AgentCommand_SyncAgents:
-			log.Println("received sync agents command, re-syncing...")
+			slog.Info("received sync agents command, re-syncing")
 			syncAgents(ctx, client, cfg)
 
 		case *v1.AgentCommand_SyncPermissions:
-			log.Println("received sync permissions command, re-syncing...")
+			slog.Info("received sync permissions command, re-syncing")
 			syncPermissions(ctx, client, cfg, permCache)
 
 		case *v1.AgentCommand_SyncScripts:
-			log.Println("received sync scripts command, re-syncing...")
+			slog.Info("received sync scripts command, re-syncing")
 			syncScripts(ctx, client, cfg)
 
 		case *v1.AgentCommand_ExecuteScript:
 			execCmd := c.ExecuteScript
-			log.Printf("received execute script command (request_id: %s, script_id: %s, filename: %s)",
-				execCmd.GetRequestId(), execCmd.GetScriptId(), execCmd.GetFilename())
+			slog.Info("received execute script command",
+				"request_id", execCmd.GetRequestId(),
+				"script_id", execCmd.GetScriptId(),
+				"filename", execCmd.GetFilename(),
+			)
 			go handleExecuteScript(ctx, client, cfg, execCmd)
 
 		case *v1.AgentCommand_CancelTask:
 			cancelCmd := c.CancelTask
 			taskID := cancelCmd.GetTaskId()
 			reason := cancelCmd.GetReason()
-			log.Printf("cancel request for task %s: %s", taskID, reason)
+			slog.Info("cancel request for task", "task_id", taskID, "reason", reason)
 
 			mu.Lock()
 			if cancelFn, ok := activeTasks[taskID]; ok {
@@ -383,13 +409,13 @@ func runSubscribeLoop(
 		case *v1.AgentCommand_AssignTask:
 			assignCmd := c.AssignTask
 			taskID := assignCmd.GetTaskId()
-			log.Printf("direct task assignment: %s", taskID)
+			slog.Info("direct task assignment", "task_id", taskID)
 
 			// Cancel previous run if the same task is re-assigned.
 			mu.Lock()
 			if prevCancel, ok := activeTasks[taskID]; ok {
 				mu.Unlock()
-				log.Printf("task %s already active, cancelling previous run for re-assignment", taskID)
+				slog.Info("task already active, cancelling previous run for re-assignment", "task_id", taskID)
 				prevCancel()
 			} else {
 				mu.Unlock()
@@ -426,8 +452,9 @@ func runSubscribeLoop(
 		case *v1.AgentCommand_InteractionResponse:
 			// Interaction responses are handled per-task via SubscribeInteractions.
 			// Log and ignore if received on the global subscribe stream.
-			log.Printf("received interaction_response on subscribe stream (interaction_id: %s), ignoring",
-				c.InteractionResponse.GetInteractionId())
+			slog.Debug("received interaction_response on subscribe stream, ignoring",
+				"interaction_id", c.InteractionResponse.GetInteractionId(),
+			)
 
 		case *v1.AgentCommand_Ping:
 			// Server-side keepalive ping — silently ignore.
@@ -438,7 +465,7 @@ func runSubscribeLoop(
 			if cmd.GetCommand() == nil {
 				continue
 			}
-			log.Printf("unknown command type: %T", cmd.GetCommand())
+			slog.Warn("unknown command type", "type", fmt.Sprintf("%T", cmd.GetCommand()))
 		}
 	}
 
@@ -461,7 +488,7 @@ func heartbeat(ctx context.Context, client taskguildv1connect.AgentManagerServic
 				AgentManagerId: agentManagerID,
 			}))
 			if err != nil {
-				log.Printf("heartbeat error: %v", err)
+				slog.Warn("heartbeat error", "error", err)
 			}
 		}
 	}
@@ -474,9 +501,9 @@ func handleListWorktrees(ctx context.Context, client taskguildv1connect.AgentMan
 	entries, err := os.ReadDir(worktreesDir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Printf("no worktrees directory found at %s", worktreesDir)
+			slog.Info("no worktrees directory found", "path", worktreesDir)
 		} else {
-			log.Printf("failed to read worktrees directory: %v", err)
+			slog.Error("failed to read worktrees directory", "error", err)
 		}
 		// Report empty list so frontend knows the scan completed.
 		_, _ = client.ReportWorktreeList(ctx, connect.NewRequest(&v1.ReportWorktreeListRequest{
@@ -538,9 +565,9 @@ func handleListWorktrees(ctx context.Context, client taskguildv1connect.AgentMan
 		Worktrees:   worktrees,
 	}))
 	if err != nil {
-		log.Printf("failed to report worktree list: %v", err)
+		slog.Error("failed to report worktree list", "error", err)
 	} else {
-		log.Printf("reported %d worktrees (request_id: %s)", len(worktrees), requestID)
+		slog.Info("reported worktrees", "count", len(worktrees), "request_id", requestID)
 	}
 }
 
@@ -559,7 +586,7 @@ func handleDeleteWorktree(ctx context.Context, client taskguildv1connect.AgentMa
 			ErrorMessage: errMsg,
 		}))
 		if err != nil {
-			log.Printf("failed to report worktree delete result: %v", err)
+			slog.Error("failed to report worktree delete result", "error", err)
 		}
 	}
 
@@ -610,11 +637,11 @@ func handleDeleteWorktree(ctx context.Context, client taskguildv1connect.AgentMa
 	deleteBranchCmd := exec.CommandContext(ctx, "git", "branch", "-D", branchName)
 	deleteBranchCmd.Dir = cfg.WorkDir
 	if out, err := deleteBranchCmd.CombinedOutput(); err != nil {
-		log.Printf("warning: failed to delete branch %s: %v: %s", branchName, err, strings.TrimSpace(string(out)))
+		slog.Warn("failed to delete branch", "branch", branchName, "error", err, "output", strings.TrimSpace(string(out)))
 		// Not fatal – worktree is already removed.
 	}
 
-	log.Printf("deleted worktree %s (branch: %s, force: %v)", worktreeName, branchName, force)
+	slog.Info("deleted worktree", "worktree_name", worktreeName, "branch", branchName, "force", force)
 	reportResult(true, "")
 }
 
@@ -629,7 +656,7 @@ func handleGitPullMain(ctx context.Context, client taskguildv1connect.AgentManag
 			ErrorMessage: errMsg,
 		}))
 		if err != nil {
-			log.Printf("failed to report git pull main result: %v", err)
+			slog.Error("failed to report git pull main result", "error", err)
 		}
 	}
 
@@ -639,12 +666,12 @@ func handleGitPullMain(ctx context.Context, client taskguildv1connect.AgentManag
 	output := strings.TrimSpace(string(out))
 
 	if err != nil {
-		log.Printf("git pull origin main failed: %v: %s", err, output)
+		slog.Error("git pull origin main failed", "error", err, "output", output)
 		reportResult(false, output, fmt.Sprintf("git pull origin main failed: %v", err))
 		return
 	}
 
-	log.Printf("git pull origin main succeeded: %s", output)
+	slog.Info("git pull origin main succeeded", "output", output)
 	reportResult(true, output, "")
 }
 

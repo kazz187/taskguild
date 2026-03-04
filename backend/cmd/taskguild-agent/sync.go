@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,7 +17,7 @@ import (
 // It also removes stale .md files that no longer exist on the server.
 func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, cfg *config) {
 	if cfg.ProjectName == "" {
-		log.Println("skipping agent sync: no project name configured")
+		slog.Info("skipping agent sync: no project name configured")
 		return
 	}
 
@@ -25,16 +25,16 @@ func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServi
 		ProjectName: cfg.ProjectName,
 	}))
 	if err != nil {
-		log.Printf("agent sync failed: %v", err)
+		slog.Error("agent sync failed", "error", err)
 		return
 	}
 
 	agents := resp.Msg.GetAgents()
-	log.Printf("syncing %d agent(s) from server", len(agents))
+	slog.Info("syncing agents from server", "count", len(agents))
 
 	agentsDir := filepath.Join(cfg.WorkDir, ".claude", "agents")
 	if err := os.MkdirAll(agentsDir, 0755); err != nil {
-		log.Printf("failed to create agents directory: %v", err)
+		slog.Error("failed to create agents directory", "error", err)
 		return
 	}
 
@@ -44,7 +44,7 @@ func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServi
 
 		// Skip agents with unsafe names.
 		if strings.Contains(name, "/") || strings.Contains(name, "\\") || strings.Contains(name, "..") {
-			log.Printf("skipping agent with unsafe name: %q", name)
+			slog.Warn("skipping agent with unsafe name", "name", name)
 			continue
 		}
 
@@ -53,10 +53,10 @@ func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServi
 		content := buildAgentMDContent(ag)
 
 		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
-			log.Printf("failed to write agent file %s: %v", filePath, err)
+			slog.Error("failed to write agent file", "path", filePath, "error", err)
 			continue
 		}
-		log.Printf("synced agent: %s", filename)
+		slog.Debug("synced agent", "filename", filename)
 		writtenFiles[filename] = true
 	}
 
@@ -124,9 +124,9 @@ func cleanupStaleAgentFiles(agentsDir string, writtenFiles map[string]bool) {
 		if !writtenFiles[entry.Name()] {
 			filePath := filepath.Join(agentsDir, entry.Name())
 			if err := os.Remove(filePath); err != nil {
-				log.Printf("failed to remove stale agent file %s: %v", filePath, err)
+				slog.Error("failed to remove stale agent file", "path", filePath, "error", err)
 			} else {
-				log.Printf("removed stale agent: %s", entry.Name())
+				slog.Debug("removed stale agent", "filename", entry.Name())
 			}
 		}
 	}

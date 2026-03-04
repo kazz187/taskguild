@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -18,7 +18,7 @@ import (
 // permission cache so that subsequent tool calls can be auto-allowed.
 func syncPermissions(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, cfg *config, cache *permissionCache) {
 	if cfg.ProjectName == "" {
-		log.Println("skipping permission sync: no project name configured")
+		slog.Info("skipping permission sync: no project name configured")
 		return
 	}
 
@@ -35,13 +35,16 @@ func syncPermissions(ctx context.Context, client taskguildv1connect.AgentManager
 		LocalDeny:   localDeny,
 	}))
 	if err != nil {
-		log.Printf("permission sync failed: %v", err)
+		slog.Error("permission sync failed", "error", err)
 		return
 	}
 
 	merged := resp.Msg.GetPermissions()
-	log.Printf("permission sync: allow=%d, ask=%d, deny=%d",
-		len(merged.GetAllow()), len(merged.GetAsk()), len(merged.GetDeny()))
+	slog.Info("permission sync complete",
+		"allow", len(merged.GetAllow()),
+		"ask", len(merged.GetAsk()),
+		"deny", len(merged.GetDeny()),
+	)
 
 	// Write merged permissions back to settings.json.
 	writeLocalPermissions(settingsPath, rawSettings, merged)
@@ -64,7 +67,7 @@ func readLocalPermissions(path string) (allow, ask, deny []string, raw map[strin
 	}
 
 	if err := json.Unmarshal(data, &raw); err != nil {
-		log.Printf("failed to parse settings.json: %v", err)
+		slog.Warn("failed to parse settings.json", "error", err)
 		return nil, nil, nil, raw
 	}
 
@@ -93,7 +96,7 @@ func writeLocalPermissions(path string, raw map[string]interface{}, merged *v1.P
 	// Ensure .claude directory exists.
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		log.Printf("failed to create .claude directory: %v", err)
+		slog.Error("failed to create .claude directory", "error", err)
 		return
 	}
 
@@ -121,15 +124,15 @@ func writeLocalPermissions(path string, raw map[string]interface{}, merged *v1.P
 
 	data, err := json.MarshalIndent(raw, "", "    ")
 	if err != nil {
-		log.Printf("failed to marshal settings.json: %v", err)
+		slog.Error("failed to marshal settings.json", "error", err)
 		return
 	}
 
 	if err := os.WriteFile(path, data, 0644); err != nil {
-		log.Printf("failed to write settings.json: %v", err)
+		slog.Error("failed to write settings.json", "error", err)
 		return
 	}
-	log.Printf("updated %s with merged permissions", path)
+	slog.Info("updated settings.json with merged permissions", "path", path)
 }
 
 // toStringSlice converts an interface{} (expected to be []interface{}) to []string.

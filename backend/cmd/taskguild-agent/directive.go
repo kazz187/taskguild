@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 
 	"connectrpc.com/connect"
 	v1 "github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1"
 	"github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1/taskguildv1connect"
+	"github.com/kazz187/taskguild/backend/pkg/clog"
 )
 
 // createTaskDirective holds parsed CREATE_TASK directive fields.
@@ -118,11 +118,13 @@ func createTaskFromDirective(
 	metadata map[string]string,
 	directive createTaskDirective,
 ) {
+	logger := clog.LoggerFromContext(ctx)
+
 	projectID := metadata["_project_id"]
 	workflowID := metadata["_workflow_id"]
 
 	if projectID == "" || workflowID == "" {
-		log.Printf("[task:%s] cannot create task: missing _project_id or _workflow_id", sourceTaskID)
+		logger.Error("cannot create task: missing _project_id or _workflow_id")
 		return
 	}
 
@@ -162,15 +164,15 @@ func createTaskFromDirective(
 
 	resp, err := taskClient.CreateTask(ctx, connect.NewRequest(req))
 	if err != nil {
-		log.Printf("[task:%s] failed to create task %q: %v", sourceTaskID, directive.Title, err)
+		logger.Error("failed to create task", "title", directive.Title, "error", err)
 		return
 	}
 
 	newTask := resp.Msg.GetTask()
 	if newTask != nil {
-		log.Printf("[task:%s] created child task %s: %q", sourceTaskID, newTask.GetId(), directive.Title)
+		logger.Info("created child task", "child_task_id", newTask.GetId(), "title", directive.Title)
 	} else {
-		log.Printf("[task:%s] created child task (no task in response): %q", sourceTaskID, directive.Title)
+		logger.Info("created child task (no task in response)", "title", directive.Title)
 	}
 }
 
@@ -295,6 +297,8 @@ func handleStatusTransition(
 	metadata map[string]string,
 	tl *taskLogger,
 ) error {
+	logger := clog.LoggerFromContext(ctx)
+
 	transitionsJSON := metadata["_available_transitions"]
 	if transitionsJSON == "" {
 		return fmt.Errorf("no available transitions in metadata")
@@ -316,7 +320,7 @@ func handleStatusTransition(
 		// Auto-transition if exactly one transition is available.
 		if len(transitions) == 1 {
 			nextStatusID = transitions[0].ID
-			log.Printf("[task:%s] no NEXT_STATUS found, auto-transitioning to %s (%s)", taskID, nextStatusID, transitions[0].Name)
+			logger.Info("no NEXT_STATUS found, auto-transitioning", "next_status_id", nextStatusID, "next_status_name", transitions[0].Name)
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Auto-transitioning to %s (%s)", nextStatusID, transitions[0].Name), nil)
 		} else {
@@ -352,42 +356,45 @@ func handleStatusTransition(
 		return fmt.Errorf("UpdateTaskStatus RPC failed for %s: %w", nextStatusID, err)
 	}
 
-	log.Printf("[task:%s] status transitioned to %s", taskID, nextStatusID)
+	logger.Info("status transitioned", "next_status_id", nextStatusID)
 	tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 		fmt.Sprintf("Status transitioned to %s", nextStatusID), nil)
 	return nil
 }
 
 func saveSessionID(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, sessionID string) {
+	logger := clog.LoggerFromContext(ctx)
 	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
 		Id:       taskID,
 		Metadata: map[string]string{"session_id": sessionID},
 	}))
 	if err != nil {
-		log.Printf("[task:%s] failed to save session_id: %v", taskID, err)
+		logger.Error("failed to save session_id", "error", err)
 	}
 }
 
 func saveWorktreeName(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, name string) {
+	logger := clog.LoggerFromContext(ctx)
 	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
 		Id:       taskID,
 		Metadata: map[string]string{"worktree": name},
 	}))
 	if err != nil {
-		log.Printf("[task:%s] failed to save worktree_name: %v", taskID, err)
+		logger.Error("failed to save worktree_name", "error", err)
 	} else {
-		log.Printf("[task:%s] worktree name: %s", taskID, name)
+		logger.Info("worktree name saved", "worktree_name", name)
 	}
 }
 
 func saveTaskDescription(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, description string) {
+	logger := clog.LoggerFromContext(ctx)
 	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
 		Id:          taskID,
 		Description: description,
 	}))
 	if err != nil {
-		log.Printf("[task:%s] failed to save task description: %v", taskID, err)
+		logger.Error("failed to save task description", "error", err)
 	} else {
-		log.Printf("[task:%s] task description updated (%d chars)", taskID, len(description))
+		logger.Info("task description updated", "description_length", len(description))
 	}
 }

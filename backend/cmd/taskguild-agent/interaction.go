@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -11,6 +11,7 @@ import (
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	v1 "github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1"
 	"github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1/taskguildv1connect"
+	"github.com/kazz187/taskguild/backend/pkg/clog"
 )
 
 // interactionWaiter dispatches streamed interaction responses to waiting goroutines.
@@ -74,6 +75,8 @@ func (w *interactionWaiter) Deliver(inter *v1.Interaction) {
 // responses that may have been missed during disconnections.
 // It returns only when ctx is cancelled (task finished).
 func runInteractionListener(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, interClient taskguildv1connect.InteractionServiceClient, taskID string, waiter *interactionWaiter) {
+	logger := clog.LoggerFromContext(ctx)
+
 	// Start a polling fallback that periodically checks pending interactions.
 	// This ensures responses are delivered even if the stream is temporarily down.
 	go runInteractionPoller(ctx, client, taskID, waiter)
@@ -91,9 +94,9 @@ func runInteractionListener(ctx context.Context, client taskguildv1connect.Agent
 			return
 		}
 		if err != nil {
-			log.Printf("[task:%s] interaction stream error: %v, reconnecting in %s...", taskID, err, backoff)
+			logger.Warn("interaction stream error, reconnecting", "error", err, "backoff", backoff)
 		} else {
-			log.Printf("[task:%s] interaction stream ended, reconnecting in %s...", taskID, backoff)
+			logger.Info("interaction stream ended, reconnecting", "backoff", backoff)
 		}
 
 		select {
@@ -113,6 +116,8 @@ func runInteractionListener(ctx context.Context, client taskguildv1connect.Agent
 // runInteractionStream connects once and processes interaction events until
 // the stream ends or ctx is cancelled. Returns the stream error (if any).
 func runInteractionStream(ctx context.Context, interClient taskguildv1connect.InteractionServiceClient, taskID string, waiter *interactionWaiter) error {
+	logger := clog.LoggerFromContext(ctx)
+
 	stream, err := interClient.SubscribeInteractions(ctx, connect.NewRequest(&v1.SubscribeInteractionsRequest{
 		TaskId: taskID,
 	}))
@@ -121,7 +126,7 @@ func runInteractionStream(ctx context.Context, interClient taskguildv1connect.In
 	}
 	defer stream.Close()
 
-	log.Printf("[task:%s] interaction stream connected", taskID)
+	logger.Debug("interaction stream connected")
 
 	for stream.Receive() {
 		deliverInteraction(taskID, stream.Msg().GetInteraction(), waiter, "stream")
@@ -186,12 +191,13 @@ func deliverInteraction(taskID string, inter *v1.Interaction, waiter *interactio
 	if inter == nil {
 		return
 	}
+	logger := slog.Default().With("task_id", taskID)
 	switch inter.GetStatus() {
 	case v1.InteractionStatus_INTERACTION_STATUS_RESPONDED:
-		log.Printf("[task:%s] interaction %s responded via %s", taskID, inter.GetId(), source)
+		logger.Debug("interaction responded", "interaction_id", inter.GetId(), "source", source)
 		waiter.Deliver(inter)
 	case v1.InteractionStatus_INTERACTION_STATUS_EXPIRED:
-		log.Printf("[task:%s] interaction %s expired via %s", taskID, inter.GetId(), source)
+		logger.Debug("interaction expired", "interaction_id", inter.GetId(), "source", source)
 		waiter.Deliver(inter)
 	}
 }
@@ -213,6 +219,8 @@ func waitForUserResponse(
 	claudeOutput string,
 	waiter *interactionWaiter,
 ) (string, error) {
+	logger := clog.LoggerFromContext(ctx)
+
 	resp, err := client.CreateInteraction(ctx, connect.NewRequest(&v1.CreateInteractionRequest{
 		TaskId:      taskID,
 		AgentId:     agentManagerID,
@@ -225,7 +233,7 @@ func waitForUserResponse(
 	}
 
 	interactionID := resp.Msg.GetInteraction().GetId()
-	log.Printf("[task:%s] waiting for user response (interaction: %s)", taskID, interactionID)
+	logger.Info("waiting for user response", "interaction_id", interactionID)
 
 	ch := waiter.Register(interactionID)
 	defer waiter.Unregister(interactionID)
@@ -234,19 +242,19 @@ func waitForUserResponse(
 	case <-ctx.Done():
 		return "", ctx.Err()
 	case <-time.After(waitForUserResponseTimeout):
-		log.Printf("[task:%s] user response timeout (interaction: %s), expiring", taskID, interactionID)
+		logger.Warn("user response timeout, expiring interaction", "interaction_id", interactionID)
 		// Expire the pending interaction so it disappears from the UI.
 		if _, expErr := interClient.ExpireInteraction(ctx, connect.NewRequest(&v1.ExpireInteractionRequest{
 			Id: interactionID,
 		})); expErr != nil {
-			log.Printf("[task:%s] failed to expire interaction %s: %v", taskID, interactionID, expErr)
+			logger.Error("failed to expire interaction", "interaction_id", interactionID, "error", expErr)
 		}
 		return "", errWaitTimeout
 	case inter := <-ch:
 		if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
 			return "", fmt.Errorf("interaction expired")
 		}
-		log.Printf("[task:%s] user responded to interaction %s", taskID, interactionID)
+		logger.Info("user responded to interaction", "interaction_id", interactionID)
 		return inter.GetResponse(), nil
 	}
 }
@@ -322,15 +330,17 @@ func handleAskUserQuestion(
 	input map[string]any,
 	waiter *interactionWaiter,
 ) (claudeagent.PermissionResult, error) {
+	logger := clog.LoggerFromContext(ctx)
+
 	questionsRaw, ok := input["questions"]
 	if !ok {
-		log.Printf("[task:%s] AskUserQuestion: no questions field", taskID)
+		logger.Warn("AskUserQuestion: no questions field")
 		return claudeagent.PermissionResultAllow{}, nil
 	}
 
 	questionsSlice, ok := questionsRaw.([]any)
 	if !ok {
-		log.Printf("[task:%s] AskUserQuestion: questions is not an array", taskID)
+		logger.Warn("AskUserQuestion: questions is not an array")
 		return claudeagent.PermissionResultAllow{}, nil
 	}
 
@@ -339,7 +349,7 @@ func handleAskUserQuestion(
 	for i, qRaw := range questionsSlice {
 		qMap, ok := qRaw.(map[string]any)
 		if !ok {
-			log.Printf("[task:%s] AskUserQuestion: question[%d] is not a map", taskID, i)
+			logger.Warn("AskUserQuestion: question is not a map", "index", i)
 			continue
 		}
 
@@ -396,7 +406,7 @@ func handleAskUserQuestion(
 		}
 
 		interactionID := resp.Msg.GetInteraction().GetId()
-		log.Printf("[task:%s] AskUserQuestion: waiting for answer to question %d (interaction: %s)", taskID, i, interactionID)
+		logger.Info("AskUserQuestion: waiting for answer", "question_index", i, "interaction_id", interactionID)
 
 		ch := waiter.Register(interactionID)
 
@@ -427,7 +437,7 @@ func handleAskUserQuestion(
 			}
 
 			followID := followResp.Msg.GetInteraction().GetId()
-			log.Printf("[task:%s] AskUserQuestion: waiting for free-text answer (interaction: %s)", taskID, followID)
+			logger.Info("AskUserQuestion: waiting for free-text answer", "interaction_id", followID)
 
 			followCh := waiter.Register(followID)
 
@@ -445,7 +455,7 @@ func handleAskUserQuestion(
 		}
 
 		answers[questionText] = selectedAnswer
-		log.Printf("[task:%s] AskUserQuestion: question %d answered: %q", taskID, i, selectedAnswer)
+		logger.Debug("AskUserQuestion: question answered", "question_index", i, "answer", selectedAnswer)
 	}
 
 	// Inject answers into the input and return as UpdatedInput.
@@ -472,21 +482,23 @@ func handlePermissionRequest(
 	toolCtx claudeagent.ToolPermissionContext,
 	permCache *permissionCache,
 ) (claudeagent.PermissionResult, error) {
+	logger := clog.LoggerFromContext(ctx)
+
 	// bypassPermissions: allow everything
 	if permMode == claudeagent.PermissionModeBypassPermissions {
-		log.Printf("[task:%s] auto-allowing %s (bypassPermissions)", taskID, toolName)
+		logger.Debug("auto-allowing tool (bypassPermissions)", "tool", toolName)
 		return claudeagent.PermissionResultAllow{}, nil
 	}
 
 	// Read-only tools: always allowed
 	if readOnlyTools[toolName] {
-		log.Printf("[task:%s] auto-allowing read-only tool %s", taskID, toolName)
+		logger.Debug("auto-allowing read-only tool", "tool", toolName)
 		return claudeagent.PermissionResultAllow{}, nil
 	}
 
 	// Edit tools: allowed in acceptEdits mode
 	if editTools[toolName] && permMode == claudeagent.PermissionModeAcceptEdits {
-		log.Printf("[task:%s] auto-allowing edit tool %s (acceptEdits)", taskID, toolName)
+		logger.Debug("auto-allowing edit tool (acceptEdits)", "tool", toolName)
 		return claudeagent.PermissionResultAllow{}, nil
 	}
 
@@ -497,7 +509,7 @@ func handlePermissionRequest(
 
 	// Check permission cache: auto-allow if a matching "always allow" rule exists.
 	if permCache != nil && permCache.Check(toolName, input) {
-		log.Printf("[task:%s] auto-allowing %s (permission cache hit)", taskID, toolName)
+		logger.Debug("auto-allowing tool (permission cache hit)", "tool", toolName)
 		return claudeagent.PermissionResultAllow{}, nil
 	}
 
@@ -520,7 +532,7 @@ func handlePermissionRequest(
 	}
 
 	interactionID := resp.Msg.GetInteraction().GetId()
-	log.Printf("[task:%s] waiting for permission response (interaction: %s, tool: %s)", taskID, interactionID, toolName)
+	logger.Info("waiting for permission response", "interaction_id", interactionID, "tool", toolName)
 
 	ch := waiter.Register(interactionID)
 	defer waiter.Unregister(interactionID)
@@ -530,16 +542,16 @@ func handlePermissionRequest(
 		return claudeagent.PermissionResultDeny{Message: "context cancelled"}, nil
 	case inter := <-ch:
 		if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
-			log.Printf("[task:%s] permission request expired for %s", taskID, toolName)
+			logger.Info("permission request expired", "tool", toolName)
 			return claudeagent.PermissionResultDeny{Message: "permission request expired"}, nil
 		}
 		switch inter.GetResponse() {
 		case "allow":
-			log.Printf("[task:%s] permission granted for %s", taskID, toolName)
+			logger.Info("permission granted", "tool", toolName)
 			return claudeagent.PermissionResultAllow{}, nil
 		case "always_allow":
 			updates := buildPermissionUpdate(toolName, input, toolCtx.Suggestions)
-			log.Printf("[task:%s] permission granted (always allow) for %s, updating %d rule(s)", taskID, toolName, len(updates))
+			logger.Info("permission granted (always allow)", "tool", toolName, "rules", len(updates))
 
 			// Persist to cache and backend so future calls are auto-allowed.
 			if permCache != nil {
@@ -551,7 +563,7 @@ func handlePermissionRequest(
 				UpdatedPermissions: updates,
 			}, nil
 		default:
-			log.Printf("[task:%s] permission denied for %s", taskID, toolName)
+			logger.Info("permission denied", "tool", toolName)
 			return claudeagent.PermissionResultDeny{Message: "user denied permission"}, nil
 		}
 	}

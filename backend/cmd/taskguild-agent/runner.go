@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +14,7 @@ import (
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	v1 "github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1"
 	"github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1/taskguildv1connect"
+	"github.com/kazz187/taskguild/backend/pkg/clog"
 )
 
 func init() {
@@ -59,6 +60,10 @@ func runTask(
 	workDir string,
 	permCache *permissionCache,
 ) {
+	// Create task-scoped logger and embed in context.
+	logger := slog.Default().With("task_id", taskID)
+	ctx = clog.ContextWithLogger(ctx, logger)
+
 	reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "starting task")
 
 	// Initialize task logger for structured log streaming.
@@ -78,7 +83,7 @@ func runTask(
 	// Cwd is set to the worktree from the very first turn.
 	if metadata["_use_worktree"] == "true" && worktreeName != "" {
 		if _, err := ensureWorktree(ctx, workDir, worktreeName, taskID); err != nil {
-			log.Printf("[task:%s] WARNING: failed to ensure worktree: %v", taskID, err)
+			logger.Warn("failed to ensure worktree", "error", err)
 		}
 	}
 
@@ -129,38 +134,39 @@ func runTask(
 		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, worktreeName, client, ctx, taskID, agentManagerID, waiter, permCache, tl)
 		// Override StderrCallback to also send to task logger.
 		opts.StderrCallback = func(line string) {
-			log.Printf("[task:%s] [claude-stderr] %s", taskID, line)
+			logger.Debug("claude-stderr", "line", line)
 			tl.LogStderr(line)
 		}
 
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_START, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 			fmt.Sprintf("Turn %d started", turn),
 			map[string]string{"turn": fmt.Sprintf("%d", turn)})
-		log.Printf("[task:%s] === Claude SDK Input (turn %d) ===", taskID, turn)
+		logger.Debug("Claude SDK input", "turn", turn)
 		if turn == 0 {
-			log.Printf("[task:%s] SystemPrompt:\n%s", taskID, instructions)
-			log.Printf("[task:%s] Metadata: %v", taskID, metadata)
-			log.Printf("[task:%s] WorkDir: %s", taskID, workDir)
+			logger.Debug("system prompt", "prompt", instructions)
+			logger.Debug("metadata", "metadata", fmt.Sprintf("%v", metadata))
+			logger.Debug("work directory", "work_dir", workDir)
 		}
-		log.Printf("[task:%s] UserPrompt:\n%s", taskID, prompt)
+		logger.Debug("user prompt", "prompt", prompt)
 		if sessionID != "" {
-			log.Printf("[task:%s] Resume: %s", taskID, sessionID)
+			logger.Debug("resuming session", "session_id", sessionID)
 		}
-		log.Printf("[task:%s] === End Claude SDK Input (turn %d) ===", taskID, turn)
 
 		result, err := claudeagent.RunQuerySync(ctx, prompt, opts)
 
-		log.Printf("[task:%s] === Claude SDK Output (turn %d) ===", taskID, turn)
+		logger.Debug("Claude SDK output", "turn", turn)
 		if err != nil {
-			log.Printf("[task:%s] Error: %v", taskID, err)
+			logger.Error("Claude SDK error", "turn", turn, "error", err)
 		} else if result.Result != nil {
-			log.Printf("[task:%s] IsError: %v", taskID, result.Result.IsError)
-			log.Printf("[task:%s] SessionID: %s", taskID, result.Result.SessionID)
-			log.Printf("[task:%s] Result: %s", taskID, result.Result.Result)
+			logger.Debug("Claude SDK result",
+				"turn", turn,
+				"is_error", result.Result.IsError,
+				"session_id", result.Result.SessionID,
+				"result", result.Result.Result,
+			)
 		} else {
-			log.Printf("[task:%s] Result is nil", taskID)
+			logger.Debug("Claude SDK result is nil", "turn", turn)
 		}
-		log.Printf("[task:%s] === End Claude SDK Output (turn %d) ===", taskID, turn)
 
 		if err != nil {
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_END, v1.TaskLogLevel_TASK_LOG_LEVEL_ERROR,
@@ -199,7 +205,7 @@ func runTask(
 			// to run 'claude login' to re-authenticate.
 			if isAuthenticationError(errMsg) {
 				authErrMsg := fmt.Sprintf("Authentication failed: %s\nRun 'claude login' to re-authenticate.", errMsg)
-				log.Printf("[task:%s] authentication error detected, not retrying: %s", taskID, errMsg)
+				logger.Error("authentication error detected, not retrying", "error", errMsg)
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_ERROR, v1.TaskLogLevel_TASK_LOG_LEVEL_ERROR,
 					authErrMsg, nil)
 				reportTaskResult(ctx, client, taskID, "", authErrMsg)
@@ -208,11 +214,11 @@ func runTask(
 			}
 
 			consecutiveErrors++
-			log.Printf("[task:%s] error (%d/%d): %s", taskID, consecutiveErrors, maxConsecutiveErrors, errMsg)
+			logger.Error("task error", "consecutive_errors", consecutiveErrors, "max_errors", maxConsecutiveErrors, "error", errMsg)
 
 			// If resume keeps failing, clear session and start fresh.
 			if sessionID != "" && consecutiveErrors >= maxResumeRetries {
-				log.Printf("[task:%s] resume failed %d times, clearing session to start fresh", taskID, consecutiveErrors)
+				logger.Warn("resume failed, clearing session to start fresh", "consecutive_errors", consecutiveErrors)
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_STATUS_CHANGE, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 					"Resume failed, restarting with fresh session", nil)
 				sessionID = ""
@@ -224,7 +230,7 @@ func runTask(
 			}
 
 			if consecutiveErrors >= maxConsecutiveErrors {
-				log.Printf("[task:%s] max consecutive errors reached, giving up", taskID)
+				logger.Error("max consecutive errors reached, giving up")
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_ERROR, v1.TaskLogLevel_TASK_LOG_LEVEL_ERROR,
 					fmt.Sprintf("Max consecutive errors reached, giving up: %s", errMsg), nil)
 				reportTaskResult(ctx, client, taskID, "", errMsg)
@@ -256,7 +262,7 @@ func runTask(
 		// Extract and persist task description updates from agent output.
 		if result.Result != nil {
 			if newDesc := parseTaskDescription(result.Result.Result); newDesc != "" {
-				log.Printf("[task:%s] detected TASK_DESCRIPTION update (turn %d)", taskID, turn)
+				logger.Info("detected TASK_DESCRIPTION update", "turn", turn)
 				saveTaskDescription(ctx, taskClient, taskID, newDesc)
 				// Update local metadata so subsequent prompts reflect the new description.
 				metadata["_task_description"] = newDesc
@@ -274,7 +280,7 @@ func runTask(
 		if result.Result != nil {
 			ctDirectives := parseCreateTasks(result.Result.Result)
 			for _, d := range ctDirectives {
-				log.Printf("[task:%s] detected CREATE_TASK directive: %q (turn %d)", taskID, d.Title, turn)
+				logger.Info("detected CREATE_TASK directive", "title", d.Title, "turn", turn)
 				createTaskFromDirective(ctx, taskClient, taskID, metadata, d)
 				// Log the directive execution to timeline.
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_DIRECTIVE, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
@@ -326,7 +332,7 @@ func runTask(
 		nextStatusID := parseNextStatus(summary)
 		if nextStatusID != "" {
 			displaySummary := stripNextStatus(summary)
-			log.Printf("[task:%s] completed with NEXT_STATUS %q (turn %d)", taskID, nextStatusID, turn)
+			logger.Info("completed with NEXT_STATUS", "next_status", nextStatusID, "turn", turn)
 			// Log the NEXT_STATUS directive to timeline.
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_DIRECTIVE, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Status transition: %s", nextStatusID),
@@ -345,7 +351,7 @@ func runTask(
 			// only after all hooks complete.
 			afterHooks()
 			if err := handleStatusTransition(ctx, taskClient, taskID, nextStatusID, metadata, tl); err != nil {
-				log.Printf("[task:%s] status transition failed: %v", taskID, err)
+				logger.Error("status transition failed", "error", err)
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 					fmt.Sprintf("Status transition to %q failed: %v", nextStatusID, err), nil)
 			}
@@ -354,7 +360,7 @@ func runTask(
 
 		// No transitions available (terminal status) means task is done.
 		if !hasTransitions {
-			log.Printf("[task:%s] completed at terminal status (turn %d)", taskID, turn)
+			logger.Info("completed at terminal status", "turn", turn)
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Task completed at terminal status (turn %d)", turn), nil)
 			reportTaskResult(ctx, client, taskID, summary, "")
@@ -363,21 +369,21 @@ func runTask(
 		}
 
 		// Claude hasn't completed — wait for user input.
-		log.Printf("[task:%s] waiting for user input (turn %d)", taskID, turn)
+		logger.Info("waiting for user input", "turn", turn)
 		reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "waiting for user input")
 
 		userResponse, err := waitForUserResponse(ctx, client, interClient, taskID, agentManagerID, summary, waiter)
 		if err == errWaitTimeout {
 			userResponseRetries++
 			if userResponseRetries > maxUserResponseRetries {
-				log.Printf("[task:%s] max user response retries reached (%d), force-completing task", taskID, userResponseRetries-1)
+				logger.Warn("max user response retries reached, force-completing task", "retries", userResponseRetries-1)
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 					"Max user response retries reached, force-completing task", nil)
 				reportTaskResult(ctx, client, taskID, summary, "")
 				reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task force-completed (no NEXT_STATUS after retries)")
 				return
 			}
-			log.Printf("[task:%s] user response timeout (retry %d/%d), prompting for NEXT_STATUS", taskID, userResponseRetries, maxUserResponseRetries)
+			logger.Warn("user response timeout, prompting for NEXT_STATUS", "retry", userResponseRetries, "max_retries", maxUserResponseRetries)
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 				fmt.Sprintf("User response timeout, retrying with NEXT_STATUS prompt (retry %d/%d)", userResponseRetries, maxUserResponseRetries), nil)
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "retrying: requesting NEXT_STATUS")
@@ -388,7 +394,7 @@ func runTask(
 			continue
 		}
 		if err != nil {
-			log.Printf("[task:%s] user response error: %v, completing task", taskID, err)
+			logger.Error("user response error, completing task", "error", err)
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (no user response)")
 			return
@@ -416,6 +422,8 @@ func buildClaudeOptions(
 	permCache *permissionCache,
 	tl *taskLogger,
 ) *claudeagent.ClaudeAgentOptions {
+	logger := clog.LoggerFromContext(ctx)
+
 	// Permission mode from agent config (default if empty)
 	permMode := claudeagent.PermissionModeDefault
 	if pm := metadata["_permission_mode"]; pm != "" {
@@ -430,7 +438,7 @@ func buildClaudeOptions(
 		wtDir := filepath.Join(workDir, ".claude", "worktrees", worktreeName)
 		if info, err := os.Stat(wtDir); err == nil && info.IsDir() {
 			cwd = wtDir
-			log.Printf("[task:%s] using existing worktree directory: %s", taskID, wtDir)
+			logger.Debug("using existing worktree directory", "worktree_dir", wtDir)
 		}
 	}
 
@@ -442,7 +450,7 @@ func buildClaudeOptions(
 			return handlePermissionRequest(ctx, client, taskID, agentManagerID, toolName, input, waiter, permMode, toolCtx, permCache)
 		},
 		StderrCallback: func(line string) {
-			log.Printf("[task:%s] [claude-stderr] %s", taskID, line)
+			logger.Debug("claude-stderr", "line", line)
 		},
 		Hooks: buildToolUseHooks(tl, taskID),
 	}
@@ -475,13 +483,14 @@ func reportTaskResult(
 	summary string,
 	errMsg string,
 ) {
+	logger := clog.LoggerFromContext(ctx)
 	_, err := client.ReportTaskResult(ctx, connect.NewRequest(&v1.ReportTaskResultRequest{
 		TaskId:       taskID,
 		Summary:      summary,
 		ErrorMessage: errMsg,
 	}))
 	if err != nil {
-		log.Printf("[task:%s] failed to report task result: %v", taskID, err)
+		logger.Error("failed to report task result", "error", err)
 	}
 }
 
@@ -493,6 +502,7 @@ func reportAgentStatus(
 	status v1.AgentStatus,
 	message string,
 ) {
+	logger := clog.LoggerFromContext(ctx)
 	_, err := client.ReportAgentStatus(ctx, connect.NewRequest(&v1.ReportAgentStatusRequest{
 		AgentManagerId: agentManagerID,
 		TaskId:         taskID,
@@ -500,7 +510,7 @@ func reportAgentStatus(
 		Message:        message,
 	}))
 	if err != nil {
-		log.Printf("[task:%s] failed to report agent status: %v", taskID, err)
+		logger.Error("failed to report agent status", "error", err)
 	}
 }
 
