@@ -87,6 +87,9 @@ type AgentManagerSubscribeRequest struct {
 	// being executed locally). Tasks assigned to this agent but NOT in this list
 	// are released and re-broadcast.
 	ActiveTaskIds []string `protobuf:"bytes,4,rep,name=active_task_ids,json=activeTaskIds,proto3" json:"active_task_ids,omitempty"`
+	// agent_version is the git commit hash (short) of the agent binary.
+	// The server uses this to detect version mismatches and log warnings.
+	AgentVersion  string `protobuf:"bytes,5,opt,name=agent_version,json=agentVersion,proto3" json:"agent_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -147,6 +150,13 @@ func (x *AgentManagerSubscribeRequest) GetActiveTaskIds() []string {
 		return x.ActiveTaskIds
 	}
 	return nil
+}
+
+func (x *AgentManagerSubscribeRequest) GetAgentVersion() string {
+	if x != nil {
+		return x.AgentVersion
+	}
+	return ""
 }
 
 type AgentCommand struct {
@@ -3053,12 +3063,13 @@ var File_taskguild_v1_agent_manager_proto protoreflect.FileDescriptor
 
 const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\n" +
-	" taskguild/v1/agent_manager.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x18taskguild/v1/agent.proto\x1a\x1etaskguild/v1/interaction.proto\x1a\x1dtaskguild/v1/permission.proto\x1a\x19taskguild/v1/script.proto\x1a\x1btaskguild/v1/task_log.proto\"\xc5\x01\n" +
+	" taskguild/v1/agent_manager.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x18taskguild/v1/agent.proto\x1a\x1etaskguild/v1/interaction.proto\x1a\x1dtaskguild/v1/permission.proto\x1a\x19taskguild/v1/script.proto\x1a\x1btaskguild/v1/task_log.proto\"\xea\x01\n" +
 	"\x1cAgentManagerSubscribeRequest\x12(\n" +
 	"\x10agent_manager_id\x18\x01 \x01(\tR\x0eagentManagerId\x12!\n" +
 	"\fproject_name\x18\x02 \x01(\tR\vprojectName\x120\n" +
 	"\x14max_concurrent_tasks\x18\x03 \x01(\x05R\x12maxConcurrentTasks\x12&\n" +
-	"\x0factive_task_ids\x18\x04 \x03(\tR\ractiveTaskIds\"\x8e\a\n" +
+	"\x0factive_task_ids\x18\x04 \x03(\tR\ractiveTaskIds\x12#\n" +
+	"\ragent_version\x18\x05 \x01(\tR\fagentVersion\"\x8e\a\n" +
 	"\fAgentCommand\x12K\n" +
 	"\x0etask_available\x18\x01 \x01(\v2\".taskguild.v1.TaskAvailableCommandH\x00R\rtaskAvailable\x12B\n" +
 	"\vassign_task\x18\x02 \x01(\v2\x1f.taskguild.v1.AssignTaskCommandH\x00R\n" +

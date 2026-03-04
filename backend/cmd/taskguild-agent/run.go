@@ -18,6 +18,7 @@ import (
 	"connectrpc.com/connect"
 	v1 "github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1"
 	"github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1/taskguildv1connect"
+	"github.com/kazz187/taskguild/backend/internal/version"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -123,6 +124,7 @@ func runAgent() {
 
 	slog.Info("agent-manager starting",
 		"agent_manager_id", cfg.AgentManagerID,
+		"version", version.Short(),
 		"server_url", cfg.ServerURL,
 		"max_tasks", cfg.MaxConcurrentTasks,
 		"work_dir", cfg.WorkDir,
@@ -276,6 +278,7 @@ func runSubscribeLoop(
 		MaxConcurrentTasks: int32(cfg.MaxConcurrentTasks),
 		ProjectName:        cfg.ProjectName,
 		ActiveTaskIds:      activeTaskIDs,
+		AgentVersion:       version.Short(),
 	}))
 	if err != nil {
 		return fmt.Errorf("failed to subscribe: %w", err)
