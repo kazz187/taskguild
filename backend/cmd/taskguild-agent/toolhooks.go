@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
@@ -78,7 +78,7 @@ func logToolUse(tl *taskLogger, taskID string, input claudeagent.HookInput, isFa
 		}
 	}
 
-	log.Printf("[task:%s] tool_use: %s (fail=%v)", taskID, summary, isFail)
+	slog.Info("tool_use", "task_id", taskID, "summary", summary, "failed", isFail)
 
 	tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_TOOL_USE, level, summary, metadata)
 }

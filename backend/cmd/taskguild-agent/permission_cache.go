@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"sync"
 
@@ -39,7 +39,7 @@ func (c *permissionCache) Update(rules []string) {
 	defer c.mu.Unlock()
 	c.allowRules = make([]string, len(rules))
 	copy(c.allowRules, rules)
-	log.Printf("permission cache updated: %d allow rules", len(rules))
+	slog.Info("permission cache updated", "allow_rules", len(rules))
 }
 
 // Check returns true if the given tool call is allowed by any cached rule.
@@ -68,7 +68,7 @@ func (c *permissionCache) AddAndSync(ctx context.Context, newRules []string) {
 	c.allowRules = unionDedupRules(c.allowRules, newRules)
 	c.mu.Unlock()
 
-	log.Printf("permission cache: added %d rule(s), syncing to backend", len(newRules))
+	slog.Info("permission cache: added rules, syncing to backend", "new_rules", len(newRules))
 
 	// Sync to backend – send only the new rules; the backend merges them.
 	resp, err := c.client.SyncPermissions(ctx, connect.NewRequest(&v1.SyncPermissionsRequest{
@@ -76,7 +76,7 @@ func (c *permissionCache) AddAndSync(ctx context.Context, newRules []string) {
 		LocalAllow:  newRules,
 	}))
 	if err != nil {
-		log.Printf("permission cache: failed to sync rules to backend: %v", err)
+		slog.Error("permission cache: failed to sync rules to backend", "error", err)
 		return
 	}
 
@@ -86,7 +86,7 @@ func (c *permissionCache) AddAndSync(ctx context.Context, newRules []string) {
 	c.allowRules = merged.GetAllow()
 	c.mu.Unlock()
 
-	log.Printf("permission cache: backend sync complete, allow=%d", len(merged.GetAllow()))
+	slog.Info("permission cache: backend sync complete", "allow", len(merged.GetAllow()))
 }
 
 // extractRuleStrings converts PermissionUpdate objects into human-readable

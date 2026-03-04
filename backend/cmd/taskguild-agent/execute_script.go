@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,7 +31,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 	filename := cmd.GetFilename()
 	content := cmd.GetContent()
 
-	log.Printf("executing script %s (request_id: %s, filename: %s)", scriptID, requestID, filename)
+	slog.Info("executing script", "script_id", scriptID, "request_id", requestID, "filename", filename)
 
 	reportResult := func(success bool, exitCode int32, stdout, stderr, errMsg string) {
 		_, err := client.ReportScriptExecutionResult(ctx, connect.NewRequest(&v1.ReportScriptExecutionResultRequest{
@@ -45,7 +45,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 			ErrorMessage: errMsg,
 		}))
 		if err != nil {
-			log.Printf("failed to report script execution result: %v", err)
+			slog.Error("failed to report script execution result", "request_id", requestID, "error", err)
 		}
 	}
 
@@ -57,7 +57,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 	scriptTracker.mu.Lock()
 	if scriptTracker.reject {
 		scriptTracker.mu.Unlock()
-		log.Printf("script %s rejected: agent is shutting down for hot reload (request_id: %s)", filename, requestID)
+		slog.Warn("script rejected: agent is shutting down for hot reload", "filename", filename, "request_id", requestID)
 		reportResult(false, -1, "", "", "script execution rejected: agent is shutting down for hot reload")
 		return
 	}
@@ -123,12 +123,12 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 		if exitErr, ok := cmdErr.(*exec.ExitError); ok {
 			exitCode = int32(exitErr.ExitCode())
 		}
-		log.Printf("script %s failed (exit_code: %d, request_id: %s)", filename, exitCode, requestID)
+		slog.Error("script failed", "filename", filename, "exit_code", exitCode, "request_id", requestID)
 		reportResult(false, exitCode, stdout, stderr, "")
 		return
 	}
 
-	log.Printf("script %s succeeded (request_id: %s)", filename, requestID)
+	slog.Info("script succeeded", "filename", filename, "request_id", requestID)
 	reportResult(true, 0, stdout, stderr, "")
 }
 
@@ -228,6 +228,6 @@ func flushOutputChunk(
 		StderrChunk: stderrChunk,
 	}))
 	if err != nil {
-		log.Printf("failed to send output chunk (request_id: %s): %v", requestID, err)
+		slog.Error("failed to send output chunk", "request_id", requestID, "error", err)
 	}
 }

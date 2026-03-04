@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,6 +17,7 @@ import (
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	v1 "github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1"
 	"github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1/taskguildv1connect"
+	"github.com/kazz187/taskguild/backend/pkg/clog"
 )
 
 // hookEntry represents a resolved hook from metadata.
@@ -35,6 +36,8 @@ type hookEntry struct {
 // If taskClient is provided, hook results containing TASK_METADATA directives
 // will be used to update the task's metadata.
 func executeHooks(ctx context.Context, taskID string, trigger string, metadata map[string]string, workDir string, taskClient taskguildv1connect.TaskServiceClient, tl *taskLogger) {
+	logger := clog.LoggerFromContext(ctx)
+
 	hooksJSON := metadata["_hooks"]
 	if hooksJSON == "" {
 		return
@@ -42,7 +45,7 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 
 	var hooks []hookEntry
 	if err := json.Unmarshal([]byte(hooksJSON), &hooks); err != nil {
-		log.Printf("[task:%s] failed to parse _hooks metadata: %v", taskID, err)
+		logger.Error("failed to parse _hooks metadata", "error", err)
 		return
 	}
 
@@ -61,10 +64,10 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 		return
 	}
 
-	log.Printf("[task:%s] executing %d hook(s) for trigger %s", taskID, len(filtered), trigger)
+	logger.Info("executing hooks", "count", len(filtered), "trigger", trigger)
 
 	for _, h := range filtered {
-		log.Printf("[task:%s] running hook %q (id=%s, skill=%s)", taskID, h.Name, h.ID, h.SkillID)
+		logger.Info("running hook", "name", h.Name, "hook_id", h.ID, "skill_id", h.SkillID)
 		if tl != nil {
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_HOOK, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Executing hook: %s (%s)", h.Name, trigger), nil)
@@ -83,15 +86,15 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 		cancel()
 
 		if err != nil {
-			log.Printf("[task:%s] hook %q failed: %v", taskID, h.Name, err)
+			logger.Error("hook failed", "name", h.Name, "error", err)
 			continue
 		}
 		if result.Result != nil && result.Result.IsError {
-			log.Printf("[task:%s] hook %q returned error: %s", taskID, h.Name, result.Result.Result)
+			logger.Error("hook returned error", "name", h.Name, "result", result.Result.Result)
 			continue
 		}
 
-		log.Printf("[task:%s] hook %q completed successfully", taskID, h.Name)
+		logger.Info("hook completed successfully", "name", h.Name)
 
 		// Parse TASK_METADATA directives from hook output and update the task.
 		if taskClient != nil && result.Result != nil {
@@ -106,6 +109,8 @@ var taskMetadataRegex = regexp.MustCompile(`(?m)^TASK_METADATA:\s*(\S+?)=(.+)$`)
 // applyHookMetadata extracts TASK_METADATA directives from hook output and
 // updates the task's metadata via the TaskService API.
 func applyHookMetadata(ctx context.Context, taskID string, output string, taskClient taskguildv1connect.TaskServiceClient) {
+	logger := clog.LoggerFromContext(ctx)
+
 	matches := taskMetadataRegex.FindAllStringSubmatch(output, -1)
 	if len(matches) == 0 {
 		return
@@ -116,7 +121,7 @@ func applyHookMetadata(ctx context.Context, taskID string, output string, taskCl
 		key := strings.TrimSpace(m[1])
 		value := strings.TrimSpace(m[2])
 		meta[key] = value
-		log.Printf("[task:%s] hook metadata: %s=%s", taskID, key, value)
+		logger.Debug("hook metadata", "key", key, "value", value)
 	}
 
 	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
@@ -124,7 +129,7 @@ func applyHookMetadata(ctx context.Context, taskID string, output string, taskCl
 		Metadata: meta,
 	}))
 	if err != nil {
-		log.Printf("[task:%s] failed to update task metadata from hook: %v", taskID, err)
+		logger.Error("failed to update task metadata from hook", "error", err)
 	}
 }
 
@@ -167,6 +172,8 @@ func slugifyASCII(s string) string {
 // ensureWorktree creates a git worktree if the directory does not already exist.
 // It uses "git worktree add" with a new branch based on HEAD.
 func ensureWorktree(ctx context.Context, workDir, worktreeName, taskID string) (string, error) {
+	logger := clog.LoggerFromContext(ctx)
+
 	wtDir := filepath.Join(workDir, ".claude", "worktrees", worktreeName)
 	if info, err := os.Stat(wtDir); err == nil && info.IsDir() {
 		return wtDir, nil
@@ -187,7 +194,7 @@ func ensureWorktree(ctx context.Context, workDir, worktreeName, taskID string) (
 			return "", fmt.Errorf("git worktree add: %w: %s / %s", err2, out, out2)
 		}
 	}
-	log.Printf("[task:%s] created worktree at %s (branch: %s)", taskID, wtDir, branchName)
+	logger.Info("created worktree", "worktree_dir", wtDir, "branch", branchName)
 	return wtDir, nil
 }
 
@@ -242,7 +249,7 @@ func translateToEnglishSlug(ctx context.Context, title, workDir string) string {
 
 	result, err := claudeagent.RunQuerySync(timeoutCtx, prompt, opts)
 	if err != nil || result.Result == nil {
-		log.Printf("translateToEnglishSlug failed: %v", err)
+		slog.Warn("translateToEnglishSlug failed", "error", err)
 		return ""
 	}
 

@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,7 +16,7 @@ import (
 // It also removes stale script files that no longer exist on the server.
 func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, cfg *config) {
 	if cfg.ProjectName == "" {
-		log.Println("skipping script sync: no project name configured")
+		slog.Info("skipping script sync: no project name configured")
 		return
 	}
 
@@ -24,16 +24,16 @@ func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServ
 		ProjectName: cfg.ProjectName,
 	}))
 	if err != nil {
-		log.Printf("script sync failed: %v", err)
+		slog.Error("script sync failed", "error", err)
 		return
 	}
 
 	scripts := resp.Msg.GetScripts()
-	log.Printf("syncing %d script(s) from server", len(scripts))
+	slog.Info("syncing scripts from server", "count", len(scripts))
 
 	scriptsDir := filepath.Join(cfg.WorkDir, ".claude", "scripts")
 	if err := os.MkdirAll(scriptsDir, 0755); err != nil {
-		log.Printf("failed to create scripts directory: %v", err)
+		slog.Error("failed to create scripts directory", "error", err)
 		return
 	}
 
@@ -46,17 +46,17 @@ func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServ
 
 		// Skip scripts with unsafe names.
 		if strings.Contains(filename, "/") || strings.Contains(filename, "\\") || strings.Contains(filename, "..") {
-			log.Printf("skipping script with unsafe filename: %q", filename)
+			slog.Warn("skipping script with unsafe filename", "filename", filename)
 			continue
 		}
 
 		filePath := filepath.Join(scriptsDir, filename)
 
 		if err := os.WriteFile(filePath, []byte(sc.GetContent()), 0755); err != nil {
-			log.Printf("failed to write script file %s: %v", filePath, err)
+			slog.Error("failed to write script file", "path", filePath, "error", err)
 			continue
 		}
-		log.Printf("synced script: %s", filename)
+		slog.Debug("synced script", "filename", filename)
 		writtenFiles[filename] = true
 	}
 
@@ -78,9 +78,9 @@ func cleanupStaleScriptFiles(scriptsDir string, writtenFiles map[string]bool) {
 		if !writtenFiles[entry.Name()] {
 			filePath := filepath.Join(scriptsDir, entry.Name())
 			if err := os.Remove(filePath); err != nil {
-				log.Printf("failed to remove stale script file %s: %v", filePath, err)
+				slog.Error("failed to remove stale script file", "path", filePath, "error", err)
 			} else {
-				log.Printf("removed stale script: %s", entry.Name())
+				slog.Debug("removed stale script", "filename", entry.Name())
 			}
 		}
 	}

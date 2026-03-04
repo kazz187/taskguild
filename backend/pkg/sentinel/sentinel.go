@@ -4,11 +4,12 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -59,21 +60,51 @@ func Run() {
 	// Go's default signal handling would terminate the process.
 	signal.Ignore(syscall.SIGUSR1)
 
-	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
-	log.SetPrefix("[sentinel] ")
+	// Initialize slog based on environment.
+	env := os.Getenv("TASKGUILD_ENV")
+	if env == "" {
+		env = "local"
+	}
+	levelStr := os.Getenv("TASKGUILD_LOG_LEVEL")
+	if levelStr == "" {
+		levelStr = "debug"
+	}
+	var level slog.Level
+	switch strings.ToLower(levelStr) {
+	case "debug":
+		level = slog.LevelDebug
+	case "info":
+		level = slog.LevelInfo
+	case "warn":
+		level = slog.LevelWarn
+	case "error":
+		level = slog.LevelError
+	default:
+		level = slog.LevelDebug
+	}
+	handlerOpts := &slog.HandlerOptions{Level: level}
+	var handler slog.Handler
+	if env == "local" {
+		handler = slog.NewTextHandler(os.Stderr, handlerOpts)
+	} else {
+		handler = slog.NewJSONHandler(os.Stderr, handlerOpts)
+	}
+	slog.SetDefault(slog.New(handler).With("component", "sentinel"))
 
 	// Resolve own binary path.
 	binaryPath, err := os.Executable()
 	if err != nil {
-		log.Fatalf("failed to resolve executable path: %v", err)
+		slog.Error("failed to resolve executable path", "error", err)
+		os.Exit(1)
 	}
 	// Resolve symlinks so we watch the real file location.
 	binaryPath, err = filepath.EvalSymlinks(binaryPath)
 	if err != nil {
-		log.Fatalf("failed to resolve symlinks for binary: %v", err)
+		slog.Error("failed to resolve symlinks for binary", "error", err)
+		os.Exit(1)
 	}
 
-	log.Printf("starting sentinel (binary: %s)", binaryPath)
+	slog.Info("starting sentinel", "binary", binaryPath)
 
 	s := &Sentinel{
 		binaryPath: binaryPath,
@@ -84,9 +115,10 @@ func Run() {
 	// Compute initial SHA256 hash of the binary.
 	s.lastHash, err = HashFile(binaryPath)
 	if err != nil {
-		log.Fatalf("failed to hash binary: %v", err)
+		slog.Error("failed to hash binary", "error", err)
+		os.Exit(1)
 	}
-	log.Printf("initial binary hash: %x", s.lastHash[:8])
+	slog.Info("initial binary hash computed", "hash", fmt.Sprintf("%x", s.lastHash[:8]))
 
 	// Set up OS signal handler.
 	sigCh := make(chan os.Signal, 1)
@@ -106,7 +138,7 @@ func (s *Sentinel) mainLoop(sigCh <-chan os.Signal, updateCh <-chan struct{}) {
 		// Check if we should stop before starting a new child.
 		select {
 		case <-s.stopCh:
-			log.Println("sentinel stopping (stopCh closed)")
+			slog.Info("sentinel stopping (stopCh closed)")
 			return
 		default:
 		}
@@ -114,7 +146,7 @@ func (s *Sentinel) mainLoop(sigCh <-chan os.Signal, updateCh <-chan struct{}) {
 		// Start child process.
 		child, err := s.startChild()
 		if err != nil {
-			log.Printf("failed to start child: %v", err)
+			slog.Error("failed to start child", "error", err)
 			s.sleepBackoff()
 			s.increaseBackoff()
 			continue
@@ -134,7 +166,7 @@ func (s *Sentinel) mainLoop(sigCh <-chan os.Signal, updateCh <-chan struct{}) {
 			// Child exited on its own.
 			elapsed := time.Since(startTime)
 			if err != nil {
-				log.Printf("child exited with error after %v: %v", elapsed, err)
+				slog.Error("child exited with error", "elapsed", elapsed, "error", err)
 				if elapsed >= SuccessRunTime {
 					// Ran long enough — reset backoff.
 					s.backoff = InitialBackoff
@@ -144,7 +176,7 @@ func (s *Sentinel) mainLoop(sigCh <-chan os.Signal, updateCh <-chan struct{}) {
 			} else {
 				// Clean exit. The "run" subcommand normally runs forever,
 				// so a clean exit is unexpected and warrants a restart.
-				log.Printf("child exited cleanly after %v", elapsed)
+				slog.Info("child exited cleanly", "elapsed", elapsed)
 				s.backoff = InitialBackoff
 				time.Sleep(1 * time.Second)
 			}
@@ -155,37 +187,37 @@ func (s *Sentinel) mainLoop(sigCh <-chan os.Signal, updateCh <-chan struct{}) {
 			// If the child does not handle SIGUSR1 (e.g. old binary or
 			// taskguild-server), the default OS action terminates the process
 			// immediately — same as the previous SIGTERM behaviour.
-			log.Println("binary update detected, requesting graceful restart...")
+			slog.Info("binary update detected, requesting graceful restart")
 			s.requestGracefulRestart(child)
 			select {
 			case <-childDone:
-				log.Println("child exited gracefully after completing scripts")
+				slog.Info("child exited gracefully after completing scripts")
 			case <-time.After(ScriptWaitTimeout):
-				log.Println("timeout waiting for scripts to complete, force stopping child...")
+				slog.Warn("timeout waiting for scripts to complete, force stopping child")
 				s.stopChild(child)
 				<-childDone
 			case sig := <-sigCh:
 				// OS signal arrived while waiting — force stop and exit sentinel.
-				log.Printf("received %v during restart wait, force stopping child...", sig)
+				slog.Info("received signal during restart wait, force stopping child", "signal", sig)
 				s.stopChild(child)
 				<-childDone
-				log.Println("sentinel exiting")
+				slog.Info("sentinel exiting")
 				return
 			}
 			// Refresh the hash for the new binary.
 			if h, err := HashFile(s.binaryPath); err == nil {
 				s.lastHash = h
-				log.Printf("new binary hash: %x", s.lastHash[:8])
+				slog.Info("new binary hash", "hash", fmt.Sprintf("%x", s.lastHash[:8]))
 			}
 			s.backoff = InitialBackoff
 
 		case sig := <-sigCh:
 			// Sentinel received SIGINT/SIGTERM — forward to child and shut down.
-			log.Printf("received %v, forwarding to child and shutting down...", sig)
+			slog.Info("received signal, forwarding to child and shutting down", "signal", sig)
 			s.stopChild(child)
 			// Wait for child to actually exit.
 			<-childDone
-			log.Println("sentinel exiting")
+			slog.Info("sentinel exiting")
 			return
 		}
 	}
@@ -203,7 +235,7 @@ func (s *Sentinel) startChild() (*exec.Cmd, error) {
 		return nil, fmt.Errorf("exec %s run: %w", s.binaryPath, err)
 	}
 
-	log.Printf("started child process (pid: %d)", cmd.Process.Pid)
+	slog.Info("started child process", "pid", cmd.Process.Pid)
 	return cmd, nil
 }
 
@@ -216,9 +248,9 @@ func (s *Sentinel) stopChild(cmd *exec.Cmd) {
 	}
 
 	pid := cmd.Process.Pid
-	log.Printf("sending SIGTERM to child (pid: %d)", pid)
+	slog.Info("sending SIGTERM to child", "pid", pid)
 	if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
-		log.Printf("failed to send SIGTERM (process may have already exited): %v", err)
+		slog.Warn("failed to send SIGTERM (process may have already exited)", "pid", pid, "error", err)
 		return
 	}
 
@@ -227,9 +259,9 @@ func (s *Sentinel) stopChild(cmd *exec.Cmd) {
 		time.Sleep(GracePeriod)
 		// Check if process is still alive by trying to signal it.
 		if err := cmd.Process.Signal(syscall.Signal(0)); err == nil {
-			log.Printf("grace period expired, sending SIGKILL to child (pid: %d)", pid)
+			slog.Warn("grace period expired, sending SIGKILL to child", "pid", pid)
 			if err := cmd.Process.Kill(); err != nil {
-				log.Printf("failed to send SIGKILL: %v", err)
+				slog.Error("failed to send SIGKILL", "pid", pid, "error", err)
 			}
 		}
 	}()
@@ -250,9 +282,9 @@ func (s *Sentinel) requestGracefulRestart(cmd *exec.Cmd) {
 	}
 
 	pid := cmd.Process.Pid
-	log.Printf("sending SIGUSR1 to child (pid: %d) for graceful restart", pid)
+	slog.Info("sending SIGUSR1 to child for graceful restart", "pid", pid)
 	if err := cmd.Process.Signal(syscall.SIGUSR1); err != nil {
-		log.Printf("failed to send SIGUSR1 (process may have already exited): %v", err)
+		slog.Warn("failed to send SIGUSR1 (process may have already exited)", "pid", pid, "error", err)
 	}
 }
 
@@ -262,7 +294,7 @@ func (s *Sentinel) requestGracefulRestart(cmd *exec.Cmd) {
 func (s *Sentinel) watchBinary(updateCh chan<- struct{}) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Printf("failed to create fsnotify watcher: %v", err)
+		slog.Error("failed to create fsnotify watcher", "error", err)
 		return
 	}
 	defer watcher.Close()
@@ -274,10 +306,10 @@ func (s *Sentinel) watchBinary(updateCh chan<- struct{}) {
 	binaryName := filepath.Base(s.binaryPath)
 
 	if err := watcher.Add(watchDir); err != nil {
-		log.Printf("failed to watch directory %s: %v", watchDir, err)
+		slog.Error("failed to watch directory", "dir", watchDir, "error", err)
 		return
 	}
-	log.Printf("watching directory %s for changes to %s", watchDir, binaryName)
+	slog.Info("watching directory for changes", "dir", watchDir, "binary", binaryName)
 
 	// Debounce timer: after a relevant event, wait before computing the checksum
 	// to let multiple rapid events settle (e.g., atomic deploy: write + rename).
@@ -298,7 +330,7 @@ func (s *Sentinel) watchBinary(updateCh chan<- struct{}) {
 				continue
 			}
 
-			log.Printf("detected filesystem event: %s %s", event.Op, event.Name)
+			slog.Debug("detected filesystem event", "op", event.Op, "name", event.Name)
 
 			// Reset debounce timer.
 			if debounceTimer != nil {
@@ -307,19 +339,20 @@ func (s *Sentinel) watchBinary(updateCh chan<- struct{}) {
 			debounceTimer = time.AfterFunc(DebounceInterval, func() {
 				newHash, err := HashFile(s.binaryPath)
 				if err != nil {
-					log.Printf("failed to hash binary after event: %v", err)
+					slog.Error("failed to hash binary after event", "error", err)
 					return
 				}
 				if newHash != s.lastHash {
-					log.Printf("binary checksum changed (old: %x, new: %x)",
-						s.lastHash[:8], newHash[:8])
+					slog.Info("binary checksum changed",
+						"old_hash", fmt.Sprintf("%x", s.lastHash[:8]),
+						"new_hash", fmt.Sprintf("%x", newHash[:8]))
 					// Non-blocking send.
 					select {
 					case updateCh <- struct{}{}:
 					default:
 					}
 				} else {
-					log.Printf("filesystem event but checksum unchanged, ignoring")
+					slog.Debug("filesystem event but checksum unchanged, ignoring")
 				}
 			})
 
@@ -327,7 +360,7 @@ func (s *Sentinel) watchBinary(updateCh chan<- struct{}) {
 			if !ok {
 				return
 			}
-			log.Printf("fsnotify error: %v", err)
+			slog.Error("fsnotify error", "error", err)
 
 		case <-s.stopCh:
 			return
@@ -356,7 +389,7 @@ func HashFile(path string) ([sha256.Size]byte, error) {
 // sleepBackoff waits for the current backoff duration.
 // It can be interrupted by closing stopCh.
 func (s *Sentinel) sleepBackoff() {
-	log.Printf("waiting %v before restart...", s.backoff)
+	slog.Info("waiting before restart", "backoff", s.backoff)
 	select {
 	case <-time.After(s.backoff):
 	case <-s.stopCh:

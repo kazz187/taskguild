@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +21,7 @@ const (
 type taskLogger struct {
 	client    taskguildv1connect.AgentManagerServiceClient
 	taskID    string
+	logger    *slog.Logger
 	stderrBuf []string
 	stderrMu  sync.Mutex
 	ctx       context.Context
@@ -33,6 +34,7 @@ func newTaskLogger(ctx context.Context, client taskguildv1connect.AgentManagerSe
 	tl := &taskLogger{
 		client: client,
 		taskID: taskID,
+		logger: slog.Default().With("task_id", taskID),
 		ctx:    ctx,
 		cancel: cancel,
 	}
@@ -51,7 +53,7 @@ func (tl *taskLogger) Log(category v1.TaskLogCategory, level v1.TaskLogLevel, me
 		Metadata: metadata,
 	}))
 	if err != nil {
-		log.Printf("[task:%s] failed to report task log: %v", tl.taskID, err)
+		tl.logger.Error("failed to report task log", "error", err)
 	}
 }
 
