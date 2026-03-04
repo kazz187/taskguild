@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { WorktreeList } from '@/components/WorktreeList'
+import { WorktreeList } from '@/components/organisms/WorktreeList'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export const Route = createFileRoute('/projects/$projectId/worktrees')({

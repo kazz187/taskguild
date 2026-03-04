@@ -7,7 +7,8 @@ import {
   Shield, MessageSquare, Bell, Mail, Play, Square, RefreshCw, Anchor,
   Terminal, AlertTriangle, Cog, Wrench, FileText, Zap, ChevronRight, ChevronDown,
 } from 'lucide-react'
-import { formatTime } from './ChatBubble'
+import { formatTime } from './ChatBubble.tsx'
+import { Badge } from '../atoms/index.ts'
 
 export type TimelineItem =
   | { kind: 'interaction'; interaction: Interaction }
@@ -46,17 +47,11 @@ function InteractionEntry({ interaction }: { interaction: Interaction }) {
           : 'Notification'
 
   const statusBadge = isPending ? (
-    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-medium shrink-0">
-      Pending
-    </span>
+    <Badge color="amber" size="xs">Pending</Badge>
   ) : isResponded ? (
-    <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-medium shrink-0">
-      Done
-    </span>
+    <Badge color="green" size="xs">Done</Badge>
   ) : isExpired ? (
-    <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-500/20 text-gray-500 font-medium shrink-0">
-      Expired
-    </span>
+    <Badge color="gray" size="xs">Expired</Badge>
   ) : null
 
   return (

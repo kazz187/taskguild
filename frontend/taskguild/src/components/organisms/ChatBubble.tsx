@@ -10,8 +10,10 @@ import {
   CheckCircle,
   Timer,
 } from 'lucide-react'
-import { MarkdownDescription } from './MarkdownDescription'
-import { ConnectionIndicator } from './ConnectionIndicator'
+import { MarkdownDescription } from './MarkdownDescription.tsx'
+import { ConnectionIndicator } from './ConnectionIndicator.tsx'
+import { Button } from '../atoms/index.ts'
+import { Input } from '../atoms/index.ts'
 import type { ConnectionStatus } from '@/hooks/useEventSubscription'
 
 /* ─── Helpers ─── */
@@ -116,15 +118,17 @@ export function ChatBubble({
               /* Permission request: horizontal button layout */
               <div className="flex gap-2 flex-wrap mt-3">
                 {interaction.options.map((opt) => (
-                  <button
+                  <Button
                     key={opt.value}
+                    variant="secondary"
+                    size="sm"
                     onClick={() => onRespond(interaction.id, opt.value)}
                     disabled={isRespondPending}
-                    className="px-3 py-1.5 text-xs bg-slate-700 border border-slate-600 rounded-lg text-gray-200 hover:border-cyan-500/50 hover:text-white transition-colors disabled:opacity-50"
                     title={opt.description}
+                    className="bg-slate-700 border border-slate-600 text-gray-200 hover:border-cyan-500/50 hover:text-white"
                   >
                     {opt.label}
-                  </button>
+                  </Button>
                 ))}
               </div>
             )
@@ -213,20 +217,22 @@ export function InputBar({
         {connectionStatus && onReconnect && (
           <ConnectionIndicator status={connectionStatus} onReconnect={onReconnect} />
         )}
-        <input
+        <Input
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); handleSend() } }}
-          className="flex-1 px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-500 placeholder-gray-600"
+          inputSize="md"
+          className="flex-1 bg-slate-900"
           placeholder={hasPendingText ? 'Type your response...' : 'Send a message...'}
         />
-        <button
+        <Button
+          variant="primary"
+          size="md"
+          iconOnly
+          icon={<Send />}
           onClick={handleSend}
           disabled={!canSend}
-          className="px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-cyan-600"
-        >
-          <Send className="w-4 h-4" />
-        </button>
+        />
       </div>
     </div>
   )

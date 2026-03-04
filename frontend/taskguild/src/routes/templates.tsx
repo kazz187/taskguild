@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { TemplateList } from '@/components/TemplateList'
+import { TemplateList } from '@/components/organisms/TemplateList'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export const Route = createFileRoute('/templates')({

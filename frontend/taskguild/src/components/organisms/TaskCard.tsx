@@ -1,10 +1,12 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { useNavigate } from '@tanstack/react-router'
 import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { TaskAssignmentStatus } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { Bot, Clock, GitBranch, Loader, Pencil, ArrowRight, AlertTriangle } from 'lucide-react'
 import { shortId } from '@/lib/id'
+import { Badge } from '../atoms/index.ts'
+import { DropdownMenu } from '../molecules/index.ts'
 
 interface TransitionTarget {
   id: string
@@ -29,19 +31,6 @@ export function TaskCard({ task, onEdit, isDragOverlay, transitionTargets, onTra
     data: { task },
   })
   const [showTransitionMenu, setShowTransitionMenu] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    if (!showTransitionMenu) return
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowTransitionMenu(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [showTransitionMenu])
 
   const handleClick = () => {
     if (isDragging) return
@@ -72,7 +61,7 @@ export function TaskCard({ task, onEdit, isDragOverlay, transitionTargets, onTra
         <div className="flex items-center gap-1 shrink-0">
           {/* Transition button (visible on mobile when transitions available) */}
           {hasTransitions && onTransition && (
-            <div className="relative" ref={menuRef}>
+            <div className="relative">
               <button
                 onClick={(e) => {
                   e.stopPropagation()
@@ -85,43 +74,36 @@ export function TaskCard({ task, onEdit, isDragOverlay, transitionTargets, onTra
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
               {/* Transition dropdown */}
-              {showTransitionMenu && (
-                <div className="absolute right-0 top-full mt-1 z-30 bg-slate-800 border border-slate-600 rounded-lg shadow-xl py-1 min-w-[160px] animate-fade-in-down">
-                  <p className="px-3 py-1.5 text-[10px] text-gray-500 uppercase tracking-wider">Move to</p>
-                  {transitionTargets.map((target) => {
-                    // Disable force targets when agent is running
-                    const disabled = target.isForce && isAgentRunning
-                    return (
-                      <button
-                        key={target.id}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (disabled) return
-                          onTransition(task.id, target.id, target.isForce)
-                          setShowTransitionMenu(false)
-                        }}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        disabled={disabled}
-                        className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
-                          disabled
-                            ? 'text-gray-600 cursor-not-allowed'
-                            : target.isForce
-                            ? 'text-gray-400 hover:bg-slate-700 hover:text-amber-300'
-                            : 'text-gray-300 hover:bg-slate-700 hover:text-white'
-                        }`}
-                        title={disabled ? 'Cannot force-move while agent is running' : target.isForce ? 'Force move (not defined in workflow)' : undefined}
-                      >
-                        {target.isForce ? (
-                          <AlertTriangle className="w-3 h-3 text-amber-500/70" />
-                        ) : (
-                          <ArrowRight className="w-3 h-3 text-cyan-400" />
-                        )}
-                        {target.name}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
+              <DropdownMenu
+                open={showTransitionMenu}
+                onOpenChange={setShowTransitionMenu}
+                align="right"
+              >
+                <p className="px-3 py-1.5 text-[10px] text-gray-500 uppercase tracking-wider">Move to</p>
+                {transitionTargets.map((target) => {
+                  // Disable force targets when agent is running
+                  const disabled = target.isForce && isAgentRunning
+                  return (
+                    <DropdownMenu.Item
+                      key={target.id}
+                      onClick={() => {
+                        onTransition(task.id, target.id, target.isForce)
+                        setShowTransitionMenu(false)
+                      }}
+                      disabled={disabled}
+                      variant={target.isForce ? 'warning' : 'default'}
+                      className={disabled ? '' : ''}
+                    >
+                      {target.isForce ? (
+                        <AlertTriangle className="w-3 h-3 text-amber-500/70" />
+                      ) : (
+                        <ArrowRight className="w-3 h-3 text-cyan-400" />
+                      )}
+                      {target.name}
+                    </DropdownMenu.Item>
+                  )
+                })}
+              </DropdownMenu>
             </div>
           )}
           {/* Edit button (always visible on mobile, hover on desktop) */}
@@ -157,15 +139,13 @@ export function TaskCard({ task, onEdit, isDragOverlay, transitionTargets, onTra
       {/* Assignment status + ID */}
       <div className="mt-2 flex items-end justify-between">
         {task.assignmentStatus === TaskAssignmentStatus.ASSIGNED ? (
-          <span className="inline-flex items-center gap-1 text-xs bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-full px-2 py-0.5">
-            <Bot className="w-3 h-3" />
+          <Badge color="cyan" variant="outline" pill icon={<Bot className="w-3 h-3" />}>
             {shortId(task.assignedAgentId)}
-          </span>
+          </Badge>
         ) : task.assignmentStatus === TaskAssignmentStatus.PENDING ? (
-          <span className="inline-flex items-center gap-1 text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded-full px-2 py-0.5">
-            <Loader className="w-3 h-3" />
+          <Badge color="yellow" variant="outline" pill icon={<Loader className="w-3 h-3" />}>
             Pending
-          </span>
+          </Badge>
         ) : (
           <span className="inline-flex items-center gap-1 text-xs text-gray-500">
             <Clock className="w-3 h-3" />

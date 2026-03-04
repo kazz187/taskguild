@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
 import { Link } from '@tanstack/react-router'
-import { RequestItem } from './RequestItem'
+import { RequestItem } from './RequestItem.tsx'
 import { useRequestKeyboard } from '@/hooks/useRequestKeyboard'
 import { shortId } from '@/lib/id'
+import { Badge } from '../atoms/index.ts'
 import type { Interaction } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 
 interface TaskGroup {
@@ -64,9 +65,9 @@ export function PendingRequestsPanel({
         <p className="text-xs text-gray-500 uppercase tracking-wide">
           Pending Requests
         </p>
-        <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-400 rounded">
+        <Badge color="amber" size="xs">
           {pendingRequests.length}
-        </span>
+        </Badge>
         <span className="ml-auto text-[10px] text-gray-600 font-mono hidden sm:inline">
           j/k navigate · y allow · Y always · n deny
         </span>

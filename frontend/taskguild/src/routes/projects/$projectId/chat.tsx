@@ -9,11 +9,11 @@ import { getProject } from '@taskguild/proto/taskguild/v1/project-ProjectService
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { useNotificationSound } from '@/hooks/useNotificationSound'
-import { ChatBubble } from '@/components/ChatBubble'
-import { PendingRequestsPanel } from '@/components/PendingRequestsPanel'
+import { ChatBubble } from '@/components/organisms/ChatBubble'
+import { PendingRequestsPanel } from '@/components/organisms/PendingRequestsPanel'
 import { shortId } from '@/lib/id'
 import { ArrowLeft } from 'lucide-react'
-import { ConnectionIndicator } from '@/components/ConnectionIndicator'
+import { ConnectionIndicator } from '@/components/organisms/ConnectionIndicator'
 
 export const Route = createFileRoute('/projects/$projectId/chat')({
   component: ProjectChatPage,

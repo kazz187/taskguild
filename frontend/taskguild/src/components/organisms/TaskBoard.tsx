@@ -18,13 +18,14 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
-import { TaskCard } from './TaskCard'
-import { TaskDetailModal } from './TaskDetailModal'
-import { TaskCreateModal } from './TaskCreateModal'
-import { ForceTransitionDialog } from './ForceTransitionDialog'
-import { CleanTasksDialog } from './CleanTasksDialog'
-import { ArchivedTaskList } from './ArchivedTaskList'
+import { TaskCard } from './TaskCard.tsx'
+import { TaskDetailModal } from './TaskDetailModal.tsx'
+import { TaskCreateModal } from './TaskCreateModal.tsx'
+import { ForceTransitionDialog } from './ForceTransitionDialog.tsx'
+import { CleanTasksDialog } from './CleanTasksDialog.tsx'
+import { ArchivedTaskList } from './ArchivedTaskList.tsx'
 import { Plus, ChevronDown, ChevronRight, Sparkles } from 'lucide-react'
+import { Badge } from '../atoms/index.ts'
 
 interface TaskBoardProps {
   projectId: string
@@ -345,9 +346,9 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
             <Sparkles className="w-4 h-4" />
             <span className="hidden sm:inline">Clean</span>
             {terminalTasks.length > 0 && (
-              <span className="text-[10px] bg-amber-500/20 text-amber-400 rounded-full px-1.5 py-0.5 font-medium">
+              <Badge color="amber" size="xs" pill>
                 {terminalTasks.length}
-              </span>
+              </Badge>
             )}
           </button>,
           headerActionsRef.current,
@@ -498,13 +499,13 @@ function StatusColumn({
             </button>
             <StatusDot status={status} />
             <h3 className="text-sm font-semibold text-white truncate">{status.name}</h3>
-            <span className="text-xs text-gray-500 bg-slate-800 rounded-full px-2 py-0.5 shrink-0">
+            <Badge color="gray" size="xs" pill>
               {tasks.length}
-            </span>
+            </Badge>
             {agentConfigName && (
-              <span className="text-[10px] text-cyan-400/70 bg-cyan-500/10 border border-cyan-500/20 rounded-full px-1.5 py-0.5 truncate shrink-0 hidden sm:inline-block">
+              <Badge color="cyan" size="xs" variant="outline" pill className="truncate hidden sm:inline-flex">
                 {agentConfigName}
-              </span>
+              </Badge>
             )}
           </div>
           {status.isInitial && (

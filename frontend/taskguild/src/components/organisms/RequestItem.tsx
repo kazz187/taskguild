@@ -2,8 +2,9 @@ import { useState, useRef, useEffect } from 'react'
 import { InteractionType, InteractionStatus } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import type { Interaction } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import { Shield, MessageSquare, Bell, CheckCircle } from 'lucide-react'
-import { formatTime } from './ChatBubble'
-import { MarkdownDescription } from './MarkdownDescription'
+import { formatTime } from './ChatBubble.tsx'
+import { MarkdownDescription } from './MarkdownDescription.tsx'
+import { Button, Input } from '../atoms/index.ts'
 
 function getPermissionShortcutLabel(value: string): string | null {
   switch (value) {
@@ -114,12 +115,14 @@ export function RequestItem({
             {interaction.options.map((opt) => {
               const shortcut = showHints ? getPermissionShortcutLabel(opt.value) : null
               return (
-                <button
+                <Button
                   key={opt.value}
+                  variant="secondary"
+                  size="sm"
                   onClick={(e) => { e.stopPropagation(); onRespond(interaction.id, opt.value) }}
                   disabled={isRespondPending}
-                  className="px-3 py-1.5 text-xs bg-slate-700 border border-slate-600 rounded-lg text-gray-200 hover:border-cyan-500/50 hover:text-white transition-colors disabled:opacity-50"
                   title={opt.description}
+                  className="bg-slate-700 border border-slate-600 text-gray-200 hover:border-cyan-500/50 hover:text-white"
                 >
                   {opt.label}
                   {shortcut && (
@@ -127,7 +130,7 @@ export function RequestItem({
                       ({shortcut})
                     </span>
                   )}
-                </button>
+                </Button>
               )
             })}
           </div>
@@ -137,7 +140,7 @@ export function RequestItem({
       {/* Free text input for pending with no options */}
       {isPending && interaction.options.length === 0 && (
         <div className="flex gap-2 mt-2 ml-6">
-          <input
+          <Input
             value={freeText}
             onChange={(e) => setFreeText(e.target.value)}
             onKeyDown={(e) => {
@@ -146,10 +149,13 @@ export function RequestItem({
                 setFreeText('')
               }
             }}
-            className="flex-1 px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs focus:outline-none focus:border-cyan-500 placeholder-gray-600"
+            inputSize="xs"
+            className="flex-1 bg-slate-900"
             placeholder="Type your response..."
           />
-          <button
+          <Button
+            variant="primary"
+            size="xs"
             onClick={() => {
               if (freeText.trim()) {
                 onRespond(interaction.id, freeText.trim())
@@ -157,10 +163,9 @@ export function RequestItem({
               }
             }}
             disabled={isRespondPending || !freeText.trim()}
-            className="px-3 py-1.5 text-xs bg-cyan-600 text-white rounded-lg disabled:opacity-50 hover:bg-cyan-500 transition-colors"
           >
             Send
-          </button>
+          </Button>
         </div>
       )}
 
