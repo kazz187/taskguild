@@ -1,16 +1,13 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { getTask, updateTask, updateTaskStatus, deleteTask } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import { requestWorktreeList, getWorktreeList } from '@taskguild/proto/taskguild/v1/agent_manager-AgentManagerService_connectquery.ts'
-import { listInteractions, respondToInteraction } from '@taskguild/proto/taskguild/v1/interaction-InteractionService_connectquery.ts'
 import { TaskAssignmentStatus } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
-import { InteractionStatus, InteractionType } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import type { WorkflowStatus } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
-import { X, Bot, Clock, GitBranch, Loader, Trash2, ArrowRight, AlertTriangle, MessageSquare, Shield, Bell, RefreshCw, CopyPlus, ArrowUpRight, Layers } from 'lucide-react'
-import { MarkdownDescription } from './MarkdownDescription'
+import { X, Bot, Clock, GitBranch, Loader, Trash2, ArrowRight, AlertTriangle, RefreshCw, CopyPlus, ArrowUpRight, Layers } from 'lucide-react'
 import { ForceTransitionDialog } from './ForceTransitionDialog'
 import { shortId } from '@/lib/id'
 import { Button, Input, Textarea, Select, Checkbox, Badge } from '../atoms/index.ts'
@@ -21,8 +18,6 @@ const TASK_DETAIL_EVENT_TYPES = [
   EventType.TASK_STATUS_CHANGED,
   EventType.AGENT_ASSIGNED,
   EventType.AGENT_STATUS_CHANGED,
-  EventType.INTERACTION_CREATED,
-  EventType.INTERACTION_RESPONDED,
 ]
 
 interface ChildTaskInfo {
@@ -63,12 +58,10 @@ export function TaskDetailModal({
   onNavigateTask,
 }: TaskDetailModalProps) {
   const { data: taskData, refetch: refetchTask } = useQuery(getTask, { id: taskId })
-  const { data: interactionsData, refetch: refetchInteractions } = useQuery(listInteractions, { taskId })
 
   const updateMut = useMutation(updateTask)
   const statusMut = useMutation(updateTaskStatus)
   const deleteMut = useMutation(deleteTask)
-  const respondMut = useMutation(respondToInteraction)
   const requestWtMut = useMutation(requestWorktreeList)
 
   const [titleDraft, setTitleDraft] = useState('')
@@ -78,7 +71,6 @@ export function TaskDetailModal({
   const [selectedWorktree, setSelectedWorktree] = useState('')
 
   const task = taskData?.task
-  const interactions = interactionsData?.interactions ?? []
 
   const isTaskLocked = task?.assignmentStatus === TaskAssignmentStatus.ASSIGNED || task?.assignmentStatus === TaskAssignmentStatus.PENDING
   // Force-move is only blocked when agent is actively running (assigned).
@@ -103,8 +95,7 @@ export function TaskDetailModal({
 
   const onEvent = useCallback(() => {
     refetchTask()
-    refetchInteractions()
-  }, [refetchTask, refetchInteractions])
+  }, [refetchTask])
 
   useEventSubscription(
     TASK_DETAIL_EVENT_TYPES,
@@ -203,24 +194,6 @@ export function TaskDetailModal({
       { onSuccess: () => { if (onDeleted) { onDeleted() } else { onChanged(); onClose() } } },
     )
   }
-
-  // Synchronous guard to prevent duplicate responses (survives across renders before mutation state propagates)
-  const respondedIdsRef = useRef<Set<string>>(new Set())
-
-  const handleRespond = useCallback((interactionId: string, response: string) => {
-    if (respondedIdsRef.current.has(interactionId)) return
-    respondedIdsRef.current.add(interactionId)
-    respondMut.mutate(
-      { id: interactionId, response },
-      {
-        onSuccess: () => refetchInteractions(),
-        onError: () => {
-          // Allow retry on failure
-          respondedIdsRef.current.delete(interactionId)
-        },
-      },
-    )
-  }, [respondMut, refetchInteractions])
 
   if (!task) {
     return (
@@ -421,23 +394,6 @@ export function TaskDetailModal({
           </div>
         )}
 
-        {/* Interactions */}
-        {interactions.length > 0 && (
-          <div>
-            <h4 className="text-xs text-gray-500 uppercase tracking-wide mb-2">Interactions</h4>
-            <div className="space-y-2">
-              {interactions.map((interaction) => (
-                <InteractionItem
-                  key={interaction.id}
-                  interaction={interaction}
-                  onRespond={handleRespond}
-                  isPending={respondMut.isPending}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Action buttons */}
         <div className="border-t border-slate-800 mt-4 pt-3 flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -489,84 +445,5 @@ export function TaskDetailModal({
         />
       )}
     </Modal>
-  )
-}
-
-export function InteractionItem({
-  interaction,
-  onRespond,
-  isPending,
-}: {
-  interaction: { id: string; type: InteractionType; status: InteractionStatus; title: string; description: string; options: { label: string; value: string; description: string }[]; response: string }
-  onRespond: (id: string, response: string) => void
-  isPending: boolean
-}) {
-  const [freeText, setFreeText] = useState('')
-  const isPendingStatus = interaction.status === InteractionStatus.PENDING
-
-  const icon = interaction.type === InteractionType.PERMISSION_REQUEST
-    ? <Shield className="w-4 h-4 text-amber-400" />
-    : interaction.type === InteractionType.QUESTION
-    ? <MessageSquare className="w-4 h-4 text-blue-400" />
-    : <Bell className="w-4 h-4 text-gray-400" />
-
-  return (
-    <Card variant="nested" className={`!rounded-lg ${isPendingStatus ? '!border-amber-500/30' : ''}`}>
-      <div className="flex items-start gap-2">
-        <div className="mt-0.5">{icon}</div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-white">{interaction.title}</p>
-          {interaction.description && (
-            <MarkdownDescription content={interaction.description} className="mt-1" />
-          )}
-
-          {isPendingStatus ? (
-            <div className="mt-2 space-y-2">
-              {interaction.options.length > 0 ? (
-                <div className="flex gap-2 flex-wrap">
-                  {interaction.options.map((opt) => (
-                    <Button
-                      key={opt.value}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onRespond(interaction.id, opt.value)}
-                      disabled={isPending}
-                      className="!bg-slate-700 !border !border-slate-600 !text-gray-200 hover:!border-cyan-500/50 hover:!text-white"
-                      title={opt.description}
-                    >
-                      {opt.label}
-                    </Button>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <Input
-                    value={freeText}
-                    onChange={(e) => setFreeText(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && freeText.trim()) onRespond(interaction.id, freeText) }}
-                    inputSize="xs"
-                    className="flex-1 !bg-slate-900 !rounded"
-                    placeholder="Type your response..."
-                  />
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => { if (freeText.trim()) onRespond(interaction.id, freeText) }}
-                    disabled={isPending || !freeText.trim()}
-                    className="!rounded"
-                  >
-                    Send
-                  </Button>
-                </div>
-              )}
-            </div>
-          ) : (
-            interaction.response && (
-              <p className="text-xs text-green-400 mt-1">Response: {interaction.response}</p>
-            )
-          )}
-        </div>
-      </div>
-    </Card>
   )
 }
