@@ -52,4 +52,6 @@ message ListTaskLogsRequest {
 message ListTaskLogsResponse {
   repeated TaskLog logs = 1;
   PaginationResponse pagination = 2;
+  // taskId → task title (includes archived tasks).
+  map<string, string> task_titles = 3;
 }

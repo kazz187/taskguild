@@ -47,6 +47,17 @@ func (s *Server) ListTaskLogs(ctx context.Context, req *connect.Request[taskguil
 		return nil, err
 	}
 
+	// Collect unique task IDs to resolve titles.
+	uniqueTaskIDs := make(map[string]struct{}, len(logs))
+	for _, l := range logs {
+		uniqueTaskIDs[l.TaskID] = struct{}{}
+	}
+	ids := make([]string, 0, len(uniqueTaskIDs))
+	for id := range uniqueTaskIDs {
+		ids = append(ids, id)
+	}
+	taskTitles := task.ResolveTitles(ctx, s.taskRepo, ids)
+
 	protos := make([]*taskguildv1.TaskLog, len(logs))
 	for i, l := range logs {
 		protos[i] = toProto(l)
@@ -59,6 +70,7 @@ func (s *Server) ListTaskLogs(ctx context.Context, req *connect.Request[taskguil
 			Limit:  limit,
 			Offset: offset,
 		},
+		TaskTitles: taskTitles,
 	}), nil
 }
 

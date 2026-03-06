@@ -56,6 +56,18 @@ func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[task
 	if err != nil {
 		return nil, err
 	}
+
+	// Collect unique task IDs to resolve titles.
+	uniqueTaskIDs := make(map[string]struct{}, len(interactions))
+	for _, inter := range interactions {
+		uniqueTaskIDs[inter.TaskID] = struct{}{}
+	}
+	ids := make([]string, 0, len(uniqueTaskIDs))
+	for id := range uniqueTaskIDs {
+		ids = append(ids, id)
+	}
+	taskTitles := task.ResolveTitles(ctx, s.taskRepo, ids)
+
 	protos := make([]*taskguildv1.Interaction, len(interactions))
 	for i, inter := range interactions {
 		protos[i] = toProto(inter)
@@ -67,6 +79,7 @@ func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[task
 			Limit:  limit,
 			Offset: offset,
 		},
+		TaskTitles: taskTitles,
 	}), nil
 }
 
