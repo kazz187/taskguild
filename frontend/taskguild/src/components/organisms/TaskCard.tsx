@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { useNavigate } from '@tanstack/react-router'
 import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
@@ -36,6 +36,7 @@ export function TaskCard({ task, onEdit, onCreateChild, isDragOverlay, transitio
     data: { task },
   })
   const [showTransitionMenu, setShowTransitionMenu] = useState(false)
+  const transitionBtnRef = useRef<HTMLButtonElement>(null)
 
   const handleClick = () => {
     if (isDragging) return
@@ -66,8 +67,9 @@ export function TaskCard({ task, onEdit, onCreateChild, isDragOverlay, transitio
         <div className="flex items-center gap-1 shrink-0">
           {/* Transition button (visible on mobile when transitions available) */}
           {hasTransitions && onTransition && (
-            <div className="relative">
+            <>
               <button
+                ref={transitionBtnRef}
                 onClick={(e) => {
                   e.stopPropagation()
                   setShowTransitionMenu(!showTransitionMenu)
@@ -78,11 +80,12 @@ export function TaskCard({ task, onEdit, onCreateChild, isDragOverlay, transitio
               >
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
-              {/* Transition dropdown */}
+              {/* Transition dropdown (rendered via portal by Floating UI) */}
               <DropdownMenu
                 open={showTransitionMenu}
                 onOpenChange={setShowTransitionMenu}
                 align="right"
+                triggerRef={transitionBtnRef}
               >
                 <p className="px-3 py-1.5 text-[10px] text-gray-500 uppercase tracking-wider">Move to</p>
                 {transitionTargets.map((target) => {
@@ -109,7 +112,7 @@ export function TaskCard({ task, onEdit, onCreateChild, isDragOverlay, transitio
                   )
                 })}
               </DropdownMenu>
-            </div>
+            </>
           )}
           {/* Create subtask button (always visible on mobile, hover on desktop) */}
           {onCreateChild && (
