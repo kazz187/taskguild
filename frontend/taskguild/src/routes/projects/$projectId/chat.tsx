@@ -141,7 +141,7 @@ function ProjectChatPage() {
             // Show task label when task changes
             const prevTaskId = idx > 0 ? interactions[idx - 1].taskId : null
             const showTaskLabel = interaction.taskId !== prevTaskId
-            const taskTitle = taskMap.get(interaction.taskId) ?? shortId(interaction.taskId)
+            const taskTitle = taskMap.get(interaction.taskId) || shortId(interaction.taskId)
 
             return (
               <div key={interaction.id}>

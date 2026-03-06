@@ -66,30 +66,46 @@ export function useGlobalTimeline() {
     return m
   }, [tasks, interactionsData?.taskTitles, logsData?.taskTitles])
 
+  // Build taskId → projectId map (for linking).
+  // Merges active tasks with task_project_ids from interaction/log responses
+  // so that archived tasks also have a projectId for navigation links.
+  const taskProjectMap = useMemo(() => {
+    const m = new Map<string, string>()
+    // From listTasks (active tasks – preferred source)
+    for (const t of tasks) {
+      m.set(t.id, t.projectId)
+    }
+    // Supplement from listInteractions response (includes archived tasks)
+    if (interactionsData?.taskProjectIds) {
+      for (const [id, projectId] of Object.entries(interactionsData.taskProjectIds)) {
+        if (!m.has(id)) m.set(id, projectId)
+      }
+    }
+    // Supplement from listTaskLogs response (includes archived tasks)
+    if (logsData?.taskProjectIds) {
+      for (const [id, projectId] of Object.entries(logsData.taskProjectIds)) {
+        if (!m.has(id)) m.set(id, projectId)
+      }
+    }
+    return m
+  }, [tasks, interactionsData?.taskProjectIds, logsData?.taskProjectIds])
+
   // Build project name map: taskId → projectName
+  // Uses the enriched taskProjectMap so that archived tasks also get project names.
   const projectMap = useMemo(() => {
     const projectNameById = new Map<string, string>()
     for (const p of projects) {
       projectNameById.set(p.id, p.name)
     }
     const m = new Map<string, string>()
-    for (const t of tasks) {
-      const pName = projectNameById.get(t.projectId)
+    for (const [taskId, projectId] of taskProjectMap) {
+      const pName = projectNameById.get(projectId)
       if (pName) {
-        m.set(t.id, pName)
+        m.set(taskId, pName)
       }
     }
     return m
-  }, [projects, tasks])
-
-  // Build taskId → projectId map (for linking)
-  const taskProjectMap = useMemo(() => {
-    const m = new Map<string, string>()
-    for (const t of tasks) {
-      m.set(t.id, t.projectId)
-    }
-    return m
-  }, [tasks])
+  }, [projects, taskProjectMap])
 
   // Merge interactions + logs into unified timeline sorted by createdAt
   const timelineItems = useMemo<TimelineItem[]>(() => {

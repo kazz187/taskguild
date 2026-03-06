@@ -155,6 +155,21 @@ func (r *YAMLRepository) GetByResponseToken(ctx context.Context, token string) (
 	return nil, cerr.NewError(cerr.NotFound, "interaction not found for token", nil)
 }
 
+func (r *YAMLRepository) DeleteByTaskID(ctx context.Context, taskID string) (int, error) {
+	all, _, err := r.List(ctx, taskID, nil, 0, 0)
+	if err != nil {
+		return 0, err
+	}
+	count := 0
+	for _, i := range all {
+		if err := r.storage.Delete(ctx, path(i.ID)); err != nil {
+			return count, cerr.WrapStorageDeleteError("interaction", err)
+		}
+		count++
+	}
+	return count, nil
+}
+
 func (r *YAMLRepository) ExpirePendingByTask(ctx context.Context, taskID string) (int, error) {
 	// List all interactions and find PENDING ones for the given task.
 	all, _, err := r.List(ctx, taskID, nil, 0, 0)

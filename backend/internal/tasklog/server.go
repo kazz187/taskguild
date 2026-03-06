@@ -56,7 +56,7 @@ func (s *Server) ListTaskLogs(ctx context.Context, req *connect.Request[taskguil
 	for id := range uniqueTaskIDs {
 		ids = append(ids, id)
 	}
-	taskTitles := task.ResolveTitles(ctx, s.taskRepo, ids)
+	taskTitles, taskProjectIDs := task.ResolveAll(ctx, s.taskRepo, ids)
 
 	protos := make([]*taskguildv1.TaskLog, len(logs))
 	for i, l := range logs {
@@ -70,7 +70,8 @@ func (s *Server) ListTaskLogs(ctx context.Context, req *connect.Request[taskguil
 			Limit:  limit,
 			Offset: offset,
 		},
-		TaskTitles: taskTitles,
+		TaskTitles:     taskTitles,
+		TaskProjectIds: taskProjectIDs,
 	}), nil
 }
 

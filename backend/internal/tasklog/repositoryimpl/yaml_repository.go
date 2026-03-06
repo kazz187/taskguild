@@ -92,3 +92,18 @@ func (r *YAMLRepository) List(ctx context.Context, taskID string, taskIDs []stri
 	}
 	return all, total, nil
 }
+
+func (r *YAMLRepository) DeleteByTaskID(ctx context.Context, taskID string) (int, error) {
+	all, _, err := r.List(ctx, taskID, nil, 0, 0)
+	if err != nil {
+		return 0, err
+	}
+	count := 0
+	for _, l := range all {
+		if err := r.storage.Delete(ctx, path(l.ID)); err != nil {
+			return count, cerr.WrapStorageDeleteError("task_log", err)
+		}
+		count++
+	}
+	return count, nil
+}

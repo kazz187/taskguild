@@ -54,4 +54,6 @@ message ListTaskLogsResponse {
   PaginationResponse pagination = 2;
   // taskId → task title (includes archived tasks).
   map<string, string> task_titles = 3;
+  // taskId → projectId (includes archived tasks, used for linking).
+  map<string, string> task_project_ids = 4;
 }
