@@ -31,6 +31,7 @@ type Project struct {
 	DefaultBranch string                 `protobuf:"bytes,5,opt,name=default_branch,json=defaultBranch,proto3" json:"default_branch,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Order         int32                  `protobuf:"varint,8,opt,name=order,proto3" json:"order,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -112,6 +113,13 @@ func (x *Project) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *Project) GetOrder() int32 {
+	if x != nil {
+		return x.Order
+	}
+	return 0
 }
 
 type CreateProjectRequest struct {
@@ -610,11 +618,99 @@ func (*DeleteProjectResponse) Descriptor() ([]byte, []int) {
 	return file_taskguild_v1_project_proto_rawDescGZIP(), []int{10}
 }
 
+type ReorderProjectsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectIds    []string               `protobuf:"bytes,1,rep,name=project_ids,json=projectIds,proto3" json:"project_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReorderProjectsRequest) Reset() {
+	*x = ReorderProjectsRequest{}
+	mi := &file_taskguild_v1_project_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReorderProjectsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReorderProjectsRequest) ProtoMessage() {}
+
+func (x *ReorderProjectsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_project_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReorderProjectsRequest.ProtoReflect.Descriptor instead.
+func (*ReorderProjectsRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_project_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ReorderProjectsRequest) GetProjectIds() []string {
+	if x != nil {
+		return x.ProjectIds
+	}
+	return nil
+}
+
+type ReorderProjectsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Projects      []*Project             `protobuf:"bytes,1,rep,name=projects,proto3" json:"projects,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReorderProjectsResponse) Reset() {
+	*x = ReorderProjectsResponse{}
+	mi := &file_taskguild_v1_project_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReorderProjectsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReorderProjectsResponse) ProtoMessage() {}
+
+func (x *ReorderProjectsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_project_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReorderProjectsResponse.ProtoReflect.Descriptor instead.
+func (*ReorderProjectsResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_project_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ReorderProjectsResponse) GetProjects() []*Project {
+	if x != nil {
+		return x.Projects
+	}
+	return nil
+}
+
 var File_taskguild_v1_project_proto protoreflect.FileDescriptor
 
 const file_taskguild_v1_project_proto_rawDesc = "" +
 	"\n" +
-	"\x1ataskguild/v1/project.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19taskguild/v1/common.proto\"\x93\x02\n" +
+	"\x1ataskguild/v1/project.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19taskguild/v1/common.proto\"\xa9\x02\n" +
 	"\aProject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -624,7 +720,8 @@ const file_taskguild_v1_project_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x9a\x01\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x14\n" +
+	"\x05order\x18\b \x01(\x05R\x05order\"\x9a\x01\n" +
 	"\x14CreateProjectRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12%\n" +
@@ -655,14 +752,20 @@ const file_taskguild_v1_project_proto_rawDesc = "" +
 	"\aproject\x18\x01 \x01(\v2\x15.taskguild.v1.ProjectR\aproject\"&\n" +
 	"\x14DeleteProjectRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x17\n" +
-	"\x15DeleteProjectResponse2\xc6\x03\n" +
+	"\x15DeleteProjectResponse\"9\n" +
+	"\x16ReorderProjectsRequest\x12\x1f\n" +
+	"\vproject_ids\x18\x01 \x03(\tR\n" +
+	"projectIds\"L\n" +
+	"\x17ReorderProjectsResponse\x121\n" +
+	"\bprojects\x18\x01 \x03(\v2\x15.taskguild.v1.ProjectR\bprojects2\xa6\x04\n" +
 	"\x0eProjectService\x12X\n" +
 	"\rCreateProject\x12\".taskguild.v1.CreateProjectRequest\x1a#.taskguild.v1.CreateProjectResponse\x12O\n" +
 	"\n" +
 	"GetProject\x12\x1f.taskguild.v1.GetProjectRequest\x1a .taskguild.v1.GetProjectResponse\x12U\n" +
 	"\fListProjects\x12!.taskguild.v1.ListProjectsRequest\x1a\".taskguild.v1.ListProjectsResponse\x12X\n" +
 	"\rUpdateProject\x12\".taskguild.v1.UpdateProjectRequest\x1a#.taskguild.v1.UpdateProjectResponse\x12X\n" +
-	"\rDeleteProject\x12\".taskguild.v1.DeleteProjectRequest\x1a#.taskguild.v1.DeleteProjectResponseB\xba\x01\n" +
+	"\rDeleteProject\x12\".taskguild.v1.DeleteProjectRequest\x1a#.taskguild.v1.DeleteProjectResponse\x12^\n" +
+	"\x0fReorderProjects\x12$.taskguild.v1.ReorderProjectsRequest\x1a%.taskguild.v1.ReorderProjectsResponseB\xba\x01\n" +
 	"\x10com.taskguild.v1B\fProjectProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
@@ -677,47 +780,52 @@ func file_taskguild_v1_project_proto_rawDescGZIP() []byte {
 	return file_taskguild_v1_project_proto_rawDescData
 }
 
-var file_taskguild_v1_project_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_taskguild_v1_project_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_taskguild_v1_project_proto_goTypes = []any{
-	(*Project)(nil),               // 0: taskguild.v1.Project
-	(*CreateProjectRequest)(nil),  // 1: taskguild.v1.CreateProjectRequest
-	(*CreateProjectResponse)(nil), // 2: taskguild.v1.CreateProjectResponse
-	(*GetProjectRequest)(nil),     // 3: taskguild.v1.GetProjectRequest
-	(*GetProjectResponse)(nil),    // 4: taskguild.v1.GetProjectResponse
-	(*ListProjectsRequest)(nil),   // 5: taskguild.v1.ListProjectsRequest
-	(*ListProjectsResponse)(nil),  // 6: taskguild.v1.ListProjectsResponse
-	(*UpdateProjectRequest)(nil),  // 7: taskguild.v1.UpdateProjectRequest
-	(*UpdateProjectResponse)(nil), // 8: taskguild.v1.UpdateProjectResponse
-	(*DeleteProjectRequest)(nil),  // 9: taskguild.v1.DeleteProjectRequest
-	(*DeleteProjectResponse)(nil), // 10: taskguild.v1.DeleteProjectResponse
-	(*timestamppb.Timestamp)(nil), // 11: google.protobuf.Timestamp
-	(*PaginationRequest)(nil),     // 12: taskguild.v1.PaginationRequest
-	(*PaginationResponse)(nil),    // 13: taskguild.v1.PaginationResponse
+	(*Project)(nil),                 // 0: taskguild.v1.Project
+	(*CreateProjectRequest)(nil),    // 1: taskguild.v1.CreateProjectRequest
+	(*CreateProjectResponse)(nil),   // 2: taskguild.v1.CreateProjectResponse
+	(*GetProjectRequest)(nil),       // 3: taskguild.v1.GetProjectRequest
+	(*GetProjectResponse)(nil),      // 4: taskguild.v1.GetProjectResponse
+	(*ListProjectsRequest)(nil),     // 5: taskguild.v1.ListProjectsRequest
+	(*ListProjectsResponse)(nil),    // 6: taskguild.v1.ListProjectsResponse
+	(*UpdateProjectRequest)(nil),    // 7: taskguild.v1.UpdateProjectRequest
+	(*UpdateProjectResponse)(nil),   // 8: taskguild.v1.UpdateProjectResponse
+	(*DeleteProjectRequest)(nil),    // 9: taskguild.v1.DeleteProjectRequest
+	(*DeleteProjectResponse)(nil),   // 10: taskguild.v1.DeleteProjectResponse
+	(*ReorderProjectsRequest)(nil),  // 11: taskguild.v1.ReorderProjectsRequest
+	(*ReorderProjectsResponse)(nil), // 12: taskguild.v1.ReorderProjectsResponse
+	(*timestamppb.Timestamp)(nil),   // 13: google.protobuf.Timestamp
+	(*PaginationRequest)(nil),       // 14: taskguild.v1.PaginationRequest
+	(*PaginationResponse)(nil),      // 15: taskguild.v1.PaginationResponse
 }
 var file_taskguild_v1_project_proto_depIdxs = []int32{
-	11, // 0: taskguild.v1.Project.created_at:type_name -> google.protobuf.Timestamp
-	11, // 1: taskguild.v1.Project.updated_at:type_name -> google.protobuf.Timestamp
+	13, // 0: taskguild.v1.Project.created_at:type_name -> google.protobuf.Timestamp
+	13, // 1: taskguild.v1.Project.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 2: taskguild.v1.CreateProjectResponse.project:type_name -> taskguild.v1.Project
 	0,  // 3: taskguild.v1.GetProjectResponse.project:type_name -> taskguild.v1.Project
-	12, // 4: taskguild.v1.ListProjectsRequest.pagination:type_name -> taskguild.v1.PaginationRequest
+	14, // 4: taskguild.v1.ListProjectsRequest.pagination:type_name -> taskguild.v1.PaginationRequest
 	0,  // 5: taskguild.v1.ListProjectsResponse.projects:type_name -> taskguild.v1.Project
-	13, // 6: taskguild.v1.ListProjectsResponse.pagination:type_name -> taskguild.v1.PaginationResponse
+	15, // 6: taskguild.v1.ListProjectsResponse.pagination:type_name -> taskguild.v1.PaginationResponse
 	0,  // 7: taskguild.v1.UpdateProjectResponse.project:type_name -> taskguild.v1.Project
-	1,  // 8: taskguild.v1.ProjectService.CreateProject:input_type -> taskguild.v1.CreateProjectRequest
-	3,  // 9: taskguild.v1.ProjectService.GetProject:input_type -> taskguild.v1.GetProjectRequest
-	5,  // 10: taskguild.v1.ProjectService.ListProjects:input_type -> taskguild.v1.ListProjectsRequest
-	7,  // 11: taskguild.v1.ProjectService.UpdateProject:input_type -> taskguild.v1.UpdateProjectRequest
-	9,  // 12: taskguild.v1.ProjectService.DeleteProject:input_type -> taskguild.v1.DeleteProjectRequest
-	2,  // 13: taskguild.v1.ProjectService.CreateProject:output_type -> taskguild.v1.CreateProjectResponse
-	4,  // 14: taskguild.v1.ProjectService.GetProject:output_type -> taskguild.v1.GetProjectResponse
-	6,  // 15: taskguild.v1.ProjectService.ListProjects:output_type -> taskguild.v1.ListProjectsResponse
-	8,  // 16: taskguild.v1.ProjectService.UpdateProject:output_type -> taskguild.v1.UpdateProjectResponse
-	10, // 17: taskguild.v1.ProjectService.DeleteProject:output_type -> taskguild.v1.DeleteProjectResponse
-	13, // [13:18] is the sub-list for method output_type
-	8,  // [8:13] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	0,  // 8: taskguild.v1.ReorderProjectsResponse.projects:type_name -> taskguild.v1.Project
+	1,  // 9: taskguild.v1.ProjectService.CreateProject:input_type -> taskguild.v1.CreateProjectRequest
+	3,  // 10: taskguild.v1.ProjectService.GetProject:input_type -> taskguild.v1.GetProjectRequest
+	5,  // 11: taskguild.v1.ProjectService.ListProjects:input_type -> taskguild.v1.ListProjectsRequest
+	7,  // 12: taskguild.v1.ProjectService.UpdateProject:input_type -> taskguild.v1.UpdateProjectRequest
+	9,  // 13: taskguild.v1.ProjectService.DeleteProject:input_type -> taskguild.v1.DeleteProjectRequest
+	11, // 14: taskguild.v1.ProjectService.ReorderProjects:input_type -> taskguild.v1.ReorderProjectsRequest
+	2,  // 15: taskguild.v1.ProjectService.CreateProject:output_type -> taskguild.v1.CreateProjectResponse
+	4,  // 16: taskguild.v1.ProjectService.GetProject:output_type -> taskguild.v1.GetProjectResponse
+	6,  // 17: taskguild.v1.ProjectService.ListProjects:output_type -> taskguild.v1.ListProjectsResponse
+	8,  // 18: taskguild.v1.ProjectService.UpdateProject:output_type -> taskguild.v1.UpdateProjectResponse
+	10, // 19: taskguild.v1.ProjectService.DeleteProject:output_type -> taskguild.v1.DeleteProjectResponse
+	12, // 20: taskguild.v1.ProjectService.ReorderProjects:output_type -> taskguild.v1.ReorderProjectsResponse
+	15, // [15:21] is the sub-list for method output_type
+	9,  // [9:15] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_project_proto_init() }
@@ -732,7 +840,7 @@ func file_taskguild_v1_project_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_project_proto_rawDesc), len(file_taskguild_v1_project_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

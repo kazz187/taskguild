@@ -48,6 +48,9 @@ const (
 	// ProjectServiceDeleteProjectProcedure is the fully-qualified name of the ProjectService's
 	// DeleteProject RPC.
 	ProjectServiceDeleteProjectProcedure = "/taskguild.v1.ProjectService/DeleteProject"
+	// ProjectServiceReorderProjectsProcedure is the fully-qualified name of the ProjectService's
+	// ReorderProjects RPC.
+	ProjectServiceReorderProjectsProcedure = "/taskguild.v1.ProjectService/ReorderProjects"
 )
 
 // ProjectServiceClient is a client for the taskguild.v1.ProjectService service.
@@ -57,6 +60,7 @@ type ProjectServiceClient interface {
 	ListProjects(context.Context, *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error)
 	UpdateProject(context.Context, *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[v1.UpdateProjectResponse], error)
 	DeleteProject(context.Context, *connect.Request[v1.DeleteProjectRequest]) (*connect.Response[v1.DeleteProjectResponse], error)
+	ReorderProjects(context.Context, *connect.Request[v1.ReorderProjectsRequest]) (*connect.Response[v1.ReorderProjectsResponse], error)
 }
 
 // NewProjectServiceClient constructs a client for the taskguild.v1.ProjectService service. By
@@ -100,16 +104,23 @@ func NewProjectServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(projectServiceMethods.ByName("DeleteProject")),
 			connect.WithClientOptions(opts...),
 		),
+		reorderProjects: connect.NewClient[v1.ReorderProjectsRequest, v1.ReorderProjectsResponse](
+			httpClient,
+			baseURL+ProjectServiceReorderProjectsProcedure,
+			connect.WithSchema(projectServiceMethods.ByName("ReorderProjects")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // projectServiceClient implements ProjectServiceClient.
 type projectServiceClient struct {
-	createProject *connect.Client[v1.CreateProjectRequest, v1.CreateProjectResponse]
-	getProject    *connect.Client[v1.GetProjectRequest, v1.GetProjectResponse]
-	listProjects  *connect.Client[v1.ListProjectsRequest, v1.ListProjectsResponse]
-	updateProject *connect.Client[v1.UpdateProjectRequest, v1.UpdateProjectResponse]
-	deleteProject *connect.Client[v1.DeleteProjectRequest, v1.DeleteProjectResponse]
+	createProject   *connect.Client[v1.CreateProjectRequest, v1.CreateProjectResponse]
+	getProject      *connect.Client[v1.GetProjectRequest, v1.GetProjectResponse]
+	listProjects    *connect.Client[v1.ListProjectsRequest, v1.ListProjectsResponse]
+	updateProject   *connect.Client[v1.UpdateProjectRequest, v1.UpdateProjectResponse]
+	deleteProject   *connect.Client[v1.DeleteProjectRequest, v1.DeleteProjectResponse]
+	reorderProjects *connect.Client[v1.ReorderProjectsRequest, v1.ReorderProjectsResponse]
 }
 
 // CreateProject calls taskguild.v1.ProjectService.CreateProject.
@@ -137,6 +148,11 @@ func (c *projectServiceClient) DeleteProject(ctx context.Context, req *connect.R
 	return c.deleteProject.CallUnary(ctx, req)
 }
 
+// ReorderProjects calls taskguild.v1.ProjectService.ReorderProjects.
+func (c *projectServiceClient) ReorderProjects(ctx context.Context, req *connect.Request[v1.ReorderProjectsRequest]) (*connect.Response[v1.ReorderProjectsResponse], error) {
+	return c.reorderProjects.CallUnary(ctx, req)
+}
+
 // ProjectServiceHandler is an implementation of the taskguild.v1.ProjectService service.
 type ProjectServiceHandler interface {
 	CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error)
@@ -144,6 +160,7 @@ type ProjectServiceHandler interface {
 	ListProjects(context.Context, *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error)
 	UpdateProject(context.Context, *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[v1.UpdateProjectResponse], error)
 	DeleteProject(context.Context, *connect.Request[v1.DeleteProjectRequest]) (*connect.Response[v1.DeleteProjectResponse], error)
+	ReorderProjects(context.Context, *connect.Request[v1.ReorderProjectsRequest]) (*connect.Response[v1.ReorderProjectsResponse], error)
 }
 
 // NewProjectServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -183,6 +200,12 @@ func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.Handler
 		connect.WithSchema(projectServiceMethods.ByName("DeleteProject")),
 		connect.WithHandlerOptions(opts...),
 	)
+	projectServiceReorderProjectsHandler := connect.NewUnaryHandler(
+		ProjectServiceReorderProjectsProcedure,
+		svc.ReorderProjects,
+		connect.WithSchema(projectServiceMethods.ByName("ReorderProjects")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/taskguild.v1.ProjectService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ProjectServiceCreateProjectProcedure:
@@ -195,6 +218,8 @@ func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.Handler
 			projectServiceUpdateProjectHandler.ServeHTTP(w, r)
 		case ProjectServiceDeleteProjectProcedure:
 			projectServiceDeleteProjectHandler.ServeHTTP(w, r)
+		case ProjectServiceReorderProjectsProcedure:
+			projectServiceReorderProjectsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -222,4 +247,8 @@ func (UnimplementedProjectServiceHandler) UpdateProject(context.Context, *connec
 
 func (UnimplementedProjectServiceHandler) DeleteProject(context.Context, *connect.Request[v1.DeleteProjectRequest]) (*connect.Response[v1.DeleteProjectResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ProjectService.DeleteProject is not implemented"))
+}
+
+func (UnimplementedProjectServiceHandler) ReorderProjects(context.Context, *connect.Request[v1.ReorderProjectsRequest]) (*connect.Response[v1.ReorderProjectsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ProjectService.ReorderProjects is not implemented"))
 }

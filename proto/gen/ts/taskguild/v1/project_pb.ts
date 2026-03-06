@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file taskguild/v1/project.proto.
  */
 export const file_taskguild_v1_project: GenFile = /*@__PURE__*/
-  fileDesc("Chp0YXNrZ3VpbGQvdjEvcHJvamVjdC5wcm90bxIMdGFza2d1aWxkLnYxIsgBCgdQcm9qZWN0EgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSFgoOcmVwb3NpdG9yeV91cmwYBCABKAkSFgoOZGVmYXVsdF9icmFuY2gYBSABKAkSLgoKY3JlYXRlZF9hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiaQoUQ3JlYXRlUHJvamVjdFJlcXVlc3QSDAoEbmFtZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRIWCg5yZXBvc2l0b3J5X3VybBgDIAEoCRIWCg5kZWZhdWx0X2JyYW5jaBgEIAEoCSI/ChVDcmVhdGVQcm9qZWN0UmVzcG9uc2USJgoHcHJvamVjdBgBIAEoCzIVLnRhc2tndWlsZC52MS5Qcm9qZWN0Ih8KEUdldFByb2plY3RSZXF1ZXN0EgoKAmlkGAEgASgJIjwKEkdldFByb2plY3RSZXNwb25zZRImCgdwcm9qZWN0GAEgASgLMhUudGFza2d1aWxkLnYxLlByb2plY3QiSgoTTGlzdFByb2plY3RzUmVxdWVzdBIzCgpwYWdpbmF0aW9uGAEgASgLMh8udGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXF1ZXN0InUKFExpc3RQcm9qZWN0c1Jlc3BvbnNlEicKCHByb2plY3RzGAEgAygLMhUudGFza2d1aWxkLnYxLlByb2plY3QSNAoKcGFnaW5hdGlvbhgCIAEoCzIgLnRhc2tndWlsZC52MS5QYWdpbmF0aW9uUmVzcG9uc2UidQoUVXBkYXRlUHJvamVjdFJlcXVlc3QSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIWCg5yZXBvc2l0b3J5X3VybBgEIAEoCRIWCg5kZWZhdWx0X2JyYW5jaBgFIAEoCSI/ChVVcGRhdGVQcm9qZWN0UmVzcG9uc2USJgoHcHJvamVjdBgBIAEoCzIVLnRhc2tndWlsZC52MS5Qcm9qZWN0IiIKFERlbGV0ZVByb2plY3RSZXF1ZXN0EgoKAmlkGAEgASgJIhcKFURlbGV0ZVByb2plY3RSZXNwb25zZTLGAwoOUHJvamVjdFNlcnZpY2USWAoNQ3JlYXRlUHJvamVjdBIiLnRhc2tndWlsZC52MS5DcmVhdGVQcm9qZWN0UmVxdWVzdBojLnRhc2tndWlsZC52MS5DcmVhdGVQcm9qZWN0UmVzcG9uc2USTwoKR2V0UHJvamVjdBIfLnRhc2tndWlsZC52MS5HZXRQcm9qZWN0UmVxdWVzdBogLnRhc2tndWlsZC52MS5HZXRQcm9qZWN0UmVzcG9uc2USVQoMTGlzdFByb2plY3RzEiEudGFza2d1aWxkLnYxLkxpc3RQcm9qZWN0c1JlcXVlc3QaIi50YXNrZ3VpbGQudjEuTGlzdFByb2plY3RzUmVzcG9uc2USWAoNVXBkYXRlUHJvamVjdBIiLnRhc2tndWlsZC52MS5VcGRhdGVQcm9qZWN0UmVxdWVzdBojLnRhc2tndWlsZC52MS5VcGRhdGVQcm9qZWN0UmVzcG9uc2USWAoNRGVsZXRlUHJvamVjdBIiLnRhc2tndWlsZC52MS5EZWxldGVQcm9qZWN0UmVxdWVzdBojLnRhc2tndWlsZC52MS5EZWxldGVQcm9qZWN0UmVzcG9uc2VCugEKEGNvbS50YXNrZ3VpbGQudjFCDFByb2plY3RQcm90b1ABWkdnaXRodWIuY29tL2thenoxODcvdGFza2d1aWxkL2JhY2tlbmQvZ2VuL3Byb3RvL3Rhc2tndWlsZC92MTt0YXNrZ3VpbGR2MaICA1RYWKoCDFRhc2tndWlsZC5WMcoCDFRhc2tndWlsZFxWMeICGFRhc2tndWlsZFxWMVxHUEJNZXRhZGF0YeoCDVRhc2tndWlsZDo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_taskguild_v1_common]);
+  fileDesc("Chp0YXNrZ3VpbGQvdjEvcHJvamVjdC5wcm90bxIMdGFza2d1aWxkLnYxItcBCgdQcm9qZWN0EgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSFgoOcmVwb3NpdG9yeV91cmwYBCABKAkSFgoOZGVmYXVsdF9icmFuY2gYBSABKAkSLgoKY3JlYXRlZF9hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDQoFb3JkZXIYCCABKAUiaQoUQ3JlYXRlUHJvamVjdFJlcXVlc3QSDAoEbmFtZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRIWCg5yZXBvc2l0b3J5X3VybBgDIAEoCRIWCg5kZWZhdWx0X2JyYW5jaBgEIAEoCSI/ChVDcmVhdGVQcm9qZWN0UmVzcG9uc2USJgoHcHJvamVjdBgBIAEoCzIVLnRhc2tndWlsZC52MS5Qcm9qZWN0Ih8KEUdldFByb2plY3RSZXF1ZXN0EgoKAmlkGAEgASgJIjwKEkdldFByb2plY3RSZXNwb25zZRImCgdwcm9qZWN0GAEgASgLMhUudGFza2d1aWxkLnYxLlByb2plY3QiSgoTTGlzdFByb2plY3RzUmVxdWVzdBIzCgpwYWdpbmF0aW9uGAEgASgLMh8udGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXF1ZXN0InUKFExpc3RQcm9qZWN0c1Jlc3BvbnNlEicKCHByb2plY3RzGAEgAygLMhUudGFza2d1aWxkLnYxLlByb2plY3QSNAoKcGFnaW5hdGlvbhgCIAEoCzIgLnRhc2tndWlsZC52MS5QYWdpbmF0aW9uUmVzcG9uc2UidQoUVXBkYXRlUHJvamVjdFJlcXVlc3QSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIWCg5yZXBvc2l0b3J5X3VybBgEIAEoCRIWCg5kZWZhdWx0X2JyYW5jaBgFIAEoCSI/ChVVcGRhdGVQcm9qZWN0UmVzcG9uc2USJgoHcHJvamVjdBgBIAEoCzIVLnRhc2tndWlsZC52MS5Qcm9qZWN0IiIKFERlbGV0ZVByb2plY3RSZXF1ZXN0EgoKAmlkGAEgASgJIhcKFURlbGV0ZVByb2plY3RSZXNwb25zZSItChZSZW9yZGVyUHJvamVjdHNSZXF1ZXN0EhMKC3Byb2plY3RfaWRzGAEgAygJIkIKF1Jlb3JkZXJQcm9qZWN0c1Jlc3BvbnNlEicKCHByb2plY3RzGAEgAygLMhUudGFza2d1aWxkLnYxLlByb2plY3QypgQKDlByb2plY3RTZXJ2aWNlElgKDUNyZWF0ZVByb2plY3QSIi50YXNrZ3VpbGQudjEuQ3JlYXRlUHJvamVjdFJlcXVlc3QaIy50YXNrZ3VpbGQudjEuQ3JlYXRlUHJvamVjdFJlc3BvbnNlEk8KCkdldFByb2plY3QSHy50YXNrZ3VpbGQudjEuR2V0UHJvamVjdFJlcXVlc3QaIC50YXNrZ3VpbGQudjEuR2V0UHJvamVjdFJlc3BvbnNlElUKDExpc3RQcm9qZWN0cxIhLnRhc2tndWlsZC52MS5MaXN0UHJvamVjdHNSZXF1ZXN0GiIudGFza2d1aWxkLnYxLkxpc3RQcm9qZWN0c1Jlc3BvbnNlElgKDVVwZGF0ZVByb2plY3QSIi50YXNrZ3VpbGQudjEuVXBkYXRlUHJvamVjdFJlcXVlc3QaIy50YXNrZ3VpbGQudjEuVXBkYXRlUHJvamVjdFJlc3BvbnNlElgKDURlbGV0ZVByb2plY3QSIi50YXNrZ3VpbGQudjEuRGVsZXRlUHJvamVjdFJlcXVlc3QaIy50YXNrZ3VpbGQudjEuRGVsZXRlUHJvamVjdFJlc3BvbnNlEl4KD1Jlb3JkZXJQcm9qZWN0cxIkLnRhc2tndWlsZC52MS5SZW9yZGVyUHJvamVjdHNSZXF1ZXN0GiUudGFza2d1aWxkLnYxLlJlb3JkZXJQcm9qZWN0c1Jlc3BvbnNlQroBChBjb20udGFza2d1aWxkLnYxQgxQcm9qZWN0UHJvdG9QAVpHZ2l0aHViLmNvbS9rYXp6MTg3L3Rhc2tndWlsZC9iYWNrZW5kL2dlbi9wcm90by90YXNrZ3VpbGQvdjE7dGFza2d1aWxkdjGiAgNUWFiqAgxUYXNrZ3VpbGQuVjHKAgxUYXNrZ3VpbGRcVjHiAhhUYXNrZ3VpbGRcVjFcR1BCTWV0YWRhdGHqAg1UYXNrZ3VpbGQ6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_taskguild_v1_common]);
 
 /**
  * @generated from message taskguild.v1.Project
@@ -54,6 +54,11 @@ export type Project = Message<"taskguild.v1.Project"> & {
    * @generated from field: google.protobuf.Timestamp updated_at = 7;
    */
   updatedAt?: Timestamp;
+
+  /**
+   * @generated from field: int32 order = 8;
+   */
+  order: number;
 };
 
 /**
@@ -270,6 +275,40 @@ export const DeleteProjectResponseSchema: GenMessage<DeleteProjectResponse> = /*
   messageDesc(file_taskguild_v1_project, 10);
 
 /**
+ * @generated from message taskguild.v1.ReorderProjectsRequest
+ */
+export type ReorderProjectsRequest = Message<"taskguild.v1.ReorderProjectsRequest"> & {
+  /**
+   * @generated from field: repeated string project_ids = 1;
+   */
+  projectIds: string[];
+};
+
+/**
+ * Describes the message taskguild.v1.ReorderProjectsRequest.
+ * Use `create(ReorderProjectsRequestSchema)` to create a new message.
+ */
+export const ReorderProjectsRequestSchema: GenMessage<ReorderProjectsRequest> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_project, 11);
+
+/**
+ * @generated from message taskguild.v1.ReorderProjectsResponse
+ */
+export type ReorderProjectsResponse = Message<"taskguild.v1.ReorderProjectsResponse"> & {
+  /**
+   * @generated from field: repeated taskguild.v1.Project projects = 1;
+   */
+  projects: Project[];
+};
+
+/**
+ * Describes the message taskguild.v1.ReorderProjectsResponse.
+ * Use `create(ReorderProjectsResponseSchema)` to create a new message.
+ */
+export const ReorderProjectsResponseSchema: GenMessage<ReorderProjectsResponse> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_project, 12);
+
+/**
  * @generated from service taskguild.v1.ProjectService
  */
 export const ProjectService: GenService<{
@@ -312,6 +351,14 @@ export const ProjectService: GenService<{
     methodKind: "unary";
     input: typeof DeleteProjectRequestSchema;
     output: typeof DeleteProjectResponseSchema;
+  },
+  /**
+   * @generated from rpc taskguild.v1.ProjectService.ReorderProjects
+   */
+  reorderProjects: {
+    methodKind: "unary";
+    input: typeof ReorderProjectsRequestSchema;
+    output: typeof ReorderProjectsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_taskguild_v1_project, 0);

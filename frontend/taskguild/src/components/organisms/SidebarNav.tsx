@@ -1,22 +1,121 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useMatchRoute } from '@tanstack/react-router'
-import { useQuery } from '@connectrpc/connect-query'
-import { listProjects } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
+import { useQuery, useMutation } from '@connectrpc/connect-query'
+import { listProjects, reorderProjects } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
 import { listWorkflows } from '@taskguild/proto/taskguild/v1/workflow-WorkflowService_connectquery.ts'
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  type DragStartEvent,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { ChevronRight, ChevronDown, MessageSquare, Bot, Sparkles, Terminal, Shield, Workflow, GitFork, Layers } from 'lucide-react'
 
 export function SidebarNav() {
-  const { data } = useQuery(listProjects, {})
+  const { data, refetch } = useQuery(listProjects, {})
   const projects = data?.projects ?? []
+
+  const reorderMut = useMutation(reorderProjects)
+
+  const [orderedIds, setOrderedIds] = useState<string[] | null>(null)
+  const [activeId, setActiveId] = useState<string | null>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  )
+
+  // Build an ordered project list: use local ordering during drag, server data otherwise.
+  const sortedProjects = useMemo(() => {
+    if (!orderedIds) return projects
+    const byId = new Map(projects.map((p) => [p.id, p]))
+    return orderedIds.map((id) => byId.get(id)).filter(Boolean) as typeof projects
+  }, [projects, orderedIds])
+
+  const projectIds = useMemo(() => sortedProjects.map((p) => p.id), [sortedProjects])
+
+  const activeProject = useMemo(
+    () => (activeId ? projects.find((p) => p.id === activeId) : null),
+    [activeId, projects],
+  )
+
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(event.active.id as string)
+    // Capture current ordering for optimistic reorder
+    setOrderedIds(projects.map((p) => p.id))
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    setActiveId(null)
+
+    if (!over || active.id === over.id) {
+      setOrderedIds(null)
+      return
+    }
+
+    const currentIds = orderedIds ?? projects.map((p) => p.id)
+    const oldIndex = currentIds.indexOf(active.id as string)
+    const newIndex = currentIds.indexOf(over.id as string)
+    if (oldIndex === -1 || newIndex === -1) {
+      setOrderedIds(null)
+      return
+    }
+
+    const newIds = arrayMove(currentIds, oldIndex, newIndex)
+    setOrderedIds(newIds)
+
+    reorderMut.mutate(
+      { projectIds: newIds },
+      {
+        onSuccess: () => {
+          setOrderedIds(null)
+          refetch()
+        },
+        onError: () => {
+          setOrderedIds(null)
+        },
+      },
+    )
+  }
 
   return (
     <div className="space-y-1">
       <p className="px-3 py-1.5 text-[11px] uppercase tracking-wider text-gray-500 font-semibold">
         Projects
       </p>
-      {projects.map((project) => (
-        <ProjectNode key={project.id} projectId={project.id} name={project.name} />
-      ))}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={projectIds} strategy={verticalListSortingStrategy}>
+          {sortedProjects.map((project) => (
+            <SortableProjectNode
+              key={project.id}
+              projectId={project.id}
+              name={project.name}
+              isDragging={activeId === project.id}
+            />
+          ))}
+        </SortableContext>
+        <DragOverlay>
+          {activeProject ? (
+            <ProjectNodeOverlay name={activeProject.name} />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       <div className="pt-3 mt-3 border-t border-slate-800">
         <Link
@@ -32,18 +131,34 @@ export function SidebarNav() {
   )
 }
 
-function ProjectNode({ projectId, name }: { projectId: string; name: string }) {
+function SortableProjectNode({ projectId, name, isDragging }: { projectId: string; name: string; isDragging: boolean }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: projectId })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  }
+
   const matchRoute = useMatchRoute()
   const isActive = !!matchRoute({ to: '/projects/$projectId', params: { projectId }, fuzzy: true })
   const [expanded, setExpanded] = useState(true)
 
   return (
-    <div>
+    <div ref={setNodeRef} style={style}>
       <button
         onClick={() => setExpanded((e) => !e)}
-        className={`w-full flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+        className={`w-full flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors cursor-grab active:cursor-grabbing ${
           isActive ? 'text-white bg-slate-800/60' : 'text-gray-400 hover:text-gray-200 hover:bg-slate-800/40'
         }`}
+        {...attributes}
+        {...listeners}
       >
         {expanded ? (
           <ChevronDown className="w-3.5 h-3.5 shrink-0 text-gray-500" />
@@ -53,6 +168,16 @@ function ProjectNode({ projectId, name }: { projectId: string; name: string }) {
         <span className="truncate">{name}</span>
       </button>
       {expanded && <ProjectChildren projectId={projectId} />}
+    </div>
+  )
+}
+
+/** Static overlay shown during drag */
+function ProjectNodeOverlay({ name }: { name: string }) {
+  return (
+    <div className="w-full flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-slate-800 text-white shadow-lg border border-cyan-500/50 cursor-grabbing">
+      <ChevronDown className="w-3.5 h-3.5 shrink-0 text-gray-500" />
+      <span className="truncate">{name}</span>
     </div>
   )
 }
