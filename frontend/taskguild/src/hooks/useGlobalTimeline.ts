@@ -26,11 +26,13 @@ export function useGlobalTimeline() {
   })
   const tasks = tasksData?.tasks ?? []
 
-  // Fetch all interactions across all projects (empty project_id and task_id = all)
+  // Fetch all interactions across all projects (empty project_id and task_id = all).
+  // Use limit: 0 (no limit) to ensure pending interactions are always included,
+  // matching the approach used by task detail and project chat pages.
   const { data: interactionsData, refetch: refetchInteractions } = useQuery(listInteractions, {
     projectId: '',
     taskId: '',
-    pagination: { limit },
+    pagination: { limit: 0 },
   })
   const interactions = interactionsData?.interactions ?? []
 
@@ -154,10 +156,9 @@ export function useGlobalTimeline() {
 
   const { connectionStatus, reconnect } = useEventSubscription(eventTypes, '', onEvent)
 
-  // Pagination
-  const interactionTotal = interactionsData?.pagination?.total ?? 0
+  // Pagination (interactions are fetched without limit; only logs are paginated)
   const logTotal = logsData?.pagination?.total ?? 0
-  const hasMore = interactionTotal > limit || logTotal > limit
+  const hasMore = logTotal > limit
 
   const loadMore = useCallback(() => {
     setLimit((prev) => prev + INITIAL_LIMIT)
