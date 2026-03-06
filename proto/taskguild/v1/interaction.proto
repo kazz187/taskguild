@@ -75,6 +75,8 @@ message ListInteractionsRequest {
 message ListInteractionsResponse {
   repeated Interaction interactions = 1;
   PaginationResponse pagination = 2;
+  // taskId → task title (includes archived tasks).
+  map<string, string> task_titles = 3;
 }
 
 message RespondToInteractionRequest {

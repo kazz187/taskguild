@@ -43,13 +43,28 @@ export function useGlobalTimeline() {
   const logs = logsData?.logs ?? []
 
   // Build task title map: taskId → taskTitle
+  // Merges titles from listTasks (active) and from interaction/log responses
+  // (which include archived tasks).
   const taskMap = useMemo(() => {
     const m = new Map<string, string>()
+    // From listTasks (active tasks – preferred source)
     for (const t of tasks) {
       m.set(t.id, t.title)
     }
+    // Supplement from listInteractions response (includes archived tasks)
+    if (interactionsData?.taskTitles) {
+      for (const [id, title] of Object.entries(interactionsData.taskTitles)) {
+        if (!m.has(id)) m.set(id, title)
+      }
+    }
+    // Supplement from listTaskLogs response (includes archived tasks)
+    if (logsData?.taskTitles) {
+      for (const [id, title] of Object.entries(logsData.taskTitles)) {
+        if (!m.has(id)) m.set(id, title)
+      }
+    }
     return m
-  }, [tasks])
+  }, [tasks, interactionsData?.taskTitles, logsData?.taskTitles])
 
   // Build project name map: taskId → projectName
   const projectMap = useMemo(() => {
