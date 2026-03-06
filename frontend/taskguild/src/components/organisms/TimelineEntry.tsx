@@ -6,9 +6,11 @@ import type { TaskLog } from '@taskguild/proto/taskguild/v1/task_log_pb.ts'
 import {
   Shield, MessageSquare, Bell, Mail, Play, Square, RefreshCw, Anchor,
   Terminal, AlertTriangle, Cog, Wrench, FileText, Zap, ChevronRight, ChevronDown,
+  CheckCircle,
 } from 'lucide-react'
 import { formatTime } from './InputBar.tsx'
 import { Badge } from '../atoms/index.ts'
+import { MarkdownDescription } from './MarkdownDescription.tsx'
 
 export type TimelineItem =
   | { kind: 'interaction'; interaction: Interaction }
@@ -21,10 +23,21 @@ export function TimelineEntry({ item }: { item: TimelineItem }) {
   return <LogEntry log={item.log} />
 }
 
+/** Check if an interaction has expandable details. */
+function hasExpandableContent(interaction: Interaction): boolean {
+  return !!(
+    interaction.description ||
+    interaction.options.length > 0 ||
+    (interaction.response && interaction.status === InteractionStatus.RESPONDED)
+  )
+}
+
 function InteractionEntry({ interaction }: { interaction: Interaction }) {
+  const [expanded, setExpanded] = useState(false)
   const isPending = interaction.status === InteractionStatus.PENDING
   const isResponded = interaction.status === InteractionStatus.RESPONDED
   const isExpired = interaction.status === InteractionStatus.EXPIRED
+  const expandable = hasExpandableContent(interaction)
 
   const icon =
     interaction.type === InteractionType.PERMISSION_REQUEST ? (
@@ -56,17 +69,124 @@ function InteractionEntry({ interaction }: { interaction: Interaction }) {
 
   return (
     <div
-      className={`flex items-start gap-2 px-2 py-1 rounded text-xs ${
+      className={`rounded text-xs ${
         isPending ? 'bg-amber-500/5' : 'hover:bg-slate-800/50'
       }`}
     >
-      <span className="text-[11px] text-gray-600 font-mono w-12 shrink-0 text-right mt-0.5">
-        {interaction.createdAt ? formatTime(interaction.createdAt) : ''}
-      </span>
-      <span className="shrink-0 mt-0.5">{icon}</span>
-      <span className="text-[11px] text-gray-500 w-16 shrink-0 mt-0.5">{typeLabel}</span>
-      <span className="text-gray-300 flex-1 min-w-0 break-words">{interaction.title}</span>
-      {statusBadge}
+      <div
+        className={`flex items-start gap-2 px-2 py-1 ${expandable ? 'cursor-pointer select-none' : ''}`}
+        onClick={expandable ? () => setExpanded((prev) => !prev) : undefined}
+      >
+        <span className="text-[11px] text-gray-600 font-mono w-12 shrink-0 text-right mt-0.5">
+          {interaction.createdAt ? formatTime(interaction.createdAt) : ''}
+        </span>
+        <span className="shrink-0 mt-0.5">{icon}</span>
+        <span className="text-[11px] text-gray-500 w-16 shrink-0 mt-0.5">{typeLabel}</span>
+        <span className={`flex-1 min-w-0 break-words ${isPending ? 'text-gray-300' : 'text-gray-300'}`}>
+          {interaction.title}
+        </span>
+        {statusBadge}
+        {expandable && (
+          <span className="shrink-0 mt-0.5 text-gray-600">
+            {expanded ? (
+              <ChevronDown className="w-3 h-3" />
+            ) : (
+              <ChevronRight className="w-3 h-3" />
+            )}
+          </span>
+        )}
+      </div>
+
+      {expanded && (
+        <div className="ml-[7.5rem] mr-2 mb-1">
+          <InteractionExpandedContent interaction={interaction} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Renders expanded detail content for an interaction. */
+function InteractionExpandedContent({ interaction }: { interaction: Interaction }) {
+  const isResponded = interaction.status === InteractionStatus.RESPONDED
+  const isExpired = interaction.status === InteractionStatus.EXPIRED
+
+  /** Resolve the response value to a human-readable label. */
+  function resolveResponseLabel(response: string): string {
+    if (!interaction.options.length) return response
+    const matched = interaction.options.find((opt) => opt.value === response)
+    return matched ? matched.label : response
+  }
+
+  return (
+    <div className="space-y-1.5">
+      {/* Description */}
+      {interaction.description && (
+        <div>
+          <div className="text-[10px] text-gray-500 font-medium mb-0.5">Description</div>
+          <div className="bg-slate-900/50 rounded px-2 py-1 max-h-48 overflow-y-auto">
+            <MarkdownDescription content={interaction.description} className="text-[11px]" />
+          </div>
+        </div>
+      )}
+
+      {/* Options */}
+      {interaction.options.length > 0 && (
+        <div>
+          <div className="text-[10px] text-gray-500 font-medium mb-0.5">Options</div>
+          <div className="bg-slate-900/50 rounded px-2 py-1 space-y-0.5">
+            {interaction.options.map((opt) => {
+              const isSelected = isResponded && interaction.response === opt.value
+              return (
+                <div
+                  key={opt.value}
+                  className={`flex items-start gap-1.5 text-[11px] ${
+                    isSelected ? 'text-green-400' : 'text-gray-400'
+                  }`}
+                >
+                  {isSelected && <CheckCircle className="w-3 h-3 shrink-0 mt-0.5" />}
+                  <span className={isSelected ? 'font-medium' : ''}>
+                    {opt.label}
+                    {opt.description && (
+                      <span className="text-gray-500 ml-1">— {opt.description}</span>
+                    )}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Response */}
+      {isResponded && interaction.response && (
+        <div>
+          <div className="text-[10px] text-gray-500 font-medium mb-0.5">Response</div>
+          <div className="flex items-start gap-1.5 bg-slate-900/50 rounded px-2 py-1">
+            <CheckCircle className="w-3 h-3 text-green-400 shrink-0 mt-0.5" />
+            <span className="text-[11px] text-green-400 break-words min-w-0">
+              {resolveResponseLabel(interaction.response)}
+            </span>
+            {interaction.respondedAt && (
+              <span className="text-[10px] text-gray-600 ml-auto shrink-0">
+                {formatTime(interaction.respondedAt)}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Expired indicator */}
+      {isExpired && (
+        <div className="flex items-center gap-1.5 bg-slate-900/50 rounded px-2 py-1 text-[11px] text-gray-500">
+          <span>Dismissed</span>
+          {interaction.respondedAt && (
+            <span className="text-[10px] text-gray-600 ml-auto">
+              {formatTime(interaction.respondedAt)}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   )
 }
