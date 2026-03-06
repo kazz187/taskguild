@@ -12,6 +12,7 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/agent"
 	agentrepo "github.com/kazz187/taskguild/backend/internal/agent/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/agentmanager"
+	"github.com/kazz187/taskguild/backend/internal/chatnotifier"
 	"github.com/kazz187/taskguild/backend/internal/config"
 	"github.com/kazz187/taskguild/backend/internal/event"
 	"github.com/kazz187/taskguild/backend/internal/eventbus"
@@ -192,6 +193,9 @@ func runServer() {
 	// Setup orchestrator
 	orch := orchestrator.New(bus, taskRepo, workflowRepo, projectRepo, agentManagerRegistry)
 
+	// Setup chat notifier (creates notification interactions on task status changes)
+	chatNotifier := chatnotifier.New(bus, interactionRepo, taskRepo, workflowRepo)
+
 	// Graceful shutdown context: responds to SIGTERM and SIGINT.
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
@@ -220,6 +224,7 @@ func runServer() {
 
 	go orch.Start(ctx)
 	go pushDispatcher.Start(ctx)
+	go chatNotifier.Start(ctx)
 
 	go func() {
 		if err := srv.ListenAndServe(ctx); err != nil && err != http.ErrServerClosed {
