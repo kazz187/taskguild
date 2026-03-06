@@ -33,16 +33,14 @@ export function CleanTasksDialog({
     errors: string[]
   } | null>(null)
 
-  // Split into archivable (unassigned) and skipped (agent running)
+  // Split into archivable and skipped (agent actively running).
+  // Pending tasks in a terminal status are safe to archive because no agent
+  // will ever claim them — only actively assigned tasks should be skipped.
   const archivable = terminalTasks.filter(
-    (t) =>
-      t.assignmentStatus === TaskAssignmentStatus.UNASSIGNED ||
-      t.assignmentStatus === TaskAssignmentStatus.UNSPECIFIED,
+    (t) => t.assignmentStatus !== TaskAssignmentStatus.ASSIGNED,
   )
   const skipped = terminalTasks.filter(
-    (t) =>
-      t.assignmentStatus === TaskAssignmentStatus.PENDING ||
-      t.assignmentStatus === TaskAssignmentStatus.ASSIGNED,
+    (t) => t.assignmentStatus === TaskAssignmentStatus.ASSIGNED,
   )
 
   const handleArchive = () => {
