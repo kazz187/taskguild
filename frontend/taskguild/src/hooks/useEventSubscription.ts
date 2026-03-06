@@ -27,8 +27,6 @@ export function useEventSubscription(
   const eventTypesKey = useMemo(() => eventTypes.slice().sort().join(','), [eventTypes])
 
   useEffect(() => {
-    if (!projectId) return
-
     const client = createClient(EventService, transport)
     const controller = new AbortController()
 

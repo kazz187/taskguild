@@ -156,7 +156,7 @@ func runServer() {
 	agentServer := agent.NewServer(agentRepo, agentChangeNotifier)
 	skillServer := skill.NewServer(skillRepo)
 	scriptServer := script.NewServer(scriptRepo, agentManagerServer, scriptBroker)
-	taskLogServer := tasklog.NewServer(taskLogRepo)
+	taskLogServer := tasklog.NewServer(taskLogRepo, taskRepo)
 	eventServer := event.NewServer(bus)
 	permissionChangeNotifier := &permissionChangeNotifier{
 		registry:    agentManagerRegistry,

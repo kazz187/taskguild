@@ -135,7 +135,15 @@ export function SidebarNav() {
         </DragOverlay>
       </DndContext>
 
-      <div className="pt-3 mt-3 border-t border-slate-800">
+      <div className="pt-3 mt-3 border-t border-slate-800 space-y-0.5">
+        <Link
+          to="/global-chat"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-slate-800/40 rounded-lg transition-colors"
+          activeProps={{ className: 'flex items-center gap-1.5 px-3 py-1.5 text-sm text-white bg-slate-800/60 rounded-lg' }}
+        >
+          <MessageSquare className="w-3.5 h-3.5 text-cyan-400" />
+          Chat
+        </Link>
         <Link
           to="/templates"
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-slate-800/40 rounded-lg transition-colors"
