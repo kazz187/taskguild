@@ -68,7 +68,7 @@ function GlobalChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-dvh">
+    <div className="flex flex-col h-full">
       {/* Header */}
       <div className="shrink-0 border-b border-slate-800 px-4 py-3 md:px-6 md:py-4">
         <h1 className="text-lg md:text-xl font-bold text-white">Global Chat</h1>
