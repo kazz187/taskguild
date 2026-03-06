@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TemplatesRouteImport } from './routes/templates'
+import { Route as GlobalChatRouteImport } from './routes/global-chat'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectsProjectIdIndexRouteImport } from './routes/projects/$projectId/index'
 import { Route as ProjectsProjectIdWorktreesRouteImport } from './routes/projects/$projectId/worktrees'
@@ -23,6 +24,11 @@ import { Route as ProjectsProjectIdTasksTaskIdRouteImport } from './routes/proje
 const TemplatesRoute = TemplatesRouteImport.update({
   id: '/templates',
   path: '/templates',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GlobalChatRoute = GlobalChatRouteImport.update({
+  id: '/global-chat',
+  path: '/global-chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -77,6 +83,7 @@ const ProjectsProjectIdTasksTaskIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/global-chat': typeof GlobalChatRoute
   '/templates': typeof TemplatesRoute
   '/projects/$projectId/agents': typeof ProjectsProjectIdAgentsRoute
   '/projects/$projectId/chat': typeof ProjectsProjectIdChatRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/global-chat': typeof GlobalChatRoute
   '/templates': typeof TemplatesRoute
   '/projects/$projectId/agents': typeof ProjectsProjectIdAgentsRoute
   '/projects/$projectId/chat': typeof ProjectsProjectIdChatRoute
@@ -102,6 +110,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/global-chat': typeof GlobalChatRoute
   '/templates': typeof TemplatesRoute
   '/projects/$projectId/agents': typeof ProjectsProjectIdAgentsRoute
   '/projects/$projectId/chat': typeof ProjectsProjectIdChatRoute
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/global-chat'
     | '/templates'
     | '/projects/$projectId/agents'
     | '/projects/$projectId/chat'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/global-chat'
     | '/templates'
     | '/projects/$projectId/agents'
     | '/projects/$projectId/chat'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/global-chat'
     | '/templates'
     | '/projects/$projectId/agents'
     | '/projects/$projectId/chat'
@@ -153,6 +165,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  GlobalChatRoute: typeof GlobalChatRoute
   TemplatesRoute: typeof TemplatesRoute
   ProjectsProjectIdAgentsRoute: typeof ProjectsProjectIdAgentsRoute
   ProjectsProjectIdChatRoute: typeof ProjectsProjectIdChatRoute
@@ -171,6 +184,13 @@ declare module '@tanstack/react-router' {
       path: '/templates'
       fullPath: '/templates'
       preLoaderRoute: typeof TemplatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/global-chat': {
+      id: '/global-chat'
+      path: '/global-chat'
+      fullPath: '/global-chat'
+      preLoaderRoute: typeof GlobalChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -241,6 +261,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  GlobalChatRoute: GlobalChatRoute,
   TemplatesRoute: TemplatesRoute,
   ProjectsProjectIdAgentsRoute: ProjectsProjectIdAgentsRoute,
   ProjectsProjectIdChatRoute: ProjectsProjectIdChatRoute,

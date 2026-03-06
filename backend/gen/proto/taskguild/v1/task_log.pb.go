@@ -243,9 +243,12 @@ func (x *TaskLog) GetCreatedAt() *timestamppb.Timestamp {
 }
 
 type ListTaskLogsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	Pagination    *PaginationRequest     `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	TaskId     string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	Pagination *PaginationRequest     `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	// When set, return logs for all tasks belonging to this project.
+	// Ignored when task_id is set.
+	ProjectId     string `protobuf:"bytes,3,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -292,6 +295,13 @@ func (x *ListTaskLogsRequest) GetPagination() *PaginationRequest {
 		return x.Pagination
 	}
 	return nil
+}
+
+func (x *ListTaskLogsRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
 }
 
 type ListTaskLogsResponse struct {
@@ -362,12 +372,14 @@ const file_taskguild_v1_task_log_proto_rawDesc = "" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"o\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x8e\x01\n" +
 	"\x13ListTaskLogsRequest\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12?\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1f.taskguild.v1.PaginationRequestR\n" +
-	"pagination\"\x83\x01\n" +
+	"pagination\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x03 \x01(\tR\tprojectId\"\x83\x01\n" +
 	"\x14ListTaskLogsResponse\x12)\n" +
 	"\x04logs\x18\x01 \x03(\v2\x15.taskguild.v1.TaskLogR\x04logs\x12@\n" +
 	"\n" +
