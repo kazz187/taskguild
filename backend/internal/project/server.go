@@ -23,6 +23,18 @@ func NewServer(repo Repository) *Server {
 }
 
 func (s *Server) CreateProject(ctx context.Context, req *connect.Request[taskguildv1.CreateProjectRequest]) (*connect.Response[taskguildv1.CreateProjectResponse], error) {
+	// Determine order for the new project (append to end).
+	allProjects, err := s.repo.ListAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	maxOrder := int32(0)
+	for _, ep := range allProjects {
+		if ep.Order > maxOrder {
+			maxOrder = ep.Order
+		}
+	}
+
 	now := time.Now()
 	p := &Project{
 		ID:            ulid.Make().String(),
@@ -30,6 +42,7 @@ func (s *Server) CreateProject(ctx context.Context, req *connect.Request[taskgui
 		Description:   req.Msg.Description,
 		RepositoryURL: req.Msg.RepositoryUrl,
 		DefaultBranch: req.Msg.DefaultBranch,
+		Order:         maxOrder + 1,
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}
@@ -113,6 +126,34 @@ func (s *Server) DeleteProject(ctx context.Context, req *connect.Request[taskgui
 	return connect.NewResponse(&taskguildv1.DeleteProjectResponse{}), nil
 }
 
+func (s *Server) ReorderProjects(ctx context.Context, req *connect.Request[taskguildv1.ReorderProjectsRequest]) (*connect.Response[taskguildv1.ReorderProjectsResponse], error) {
+	now := time.Now()
+	for i, id := range req.Msg.ProjectIds {
+		p, err := s.repo.Get(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		p.Order = int32(i + 1)
+		p.UpdatedAt = now
+		if err := s.repo.Update(ctx, p); err != nil {
+			return nil, err
+		}
+	}
+
+	// Return updated project list in order.
+	allProjects, err := s.repo.ListAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	protos := make([]*taskguildv1.Project, len(allProjects))
+	for i, p := range allProjects {
+		protos[i] = toProto(p)
+	}
+	return connect.NewResponse(&taskguildv1.ReorderProjectsResponse{
+		Projects: protos,
+	}), nil
+}
+
 func toProto(p *Project) *taskguildv1.Project {
 	return &taskguildv1.Project{
 		Id:                p.ID,
@@ -120,6 +161,7 @@ func toProto(p *Project) *taskguildv1.Project {
 		Description:       p.Description,
 		RepositoryUrl:     p.RepositoryURL,
 		DefaultBranch:     p.DefaultBranch,
+		Order:             p.Order,
 		HiddenFromSidebar: p.HiddenFromSidebar,
 		CreatedAt:         timestamppb.New(p.CreatedAt),
 		UpdatedAt:         timestamppb.New(p.UpdatedAt),

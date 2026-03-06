@@ -11,6 +11,7 @@ service ProjectService {
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
   rpc UpdateProject(UpdateProjectRequest) returns (UpdateProjectResponse);
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
+  rpc ReorderProjects(ReorderProjectsRequest) returns (ReorderProjectsResponse);
 }
 
 message Project {
@@ -21,7 +22,8 @@ message Project {
   string default_branch = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
-  bool hidden_from_sidebar = 8;
+  int32 order = 8;
+  bool hidden_from_sidebar = 9;
 }
 
 message CreateProjectRequest {
@@ -65,3 +67,10 @@ message DeleteProjectRequest {
   string id = 1;
 }
 message DeleteProjectResponse {}
+
+message ReorderProjectsRequest {
+  repeated string project_ids = 1;
+}
+message ReorderProjectsResponse {
+  repeated Project projects = 1;
+}

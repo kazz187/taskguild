@@ -28,3 +28,8 @@ export const updateProject = ProjectService.method.updateProject;
  * @generated from rpc taskguild.v1.ProjectService.DeleteProject
  */
 export const deleteProject = ProjectService.method.deleteProject;
+
+/**
+ * @generated from rpc taskguild.v1.ProjectService.ReorderProjects
+ */
+export const reorderProjects = ProjectService.method.reorderProjects;

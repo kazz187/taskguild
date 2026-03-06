@@ -77,25 +77,12 @@ func (r *YAMLRepository) FindByName(ctx context.Context, name string) (*project.
 	return nil, cerr.NewError(cerr.NotFound, "project not found", nil)
 }
 
-func (r *YAMLRepository) List(ctx context.Context, limit, offset int) ([]*project.Project, int, error) {
+// readAll reads all project YAML files and returns them unsorted.
+func (r *YAMLRepository) readAll(ctx context.Context) ([]*project.Project, error) {
 	paths, err := r.storage.List(ctx, projectsPrefix)
 	if err != nil {
-		return nil, 0, cerr.WrapStorageReadError("projects", err)
+		return nil, cerr.WrapStorageReadError("projects", err)
 	}
-	total := len(paths)
-
-	// Sort by filename for consistent ordering.
-	sort.Strings(paths)
-
-	// Apply pagination.
-	if offset >= len(paths) {
-		return nil, total, nil
-	}
-	paths = paths[offset:]
-	if limit > 0 && len(paths) > limit {
-		paths = paths[:limit]
-	}
-
 	projects := make([]*project.Project, 0, len(paths))
 	for _, p := range paths {
 		data, err := r.storage.Read(ctx, p)
@@ -108,6 +95,41 @@ func (r *YAMLRepository) List(ctx context.Context, limit, offset int) ([]*projec
 		}
 		projects = append(projects, &proj)
 	}
+	return projects, nil
+}
+
+func (r *YAMLRepository) ListAll(ctx context.Context) ([]*project.Project, error) {
+	projects, err := r.readAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(projects, func(i, j int) bool {
+		return projects[i].Order < projects[j].Order
+	})
+	return projects, nil
+}
+
+func (r *YAMLRepository) List(ctx context.Context, limit, offset int) ([]*project.Project, int, error) {
+	projects, err := r.readAll(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	total := len(projects)
+
+	// Sort by Order field.
+	sort.Slice(projects, func(i, j int) bool {
+		return projects[i].Order < projects[j].Order
+	})
+
+	// Apply pagination.
+	if offset >= len(projects) {
+		return nil, total, nil
+	}
+	projects = projects[offset:]
+	if limit > 0 && len(projects) > limit {
+		projects = projects[:limit]
+	}
+
 	return projects, total, nil
 }
 
