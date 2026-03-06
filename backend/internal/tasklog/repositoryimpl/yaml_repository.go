@@ -44,13 +44,22 @@ func (r *YAMLRepository) Create(ctx context.Context, l *tasklog.TaskLog) error {
 	return nil
 }
 
-func (r *YAMLRepository) List(ctx context.Context, taskID string, limit, offset int) ([]*tasklog.TaskLog, int, error) {
+func (r *YAMLRepository) List(ctx context.Context, taskID string, taskIDs []string, limit, offset int) ([]*tasklog.TaskLog, int, error) {
 	paths, err := r.storage.List(ctx, taskLogsPrefix)
 	if err != nil {
 		return nil, 0, cerr.WrapStorageReadError("task_logs", err)
 	}
 
 	sort.Strings(paths)
+
+	// Build a set for fast lookup when filtering by multiple task IDs.
+	var taskIDSet map[string]struct{}
+	if len(taskIDs) > 0 {
+		taskIDSet = make(map[string]struct{}, len(taskIDs))
+		for _, id := range taskIDs {
+			taskIDSet[id] = struct{}{}
+		}
+	}
 
 	var all []*tasklog.TaskLog
 	for _, p := range paths {
@@ -64,6 +73,11 @@ func (r *YAMLRepository) List(ctx context.Context, taskID string, limit, offset 
 		}
 		if taskID != "" && l.TaskID != taskID {
 			continue
+		}
+		if taskIDSet != nil {
+			if _, ok := taskIDSet[l.TaskID]; !ok {
+				continue
+			}
 		}
 		all = append(all, &l)
 	}

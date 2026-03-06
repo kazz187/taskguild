@@ -6,6 +6,7 @@ import (
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/kazz187/taskguild/backend/internal/task"
 	taskguildv1 "github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1"
 	"github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1/taskguildv1connect"
 )
@@ -13,11 +14,12 @@ import (
 var _ taskguildv1connect.TaskLogServiceHandler = (*Server)(nil)
 
 type Server struct {
-	repo Repository
+	repo     Repository
+	taskRepo task.Repository
 }
 
-func NewServer(repo Repository) *Server {
-	return &Server{repo: repo}
+func NewServer(repo Repository, taskRepo task.Repository) *Server {
+	return &Server{repo: repo, taskRepo: taskRepo}
 }
 
 func (s *Server) ListTaskLogs(ctx context.Context, req *connect.Request[taskguildv1.ListTaskLogsRequest]) (*connect.Response[taskguildv1.ListTaskLogsResponse], error) {
@@ -27,7 +29,20 @@ func (s *Server) ListTaskLogs(ctx context.Context, req *connect.Request[taskguil
 		offset = req.Msg.Pagination.Offset
 	}
 
-	logs, total, err := s.repo.List(ctx, req.Msg.TaskId, int(limit), int(offset))
+	// When project_id is provided (and task_id is not), resolve to task IDs for filtering.
+	var taskIDs []string
+	if req.Msg.ProjectId != "" && req.Msg.TaskId == "" {
+		tasks, _, err := s.taskRepo.List(ctx, req.Msg.ProjectId, "", "", 0, 0)
+		if err != nil {
+			return nil, err
+		}
+		taskIDs = make([]string, len(tasks))
+		for i, t := range tasks {
+			taskIDs[i] = t.ID
+		}
+	}
+
+	logs, total, err := s.repo.List(ctx, req.Msg.TaskId, taskIDs, int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}

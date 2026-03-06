@@ -44,6 +44,9 @@ message TaskLog {
 message ListTaskLogsRequest {
   string task_id = 1;
   PaginationRequest pagination = 2;
+  // When set, return logs for all tasks belonging to this project.
+  // Ignored when task_id is set.
+  string project_id = 3;
 }
 
 message ListTaskLogsResponse {
