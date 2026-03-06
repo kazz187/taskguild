@@ -309,9 +309,11 @@ type ListTaskLogsResponse struct {
 	Logs       []*TaskLog             `protobuf:"bytes,1,rep,name=logs,proto3" json:"logs,omitempty"`
 	Pagination *PaginationResponse    `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
 	// taskId → task title (includes archived tasks).
-	TaskTitles    map[string]string `protobuf:"bytes,3,rep,name=task_titles,json=taskTitles,proto3" json:"task_titles,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	TaskTitles map[string]string `protobuf:"bytes,3,rep,name=task_titles,json=taskTitles,proto3" json:"task_titles,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// taskId → projectId (includes archived tasks, used for linking).
+	TaskProjectIds map[string]string `protobuf:"bytes,4,rep,name=task_project_ids,json=taskProjectIds,proto3" json:"task_project_ids,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ListTaskLogsResponse) Reset() {
@@ -365,6 +367,13 @@ func (x *ListTaskLogsResponse) GetTaskTitles() map[string]string {
 	return nil
 }
 
+func (x *ListTaskLogsResponse) GetTaskProjectIds() map[string]string {
+	if x != nil {
+		return x.TaskProjectIds
+	}
+	return nil
+}
+
 var File_taskguild_v1_task_log_proto protoreflect.FileDescriptor
 
 const file_taskguild_v1_task_log_proto_rawDesc = "" +
@@ -388,15 +397,19 @@ const file_taskguild_v1_task_log_proto_rawDesc = "" +
 	"pagination\x18\x02 \x01(\v2\x1f.taskguild.v1.PaginationRequestR\n" +
 	"pagination\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x03 \x01(\tR\tprojectId\"\x97\x02\n" +
+	"project_id\x18\x03 \x01(\tR\tprojectId\"\xbc\x03\n" +
 	"\x14ListTaskLogsResponse\x12)\n" +
 	"\x04logs\x18\x01 \x03(\v2\x15.taskguild.v1.TaskLogR\x04logs\x12@\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2 .taskguild.v1.PaginationResponseR\n" +
 	"pagination\x12S\n" +
 	"\vtask_titles\x18\x03 \x03(\v22.taskguild.v1.ListTaskLogsResponse.TaskTitlesEntryR\n" +
-	"taskTitles\x1a=\n" +
+	"taskTitles\x12`\n" +
+	"\x10task_project_ids\x18\x04 \x03(\v26.taskguild.v1.ListTaskLogsResponse.TaskProjectIdsEntryR\x0etaskProjectIds\x1a=\n" +
 	"\x0fTaskTitlesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1aA\n" +
+	"\x13TaskProjectIdsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\x94\x01\n" +
 	"\fTaskLogLevel\x12\x1e\n" +
@@ -435,7 +448,7 @@ func file_taskguild_v1_task_log_proto_rawDescGZIP() []byte {
 }
 
 var file_taskguild_v1_task_log_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_taskguild_v1_task_log_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_taskguild_v1_task_log_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_taskguild_v1_task_log_proto_goTypes = []any{
 	(TaskLogLevel)(0),             // 0: taskguild.v1.TaskLogLevel
 	(TaskLogCategory)(0),          // 1: taskguild.v1.TaskLogCategory
@@ -444,26 +457,28 @@ var file_taskguild_v1_task_log_proto_goTypes = []any{
 	(*ListTaskLogsResponse)(nil),  // 4: taskguild.v1.ListTaskLogsResponse
 	nil,                           // 5: taskguild.v1.TaskLog.MetadataEntry
 	nil,                           // 6: taskguild.v1.ListTaskLogsResponse.TaskTitlesEntry
-	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
-	(*PaginationRequest)(nil),     // 8: taskguild.v1.PaginationRequest
-	(*PaginationResponse)(nil),    // 9: taskguild.v1.PaginationResponse
+	nil,                           // 7: taskguild.v1.ListTaskLogsResponse.TaskProjectIdsEntry
+	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
+	(*PaginationRequest)(nil),     // 9: taskguild.v1.PaginationRequest
+	(*PaginationResponse)(nil),    // 10: taskguild.v1.PaginationResponse
 }
 var file_taskguild_v1_task_log_proto_depIdxs = []int32{
-	0, // 0: taskguild.v1.TaskLog.level:type_name -> taskguild.v1.TaskLogLevel
-	1, // 1: taskguild.v1.TaskLog.category:type_name -> taskguild.v1.TaskLogCategory
-	5, // 2: taskguild.v1.TaskLog.metadata:type_name -> taskguild.v1.TaskLog.MetadataEntry
-	7, // 3: taskguild.v1.TaskLog.created_at:type_name -> google.protobuf.Timestamp
-	8, // 4: taskguild.v1.ListTaskLogsRequest.pagination:type_name -> taskguild.v1.PaginationRequest
-	2, // 5: taskguild.v1.ListTaskLogsResponse.logs:type_name -> taskguild.v1.TaskLog
-	9, // 6: taskguild.v1.ListTaskLogsResponse.pagination:type_name -> taskguild.v1.PaginationResponse
-	6, // 7: taskguild.v1.ListTaskLogsResponse.task_titles:type_name -> taskguild.v1.ListTaskLogsResponse.TaskTitlesEntry
-	3, // 8: taskguild.v1.TaskLogService.ListTaskLogs:input_type -> taskguild.v1.ListTaskLogsRequest
-	4, // 9: taskguild.v1.TaskLogService.ListTaskLogs:output_type -> taskguild.v1.ListTaskLogsResponse
-	9, // [9:10] is the sub-list for method output_type
-	8, // [8:9] is the sub-list for method input_type
-	8, // [8:8] is the sub-list for extension type_name
-	8, // [8:8] is the sub-list for extension extendee
-	0, // [0:8] is the sub-list for field type_name
+	0,  // 0: taskguild.v1.TaskLog.level:type_name -> taskguild.v1.TaskLogLevel
+	1,  // 1: taskguild.v1.TaskLog.category:type_name -> taskguild.v1.TaskLogCategory
+	5,  // 2: taskguild.v1.TaskLog.metadata:type_name -> taskguild.v1.TaskLog.MetadataEntry
+	8,  // 3: taskguild.v1.TaskLog.created_at:type_name -> google.protobuf.Timestamp
+	9,  // 4: taskguild.v1.ListTaskLogsRequest.pagination:type_name -> taskguild.v1.PaginationRequest
+	2,  // 5: taskguild.v1.ListTaskLogsResponse.logs:type_name -> taskguild.v1.TaskLog
+	10, // 6: taskguild.v1.ListTaskLogsResponse.pagination:type_name -> taskguild.v1.PaginationResponse
+	6,  // 7: taskguild.v1.ListTaskLogsResponse.task_titles:type_name -> taskguild.v1.ListTaskLogsResponse.TaskTitlesEntry
+	7,  // 8: taskguild.v1.ListTaskLogsResponse.task_project_ids:type_name -> taskguild.v1.ListTaskLogsResponse.TaskProjectIdsEntry
+	3,  // 9: taskguild.v1.TaskLogService.ListTaskLogs:input_type -> taskguild.v1.ListTaskLogsRequest
+	4,  // 10: taskguild.v1.TaskLogService.ListTaskLogs:output_type -> taskguild.v1.ListTaskLogsResponse
+	10, // [10:11] is the sub-list for method output_type
+	9,  // [9:10] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_task_log_proto_init() }
@@ -478,7 +493,7 @@ func file_taskguild_v1_task_log_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_task_log_proto_rawDesc), len(file_taskguild_v1_task_log_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -108,7 +108,7 @@ function GlobalChatPage() {
             const taskId = getTaskId(item)
             const prevTaskId = idx > 0 ? getTaskId(timelineItems[idx - 1]) : null
             const showTaskLabel = taskId !== prevTaskId
-            const taskTitle = taskMap.get(taskId) ?? shortId(taskId)
+            const taskTitle = taskMap.get(taskId) || shortId(taskId)
             const projectName = projectMap.get(taskId)
             const projectId = taskProjectMap.get(taskId)
 
@@ -161,6 +161,7 @@ function GlobalChatPage() {
               isRespondPending={respondMut.isPending}
               taskMap={taskMap}
               projectMap={projectMap}
+              taskProjectMap={taskProjectMap}
             />
           </div>
         </div>

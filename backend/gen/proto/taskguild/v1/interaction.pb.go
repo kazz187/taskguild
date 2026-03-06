@@ -435,9 +435,11 @@ type ListInteractionsResponse struct {
 	Interactions []*Interaction         `protobuf:"bytes,1,rep,name=interactions,proto3" json:"interactions,omitempty"`
 	Pagination   *PaginationResponse    `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
 	// taskId → task title (includes archived tasks).
-	TaskTitles    map[string]string `protobuf:"bytes,3,rep,name=task_titles,json=taskTitles,proto3" json:"task_titles,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	TaskTitles map[string]string `protobuf:"bytes,3,rep,name=task_titles,json=taskTitles,proto3" json:"task_titles,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// taskId → projectId (includes archived tasks, used for linking).
+	TaskProjectIds map[string]string `protobuf:"bytes,4,rep,name=task_project_ids,json=taskProjectIds,proto3" json:"task_project_ids,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ListInteractionsResponse) Reset() {
@@ -487,6 +489,13 @@ func (x *ListInteractionsResponse) GetPagination() *PaginationResponse {
 func (x *ListInteractionsResponse) GetTaskTitles() map[string]string {
 	if x != nil {
 		return x.TaskTitles
+	}
+	return nil
+}
+
+func (x *ListInteractionsResponse) GetTaskProjectIds() map[string]string {
+	if x != nil {
+		return x.TaskProjectIds
 	}
 	return nil
 }
@@ -943,15 +952,19 @@ const file_taskguild_v1_interaction_proto_rawDesc = "" +
 	"\rstatus_filter\x18\x03 \x01(\x0e2\x1f.taskguild.v1.InteractionStatusR\fstatusFilter\x12?\n" +
 	"\n" +
 	"pagination\x18\x04 \x01(\v2\x1f.taskguild.v1.PaginationRequestR\n" +
-	"pagination\"\xb3\x02\n" +
+	"pagination\"\xdc\x03\n" +
 	"\x18ListInteractionsResponse\x12=\n" +
 	"\finteractions\x18\x01 \x03(\v2\x19.taskguild.v1.InteractionR\finteractions\x12@\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2 .taskguild.v1.PaginationResponseR\n" +
 	"pagination\x12W\n" +
 	"\vtask_titles\x18\x03 \x03(\v26.taskguild.v1.ListInteractionsResponse.TaskTitlesEntryR\n" +
-	"taskTitles\x1a=\n" +
+	"taskTitles\x12d\n" +
+	"\x10task_project_ids\x18\x04 \x03(\v2:.taskguild.v1.ListInteractionsResponse.TaskProjectIdsEntryR\x0etaskProjectIds\x1a=\n" +
 	"\x0fTaskTitlesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1aA\n" +
+	"\x13TaskProjectIdsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"I\n" +
 	"\x1bRespondToInteractionRequest\x12\x0e\n" +
@@ -1008,7 +1021,7 @@ func file_taskguild_v1_interaction_proto_rawDescGZIP() []byte {
 }
 
 var file_taskguild_v1_interaction_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_taskguild_v1_interaction_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_taskguild_v1_interaction_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_taskguild_v1_interaction_proto_goTypes = []any{
 	(InteractionType)(0),                        // 0: taskguild.v1.InteractionType
 	(InteractionStatus)(0),                      // 1: taskguild.v1.InteractionStatus
@@ -1027,43 +1040,45 @@ var file_taskguild_v1_interaction_proto_goTypes = []any{
 	(*ExpireInteractionRequest)(nil),            // 14: taskguild.v1.ExpireInteractionRequest
 	(*ExpireInteractionResponse)(nil),           // 15: taskguild.v1.ExpireInteractionResponse
 	nil,                                         // 16: taskguild.v1.ListInteractionsResponse.TaskTitlesEntry
-	(*timestamppb.Timestamp)(nil),               // 17: google.protobuf.Timestamp
-	(*PaginationRequest)(nil),                   // 18: taskguild.v1.PaginationRequest
-	(*PaginationResponse)(nil),                  // 19: taskguild.v1.PaginationResponse
+	nil,                                         // 17: taskguild.v1.ListInteractionsResponse.TaskProjectIdsEntry
+	(*timestamppb.Timestamp)(nil),               // 18: google.protobuf.Timestamp
+	(*PaginationRequest)(nil),                   // 19: taskguild.v1.PaginationRequest
+	(*PaginationResponse)(nil),                  // 20: taskguild.v1.PaginationResponse
 }
 var file_taskguild_v1_interaction_proto_depIdxs = []int32{
 	0,  // 0: taskguild.v1.Interaction.type:type_name -> taskguild.v1.InteractionType
 	1,  // 1: taskguild.v1.Interaction.status:type_name -> taskguild.v1.InteractionStatus
 	3,  // 2: taskguild.v1.Interaction.options:type_name -> taskguild.v1.InteractionOption
-	17, // 3: taskguild.v1.Interaction.created_at:type_name -> google.protobuf.Timestamp
-	17, // 4: taskguild.v1.Interaction.responded_at:type_name -> google.protobuf.Timestamp
+	18, // 3: taskguild.v1.Interaction.created_at:type_name -> google.protobuf.Timestamp
+	18, // 4: taskguild.v1.Interaction.responded_at:type_name -> google.protobuf.Timestamp
 	2,  // 5: taskguild.v1.InteractionEvent.interaction:type_name -> taskguild.v1.Interaction
 	1,  // 6: taskguild.v1.ListInteractionsRequest.status_filter:type_name -> taskguild.v1.InteractionStatus
-	18, // 7: taskguild.v1.ListInteractionsRequest.pagination:type_name -> taskguild.v1.PaginationRequest
+	19, // 7: taskguild.v1.ListInteractionsRequest.pagination:type_name -> taskguild.v1.PaginationRequest
 	2,  // 8: taskguild.v1.ListInteractionsResponse.interactions:type_name -> taskguild.v1.Interaction
-	19, // 9: taskguild.v1.ListInteractionsResponse.pagination:type_name -> taskguild.v1.PaginationResponse
+	20, // 9: taskguild.v1.ListInteractionsResponse.pagination:type_name -> taskguild.v1.PaginationResponse
 	16, // 10: taskguild.v1.ListInteractionsResponse.task_titles:type_name -> taskguild.v1.ListInteractionsResponse.TaskTitlesEntry
-	2,  // 11: taskguild.v1.RespondToInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
-	2,  // 12: taskguild.v1.SendMessageResponse.interaction:type_name -> taskguild.v1.Interaction
-	2,  // 13: taskguild.v1.RespondToInteractionByTokenResponse.interaction:type_name -> taskguild.v1.Interaction
-	2,  // 14: taskguild.v1.ExpireInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
-	5,  // 15: taskguild.v1.InteractionService.ListInteractions:input_type -> taskguild.v1.ListInteractionsRequest
-	7,  // 16: taskguild.v1.InteractionService.RespondToInteraction:input_type -> taskguild.v1.RespondToInteractionRequest
-	12, // 17: taskguild.v1.InteractionService.RespondToInteractionByToken:input_type -> taskguild.v1.RespondToInteractionByTokenRequest
-	14, // 18: taskguild.v1.InteractionService.ExpireInteraction:input_type -> taskguild.v1.ExpireInteractionRequest
-	9,  // 19: taskguild.v1.InteractionService.SendMessage:input_type -> taskguild.v1.SendMessageRequest
-	11, // 20: taskguild.v1.InteractionService.SubscribeInteractions:input_type -> taskguild.v1.SubscribeInteractionsRequest
-	6,  // 21: taskguild.v1.InteractionService.ListInteractions:output_type -> taskguild.v1.ListInteractionsResponse
-	8,  // 22: taskguild.v1.InteractionService.RespondToInteraction:output_type -> taskguild.v1.RespondToInteractionResponse
-	13, // 23: taskguild.v1.InteractionService.RespondToInteractionByToken:output_type -> taskguild.v1.RespondToInteractionByTokenResponse
-	15, // 24: taskguild.v1.InteractionService.ExpireInteraction:output_type -> taskguild.v1.ExpireInteractionResponse
-	10, // 25: taskguild.v1.InteractionService.SendMessage:output_type -> taskguild.v1.SendMessageResponse
-	4,  // 26: taskguild.v1.InteractionService.SubscribeInteractions:output_type -> taskguild.v1.InteractionEvent
-	21, // [21:27] is the sub-list for method output_type
-	15, // [15:21] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	17, // 11: taskguild.v1.ListInteractionsResponse.task_project_ids:type_name -> taskguild.v1.ListInteractionsResponse.TaskProjectIdsEntry
+	2,  // 12: taskguild.v1.RespondToInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
+	2,  // 13: taskguild.v1.SendMessageResponse.interaction:type_name -> taskguild.v1.Interaction
+	2,  // 14: taskguild.v1.RespondToInteractionByTokenResponse.interaction:type_name -> taskguild.v1.Interaction
+	2,  // 15: taskguild.v1.ExpireInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
+	5,  // 16: taskguild.v1.InteractionService.ListInteractions:input_type -> taskguild.v1.ListInteractionsRequest
+	7,  // 17: taskguild.v1.InteractionService.RespondToInteraction:input_type -> taskguild.v1.RespondToInteractionRequest
+	12, // 18: taskguild.v1.InteractionService.RespondToInteractionByToken:input_type -> taskguild.v1.RespondToInteractionByTokenRequest
+	14, // 19: taskguild.v1.InteractionService.ExpireInteraction:input_type -> taskguild.v1.ExpireInteractionRequest
+	9,  // 20: taskguild.v1.InteractionService.SendMessage:input_type -> taskguild.v1.SendMessageRequest
+	11, // 21: taskguild.v1.InteractionService.SubscribeInteractions:input_type -> taskguild.v1.SubscribeInteractionsRequest
+	6,  // 22: taskguild.v1.InteractionService.ListInteractions:output_type -> taskguild.v1.ListInteractionsResponse
+	8,  // 23: taskguild.v1.InteractionService.RespondToInteraction:output_type -> taskguild.v1.RespondToInteractionResponse
+	13, // 24: taskguild.v1.InteractionService.RespondToInteractionByToken:output_type -> taskguild.v1.RespondToInteractionByTokenResponse
+	15, // 25: taskguild.v1.InteractionService.ExpireInteraction:output_type -> taskguild.v1.ExpireInteractionResponse
+	10, // 26: taskguild.v1.InteractionService.SendMessage:output_type -> taskguild.v1.SendMessageResponse
+	4,  // 27: taskguild.v1.InteractionService.SubscribeInteractions:output_type -> taskguild.v1.InteractionEvent
+	22, // [22:28] is the sub-list for method output_type
+	16, // [16:22] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_interaction_proto_init() }
@@ -1078,7 +1093,7 @@ func file_taskguild_v1_interaction_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_interaction_proto_rawDesc), len(file_taskguild_v1_interaction_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   15,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

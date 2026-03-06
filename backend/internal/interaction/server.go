@@ -66,7 +66,7 @@ func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[task
 	for id := range uniqueTaskIDs {
 		ids = append(ids, id)
 	}
-	taskTitles := task.ResolveTitles(ctx, s.taskRepo, ids)
+	taskTitles, taskProjectIDs := task.ResolveAll(ctx, s.taskRepo, ids)
 
 	protos := make([]*taskguildv1.Interaction, len(interactions))
 	for i, inter := range interactions {
@@ -79,7 +79,8 @@ func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[task
 			Limit:  limit,
 			Offset: offset,
 		},
-		TaskTitles: taskTitles,
+		TaskTitles:     taskTitles,
+		TaskProjectIds: taskProjectIDs,
 	}), nil
 }
 

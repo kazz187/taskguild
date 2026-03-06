@@ -10,6 +10,7 @@ interface TaskGroup {
   taskId: string
   taskTitle: string
   projectName?: string
+  projectId?: string
   interactions: Interaction[]
 }
 
@@ -24,6 +25,7 @@ export function PendingRequestsPanel({
   onDismiss,
   isDismissPending,
   projectMap,
+  taskProjectMap,
 }: {
   pendingRequests: Interaction[]
   onRespond: (interactionId: string, response: string) => void
@@ -31,10 +33,13 @@ export function PendingRequestsPanel({
   enabled?: boolean
   className?: string
   taskMap?: Map<string, string>
+  /** Single project ID (project chat page). Falls back when taskProjectMap is absent. */
   projectId?: string
   onDismiss?: (interactionId: string) => void
   isDismissPending?: boolean
   projectMap?: Map<string, string>
+  /** taskId → projectId map (global chat). Takes priority over single projectId. */
+  taskProjectMap?: Map<string, string>
 }) {
   const { selectedId, setSelectedId } = useRequestKeyboard({
     pendingRequests,
@@ -60,11 +65,12 @@ export function PendingRequestsPanel({
 
     return groupOrder.map((taskId): TaskGroup => ({
       taskId,
-      taskTitle: taskMap?.get(taskId) ?? shortId(taskId),
+      taskTitle: taskMap?.get(taskId) || shortId(taskId),
       projectName: projectMap?.get(taskId),
+      projectId: taskProjectMap?.get(taskId) ?? projectId,
       interactions: groupMap.get(taskId)!,
     }))
-  }, [pendingRequests, taskMap, projectMap])
+  }, [pendingRequests, taskMap, projectMap, taskProjectMap, projectId])
 
   if (pendingRequests.length === 0) return null
 
@@ -92,10 +98,10 @@ export function PendingRequestsPanel({
                     {group.projectName} /
                   </span>
                 )}
-                {projectId ? (
+                {group.projectId ? (
                   <Link
                     to="/projects/$projectId/tasks/$taskId"
-                    params={{ projectId, taskId: group.taskId }}
+                    params={{ projectId: group.projectId, taskId: group.taskId }}
                     className="text-[11px] text-cyan-400 hover:text-cyan-300 font-medium truncate transition-colors"
                   >
                     {group.taskTitle}

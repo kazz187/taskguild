@@ -3,6 +3,7 @@ package task
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"connectrpc.com/connect"
@@ -18,17 +19,25 @@ import (
 
 var _ taskguildv1connect.TaskServiceHandler = (*Server)(nil)
 
-type Server struct {
-	repo         Repository
-	workflowRepo workflow.Repository
-	eventBus     *eventbus.Bus
+// CascadeDeleter deletes all records belonging to a given task.
+// Implemented by tasklog and interaction repositories.
+type CascadeDeleter interface {
+	DeleteByTaskID(ctx context.Context, taskID string) (int, error)
 }
 
-func NewServer(repo Repository, workflowRepo workflow.Repository, eventBus *eventbus.Bus) *Server {
+type Server struct {
+	repo             Repository
+	workflowRepo     workflow.Repository
+	eventBus         *eventbus.Bus
+	cascadeDeleters  []CascadeDeleter
+}
+
+func NewServer(repo Repository, workflowRepo workflow.Repository, eventBus *eventbus.Bus, cascadeDeleters ...CascadeDeleter) *Server {
 	return &Server{
-		repo:         repo,
-		workflowRepo: workflowRepo,
-		eventBus:     eventBus,
+		repo:            repo,
+		workflowRepo:    workflowRepo,
+		eventBus:        eventBus,
+		cascadeDeleters: cascadeDeleters,
 	}
 }
 
@@ -184,6 +193,16 @@ func (s *Server) DeleteTask(ctx context.Context, req *connect.Request[taskguildv
 	}
 	if err := s.repo.Delete(ctx, req.Msg.Id); err != nil {
 		return nil, err
+	}
+
+	// Cascade-delete related task logs and interactions so that no
+	// orphaned records remain after the task is removed.
+	for _, d := range s.cascadeDeleters {
+		if n, err := d.DeleteByTaskID(ctx, req.Msg.Id); err != nil {
+			slog.Warn("cascade delete failed", "task_id", req.Msg.Id, "error", err)
+		} else if n > 0 {
+			slog.Info("cascade-deleted records", "task_id", req.Msg.Id, "count", n)
+		}
 	}
 
 	s.eventBus.PublishNew(

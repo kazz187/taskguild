@@ -13,4 +13,6 @@ type Repository interface {
 	// ExpirePendingByTask sets all PENDING interactions for the given task to EXPIRED.
 	// Returns the number of interactions expired.
 	ExpirePendingByTask(ctx context.Context, taskID string) (int, error)
+	// DeleteByTaskID removes all interactions belonging to the given task.
+	DeleteByTaskID(ctx context.Context, taskID string) (int, error)
 }
