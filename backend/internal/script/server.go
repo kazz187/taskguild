@@ -160,6 +160,12 @@ func (s *Server) SyncScriptsFromDir(ctx context.Context, req *connect.Request[ta
 		}
 
 		filename := entry.Name()
+
+		// Skip editor swap files, backups, and other temporary files.
+		if ShouldSkipScriptFile(filename) {
+			continue
+		}
+
 		filePath := filepath.Join(scriptsDir, filename)
 
 		content, err := os.ReadFile(filePath)
