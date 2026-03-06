@@ -382,6 +382,7 @@ function TaskDetailPage() {
               isRespondPending={respondMut.isPending}
               onDismiss={handleDismiss}
               isDismissPending={expireMut.isPending}
+              hideTaskHeader
             />
           </div>
         </div>

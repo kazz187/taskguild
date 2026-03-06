@@ -26,6 +26,7 @@ export function PendingRequestsPanel({
   isDismissPending,
   projectMap,
   taskProjectMap,
+  hideTaskHeader = false,
 }: {
   pendingRequests: Interaction[]
   onRespond: (interactionId: string, response: string) => void
@@ -40,6 +41,8 @@ export function PendingRequestsPanel({
   projectMap?: Map<string, string>
   /** taskId → projectId map (global chat). Takes priority over single projectId. */
   taskProjectMap?: Map<string, string>
+  /** Hide the task group header (useful on task detail page where task context is already clear). */
+  hideTaskHeader?: boolean
 }) {
   const { selectedId, setSelectedId } = useRequestKeyboard({
     pendingRequests,
@@ -91,6 +94,7 @@ export function PendingRequestsPanel({
         {taskGroups.map((group) => (
           <div key={group.taskId}>
             {/* Task group header */}
+            {!hideTaskHeader && (
             <div className="flex items-center gap-2 mb-1.5">
               <div className="flex items-center gap-1 min-w-0 shrink">
                 {group.projectName && (
@@ -114,6 +118,7 @@ export function PendingRequestsPanel({
               </div>
               <div className="flex-1 border-t border-slate-700/50" />
             </div>
+            )}
             {/* Request items within this task group */}
             <div className="space-y-2">
               {group.interactions.map((interaction) => (
