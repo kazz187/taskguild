@@ -4,11 +4,12 @@ import { getTask, updateTask, updateTaskStatus, deleteTask } from '@taskguild/pr
 import { requestWorktreeList, getWorktreeList } from '@taskguild/proto/taskguild/v1/agent_manager-AgentManagerService_connectquery.ts'
 import { listInteractions, respondToInteraction } from '@taskguild/proto/taskguild/v1/interaction-InteractionService_connectquery.ts'
 import { TaskAssignmentStatus } from '@taskguild/proto/taskguild/v1/task_pb.ts'
+import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { InteractionStatus, InteractionType } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import type { WorkflowStatus } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
-import { X, Bot, Clock, GitBranch, Loader, Trash2, ArrowRight, AlertTriangle, MessageSquare, Shield, Bell, RefreshCw } from 'lucide-react'
+import { X, Bot, Clock, GitBranch, Loader, Trash2, ArrowRight, AlertTriangle, MessageSquare, Shield, Bell, RefreshCw, CopyPlus, ArrowUpRight, Layers } from 'lucide-react'
 import { MarkdownDescription } from './MarkdownDescription'
 import { ForceTransitionDialog } from './ForceTransitionDialog'
 import { shortId } from '@/lib/id'
@@ -24,6 +25,12 @@ const TASK_DETAIL_EVENT_TYPES = [
   EventType.INTERACTION_RESPONDED,
 ]
 
+interface ChildTaskInfo {
+  id: string
+  title: string
+  statusId: string
+}
+
 interface TaskDetailModalProps {
   taskId: string
   projectId: string
@@ -32,6 +39,14 @@ interface TaskDetailModalProps {
   onClose: () => void
   onChanged: () => void
   onDeleted?: () => void
+  /** Callback to open the child task creation modal */
+  onCreateChild?: (task: Task) => void
+  /** Child tasks of this task */
+  childTasks?: ChildTaskInfo[]
+  /** Parent task info (if this task is a child) */
+  parentTask?: { id: string; title: string } | null
+  /** Callback when clicking on a related task (parent or child) */
+  onNavigateTask?: (taskId: string) => void
 }
 
 export function TaskDetailModal({
@@ -42,6 +57,10 @@ export function TaskDetailModal({
   onClose,
   onChanged,
   onDeleted,
+  onCreateChild,
+  childTasks,
+  parentTask,
+  onNavigateTask,
 }: TaskDetailModalProps) {
   const { data: taskData, refetch: refetchTask } = useQuery(getTask, { id: taskId })
   const { data: interactionsData, refetch: refetchInteractions } = useQuery(listInteractions, { taskId })
@@ -232,6 +251,21 @@ export function TaskDetailModal({
 
       {/* Body */}
       <Modal.Body>
+        {/* Parent task link */}
+        {parentTask && (
+          <Card variant="nested" className="!rounded-lg !py-2 !px-3">
+            <button
+              onClick={() => onNavigateTask?.(parentTask.id)}
+              className="flex items-center gap-2 text-xs text-gray-400 hover:text-white transition-colors w-full text-left"
+            >
+              <ArrowUpRight className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+              <span className="text-gray-500">Parent:</span>
+              <span className="font-medium truncate">{parentTask.title}</span>
+              <span className="text-gray-600 font-mono shrink-0">{shortId(parentTask.id)}</span>
+            </button>
+          </Card>
+        )}
+
         <Textarea
           value={descDraft}
           onChange={(e) => setDescDraft(e.target.value)}
@@ -353,6 +387,40 @@ export function TaskDetailModal({
           <span className="text-[11px] text-gray-600 font-mono ml-auto hidden sm:inline">{task.id}</span>
         </div>
 
+        {/* Child tasks */}
+        {childTasks && childTasks.length > 0 && (
+          <div>
+            <h4 className="text-xs text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+              <Layers className="w-3 h-3" />
+              Subtasks ({childTasks.length})
+            </h4>
+            <div className="space-y-1">
+              {childTasks.map((child) => {
+                const childStatus = statuses.find((s) => s.id === child.statusId)
+                return (
+                  <button
+                    key={child.id}
+                    onClick={() => onNavigateTask?.(child.id)}
+                    className="flex items-center gap-2 w-full text-left px-2.5 py-1.5 text-xs bg-slate-800/50 border border-slate-700/50 rounded-lg hover:border-slate-600 hover:bg-slate-800 transition-colors"
+                  >
+                    <span className="text-white font-medium truncate flex-1">{child.title}</span>
+                    {childStatus && (
+                      <Badge
+                        color={childStatus.isInitial ? 'blue' : childStatus.isTerminal ? 'green' : 'gray'}
+                        size="xs"
+                        pill
+                      >
+                        {childStatus.name}
+                      </Badge>
+                    )}
+                    <span className="text-[10px] text-gray-600 font-mono shrink-0">{shortId(child.id)}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Interactions */}
         {interactions.length > 0 && (
           <div>
@@ -372,16 +440,29 @@ export function TaskDetailModal({
 
         {/* Action buttons */}
         <div className="border-t border-slate-800 mt-4 pt-3 flex justify-between items-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<Trash2 className="w-3.5 h-3.5" />}
-            onClick={handleDelete}
-            disabled={deleteMut.isPending}
-            className="!text-gray-500 hover:!text-red-400"
-          >
-            Delete
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Trash2 className="w-3.5 h-3.5" />}
+              onClick={handleDelete}
+              disabled={deleteMut.isPending}
+              className="!text-gray-500 hover:!text-red-400"
+            >
+              Delete
+            </Button>
+            {onCreateChild && task && (
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<CopyPlus className="w-3.5 h-3.5" />}
+                onClick={() => onCreateChild(task)}
+                className="!text-gray-500 hover:!text-cyan-400"
+              >
+                Subtask
+              </Button>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <Button variant="secondary" size="sm" onClick={handleCancel}>
               Cancel

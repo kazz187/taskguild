@@ -3,7 +3,7 @@ import { useDraggable } from '@dnd-kit/core'
 import { useNavigate } from '@tanstack/react-router'
 import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { TaskAssignmentStatus } from '@taskguild/proto/taskguild/v1/task_pb.ts'
-import { Bot, Clock, GitBranch, Loader, Pencil, ArrowRight, AlertTriangle } from 'lucide-react'
+import { Bot, Clock, GitBranch, Loader, Pencil, ArrowRight, AlertTriangle, CopyPlus, ArrowUpRight, Layers } from 'lucide-react'
 import { shortId } from '@/lib/id'
 import { Badge } from '../atoms/index.ts'
 import { DropdownMenu } from '../molecules/index.ts'
@@ -17,14 +17,19 @@ interface TransitionTarget {
 interface TaskCardProps {
   task: Task
   onEdit?: (taskId: string) => void
+  onCreateChild?: (taskId: string) => void
   isDragOverlay?: boolean
   /** Available status transitions for this task (mobile UI) */
   transitionTargets?: TransitionTarget[]
   /** Callback when a status transition is selected (mobile UI) */
   onTransition?: (taskId: string, targetStatusId: string, isForce: boolean) => void
+  /** Number of child tasks for this task */
+  childCount?: number
+  /** Parent task title (when this task is a child) */
+  parentTaskTitle?: string
 }
 
-export function TaskCard({ task, onEdit, isDragOverlay, transitionTargets, onTransition }: TaskCardProps) {
+export function TaskCard({ task, onEdit, onCreateChild, isDragOverlay, transitionTargets, onTransition, childCount, parentTaskTitle }: TaskCardProps) {
   const navigate = useNavigate()
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: task.id,
@@ -106,6 +111,20 @@ export function TaskCard({ task, onEdit, isDragOverlay, transitionTargets, onTra
               </DropdownMenu>
             </div>
           )}
+          {/* Create subtask button (always visible on mobile, hover on desktop) */}
+          {onCreateChild && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onCreateChild(task.id)
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="opacity-100 md:opacity-0 md:group-hover:opacity-100 shrink-0 p-1 text-gray-500 hover:text-cyan-400 hover:bg-slate-700 rounded transition-all"
+              title="Create subtask"
+            >
+              <CopyPlus className="w-3.5 h-3.5" />
+            </button>
+          )}
           {/* Edit button (always visible on mobile, hover on desktop) */}
           {onEdit && (
             <button
@@ -128,6 +147,14 @@ export function TaskCard({ task, onEdit, isDragOverlay, transitionTargets, onTra
         </p>
       )}
 
+      {/* Parent task link */}
+      {parentTaskTitle && (
+        <div className="mt-1.5 flex items-center gap-1 text-[11px] text-gray-500 truncate">
+          <ArrowUpRight className="w-3 h-3 shrink-0 text-gray-600" />
+          <span className="truncate">{parentTaskTitle}</span>
+        </div>
+      )}
+
       {/* Worktree indicator */}
       {task.useWorktree && (
         <div className="mt-1.5 flex items-center gap-1 text-xs text-gray-500 truncate">
@@ -136,22 +163,30 @@ export function TaskCard({ task, onEdit, isDragOverlay, transitionTargets, onTra
         </div>
       )}
 
-      {/* Assignment status + ID */}
+      {/* Assignment status + child count + ID */}
       <div className="mt-2 flex items-end justify-between">
-        {task.assignmentStatus === TaskAssignmentStatus.ASSIGNED ? (
-          <Badge color="cyan" variant="outline" pill icon={<Bot className="w-3 h-3" />}>
-            {shortId(task.assignedAgentId)}
-          </Badge>
-        ) : task.assignmentStatus === TaskAssignmentStatus.PENDING ? (
-          <Badge color="yellow" variant="outline" pill icon={<Loader className="w-3 h-3" />}>
-            Pending
-          </Badge>
-        ) : (
-          <span className="inline-flex items-center gap-1 text-xs text-gray-500">
-            <Clock className="w-3 h-3" />
-            Unassigned
-          </span>
-        )}
+        <div className="flex items-center gap-1.5">
+          {task.assignmentStatus === TaskAssignmentStatus.ASSIGNED ? (
+            <Badge color="cyan" variant="outline" pill icon={<Bot className="w-3 h-3" />}>
+              {shortId(task.assignedAgentId)}
+            </Badge>
+          ) : task.assignmentStatus === TaskAssignmentStatus.PENDING ? (
+            <Badge color="yellow" variant="outline" pill icon={<Loader className="w-3 h-3" />}>
+              Pending
+            </Badge>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+              <Clock className="w-3 h-3" />
+              Unassigned
+            </span>
+          )}
+          {/* Child task count badge */}
+          {childCount != null && childCount > 0 && (
+            <Badge color="purple" size="xs" variant="outline" pill icon={<Layers className="w-2.5 h-2.5" />}>
+              {childCount}
+            </Badge>
+          )}
+        </div>
         <span className="text-[10px] text-gray-600 font-mono">{shortId(task.id)}</span>
       </div>
     </div>

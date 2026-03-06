@@ -21,6 +21,7 @@ import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { TaskCard } from './TaskCard.tsx'
 import { TaskDetailModal } from './TaskDetailModal.tsx'
 import { TaskCreateModal } from './TaskCreateModal.tsx'
+import { ChildTaskCreateModal } from './ChildTaskCreateModal.tsx'
 import { ForceTransitionDialog } from './ForceTransitionDialog.tsx'
 import { CleanTasksDialog } from './CleanTasksDialog.tsx'
 import { ArchivedTaskList } from './ArchivedTaskList.tsx'
@@ -60,6 +61,7 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
   })
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [activeTask, setActiveTask] = useState<Task | null>(null)
+  const [creatingChildForTask, setCreatingChildForTask] = useState<Task | null>(null)
 
   // Track whether the last drop was a successful status transition (for animation control)
   const lastDropWasSuccessful = useRef(false)
@@ -97,6 +99,34 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
     }
     return map
   }, [sortedStatuses])
+
+  // Compute parent-child relationships from task metadata
+  const childTasksByParentId = useMemo(() => {
+    const map = new Map<string, { id: string; title: string; statusId: string }[]>()
+    for (const t of tasks) {
+      const parentId = t.metadata?.['source_task_id']
+      if (parentId) {
+        if (!map.has(parentId)) map.set(parentId, [])
+        map.get(parentId)!.push({ id: t.id, title: t.title, statusId: t.statusId })
+      }
+    }
+    return map
+  }, [tasks])
+
+  // Map from task ID to parent task info
+  const parentTaskById = useMemo(() => {
+    const map = new Map<string, { id: string; title: string }>()
+    for (const t of tasks) {
+      const parentId = t.metadata?.['source_task_id']
+      if (parentId) {
+        const parent = tasks.find((p) => p.id === parentId)
+        if (parent) {
+          map.set(t.id, { id: parent.id, title: parent.title })
+        }
+      }
+    }
+    return map
+  }, [tasks])
 
   // Fetch project agents to resolve agent names from status agent_id.
   const { data: agentsData } = useQuery(listAgents, { projectId })
@@ -328,6 +358,26 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
     [executeTransition, tasks, statusById],
   )
 
+  /** Open child task creation modal from TaskCard or TaskDetailModal */
+  const handleCreateChild = useCallback(
+    (taskOrId: Task | string) => {
+      if (typeof taskOrId === 'string') {
+        // From TaskCard — find the task by ID
+        const task = tasks.find((t) => t.id === taskOrId)
+        if (task) setCreatingChildForTask(task)
+      } else {
+        // From TaskDetailModal — task object passed directly
+        setCreatingChildForTask(taskOrId)
+      }
+    },
+    [tasks],
+  )
+
+  /** Navigate to a related task (open its detail modal) */
+  const handleNavigateTask = useCallback((taskId: string) => {
+    setEditingTaskId(taskId)
+  }, [])
+
   return (
     <DndContext
       sensors={sensors}
@@ -365,6 +415,7 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
                 tasks={tasksByStatus.get(status.id) ?? []}
                 agentConfigName={agentConfigByStatusId.get(status.id)}
                 onEdit={setEditingTaskId}
+                onCreateChild={handleCreateChild}
                 onCreated={() => refetch()}
                 isNormalTarget={normalTargetIds.has(status.id)}
                 isForceTarget={forceTargetIds.has(status.id)}
@@ -373,6 +424,8 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
                 onTransition={handleMobileTransition}
                 defaultPermissionMode={workflow.defaultPermissionMode}
                 defaultUseWorktree={workflow.defaultUseWorktree}
+                childTasksByParentId={childTasksByParentId}
+                parentTaskById={parentTaskById}
               />
             ))}
           </div>
@@ -395,6 +448,21 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
               currentStatusId={tasks.find((t) => t.id === editingTaskId)?.statusId ?? ''}
               onClose={() => setEditingTaskId(null)}
               onChanged={() => refetch()}
+              onCreateChild={handleCreateChild}
+              childTasks={childTasksByParentId.get(editingTaskId)}
+              parentTask={parentTaskById.get(editingTaskId) ?? null}
+              onNavigateTask={handleNavigateTask}
+            />
+          )}
+
+          {/* Child task creation modal */}
+          {creatingChildForTask && (
+            <ChildTaskCreateModal
+              parentTask={creatingChildForTask}
+              projectId={projectId}
+              workflowId={workflow.id}
+              onCreated={() => refetch()}
+              onClose={() => setCreatingChildForTask(null)}
             />
           )}
 
@@ -439,6 +507,7 @@ function StatusColumn({
   tasks,
   agentConfigName,
   onEdit,
+  onCreateChild,
   onCreated,
   isNormalTarget,
   isForceTarget,
@@ -447,6 +516,8 @@ function StatusColumn({
   onTransition,
   defaultPermissionMode,
   defaultUseWorktree,
+  childTasksByParentId,
+  parentTaskById,
 }: {
   projectId: string
   workflowId: string
@@ -454,6 +525,7 @@ function StatusColumn({
   tasks: Task[]
   agentConfigName?: string
   onEdit: (id: string) => void
+  onCreateChild: (taskId: string) => void
   onCreated: () => void
   isNormalTarget: boolean
   isForceTarget: boolean
@@ -462,6 +534,8 @@ function StatusColumn({
   onTransition: (taskId: string, targetStatusId: string, isForce: boolean) => void
   defaultPermissionMode?: string
   defaultUseWorktree?: boolean
+  childTasksByParentId: Map<string, { id: string; title: string; statusId: string }[]>
+  parentTaskById: Map<string, { id: string; title: string }>
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.id })
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -528,8 +602,11 @@ function StatusColumn({
               key={task.id}
               task={task}
               onEdit={onEdit}
+              onCreateChild={onCreateChild}
               transitionTargets={transitionTargets}
               onTransition={onTransition}
+              childCount={childTasksByParentId.get(task.id)?.length}
+              parentTaskTitle={parentTaskById.get(task.id)?.title}
             />
           ))}
           {tasks.length === 0 && (
