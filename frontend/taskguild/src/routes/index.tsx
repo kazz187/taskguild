@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
-import { listProjects, createProject } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
+import { listProjects, createProject, updateProject } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
-import { Folder, ArrowRight, Plus, X } from 'lucide-react'
+import { Folder, ArrowRight, Plus, X, Eye, EyeOff } from 'lucide-react'
 import { useState } from 'react'
 
 export const Route = createFileRoute('/')({ component: ProjectsPage })
@@ -11,6 +11,7 @@ function ProjectsPage() {
   useDocumentTitle('Projects')
   const { data, isLoading, error, refetch } = useQuery(listProjects, {})
   const [showForm, setShowForm] = useState(false)
+  const toggleVisibility = useMutation(updateProject)
 
   return (
     <div className="p-4 md:p-8 max-w-4xl">
@@ -71,7 +72,31 @@ function ProjectsPage() {
                   )}
                 </div>
               </div>
-              <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-cyan-400 transition-colors mt-1 shrink-0" />
+              <div className="flex items-center gap-1 mt-1 shrink-0">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    toggleVisibility.mutate(
+                      { id: project.id, hiddenFromSidebar: !project.hiddenFromSidebar },
+                      { onSuccess: () => refetch() },
+                    )
+                  }}
+                  className={`p-1 rounded transition-colors ${
+                    project.hiddenFromSidebar
+                      ? 'text-gray-600 hover:text-gray-400'
+                      : 'text-cyan-400 hover:text-cyan-300'
+                  }`}
+                  title={project.hiddenFromSidebar ? 'Show in sidebar' : 'Hide from sidebar'}
+                >
+                  {project.hiddenFromSidebar ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+                <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-cyan-400 transition-colors" />
+              </div>
             </div>
           </Link>
         ))}

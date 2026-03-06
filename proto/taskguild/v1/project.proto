@@ -21,6 +21,7 @@ message Project {
   string default_branch = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
+  bool hidden_from_sidebar = 8;
 }
 
 message CreateProjectRequest {
@@ -54,6 +55,7 @@ message UpdateProjectRequest {
   string description = 3;
   string repository_url = 4;
   string default_branch = 5;
+  optional bool hidden_from_sidebar = 6;
 }
 message UpdateProjectResponse {
   Project project = 1;

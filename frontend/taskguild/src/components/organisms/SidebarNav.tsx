@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link, useMatchRoute } from '@tanstack/react-router'
 import { useQuery } from '@connectrpc/connect-query'
 import { listProjects } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
@@ -8,13 +8,29 @@ import { ChevronRight, ChevronDown, MessageSquare, Bot, Sparkles, Terminal, Shie
 export function SidebarNav() {
   const { data } = useQuery(listProjects, {})
   const projects = data?.projects ?? []
+  const matchRoute = useMatchRoute()
+
+  const visibleProjects = useMemo(() => {
+    // Find the currently active project ID from the route
+    const activeProject = projects.find(
+      (p) => !!matchRoute({ to: '/projects/$projectId', params: { projectId: p.id }, fuzzy: true }),
+    )
+
+    return projects.filter((p) => {
+      // Always show projects that are not hidden
+      if (!p.hiddenFromSidebar) return true
+      // Temporarily show hidden projects if they are currently active
+      if (activeProject && p.id === activeProject.id) return true
+      return false
+    })
+  }, [projects, matchRoute])
 
   return (
     <div className="space-y-1">
       <p className="px-3 py-1.5 text-[11px] uppercase tracking-wider text-gray-500 font-semibold">
         Projects
       </p>
-      {projects.map((project) => (
+      {visibleProjects.map((project) => (
         <ProjectNode key={project.id} projectId={project.id} name={project.name} />
       ))}
 

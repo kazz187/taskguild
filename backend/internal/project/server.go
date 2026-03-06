@@ -94,6 +94,9 @@ func (s *Server) UpdateProject(ctx context.Context, req *connect.Request[taskgui
 	if req.Msg.DefaultBranch != "" {
 		p.DefaultBranch = req.Msg.DefaultBranch
 	}
+	if req.Msg.HiddenFromSidebar != nil {
+		p.HiddenFromSidebar = *req.Msg.HiddenFromSidebar
+	}
 	p.UpdatedAt = time.Now()
 	if err := s.repo.Update(ctx, p); err != nil {
 		return nil, err
@@ -112,12 +115,13 @@ func (s *Server) DeleteProject(ctx context.Context, req *connect.Request[taskgui
 
 func toProto(p *Project) *taskguildv1.Project {
 	return &taskguildv1.Project{
-		Id:            p.ID,
-		Name:          p.Name,
-		Description:   p.Description,
-		RepositoryUrl: p.RepositoryURL,
-		DefaultBranch: p.DefaultBranch,
-		CreatedAt:     timestamppb.New(p.CreatedAt),
-		UpdatedAt:     timestamppb.New(p.UpdatedAt),
+		Id:                p.ID,
+		Name:              p.Name,
+		Description:       p.Description,
+		RepositoryUrl:     p.RepositoryURL,
+		DefaultBranch:     p.DefaultBranch,
+		HiddenFromSidebar: p.HiddenFromSidebar,
+		CreatedAt:         timestamppb.New(p.CreatedAt),
+		UpdatedAt:         timestamppb.New(p.UpdatedAt),
 	}
 }
