@@ -9,7 +9,7 @@ import { getProject } from '@taskguild/proto/taskguild/v1/project-ProjectService
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { useNotificationSound } from '@/hooks/useNotificationSound'
-import { ChatBubble } from '@/components/organisms/ChatBubble'
+import { TimelineEntry, type TimelineItem } from '@/components/organisms/TimelineEntry'
 import { PendingRequestsPanel } from '@/components/organisms/PendingRequestsPanel'
 import { shortId } from '@/lib/id'
 import { ArrowLeft } from 'lucide-react'
@@ -44,6 +44,12 @@ function ProjectChatPage() {
     return m
   }, [tasks])
 
+  // Wrap interactions as TimelineItems
+  const timelineItems = useMemo<TimelineItem[]>(
+    () => interactions.map((interaction): TimelineItem => ({ kind: 'interaction', interaction })),
+    [interactions],
+  )
+
   const onEvent = useCallback(() => {
     refetchTasks()
     refetchInteractions()
@@ -76,7 +82,7 @@ function ProjectChatPage() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [interactions.length])
+  }, [timelineItems.length])
 
   // Synchronous guard to prevent duplicate responses (survives across renders before mutation state propagates)
   const respondedIdsRef = useRef<Set<string>>(new Set())
@@ -131,25 +137,25 @@ function ProjectChatPage() {
         </p>
       </div>
 
-      {/* Chat area */}
+      {/* Timeline area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto px-4 py-4 md:px-6 md:py-6 space-y-3">
-          {interactions.length === 0 && (
+        <div className="max-w-4xl mx-auto px-4 py-4 md:px-6 md:py-6">
+          {timelineItems.length === 0 && (
             <p className="text-gray-500 text-sm text-center py-12">No interactions yet.</p>
           )}
-          {interactions.map((interaction, idx) => {
-            // Show task label when task changes
-            const prevTaskId = idx > 0 ? interactions[idx - 1].taskId : null
-            const showTaskLabel = interaction.taskId !== prevTaskId
-            const taskTitle = taskMap.get(interaction.taskId) || shortId(interaction.taskId)
+          {timelineItems.map((item, idx) => {
+            const taskId = item.interaction.taskId
+            const prevTaskId = idx > 0 ? timelineItems[idx - 1].interaction.taskId : null
+            const showTaskLabel = taskId !== prevTaskId
+            const taskTitle = taskMap.get(taskId) || shortId(taskId)
 
             return (
-              <div key={interaction.id}>
+              <div key={`i-${item.interaction.id}`}>
                 {showTaskLabel && (
                   <div className="flex items-center gap-2 pt-3 pb-1">
                     <Link
                       to="/projects/$projectId/tasks/$taskId"
-                      params={{ projectId, taskId: interaction.taskId }}
+                      params={{ projectId, taskId }}
                       className="text-[11px] text-cyan-400 hover:text-cyan-300 font-medium truncate transition-colors"
                     >
                       {taskTitle}
@@ -157,16 +163,7 @@ function ProjectChatPage() {
                     <div className="flex-1 border-t border-slate-800" />
                   </div>
                 )}
-                <ChatBubble
-                  interaction={interaction}
-                  onRespond={handleRespond}
-                  isRespondPending={respondMut.isPending}
-                  hideActions={
-                    interaction.status === InteractionStatus.PENDING &&
-                    (interaction.type === InteractionType.PERMISSION_REQUEST ||
-                      interaction.type === InteractionType.QUESTION)
-                  }
-                />
+                <TimelineEntry item={item} />
               </div>
             )
           })}
@@ -176,7 +173,7 @@ function ProjectChatPage() {
       {/* Pending requests section — pinned above connection bar */}
       {pendingRequests.length > 0 && (
         <div className="shrink-0 border-t border-slate-800 bg-slate-800/50 px-4 md:px-6 py-3">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             <PendingRequestsPanel
               pendingRequests={pendingRequests}
               onRespond={handleRespond}
@@ -192,7 +189,7 @@ function ProjectChatPage() {
 
       {/* Connection status bar */}
       <div className="shrink-0 border-t border-slate-800 px-6 py-2">
-        <div className="max-w-3xl mx-auto flex items-center gap-2">
+        <div className="max-w-4xl mx-auto flex items-center gap-2">
           <ConnectionIndicator status={connectionStatus} onReconnect={reconnect} />
           <span className="text-[11px] text-gray-500">
             {connectionStatus === 'connected' ? 'Connected' : connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { InteractionType, InteractionStatus } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import type { Interaction } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import { Shield, MessageSquare, Bell, CheckCircle, X } from 'lucide-react'
-import { formatTime } from './ChatBubble.tsx'
+import { formatTime } from './InputBar.tsx'
 import { MarkdownDescription } from './MarkdownDescription.tsx'
 import { Button, Input } from '../atoms/index.ts'
 
