@@ -25,6 +25,22 @@ import { ChevronRight, ChevronDown, MessageSquare, Bot, Sparkles, Terminal, Shie
 export function SidebarNav() {
   const { data, refetch } = useQuery(listProjects, {})
   const projects = data?.projects ?? []
+  const matchRoute = useMatchRoute()
+
+  const visibleProjects = useMemo(() => {
+    // Find the currently active project ID from the route
+    const activeProject = projects.find(
+      (p) => !!matchRoute({ to: '/projects/$projectId', params: { projectId: p.id }, fuzzy: true }),
+    )
+
+    return projects.filter((p) => {
+      // Always show projects that are not hidden
+      if (!p.hiddenFromSidebar) return true
+      // Temporarily show hidden projects if they are currently active
+      if (activeProject && p.id === activeProject.id) return true
+      return false
+    })
+  }, [projects, matchRoute])
 
   const reorderMut = useMutation(reorderProjects)
 
@@ -37,10 +53,12 @@ export function SidebarNav() {
 
   // Build an ordered project list: use local ordering during drag, server data otherwise.
   const sortedProjects = useMemo(() => {
-    if (!orderedIds) return projects
+    if (!orderedIds) return visibleProjects
     const byId = new Map(projects.map((p) => [p.id, p]))
-    return orderedIds.map((id) => byId.get(id)).filter(Boolean) as typeof projects
-  }, [projects, orderedIds])
+    const allSorted = orderedIds.map((id) => byId.get(id)).filter(Boolean) as typeof projects
+    const visibleIds = new Set(visibleProjects.map((p) => p.id))
+    return allSorted.filter((p) => visibleIds.has(p.id))
+  }, [projects, visibleProjects, orderedIds])
 
   const projectIds = useMemo(() => sortedProjects.map((p) => p.id), [sortedProjects])
 

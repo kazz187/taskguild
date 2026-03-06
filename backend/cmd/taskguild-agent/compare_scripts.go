@@ -10,6 +10,7 @@ import (
 	"connectrpc.com/connect"
 	v1 "github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1"
 	"github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1/taskguildv1connect"
+	"github.com/kazz187/taskguild/backend/internal/script"
 )
 
 // handleCompareScripts compares local .claude/scripts/* files with server-side
@@ -108,8 +109,8 @@ func readLocalScripts(scriptsDir string) map[string]string {
 		}
 
 		filename := entry.Name()
-		// Skip hidden files and temp files.
-		if strings.HasPrefix(filename, ".") {
+		// Skip editor swap files, backups, and other temporary files.
+		if script.ShouldSkipScriptFile(filename) {
 			continue
 		}
 

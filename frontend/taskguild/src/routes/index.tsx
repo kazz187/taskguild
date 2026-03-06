@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
-import { listProjects, createProject, reorderProjects } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
+import { listProjects, createProject, reorderProjects, updateProject } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
-import { Folder, ArrowRight, Plus, X } from 'lucide-react'
+import { Folder, ArrowRight, Plus, X, Eye, EyeOff } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import {
   DndContext,
@@ -28,6 +28,7 @@ function ProjectsPage() {
   useDocumentTitle('Projects')
   const { data, isLoading, error, refetch } = useQuery(listProjects, {})
   const [showForm, setShowForm] = useState(false)
+  const toggleVisibility = useMutation(updateProject)
 
   const reorderMut = useMutation(reorderProjects)
 
@@ -140,7 +141,14 @@ function ProjectsPage() {
                 name={project.name}
                 description={project.description}
                 repositoryUrl={project.repositoryUrl}
+                hiddenFromSidebar={project.hiddenFromSidebar}
                 isDragging={activeId === project.id}
+                onToggleVisibility={() => {
+                  toggleVisibility.mutate(
+                    { id: project.id, hiddenFromSidebar: !project.hiddenFromSidebar },
+                    { onSuccess: () => refetch() },
+                  )
+                }}
               />
             ))}
           </div>
@@ -164,10 +172,12 @@ interface SortableProjectCardProps {
   name: string
   description: string
   repositoryUrl: string
+  hiddenFromSidebar: boolean
   isDragging: boolean
+  onToggleVisibility: () => void
 }
 
-function SortableProjectCard({ projectId, name, description, repositoryUrl, isDragging }: SortableProjectCardProps) {
+function SortableProjectCard({ projectId, name, description, repositoryUrl, hiddenFromSidebar, isDragging, onToggleVisibility }: SortableProjectCardProps) {
   const navigate = useNavigate()
   const {
     attributes,
@@ -211,7 +221,28 @@ function SortableProjectCard({ projectId, name, description, repositoryUrl, isDr
             )}
           </div>
         </div>
-        <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-cyan-400 transition-colors mt-1 shrink-0" />
+        <div className="flex items-center gap-1 mt-1 shrink-0">
+          <button
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onToggleVisibility()
+            }}
+            className={`p-1 rounded transition-colors ${
+              hiddenFromSidebar
+                ? 'text-gray-600 hover:text-gray-400'
+                : 'text-cyan-400 hover:text-cyan-300'
+            }`}
+            title={hiddenFromSidebar ? 'Show in sidebar' : 'Hide from sidebar'}
+          >
+            {hiddenFromSidebar ? (
+              <EyeOff className="w-4 h-4" />
+            ) : (
+              <Eye className="w-4 h-4" />
+            )}
+          </button>
+          <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-cyan-400 transition-colors" />
+        </div>
       </div>
     </div>
   )
