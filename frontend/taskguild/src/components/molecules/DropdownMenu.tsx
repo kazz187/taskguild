@@ -1,4 +1,14 @@
-import { useRef, useEffect, type ReactNode } from 'react'
+import { useLayoutEffect, type ReactNode, type RefObject } from 'react'
+import {
+  useFloating,
+  offset,
+  flip,
+  shift,
+  autoUpdate,
+  FloatingPortal,
+  useDismiss,
+  useInteractions,
+} from '@floating-ui/react'
 
 /* ─── DropdownMenu ─── */
 
@@ -7,6 +17,8 @@ export interface DropdownMenuProps {
   onOpenChange: (open: boolean) => void
   /** @default 'right' */
   align?: 'left' | 'right'
+  /** Reference element (trigger button) to anchor the dropdown */
+  triggerRef?: RefObject<HTMLElement | null>
   children: ReactNode
   className?: string
 }
@@ -15,34 +27,43 @@ export function DropdownMenu({
   open,
   onOpenChange,
   align = 'right',
+  triggerRef,
   children,
   className = '',
 }: DropdownMenuProps) {
-  const menuRef = useRef<HTMLDivElement>(null)
+  const { refs, floatingStyles, context } = useFloating({
+    open,
+    onOpenChange,
+    placement: align === 'left' ? 'bottom-start' : 'bottom-end',
+    middleware: [offset(4), flip(), shift({ padding: 8 })],
+    whileElementsMounted: autoUpdate,
+  })
 
-  // Close on outside click
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onOpenChange(false)
-      }
+  const dismiss = useDismiss(context)
+  const { getFloatingProps } = useInteractions([dismiss])
+
+  // Sync external trigger ref to floating reference element.
+  // useLayoutEffect ensures the reference is set before paint to avoid a
+  // frame at (0,0) when the dropdown first opens.
+  useLayoutEffect(() => {
+    if (triggerRef?.current) {
+      refs.setReference(triggerRef.current)
     }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [open, onOpenChange])
+  }, [triggerRef, refs, open])
 
   if (!open) return null
 
-  const alignCls = align === 'left' ? 'left-0' : 'right-0'
-
   return (
-    <div
-      ref={menuRef}
-      className={`absolute ${alignCls} top-full mt-1 z-30 bg-slate-800 border border-slate-600 rounded-lg shadow-xl py-1 min-w-[160px] animate-fade-in-down ${className}`}
-    >
-      {children}
-    </div>
+    <FloatingPortal>
+      <div
+        ref={refs.setFloating}
+        style={floatingStyles}
+        {...getFloatingProps()}
+        className={`z-50 bg-slate-800 border border-slate-600 rounded-lg shadow-xl py-1 min-w-[160px] animate-fade-in-down ${className}`}
+      >
+        {children}
+      </div>
+    </FloatingPortal>
   )
 }
 
