@@ -1,7 +1,7 @@
 export { AgentList } from './AgentList.tsx'
 export { ArchivedTaskList } from './ArchivedTaskList.tsx'
 export { AutoScrollPre } from './AutoScrollPre.tsx'
-export { formatTime, ChatBubble, InputBar } from './ChatBubble.tsx'
+export { formatTime, InputBar } from './InputBar.tsx'
 export { CleanTasksDialog } from './CleanTasksDialog.tsx'
 export { useConfig, ConfigProvider } from './ConfigProvider.tsx'
 export { ConnectionIndicator } from './ConnectionIndicator.tsx'

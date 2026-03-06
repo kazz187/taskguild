@@ -2,7 +2,7 @@ import { useCallback, useRef, useEffect } from 'react'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMutation } from '@connectrpc/connect-query'
-import { respondToInteraction } from '@taskguild/proto/taskguild/v1/interaction-InteractionService_connectquery.ts'
+import { respondToInteraction, expireInteraction } from '@taskguild/proto/taskguild/v1/interaction-InteractionService_connectquery.ts'
 import { useGlobalTimeline } from '@/hooks/useGlobalTimeline'
 import { useNotificationSound } from '@/hooks/useNotificationSound'
 import { TimelineEntry } from '@/components/organisms/TimelineEntry'
@@ -35,6 +35,7 @@ function GlobalChatPage() {
   } = useGlobalTimeline()
 
   const respondMut = useMutation(respondToInteraction)
+  const expireMut = useMutation(expireInteraction)
 
   // Play notification sound when new pending requests arrive
   useNotificationSound(pendingRequests.length)
@@ -61,6 +62,19 @@ function GlobalChatPage() {
       },
     )
   }, [respondMut])
+
+  const handleDismiss = useCallback((interactionId: string) => {
+    if (respondedIdsRef.current.has(interactionId)) return
+    respondedIdsRef.current.add(interactionId)
+    expireMut.mutate(
+      { id: interactionId },
+      {
+        onError: () => {
+          respondedIdsRef.current.delete(interactionId)
+        },
+      },
+    )
+  }, [expireMut])
 
   /** Get the taskId for a timeline item. */
   function getTaskId(item: (typeof timelineItems)[number]): string {
@@ -162,6 +176,8 @@ function GlobalChatPage() {
               taskMap={taskMap}
               projectMap={projectMap}
               taskProjectMap={taskProjectMap}
+              onDismiss={handleDismiss}
+              isDismissPending={expireMut.isPending}
             />
           </div>
         </div>
