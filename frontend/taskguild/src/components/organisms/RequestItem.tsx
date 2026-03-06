@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { InteractionType, InteractionStatus } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import type { Interaction } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
-import { Shield, MessageSquare, Bell, CheckCircle } from 'lucide-react'
+import { Shield, MessageSquare, Bell, CheckCircle, X } from 'lucide-react'
 import { formatTime } from './ChatBubble.tsx'
 import { MarkdownDescription } from './MarkdownDescription.tsx'
 import { Button, Input } from '../atoms/index.ts'
@@ -25,12 +25,16 @@ export function RequestItem({
   isRespondPending,
   isSelected = false,
   onSelect,
+  onDismiss,
+  isDismissPending,
 }: {
   interaction: Interaction
   onRespond: (id: string, response: string) => void
   isRespondPending: boolean
   isSelected?: boolean
   onSelect?: () => void
+  onDismiss?: (id: string) => void
+  isDismissPending?: boolean
 }) {
   const [freeText, setFreeText] = useState('')
   const itemRef = useRef<HTMLDivElement>(null)
@@ -73,6 +77,16 @@ export function RequestItem({
         <span className="text-sm font-medium text-white flex-1 min-w-0 break-words">
           {interaction.title}
         </span>
+        {isPending && onDismiss && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDismiss(interaction.id) }}
+            disabled={isDismissPending}
+            className="shrink-0 p-0.5 text-gray-500 hover:text-red-400 transition-colors disabled:opacity-50"
+            title="Dismiss (x)"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
         {interaction.createdAt && (
           <span className="text-[10px] text-gray-600 shrink-0">
             {formatTime(interaction.createdAt)}

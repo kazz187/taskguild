@@ -252,7 +252,7 @@ func waitForUserResponse(
 		return "", errWaitTimeout
 	case inter := <-ch:
 		if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
-			return "", fmt.Errorf("interaction expired")
+			return "", errWaitTimeout
 		}
 		logger.Info("user responded to interaction", "interaction_id", interactionID)
 		return inter.GetResponse(), nil

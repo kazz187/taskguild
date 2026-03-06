@@ -20,6 +20,8 @@ export function PendingRequestsPanel({
   className,
   taskMap,
   projectId,
+  onDismiss,
+  isDismissPending,
 }: {
   pendingRequests: Interaction[]
   onRespond: (interactionId: string, response: string) => void
@@ -28,12 +30,15 @@ export function PendingRequestsPanel({
   className?: string
   taskMap?: Map<string, string>
   projectId?: string
+  onDismiss?: (interactionId: string) => void
+  isDismissPending?: boolean
 }) {
   const { selectedId, setSelectedId } = useRequestKeyboard({
     pendingRequests,
     onRespond,
     isRespondPending,
     enabled,
+    onDismiss,
   })
 
   // Group pending requests by taskId, preserving order by earliest createdAt
@@ -69,7 +74,7 @@ export function PendingRequestsPanel({
           {pendingRequests.length}
         </Badge>
         <span className="ml-auto text-[10px] text-gray-600 font-mono hidden sm:inline">
-          j/k navigate · y allow · Y always · n deny
+          j/k navigate · y allow · Y always · n deny · x dismiss
         </span>
       </div>
       <div className="space-y-4">
@@ -102,6 +107,8 @@ export function PendingRequestsPanel({
                   isRespondPending={isRespondPending}
                   isSelected={interaction.id === selectedId}
                   onSelect={() => setSelectedId(interaction.id)}
+                  onDismiss={onDismiss}
+                  isDismissPending={isDismissPending}
                 />
               ))}
             </div>

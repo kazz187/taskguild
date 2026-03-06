@@ -7,6 +7,7 @@ interface UseRequestKeyboardOptions {
   onRespond: (interactionId: string, response: string) => void
   isRespondPending?: boolean
   enabled?: boolean
+  onDismiss?: (interactionId: string) => void
 }
 
 interface UseRequestKeyboardResult {
@@ -44,6 +45,7 @@ export function useRequestKeyboard({
   onRespond,
   isRespondPending = false,
   enabled = true,
+  onDismiss,
 }: UseRequestKeyboardOptions): UseRequestKeyboardResult {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const prevRequestsRef = useRef<Interaction[]>([])
@@ -121,6 +123,31 @@ export function useRequestKeyboard({
     [onRespond, pendingRequests],
   )
 
+  const guardedDismiss = useCallback(
+    (interactionId: string) => {
+      if (!onDismiss) return
+      if (respondedIdsRef.current.has(interactionId)) return
+      respondedIdsRef.current.add(interactionId)
+
+      onDismiss(interactionId)
+
+      // Advance selection to the next un-responded pending request
+      const currentIndex = pendingRequests.findIndex((r) => r.id === interactionId)
+      const remaining = pendingRequests.filter(
+        (r) => r.id !== interactionId && !respondedIdsRef.current.has(r.id),
+      )
+      if (remaining.length === 0) {
+        setSelectedId(null)
+      } else {
+        const nextAfter = pendingRequests.find(
+          (r, idx) => idx > currentIndex && !respondedIdsRef.current.has(r.id),
+        )
+        setSelectedId(nextAfter?.id ?? remaining[0].id)
+      }
+    },
+    [onDismiss, pendingRequests],
+  )
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (!enabled) return
@@ -155,6 +182,13 @@ export function useRequestKeyboard({
           }
           break
         }
+        case 'x': {
+          if (!selectedId) return
+          if (!onDismiss) return
+          e.preventDefault()
+          guardedDismiss(selectedId)
+          break
+        }
         case 'y':
         case 'Y':
         case 'n': {
@@ -185,7 +219,7 @@ export function useRequestKeyboard({
         }
       }
     },
-    [enabled, pendingRequests, selectedId, isRespondPending, guardedRespond],
+    [enabled, pendingRequests, selectedId, isRespondPending, guardedRespond, guardedDismiss],
   )
 
   useEffect(() => {

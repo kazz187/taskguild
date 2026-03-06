@@ -3,7 +3,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { listTasks } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
-import { listInteractions, respondToInteraction } from '@taskguild/proto/taskguild/v1/interaction-InteractionService_connectquery.ts'
+import { listInteractions, respondToInteraction, expireInteraction } from '@taskguild/proto/taskguild/v1/interaction-InteractionService_connectquery.ts'
 import { InteractionStatus, InteractionType } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import { getProject } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
@@ -29,6 +29,7 @@ function ProjectChatPage() {
   const { data: interactionsData, refetch: refetchInteractions } = useQuery(listInteractions, { projectId, pagination: { limit: 0 } })
 
   const respondMut = useMutation(respondToInteraction)
+  const expireMut = useMutation(expireInteraction)
 
   const project = projectData?.project
   const tasks = tasksData?.tasks ?? []
@@ -94,6 +95,20 @@ function ProjectChatPage() {
       },
     )
   }, [respondMut, refetchInteractions])
+
+  const handleDismiss = useCallback((interactionId: string) => {
+    if (respondedIdsRef.current.has(interactionId)) return
+    respondedIdsRef.current.add(interactionId)
+    expireMut.mutate(
+      { id: interactionId },
+      {
+        onSuccess: () => refetchInteractions(),
+        onError: () => {
+          respondedIdsRef.current.delete(interactionId)
+        },
+      },
+    )
+  }, [expireMut, refetchInteractions])
 
   return (
     <div className="flex flex-col h-dvh">
@@ -168,6 +183,8 @@ function ProjectChatPage() {
               isRespondPending={respondMut.isPending}
               taskMap={taskMap}
               projectId={projectId}
+              onDismiss={handleDismiss}
+              isDismissPending={expireMut.isPending}
             />
           </div>
         </div>
