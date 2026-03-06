@@ -286,6 +286,18 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *connect.Request[task
 
 	t.StatusID = req.Msg.StatusId
 	t.UpdatedAt = time.Now()
+
+	// If the task is pending assignment and the target status has no agent
+	// configured, reset assignment_status to unassigned. This prevents tasks
+	// from being stuck in "pending" after moving to a status (e.g. terminal)
+	// where no agent will ever claim them.
+	if t.AssignmentStatus == AssignmentStatusPending {
+		if !statusHasAgent(wf, req.Msg.StatusId) {
+			t.AssignmentStatus = AssignmentStatusUnassigned
+			t.AssignedAgentID = ""
+		}
+	}
+
 	if err := s.repo.Update(ctx, t); err != nil {
 		return nil, err
 	}
@@ -355,8 +367,10 @@ func (s *Server) ArchiveTerminalTasks(ctx context.Context, req *connect.Request[
 		if !terminalStatusIDs[t.StatusID] {
 			continue
 		}
-		// Skip tasks that have agents running (pending or assigned).
-		if t.AssignmentStatus == AssignmentStatusPending || t.AssignmentStatus == AssignmentStatusAssigned {
+		// Skip tasks where an agent is actively running (assigned).
+		// Pending tasks in a terminal status are safe to archive because no
+		// agent will ever claim them (terminal statuses have no agent configured).
+		if t.AssignmentStatus == AssignmentStatusAssigned {
 			skipped = append(skipped, toProto(t))
 			continue
 		}
@@ -445,6 +459,22 @@ func toProto(t *Task) *taskguildv1.Task {
 		CreatedAt:        timestamppb.New(t.CreatedAt),
 		UpdatedAt:        timestamppb.New(t.UpdatedAt),
 	}
+}
+
+// statusHasAgent returns true if the given status has an agent configured,
+// either via the status-level AgentID or via the legacy AgentConfig list.
+func statusHasAgent(wf *workflow.Workflow, statusID string) bool {
+	for _, st := range wf.Statuses {
+		if st.ID == statusID && st.AgentID != "" {
+			return true
+		}
+	}
+	for _, cfg := range wf.AgentConfigs {
+		if cfg.WorkflowStatusID == statusID {
+			return true
+		}
+	}
+	return false
 }
 
 func assignmentStatusToProto(s AssignmentStatus) taskguildv1.TaskAssignmentStatus {
