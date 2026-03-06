@@ -5,7 +5,7 @@ import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { getTask, updateTaskStatus } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import { getProject } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
 import { listWorkflows } from '@taskguild/proto/taskguild/v1/workflow-WorkflowService_connectquery.ts'
-import { listInteractions, respondToInteraction, sendMessage } from '@taskguild/proto/taskguild/v1/interaction-InteractionService_connectquery.ts'
+import { listInteractions, respondToInteraction, expireInteraction, sendMessage } from '@taskguild/proto/taskguild/v1/interaction-InteractionService_connectquery.ts'
 import { TaskAssignmentStatus } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { InteractionStatus, InteractionType } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
@@ -50,6 +50,7 @@ function TaskDetailPage() {
 
   const statusMut = useMutation(updateTaskStatus)
   const respondMut = useMutation(respondToInteraction)
+  const expireMut = useMutation(expireInteraction)
   const sendMut = useMutation(sendMessage)
 
   const task = taskData?.task
@@ -185,6 +186,21 @@ function TaskDetailPage() {
       },
     )
   }, [respondMut, refetchInteractions])
+
+  const handleDismiss = useCallback((interactionId: string) => {
+    if (respondedIdsRef.current.has(interactionId)) return
+    respondedIdsRef.current.add(interactionId)
+    expireMut.mutate(
+      { id: interactionId },
+      {
+        onSuccess: () => refetchInteractions(),
+        onError: () => {
+          // Allow retry on failure
+          respondedIdsRef.current.delete(interactionId)
+        },
+      },
+    )
+  }, [expireMut, refetchInteractions])
 
   const handleSendMessage = (message: string) => {
     sendMut.mutate(
@@ -364,6 +380,8 @@ function TaskDetailPage() {
               pendingRequests={pendingRequests}
               onRespond={handleRespond}
               isRespondPending={respondMut.isPending}
+              onDismiss={handleDismiss}
+              isDismissPending={expireMut.isPending}
             />
           </div>
         </div>
