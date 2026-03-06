@@ -23,16 +23,17 @@ const (
 )
 
 type Project struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	RepositoryUrl string                 `protobuf:"bytes,4,opt,name=repository_url,json=repositoryUrl,proto3" json:"repository_url,omitempty"`
-	DefaultBranch string                 `protobuf:"bytes,5,opt,name=default_branch,json=defaultBranch,proto3" json:"default_branch,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name              string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description       string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	RepositoryUrl     string                 `protobuf:"bytes,4,opt,name=repository_url,json=repositoryUrl,proto3" json:"repository_url,omitempty"`
+	DefaultBranch     string                 `protobuf:"bytes,5,opt,name=default_branch,json=defaultBranch,proto3" json:"default_branch,omitempty"`
+	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	HiddenFromSidebar bool                   `protobuf:"varint,8,opt,name=hidden_from_sidebar,json=hiddenFromSidebar,proto3" json:"hidden_from_sidebar,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *Project) Reset() {
@@ -112,6 +113,13 @@ func (x *Project) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *Project) GetHiddenFromSidebar() bool {
+	if x != nil {
+		return x.HiddenFromSidebar
+	}
+	return false
 }
 
 type CreateProjectRequest struct {
@@ -411,14 +419,15 @@ func (x *ListProjectsResponse) GetPagination() *PaginationResponse {
 }
 
 type UpdateProjectRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	RepositoryUrl string                 `protobuf:"bytes,4,opt,name=repository_url,json=repositoryUrl,proto3" json:"repository_url,omitempty"`
-	DefaultBranch string                 `protobuf:"bytes,5,opt,name=default_branch,json=defaultBranch,proto3" json:"default_branch,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name              string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description       string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	RepositoryUrl     string                 `protobuf:"bytes,4,opt,name=repository_url,json=repositoryUrl,proto3" json:"repository_url,omitempty"`
+	DefaultBranch     string                 `protobuf:"bytes,5,opt,name=default_branch,json=defaultBranch,proto3" json:"default_branch,omitempty"`
+	HiddenFromSidebar *bool                  `protobuf:"varint,6,opt,name=hidden_from_sidebar,json=hiddenFromSidebar,proto3,oneof" json:"hidden_from_sidebar,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *UpdateProjectRequest) Reset() {
@@ -484,6 +493,13 @@ func (x *UpdateProjectRequest) GetDefaultBranch() string {
 		return x.DefaultBranch
 	}
 	return ""
+}
+
+func (x *UpdateProjectRequest) GetHiddenFromSidebar() bool {
+	if x != nil && x.HiddenFromSidebar != nil {
+		return *x.HiddenFromSidebar
+	}
+	return false
 }
 
 type UpdateProjectResponse struct {
@@ -614,7 +630,7 @@ var File_taskguild_v1_project_proto protoreflect.FileDescriptor
 
 const file_taskguild_v1_project_proto_rawDesc = "" +
 	"\n" +
-	"\x1ataskguild/v1/project.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19taskguild/v1/common.proto\"\x93\x02\n" +
+	"\x1ataskguild/v1/project.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19taskguild/v1/common.proto\"\xc3\x02\n" +
 	"\aProject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -624,7 +640,8 @@ const file_taskguild_v1_project_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x9a\x01\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12.\n" +
+	"\x13hidden_from_sidebar\x18\b \x01(\bR\x11hiddenFromSidebar\"\x9a\x01\n" +
 	"\x14CreateProjectRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12%\n" +
@@ -644,13 +661,15 @@ const file_taskguild_v1_project_proto_rawDesc = "" +
 	"\bprojects\x18\x01 \x03(\v2\x15.taskguild.v1.ProjectR\bprojects\x12@\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2 .taskguild.v1.PaginationResponseR\n" +
-	"pagination\"\xaa\x01\n" +
+	"pagination\"\xf7\x01\n" +
 	"\x14UpdateProjectRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12%\n" +
 	"\x0erepository_url\x18\x04 \x01(\tR\rrepositoryUrl\x12%\n" +
-	"\x0edefault_branch\x18\x05 \x01(\tR\rdefaultBranch\"H\n" +
+	"\x0edefault_branch\x18\x05 \x01(\tR\rdefaultBranch\x123\n" +
+	"\x13hidden_from_sidebar\x18\x06 \x01(\bH\x00R\x11hiddenFromSidebar\x88\x01\x01B\x16\n" +
+	"\x14_hidden_from_sidebar\"H\n" +
 	"\x15UpdateProjectResponse\x12/\n" +
 	"\aproject\x18\x01 \x01(\v2\x15.taskguild.v1.ProjectR\aproject\"&\n" +
 	"\x14DeleteProjectRequest\x12\x0e\n" +
@@ -726,6 +745,7 @@ func file_taskguild_v1_project_proto_init() {
 		return
 	}
 	file_taskguild_v1_common_proto_init()
+	file_taskguild_v1_project_proto_msgTypes[7].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
