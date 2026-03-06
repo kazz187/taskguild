@@ -13,8 +13,11 @@ import (
 )
 
 // syncScripts calls the SyncScripts RPC and writes .claude/scripts/* files locally.
-// It also removes stale script files that no longer exist on the server.
-func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, cfg *config) {
+// It only writes new files (files that don't exist yet on the agent).
+// Existing files are preserved to protect local modifications.
+// When forceOverwriteIDs is non-empty, those specific scripts are overwritten
+// regardless of whether the local file already exists.
+func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, cfg *config, forceOverwriteIDs map[string]bool) {
 	if cfg.ProjectName == "" {
 		slog.Info("skipping script sync: no project name configured")
 		return
@@ -37,7 +40,7 @@ func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServ
 		return
 	}
 
-	writtenFiles := make(map[string]bool)
+	var written, skipped int
 	for _, sc := range scripts {
 		filename := sc.GetFilename()
 		if filename == "" {
@@ -52,36 +55,25 @@ func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServ
 
 		filePath := filepath.Join(scriptsDir, filename)
 
+		// Check if the file already exists.
+		if _, err := os.Stat(filePath); err == nil {
+			// File exists — only overwrite if this script ID is in the force list.
+			if forceOverwriteIDs != nil && forceOverwriteIDs[sc.GetId()] {
+				slog.Debug("force-overwriting existing script", "filename", filename, "script_id", sc.GetId())
+			} else {
+				slog.Debug("script file already exists, preserving local version", "filename", filename)
+				skipped++
+				continue
+			}
+		}
+
 		if err := os.WriteFile(filePath, []byte(sc.GetContent()), 0755); err != nil {
 			slog.Error("failed to write script file", "path", filePath, "error", err)
 			continue
 		}
 		slog.Debug("synced script", "filename", filename)
-		writtenFiles[filename] = true
+		written++
 	}
 
-	cleanupStaleScriptFiles(scriptsDir, writtenFiles)
-}
-
-// cleanupStaleScriptFiles removes script files from the scripts directory
-// that were not written during the current sync.
-func cleanupStaleScriptFiles(scriptsDir string, writtenFiles map[string]bool) {
-	entries, err := os.ReadDir(scriptsDir)
-	if err != nil {
-		return
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		if !writtenFiles[entry.Name()] {
-			filePath := filepath.Join(scriptsDir, entry.Name())
-			if err := os.Remove(filePath); err != nil {
-				slog.Error("failed to remove stale script file", "path", filePath, "error", err)
-			} else {
-				slog.Debug("removed stale script", "filename", entry.Name())
-			}
-		}
-	}
+	slog.Info("script sync complete", "written", written, "skipped_existing", skipped)
 }

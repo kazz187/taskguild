@@ -22,7 +22,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file taskguild/v1/agent_manager.proto.
  */
 export const file_taskguild_v1_agent_manager: GenFile = /*@__PURE__*/
-  fileDesc("CiB0YXNrZ3VpbGQvdjEvYWdlbnRfbWFuYWdlci5wcm90bxIMdGFza2d1aWxkLnYxIpwBChxBZ2VudE1hbmFnZXJTdWJzY3JpYmVSZXF1ZXN0EhgKEGFnZW50X21hbmFnZXJfaWQYASABKAkSFAoMcHJvamVjdF9uYW1lGAIgASgJEhwKFG1heF9jb25jdXJyZW50X3Rhc2tzGAMgASgFEhcKD2FjdGl2ZV90YXNrX2lkcxgEIAMoCRIVCg1hZ2VudF92ZXJzaW9uGAUgASgJIucFCgxBZ2VudENvbW1hbmQSPAoOdGFza19hdmFpbGFibGUYASABKAsyIi50YXNrZ3VpbGQudjEuVGFza0F2YWlsYWJsZUNvbW1hbmRIABI2Cgthc3NpZ25fdGFzaxgCIAEoCzIfLnRhc2tndWlsZC52MS5Bc3NpZ25UYXNrQ29tbWFuZEgAEjYKC2NhbmNlbF90YXNrGAMgASgLMh8udGFza2d1aWxkLnYxLkNhbmNlbFRhc2tDb21tYW5kSAASSAoUaW50ZXJhY3Rpb25fcmVzcG9uc2UYBCABKAsyKC50YXNrZ3VpbGQudjEuSW50ZXJhY3Rpb25SZXNwb25zZUNvbW1hbmRIABI2CgtzeW5jX2FnZW50cxgFIAEoCzIfLnRhc2tndWlsZC52MS5TeW5jQWdlbnRzQ29tbWFuZEgAEkAKEHN5bmNfcGVybWlzc2lvbnMYBiABKAsyJC50YXNrZ3VpbGQudjEuU3luY1Blcm1pc3Npb25zQ29tbWFuZEgAEjwKDmxpc3Rfd29ya3RyZWVzGAcgASgLMiIudGFza2d1aWxkLnYxLkxpc3RXb3JrdHJlZXNDb21tYW5kSAASPgoPZGVsZXRlX3dvcmt0cmVlGAggASgLMiMudGFza2d1aWxkLnYxLkRlbGV0ZVdvcmt0cmVlQ29tbWFuZEgAEjkKDWdpdF9wdWxsX21haW4YCSABKAsyIC50YXNrZ3VpbGQudjEuR2l0UHVsbE1haW5Db21tYW5kSAASOAoMc3luY19zY3JpcHRzGAogASgLMiAudGFza2d1aWxkLnYxLlN5bmNTY3JpcHRzQ29tbWFuZEgAEjwKDmV4ZWN1dGVfc2NyaXB0GAsgASgLMiIudGFza2d1aWxkLnYxLkV4ZWN1dGVTY3JpcHRDb21tYW5kSAASKQoEcGluZxgMIAEoCzIZLnRhc2tndWlsZC52MS5QaW5nQ29tbWFuZEgAQgkKB2NvbW1hbmQiDQoLUGluZ0NvbW1hbmQixAEKFFRhc2tBdmFpbGFibGVDb21tYW5kEg8KB3Rhc2tfaWQYASABKAkSDQoFdGl0bGUYAiABKAkSFwoPYWdlbnRfY29uZmlnX2lkGAMgASgJEkIKCG1ldGFkYXRhGAQgAygLMjAudGFza2d1aWxkLnYxLlRhc2tBdmFpbGFibGVDb21tYW5kLk1ldGFkYXRhRW50cnkaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIt4BChFBc3NpZ25UYXNrQ29tbWFuZBIPCgd0YXNrX2lkGAEgASgJEhcKD2FnZW50X2NvbmZpZ19pZBgCIAEoCRIUCgxpbnN0cnVjdGlvbnMYAyABKAkSFwoPd29ya3RyZWVfYnJhbmNoGAQgASgJEj8KCG1ldGFkYXRhGAUgAygLMi0udGFza2d1aWxkLnYxLkFzc2lnblRhc2tDb21tYW5kLk1ldGFkYXRhRW50cnkaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIjQKEUNhbmNlbFRhc2tDb21tYW5kEg8KB3Rhc2tfaWQYASABKAkSDgoGcmVhc29uGAIgASgJIkYKGkludGVyYWN0aW9uUmVzcG9uc2VDb21tYW5kEhYKDmludGVyYWN0aW9uX2lkGAEgASgJEhAKCHJlc3BvbnNlGAIgASgJIhMKEVN5bmNBZ2VudHNDb21tYW5kIhgKFlN5bmNQZXJtaXNzaW9uc0NvbW1hbmQiKgoUTGlzdFdvcmt0cmVlc0NvbW1hbmQSEgoKcmVxdWVzdF9pZBgBIAEoCSI9ChBDbGFpbVRhc2tSZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkSGAoQYWdlbnRfbWFuYWdlcl9pZBgCIAEoCSLFAQoRQ2xhaW1UYXNrUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBIXCg9hZ2VudF9jb25maWdfaWQYAiABKAkSFAoMaW5zdHJ1Y3Rpb25zGAMgASgJEj8KCG1ldGFkYXRhGAQgAygLMi0udGFza2d1aWxkLnYxLkNsYWltVGFza1Jlc3BvbnNlLk1ldGFkYXRhRW50cnkaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBImAKF1JlcG9ydFRhc2tSZXN1bHRSZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkSDwoHc3VtbWFyeRgDIAEoCRIVCg1lcnJvcl9tZXNzYWdlGAQgASgJSgQIAhADUgZzdGF0dXMiGgoYUmVwb3J0VGFza1Jlc3VsdFJlc3BvbnNlIoEBChhSZXBvcnRBZ2VudFN0YXR1c1JlcXVlc3QSGAoQYWdlbnRfbWFuYWdlcl9pZBgBIAEoCRIPCgd0YXNrX2lkGAIgASgJEikKBnN0YXR1cxgDIAEoDjIZLnRhc2tndWlsZC52MS5BZ2VudFN0YXR1cxIPCgdtZXNzYWdlGAQgASgJIhsKGVJlcG9ydEFnZW50U3RhdHVzUmVzcG9uc2UicQoQSGVhcnRiZWF0UmVxdWVzdBIYChBhZ2VudF9tYW5hZ2VyX2lkGAEgASgJEhQKDGFjdGl2ZV90YXNrcxgCIAEoBRItCgl0aW1lc3RhbXAYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIhMKEUhlYXJ0YmVhdFJlc3BvbnNlIsABChhDcmVhdGVJbnRlcmFjdGlvblJlcXVlc3QSDwoHdGFza19pZBgBIAEoCRIQCghhZ2VudF9pZBgCIAEoCRIrCgR0eXBlGAMgASgOMh0udGFza2d1aWxkLnYxLkludGVyYWN0aW9uVHlwZRINCgV0aXRsZRgEIAEoCRITCgtkZXNjcmlwdGlvbhgFIAEoCRIwCgdvcHRpb25zGAYgAygLMh8udGFza2d1aWxkLnYxLkludGVyYWN0aW9uT3B0aW9uIksKGUNyZWF0ZUludGVyYWN0aW9uUmVzcG9uc2USLgoLaW50ZXJhY3Rpb24YASABKAsyGS50YXNrZ3VpbGQudjEuSW50ZXJhY3Rpb24iNwodR2V0SW50ZXJhY3Rpb25SZXNwb25zZVJlcXVlc3QSFgoOaW50ZXJhY3Rpb25faWQYASABKAkiUAoeR2V0SW50ZXJhY3Rpb25SZXNwb25zZVJlc3BvbnNlEi4KC2ludGVyYWN0aW9uGAEgASgLMhkudGFza2d1aWxkLnYxLkludGVyYWN0aW9uIikKEVN5bmNBZ2VudHNSZXF1ZXN0EhQKDHByb2plY3RfbmFtZRgBIAEoCSJDChJTeW5jQWdlbnRzUmVzcG9uc2USLQoGYWdlbnRzGAEgAygLMh0udGFza2d1aWxkLnYxLkFnZW50RGVmaW5pdGlvbiJqChZTeW5jUGVybWlzc2lvbnNSZXF1ZXN0EhQKDHByb2plY3RfbmFtZRgBIAEoCRITCgtsb2NhbF9hbGxvdxgCIAMoCRIRCglsb2NhbF9hc2sYAyADKAkSEgoKbG9jYWxfZGVueRgEIAMoCSJLChdTeW5jUGVybWlzc2lvbnNSZXNwb25zZRIwCgtwZXJtaXNzaW9ucxgBIAEoCzIbLnRhc2tndWlsZC52MS5QZXJtaXNzaW9uU2V0IokCChRSZXBvcnRUYXNrTG9nUmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJEikKBWxldmVsGAIgASgOMhoudGFza2d1aWxkLnYxLlRhc2tMb2dMZXZlbBIvCghjYXRlZ29yeRgDIAEoDjIdLnRhc2tndWlsZC52MS5UYXNrTG9nQ2F0ZWdvcnkSDwoHbWVzc2FnZRgEIAEoCRJCCghtZXRhZGF0YRgFIAMoCzIwLnRhc2tndWlsZC52MS5SZXBvcnRUYXNrTG9nUmVxdWVzdC5NZXRhZGF0YUVudHJ5Gi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASIXChVSZXBvcnRUYXNrTG9nUmVzcG9uc2UiaQoMV29ya3RyZWVJbmZvEgwKBG5hbWUYASABKAkSDgoGYnJhbmNoGAIgASgJEg8KB3Rhc2tfaWQYAyABKAkSEwoLaGFzX2NoYW5nZXMYBCABKAgSFQoNY2hhbmdlZF9maWxlcxgFIAMoCSJRChVEZWxldGVXb3JrdHJlZUNvbW1hbmQSEgoKcmVxdWVzdF9pZBgBIAEoCRIVCg13b3JrdHJlZV9uYW1lGAIgASgJEg0KBWZvcmNlGAMgASgIInQKGVJlcG9ydFdvcmt0cmVlTGlzdFJlcXVlc3QSEgoKcmVxdWVzdF9pZBgBIAEoCRIUCgxwcm9qZWN0X25hbWUYAiABKAkSLQoJd29ya3RyZWVzGAMgAygLMhoudGFza2d1aWxkLnYxLldvcmt0cmVlSW5mbyIcChpSZXBvcnRXb3JrdHJlZUxpc3RSZXNwb25zZSIwChpSZXF1ZXN0V29ya3RyZWVMaXN0UmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJIjEKG1JlcXVlc3RXb3JrdHJlZUxpc3RSZXNwb25zZRISCgpyZXF1ZXN0X2lkGAEgASgJIiwKFkdldFdvcmt0cmVlTGlzdFJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCSJIChdHZXRXb3JrdHJlZUxpc3RSZXNwb25zZRItCgl3b3JrdHJlZXMYASADKAsyGi50YXNrZ3VpbGQudjEuV29ya3RyZWVJbmZvIlgKHFJlcXVlc3RXb3JrdHJlZURlbGV0ZVJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIVCg13b3JrdHJlZV9uYW1lGAIgASgJEg0KBWZvcmNlGAMgASgIIjMKHVJlcXVlc3RXb3JrdHJlZURlbGV0ZVJlc3BvbnNlEhIKCnJlcXVlc3RfaWQYASABKAkijAEKIVJlcG9ydFdvcmt0cmVlRGVsZXRlUmVzdWx0UmVxdWVzdBISCgpyZXF1ZXN0X2lkGAEgASgJEhQKDHByb2plY3RfbmFtZRgCIAEoCRIVCg13b3JrdHJlZV9uYW1lGAMgASgJEg8KB3N1Y2Nlc3MYBCABKAgSFQoNZXJyb3JfbWVzc2FnZRgFIAEoCSIkCiJSZXBvcnRXb3JrdHJlZURlbGV0ZVJlc3VsdFJlc3BvbnNlIigKEkdpdFB1bGxNYWluQ29tbWFuZBISCgpyZXF1ZXN0X2lkGAEgASgJIi8KGVJlcXVlc3RHaXRQdWxsTWFpblJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCSIwChpSZXF1ZXN0R2l0UHVsbE1haW5SZXNwb25zZRISCgpyZXF1ZXN0X2lkGAEgASgJIoIBCh5SZXBvcnRHaXRQdWxsTWFpblJlc3VsdFJlcXVlc3QSEgoKcmVxdWVzdF9pZBgBIAEoCRIUCgxwcm9qZWN0X25hbWUYAiABKAkSDwoHc3VjY2VzcxgDIAEoCBIOCgZvdXRwdXQYBCABKAkSFQoNZXJyb3JfbWVzc2FnZRgFIAEoCSIhCh9SZXBvcnRHaXRQdWxsTWFpblJlc3VsdFJlc3BvbnNlIhQKElN5bmNTY3JpcHRzQ29tbWFuZCJgChRFeGVjdXRlU2NyaXB0Q29tbWFuZBISCgpyZXF1ZXN0X2lkGAEgASgJEhEKCXNjcmlwdF9pZBgCIAEoCRIQCghmaWxlbmFtZRgDIAEoCRIPCgdjb250ZW50GAQgASgJIioKElN5bmNTY3JpcHRzUmVxdWVzdBIUCgxwcm9qZWN0X25hbWUYASABKAkiRgoTU3luY1NjcmlwdHNSZXNwb25zZRIvCgdzY3JpcHRzGAEgAygLMh4udGFza2d1aWxkLnYxLlNjcmlwdERlZmluaXRpb24ivAEKIlJlcG9ydFNjcmlwdEV4ZWN1dGlvblJlc3VsdFJlcXVlc3QSEgoKcmVxdWVzdF9pZBgBIAEoCRIUCgxwcm9qZWN0X25hbWUYAiABKAkSEQoJc2NyaXB0X2lkGAMgASgJEg8KB3N1Y2Nlc3MYBCABKAgSEQoJZXhpdF9jb2RlGAUgASgFEg4KBnN0ZG91dBgGIAEoCRIOCgZzdGRlcnIYByABKAkSFQoNZXJyb3JfbWVzc2FnZRgIIAEoCSIlCiNSZXBvcnRTY3JpcHRFeGVjdXRpb25SZXN1bHRSZXNwb25zZSJ2Ch5SZXBvcnRTY3JpcHRPdXRwdXRDaHVua1JlcXVlc3QSEgoKcmVxdWVzdF9pZBgBIAEoCRIUCgxwcm9qZWN0X25hbWUYAiABKAkSFAoMc3Rkb3V0X2NodW5rGAMgASgJEhQKDHN0ZGVycl9jaHVuaxgEIAEoCSIhCh9SZXBvcnRTY3JpcHRPdXRwdXRDaHVua1Jlc3BvbnNlKo4BCgtBZ2VudFN0YXR1cxIcChhBR0VOVF9TVEFUVVNfVU5TUEVDSUZJRUQQABIVChFBR0VOVF9TVEFUVVNfSURMRRABEhgKFEFHRU5UX1NUQVRVU19SVU5OSU5HEAISGAoUQUdFTlRfU1RBVFVTX1dBSVRJTkcQAxIWChJBR0VOVF9TVEFUVVNfRVJST1IQBDKREAoTQWdlbnRNYW5hZ2VyU2VydmljZRJVCglTdWJzY3JpYmUSKi50YXNrZ3VpbGQudjEuQWdlbnRNYW5hZ2VyU3Vic2NyaWJlUmVxdWVzdBoaLnRhc2tndWlsZC52MS5BZ2VudENvbW1hbmQwARJMCglDbGFpbVRhc2sSHi50YXNrZ3VpbGQudjEuQ2xhaW1UYXNrUmVxdWVzdBofLnRhc2tndWlsZC52MS5DbGFpbVRhc2tSZXNwb25zZRJhChBSZXBvcnRUYXNrUmVzdWx0EiUudGFza2d1aWxkLnYxLlJlcG9ydFRhc2tSZXN1bHRSZXF1ZXN0GiYudGFza2d1aWxkLnYxLlJlcG9ydFRhc2tSZXN1bHRSZXNwb25zZRJkChFSZXBvcnRBZ2VudFN0YXR1cxImLnRhc2tndWlsZC52MS5SZXBvcnRBZ2VudFN0YXR1c1JlcXVlc3QaJy50YXNrZ3VpbGQudjEuUmVwb3J0QWdlbnRTdGF0dXNSZXNwb25zZRJMCglIZWFydGJlYXQSHi50YXNrZ3VpbGQudjEuSGVhcnRiZWF0UmVxdWVzdBofLnRhc2tndWlsZC52MS5IZWFydGJlYXRSZXNwb25zZRJkChFDcmVhdGVJbnRlcmFjdGlvbhImLnRhc2tndWlsZC52MS5DcmVhdGVJbnRlcmFjdGlvblJlcXVlc3QaJy50YXNrZ3VpbGQudjEuQ3JlYXRlSW50ZXJhY3Rpb25SZXNwb25zZRJzChZHZXRJbnRlcmFjdGlvblJlc3BvbnNlEisudGFza2d1aWxkLnYxLkdldEludGVyYWN0aW9uUmVzcG9uc2VSZXF1ZXN0GiwudGFza2d1aWxkLnYxLkdldEludGVyYWN0aW9uUmVzcG9uc2VSZXNwb25zZRJPCgpTeW5jQWdlbnRzEh8udGFza2d1aWxkLnYxLlN5bmNBZ2VudHNSZXF1ZXN0GiAudGFza2d1aWxkLnYxLlN5bmNBZ2VudHNSZXNwb25zZRJYCg1SZXBvcnRUYXNrTG9nEiIudGFza2d1aWxkLnYxLlJlcG9ydFRhc2tMb2dSZXF1ZXN0GiMudGFza2d1aWxkLnYxLlJlcG9ydFRhc2tMb2dSZXNwb25zZRJeCg9TeW5jUGVybWlzc2lvbnMSJC50YXNrZ3VpbGQudjEuU3luY1Blcm1pc3Npb25zUmVxdWVzdBolLnRhc2tndWlsZC52MS5TeW5jUGVybWlzc2lvbnNSZXNwb25zZRJnChJSZXBvcnRXb3JrdHJlZUxpc3QSJy50YXNrZ3VpbGQudjEuUmVwb3J0V29ya3RyZWVMaXN0UmVxdWVzdBooLnRhc2tndWlsZC52MS5SZXBvcnRXb3JrdHJlZUxpc3RSZXNwb25zZRJqChNSZXF1ZXN0V29ya3RyZWVMaXN0EigudGFza2d1aWxkLnYxLlJlcXVlc3RXb3JrdHJlZUxpc3RSZXF1ZXN0GikudGFza2d1aWxkLnYxLlJlcXVlc3RXb3JrdHJlZUxpc3RSZXNwb25zZRJeCg9HZXRXb3JrdHJlZUxpc3QSJC50YXNrZ3VpbGQudjEuR2V0V29ya3RyZWVMaXN0UmVxdWVzdBolLnRhc2tndWlsZC52MS5HZXRXb3JrdHJlZUxpc3RSZXNwb25zZRJwChVSZXF1ZXN0V29ya3RyZWVEZWxldGUSKi50YXNrZ3VpbGQudjEuUmVxdWVzdFdvcmt0cmVlRGVsZXRlUmVxdWVzdBorLnRhc2tndWlsZC52MS5SZXF1ZXN0V29ya3RyZWVEZWxldGVSZXNwb25zZRJ/ChpSZXBvcnRXb3JrdHJlZURlbGV0ZVJlc3VsdBIvLnRhc2tndWlsZC52MS5SZXBvcnRXb3JrdHJlZURlbGV0ZVJlc3VsdFJlcXVlc3QaMC50YXNrZ3VpbGQudjEuUmVwb3J0V29ya3RyZWVEZWxldGVSZXN1bHRSZXNwb25zZRJnChJSZXF1ZXN0R2l0UHVsbE1haW4SJy50YXNrZ3VpbGQudjEuUmVxdWVzdEdpdFB1bGxNYWluUmVxdWVzdBooLnRhc2tndWlsZC52MS5SZXF1ZXN0R2l0UHVsbE1haW5SZXNwb25zZRJ2ChdSZXBvcnRHaXRQdWxsTWFpblJlc3VsdBIsLnRhc2tndWlsZC52MS5SZXBvcnRHaXRQdWxsTWFpblJlc3VsdFJlcXVlc3QaLS50YXNrZ3VpbGQudjEuUmVwb3J0R2l0UHVsbE1haW5SZXN1bHRSZXNwb25zZRJSCgtTeW5jU2NyaXB0cxIgLnRhc2tndWlsZC52MS5TeW5jU2NyaXB0c1JlcXVlc3QaIS50YXNrZ3VpbGQudjEuU3luY1NjcmlwdHNSZXNwb25zZRKCAQobUmVwb3J0U2NyaXB0RXhlY3V0aW9uUmVzdWx0EjAudGFza2d1aWxkLnYxLlJlcG9ydFNjcmlwdEV4ZWN1dGlvblJlc3VsdFJlcXVlc3QaMS50YXNrZ3VpbGQudjEuUmVwb3J0U2NyaXB0RXhlY3V0aW9uUmVzdWx0UmVzcG9uc2USdgoXUmVwb3J0U2NyaXB0T3V0cHV0Q2h1bmsSLC50YXNrZ3VpbGQudjEuUmVwb3J0U2NyaXB0T3V0cHV0Q2h1bmtSZXF1ZXN0Gi0udGFza2d1aWxkLnYxLlJlcG9ydFNjcmlwdE91dHB1dENodW5rUmVzcG9uc2VCvwEKEGNvbS50YXNrZ3VpbGQudjFCEUFnZW50TWFuYWdlclByb3RvUAFaR2dpdGh1Yi5jb20va2F6ejE4Ny90YXNrZ3VpbGQvYmFja2VuZC9nZW4vcHJvdG8vdGFza2d1aWxkL3YxO3Rhc2tndWlsZHYxogIDVFhYqgIMVGFza2d1aWxkLlYxygIMVGFza2d1aWxkXFYx4gIYVGFza2d1aWxkXFYxXEdQQk1ldGFkYXRh6gINVGFza2d1aWxkOjpWMWIGcHJvdG8z", [file_google_protobuf_timestamp, file_taskguild_v1_agent, file_taskguild_v1_interaction, file_taskguild_v1_permission, file_taskguild_v1_script, file_taskguild_v1_task_log]);
+  fileDesc("CiB0YXNrZ3VpbGQvdjEvYWdlbnRfbWFuYWdlci5wcm90bxIMdGFza2d1aWxkLnYxIpwBChxBZ2VudE1hbmFnZXJTdWJzY3JpYmVSZXF1ZXN0EhgKEGFnZW50X21hbmFnZXJfaWQYASABKAkSFAoMcHJvamVjdF9uYW1lGAIgASgJEhwKFG1heF9jb25jdXJyZW50X3Rhc2tzGAMgASgFEhcKD2FjdGl2ZV90YXNrX2lkcxgEIAMoCRIVCg1hZ2VudF92ZXJzaW9uGAUgASgJIqcGCgxBZ2VudENvbW1hbmQSPAoOdGFza19hdmFpbGFibGUYASABKAsyIi50YXNrZ3VpbGQudjEuVGFza0F2YWlsYWJsZUNvbW1hbmRIABI2Cgthc3NpZ25fdGFzaxgCIAEoCzIfLnRhc2tndWlsZC52MS5Bc3NpZ25UYXNrQ29tbWFuZEgAEjYKC2NhbmNlbF90YXNrGAMgASgLMh8udGFza2d1aWxkLnYxLkNhbmNlbFRhc2tDb21tYW5kSAASSAoUaW50ZXJhY3Rpb25fcmVzcG9uc2UYBCABKAsyKC50YXNrZ3VpbGQudjEuSW50ZXJhY3Rpb25SZXNwb25zZUNvbW1hbmRIABI2CgtzeW5jX2FnZW50cxgFIAEoCzIfLnRhc2tndWlsZC52MS5TeW5jQWdlbnRzQ29tbWFuZEgAEkAKEHN5bmNfcGVybWlzc2lvbnMYBiABKAsyJC50YXNrZ3VpbGQudjEuU3luY1Blcm1pc3Npb25zQ29tbWFuZEgAEjwKDmxpc3Rfd29ya3RyZWVzGAcgASgLMiIudGFza2d1aWxkLnYxLkxpc3RXb3JrdHJlZXNDb21tYW5kSAASPgoPZGVsZXRlX3dvcmt0cmVlGAggASgLMiMudGFza2d1aWxkLnYxLkRlbGV0ZVdvcmt0cmVlQ29tbWFuZEgAEjkKDWdpdF9wdWxsX21haW4YCSABKAsyIC50YXNrZ3VpbGQudjEuR2l0UHVsbE1haW5Db21tYW5kSAASOAoMc3luY19zY3JpcHRzGAogASgLMiAudGFza2d1aWxkLnYxLlN5bmNTY3JpcHRzQ29tbWFuZEgAEjwKDmV4ZWN1dGVfc2NyaXB0GAsgASgLMiIudGFza2d1aWxkLnYxLkV4ZWN1dGVTY3JpcHRDb21tYW5kSAASKQoEcGluZxgMIAEoCzIZLnRhc2tndWlsZC52MS5QaW5nQ29tbWFuZEgAEj4KD2NvbXBhcmVfc2NyaXB0cxgNIAEoCzIjLnRhc2tndWlsZC52MS5Db21wYXJlU2NyaXB0c0NvbW1hbmRIAEIJCgdjb21tYW5kIg0KC1BpbmdDb21tYW5kIsQBChRUYXNrQXZhaWxhYmxlQ29tbWFuZBIPCgd0YXNrX2lkGAEgASgJEg0KBXRpdGxlGAIgASgJEhcKD2FnZW50X2NvbmZpZ19pZBgDIAEoCRJCCghtZXRhZGF0YRgEIAMoCzIwLnRhc2tndWlsZC52MS5UYXNrQXZhaWxhYmxlQ29tbWFuZC5NZXRhZGF0YUVudHJ5Gi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASLeAQoRQXNzaWduVGFza0NvbW1hbmQSDwoHdGFza19pZBgBIAEoCRIXCg9hZ2VudF9jb25maWdfaWQYAiABKAkSFAoMaW5zdHJ1Y3Rpb25zGAMgASgJEhcKD3dvcmt0cmVlX2JyYW5jaBgEIAEoCRI/CghtZXRhZGF0YRgFIAMoCzItLnRhc2tndWlsZC52MS5Bc3NpZ25UYXNrQ29tbWFuZC5NZXRhZGF0YUVudHJ5Gi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASI0ChFDYW5jZWxUYXNrQ29tbWFuZBIPCgd0YXNrX2lkGAEgASgJEg4KBnJlYXNvbhgCIAEoCSJGChpJbnRlcmFjdGlvblJlc3BvbnNlQ29tbWFuZBIWCg5pbnRlcmFjdGlvbl9pZBgBIAEoCRIQCghyZXNwb25zZRgCIAEoCSITChFTeW5jQWdlbnRzQ29tbWFuZCIYChZTeW5jUGVybWlzc2lvbnNDb21tYW5kIioKFExpc3RXb3JrdHJlZXNDb21tYW5kEhIKCnJlcXVlc3RfaWQYASABKAkiPQoQQ2xhaW1UYXNrUmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJEhgKEGFnZW50X21hbmFnZXJfaWQYAiABKAkixQEKEUNsYWltVGFza1Jlc3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgSFwoPYWdlbnRfY29uZmlnX2lkGAIgASgJEhQKDGluc3RydWN0aW9ucxgDIAEoCRI/CghtZXRhZGF0YRgEIAMoCzItLnRhc2tndWlsZC52MS5DbGFpbVRhc2tSZXNwb25zZS5NZXRhZGF0YUVudHJ5Gi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJgChdSZXBvcnRUYXNrUmVzdWx0UmVxdWVzdBIPCgd0YXNrX2lkGAEgASgJEg8KB3N1bW1hcnkYAyABKAkSFQoNZXJyb3JfbWVzc2FnZRgEIAEoCUoECAIQA1IGc3RhdHVzIhoKGFJlcG9ydFRhc2tSZXN1bHRSZXNwb25zZSKBAQoYUmVwb3J0QWdlbnRTdGF0dXNSZXF1ZXN0EhgKEGFnZW50X21hbmFnZXJfaWQYASABKAkSDwoHdGFza19pZBgCIAEoCRIpCgZzdGF0dXMYAyABKA4yGS50YXNrZ3VpbGQudjEuQWdlbnRTdGF0dXMSDwoHbWVzc2FnZRgEIAEoCSIbChlSZXBvcnRBZ2VudFN0YXR1c1Jlc3BvbnNlInEKEEhlYXJ0YmVhdFJlcXVlc3QSGAoQYWdlbnRfbWFuYWdlcl9pZBgBIAEoCRIUCgxhY3RpdmVfdGFza3MYAiABKAUSLQoJdGltZXN0YW1wGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCITChFIZWFydGJlYXRSZXNwb25zZSLAAQoYQ3JlYXRlSW50ZXJhY3Rpb25SZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkSEAoIYWdlbnRfaWQYAiABKAkSKwoEdHlwZRgDIAEoDjIdLnRhc2tndWlsZC52MS5JbnRlcmFjdGlvblR5cGUSDQoFdGl0bGUYBCABKAkSEwoLZGVzY3JpcHRpb24YBSABKAkSMAoHb3B0aW9ucxgGIAMoCzIfLnRhc2tndWlsZC52MS5JbnRlcmFjdGlvbk9wdGlvbiJLChlDcmVhdGVJbnRlcmFjdGlvblJlc3BvbnNlEi4KC2ludGVyYWN0aW9uGAEgASgLMhkudGFza2d1aWxkLnYxLkludGVyYWN0aW9uIjcKHUdldEludGVyYWN0aW9uUmVzcG9uc2VSZXF1ZXN0EhYKDmludGVyYWN0aW9uX2lkGAEgASgJIlAKHkdldEludGVyYWN0aW9uUmVzcG9uc2VSZXNwb25zZRIuCgtpbnRlcmFjdGlvbhgBIAEoCzIZLnRhc2tndWlsZC52MS5JbnRlcmFjdGlvbiIpChFTeW5jQWdlbnRzUmVxdWVzdBIUCgxwcm9qZWN0X25hbWUYASABKAkiQwoSU3luY0FnZW50c1Jlc3BvbnNlEi0KBmFnZW50cxgBIAMoCzIdLnRhc2tndWlsZC52MS5BZ2VudERlZmluaXRpb24iagoWU3luY1Blcm1pc3Npb25zUmVxdWVzdBIUCgxwcm9qZWN0X25hbWUYASABKAkSEwoLbG9jYWxfYWxsb3cYAiADKAkSEQoJbG9jYWxfYXNrGAMgAygJEhIKCmxvY2FsX2RlbnkYBCADKAkiSwoXU3luY1Blcm1pc3Npb25zUmVzcG9uc2USMAoLcGVybWlzc2lvbnMYASABKAsyGy50YXNrZ3VpbGQudjEuUGVybWlzc2lvblNldCKJAgoUUmVwb3J0VGFza0xvZ1JlcXVlc3QSDwoHdGFza19pZBgBIAEoCRIpCgVsZXZlbBgCIAEoDjIaLnRhc2tndWlsZC52MS5UYXNrTG9nTGV2ZWwSLwoIY2F0ZWdvcnkYAyABKA4yHS50YXNrZ3VpbGQudjEuVGFza0xvZ0NhdGVnb3J5Eg8KB21lc3NhZ2UYBCABKAkSQgoIbWV0YWRhdGEYBSADKAsyMC50YXNrZ3VpbGQudjEuUmVwb3J0VGFza0xvZ1JlcXVlc3QuTWV0YWRhdGFFbnRyeRovCg1NZXRhZGF0YUVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiFwoVUmVwb3J0VGFza0xvZ1Jlc3BvbnNlImkKDFdvcmt0cmVlSW5mbxIMCgRuYW1lGAEgASgJEg4KBmJyYW5jaBgCIAEoCRIPCgd0YXNrX2lkGAMgASgJEhMKC2hhc19jaGFuZ2VzGAQgASgIEhUKDWNoYW5nZWRfZmlsZXMYBSADKAkiUQoVRGVsZXRlV29ya3RyZWVDb21tYW5kEhIKCnJlcXVlc3RfaWQYASABKAkSFQoNd29ya3RyZWVfbmFtZRgCIAEoCRINCgVmb3JjZRgDIAEoCCJ0ChlSZXBvcnRXb3JrdHJlZUxpc3RSZXF1ZXN0EhIKCnJlcXVlc3RfaWQYASABKAkSFAoMcHJvamVjdF9uYW1lGAIgASgJEi0KCXdvcmt0cmVlcxgDIAMoCzIaLnRhc2tndWlsZC52MS5Xb3JrdHJlZUluZm8iHAoaUmVwb3J0V29ya3RyZWVMaXN0UmVzcG9uc2UiMAoaUmVxdWVzdFdvcmt0cmVlTGlzdFJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCSIxChtSZXF1ZXN0V29ya3RyZWVMaXN0UmVzcG9uc2USEgoKcmVxdWVzdF9pZBgBIAEoCSIsChZHZXRXb3JrdHJlZUxpc3RSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkiSAoXR2V0V29ya3RyZWVMaXN0UmVzcG9uc2USLQoJd29ya3RyZWVzGAEgAygLMhoudGFza2d1aWxkLnYxLldvcmt0cmVlSW5mbyJYChxSZXF1ZXN0V29ya3RyZWVEZWxldGVSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSFQoNd29ya3RyZWVfbmFtZRgCIAEoCRINCgVmb3JjZRgDIAEoCCIzCh1SZXF1ZXN0V29ya3RyZWVEZWxldGVSZXNwb25zZRISCgpyZXF1ZXN0X2lkGAEgASgJIowBCiFSZXBvcnRXb3JrdHJlZURlbGV0ZVJlc3VsdFJlcXVlc3QSEgoKcmVxdWVzdF9pZBgBIAEoCRIUCgxwcm9qZWN0X25hbWUYAiABKAkSFQoNd29ya3RyZWVfbmFtZRgDIAEoCRIPCgdzdWNjZXNzGAQgASgIEhUKDWVycm9yX21lc3NhZ2UYBSABKAkiJAoiUmVwb3J0V29ya3RyZWVEZWxldGVSZXN1bHRSZXNwb25zZSIoChJHaXRQdWxsTWFpbkNvbW1hbmQSEgoKcmVxdWVzdF9pZBgBIAEoCSIvChlSZXF1ZXN0R2l0UHVsbE1haW5SZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkiMAoaUmVxdWVzdEdpdFB1bGxNYWluUmVzcG9uc2USEgoKcmVxdWVzdF9pZBgBIAEoCSKCAQoeUmVwb3J0R2l0UHVsbE1haW5SZXN1bHRSZXF1ZXN0EhIKCnJlcXVlc3RfaWQYASABKAkSFAoMcHJvamVjdF9uYW1lGAIgASgJEg8KB3N1Y2Nlc3MYAyABKAgSDgoGb3V0cHV0GAQgASgJEhUKDWVycm9yX21lc3NhZ2UYBSABKAkiIQofUmVwb3J0R2l0UHVsbE1haW5SZXN1bHRSZXNwb25zZSI4ChJTeW5jU2NyaXB0c0NvbW1hbmQSIgoaZm9yY2Vfb3ZlcndyaXRlX3NjcmlwdF9pZHMYASADKAkiXAoVQ29tcGFyZVNjcmlwdHNDb21tYW5kEhIKCnJlcXVlc3RfaWQYASABKAkSLwoHc2NyaXB0cxgCIAMoCzIeLnRhc2tndWlsZC52MS5TY3JpcHREZWZpbml0aW9uImAKFEV4ZWN1dGVTY3JpcHRDb21tYW5kEhIKCnJlcXVlc3RfaWQYASABKAkSEQoJc2NyaXB0X2lkGAIgASgJEhAKCGZpbGVuYW1lGAMgASgJEg8KB2NvbnRlbnQYBCABKAkiKgoSU3luY1NjcmlwdHNSZXF1ZXN0EhQKDHByb2plY3RfbmFtZRgBIAEoCSJGChNTeW5jU2NyaXB0c1Jlc3BvbnNlEi8KB3NjcmlwdHMYASADKAsyHi50YXNrZ3VpbGQudjEuU2NyaXB0RGVmaW5pdGlvbiK8AQoiUmVwb3J0U2NyaXB0RXhlY3V0aW9uUmVzdWx0UmVxdWVzdBISCgpyZXF1ZXN0X2lkGAEgASgJEhQKDHByb2plY3RfbmFtZRgCIAEoCRIRCglzY3JpcHRfaWQYAyABKAkSDwoHc3VjY2VzcxgEIAEoCBIRCglleGl0X2NvZGUYBSABKAUSDgoGc3Rkb3V0GAYgASgJEg4KBnN0ZGVychgHIAEoCRIVCg1lcnJvcl9tZXNzYWdlGAggASgJIiUKI1JlcG9ydFNjcmlwdEV4ZWN1dGlvblJlc3VsdFJlc3BvbnNlInYKHlJlcG9ydFNjcmlwdE91dHB1dENodW5rUmVxdWVzdBISCgpyZXF1ZXN0X2lkGAEgASgJEhQKDHByb2plY3RfbmFtZRgCIAEoCRIUCgxzdGRvdXRfY2h1bmsYAyABKAkSFAoMc3RkZXJyX2NodW5rGAQgASgJIiEKH1JlcG9ydFNjcmlwdE91dHB1dENodW5rUmVzcG9uc2UipgEKClNjcmlwdERpZmYSEQoJc2NyaXB0X2lkGAEgASgJEhMKC3NjcmlwdF9uYW1lGAIgASgJEhAKCGZpbGVuYW1lGAMgASgJEhYKDnNlcnZlcl9jb250ZW50GAQgASgJEhUKDWFnZW50X2NvbnRlbnQYBSABKAkSLwoJZGlmZl90eXBlGAYgASgOMhwudGFza2d1aWxkLnYxLlNjcmlwdERpZmZUeXBlIjQKHlJlcXVlc3RTY3JpcHRDb21wYXJpc29uUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJIjUKH1JlcXVlc3RTY3JpcHRDb21wYXJpc29uUmVzcG9uc2USEgoKcmVxdWVzdF9pZBgBIAEoCSJyCh1SZXBvcnRTY3JpcHRDb21wYXJpc29uUmVxdWVzdBISCgpyZXF1ZXN0X2lkGAEgASgJEhQKDHByb2plY3RfbmFtZRgCIAEoCRInCgVkaWZmcxgDIAMoCzIYLnRhc2tndWlsZC52MS5TY3JpcHREaWZmIiAKHlJlcG9ydFNjcmlwdENvbXBhcmlzb25SZXNwb25zZSIwChpHZXRTY3JpcHRDb21wYXJpc29uUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJIkYKG0dldFNjcmlwdENvbXBhcmlzb25SZXNwb25zZRInCgVkaWZmcxgBIAMoCzIYLnRhc2tndWlsZC52MS5TY3JpcHREaWZmIrkBChxSZXNvbHZlU2NyaXB0Q29uZmxpY3RSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSEQoJc2NyaXB0X2lkGAIgASgJEhMKC3NjcmlwdF9uYW1lGAMgASgJEhAKCGZpbGVuYW1lGAQgASgJEjQKBmNob2ljZRgFIAEoDjIkLnRhc2tndWlsZC52MS5TY3JpcHRSZXNvbHV0aW9uQ2hvaWNlEhUKDWFnZW50X2NvbnRlbnQYBiABKAkiTwodUmVzb2x2ZVNjcmlwdENvbmZsaWN0UmVzcG9uc2USLgoGc2NyaXB0GAEgASgLMh4udGFza2d1aWxkLnYxLlNjcmlwdERlZmluaXRpb24qjgEKC0FnZW50U3RhdHVzEhwKGEFHRU5UX1NUQVRVU19VTlNQRUNJRklFRBAAEhUKEUFHRU5UX1NUQVRVU19JRExFEAESGAoUQUdFTlRfU1RBVFVTX1JVTk5JTkcQAhIYChRBR0VOVF9TVEFUVVNfV0FJVElORxADEhYKEkFHRU5UX1NUQVRVU19FUlJPUhAEKpQBCg5TY3JpcHREaWZmVHlwZRIgChxTQ1JJUFRfRElGRl9UWVBFX1VOU1BFQ0lGSUVEEAASHQoZU0NSSVBUX0RJRkZfVFlQRV9NT0RJRklFRBABEh8KG1NDUklQVF9ESUZGX1RZUEVfQUdFTlRfT05MWRACEiAKHFNDUklQVF9ESUZGX1RZUEVfU0VSVkVSX09OTFkQAyqLAQoWU2NyaXB0UmVzb2x1dGlvbkNob2ljZRIoCiRTQ1JJUFRfUkVTT0xVVElPTl9DSE9JQ0VfVU5TUEVDSUZJRUQQABIjCh9TQ1JJUFRfUkVTT0xVVElPTl9DSE9JQ0VfU0VSVkVSEAESIgoeU0NSSVBUX1JFU09MVVRJT05fQ0hPSUNFX0FHRU5UEAIy3BMKE0FnZW50TWFuYWdlclNlcnZpY2USVQoJU3Vic2NyaWJlEioudGFza2d1aWxkLnYxLkFnZW50TWFuYWdlclN1YnNjcmliZVJlcXVlc3QaGi50YXNrZ3VpbGQudjEuQWdlbnRDb21tYW5kMAESTAoJQ2xhaW1UYXNrEh4udGFza2d1aWxkLnYxLkNsYWltVGFza1JlcXVlc3QaHy50YXNrZ3VpbGQudjEuQ2xhaW1UYXNrUmVzcG9uc2USYQoQUmVwb3J0VGFza1Jlc3VsdBIlLnRhc2tndWlsZC52MS5SZXBvcnRUYXNrUmVzdWx0UmVxdWVzdBomLnRhc2tndWlsZC52MS5SZXBvcnRUYXNrUmVzdWx0UmVzcG9uc2USZAoRUmVwb3J0QWdlbnRTdGF0dXMSJi50YXNrZ3VpbGQudjEuUmVwb3J0QWdlbnRTdGF0dXNSZXF1ZXN0GicudGFza2d1aWxkLnYxLlJlcG9ydEFnZW50U3RhdHVzUmVzcG9uc2USTAoJSGVhcnRiZWF0Eh4udGFza2d1aWxkLnYxLkhlYXJ0YmVhdFJlcXVlc3QaHy50YXNrZ3VpbGQudjEuSGVhcnRiZWF0UmVzcG9uc2USZAoRQ3JlYXRlSW50ZXJhY3Rpb24SJi50YXNrZ3VpbGQudjEuQ3JlYXRlSW50ZXJhY3Rpb25SZXF1ZXN0GicudGFza2d1aWxkLnYxLkNyZWF0ZUludGVyYWN0aW9uUmVzcG9uc2UScwoWR2V0SW50ZXJhY3Rpb25SZXNwb25zZRIrLnRhc2tndWlsZC52MS5HZXRJbnRlcmFjdGlvblJlc3BvbnNlUmVxdWVzdBosLnRhc2tndWlsZC52MS5HZXRJbnRlcmFjdGlvblJlc3BvbnNlUmVzcG9uc2USTwoKU3luY0FnZW50cxIfLnRhc2tndWlsZC52MS5TeW5jQWdlbnRzUmVxdWVzdBogLnRhc2tndWlsZC52MS5TeW5jQWdlbnRzUmVzcG9uc2USWAoNUmVwb3J0VGFza0xvZxIiLnRhc2tndWlsZC52MS5SZXBvcnRUYXNrTG9nUmVxdWVzdBojLnRhc2tndWlsZC52MS5SZXBvcnRUYXNrTG9nUmVzcG9uc2USXgoPU3luY1Blcm1pc3Npb25zEiQudGFza2d1aWxkLnYxLlN5bmNQZXJtaXNzaW9uc1JlcXVlc3QaJS50YXNrZ3VpbGQudjEuU3luY1Blcm1pc3Npb25zUmVzcG9uc2USZwoSUmVwb3J0V29ya3RyZWVMaXN0EicudGFza2d1aWxkLnYxLlJlcG9ydFdvcmt0cmVlTGlzdFJlcXVlc3QaKC50YXNrZ3VpbGQudjEuUmVwb3J0V29ya3RyZWVMaXN0UmVzcG9uc2USagoTUmVxdWVzdFdvcmt0cmVlTGlzdBIoLnRhc2tndWlsZC52MS5SZXF1ZXN0V29ya3RyZWVMaXN0UmVxdWVzdBopLnRhc2tndWlsZC52MS5SZXF1ZXN0V29ya3RyZWVMaXN0UmVzcG9uc2USXgoPR2V0V29ya3RyZWVMaXN0EiQudGFza2d1aWxkLnYxLkdldFdvcmt0cmVlTGlzdFJlcXVlc3QaJS50YXNrZ3VpbGQudjEuR2V0V29ya3RyZWVMaXN0UmVzcG9uc2UScAoVUmVxdWVzdFdvcmt0cmVlRGVsZXRlEioudGFza2d1aWxkLnYxLlJlcXVlc3RXb3JrdHJlZURlbGV0ZVJlcXVlc3QaKy50YXNrZ3VpbGQudjEuUmVxdWVzdFdvcmt0cmVlRGVsZXRlUmVzcG9uc2USfwoaUmVwb3J0V29ya3RyZWVEZWxldGVSZXN1bHQSLy50YXNrZ3VpbGQudjEuUmVwb3J0V29ya3RyZWVEZWxldGVSZXN1bHRSZXF1ZXN0GjAudGFza2d1aWxkLnYxLlJlcG9ydFdvcmt0cmVlRGVsZXRlUmVzdWx0UmVzcG9uc2USZwoSUmVxdWVzdEdpdFB1bGxNYWluEicudGFza2d1aWxkLnYxLlJlcXVlc3RHaXRQdWxsTWFpblJlcXVlc3QaKC50YXNrZ3VpbGQudjEuUmVxdWVzdEdpdFB1bGxNYWluUmVzcG9uc2USdgoXUmVwb3J0R2l0UHVsbE1haW5SZXN1bHQSLC50YXNrZ3VpbGQudjEuUmVwb3J0R2l0UHVsbE1haW5SZXN1bHRSZXF1ZXN0Gi0udGFza2d1aWxkLnYxLlJlcG9ydEdpdFB1bGxNYWluUmVzdWx0UmVzcG9uc2USUgoLU3luY1NjcmlwdHMSIC50YXNrZ3VpbGQudjEuU3luY1NjcmlwdHNSZXF1ZXN0GiEudGFza2d1aWxkLnYxLlN5bmNTY3JpcHRzUmVzcG9uc2USggEKG1JlcG9ydFNjcmlwdEV4ZWN1dGlvblJlc3VsdBIwLnRhc2tndWlsZC52MS5SZXBvcnRTY3JpcHRFeGVjdXRpb25SZXN1bHRSZXF1ZXN0GjEudGFza2d1aWxkLnYxLlJlcG9ydFNjcmlwdEV4ZWN1dGlvblJlc3VsdFJlc3BvbnNlEnYKF1JlcG9ydFNjcmlwdE91dHB1dENodW5rEiwudGFza2d1aWxkLnYxLlJlcG9ydFNjcmlwdE91dHB1dENodW5rUmVxdWVzdBotLnRhc2tndWlsZC52MS5SZXBvcnRTY3JpcHRPdXRwdXRDaHVua1Jlc3BvbnNlEnYKF1JlcXVlc3RTY3JpcHRDb21wYXJpc29uEiwudGFza2d1aWxkLnYxLlJlcXVlc3RTY3JpcHRDb21wYXJpc29uUmVxdWVzdBotLnRhc2tndWlsZC52MS5SZXF1ZXN0U2NyaXB0Q29tcGFyaXNvblJlc3BvbnNlEnMKFlJlcG9ydFNjcmlwdENvbXBhcmlzb24SKy50YXNrZ3VpbGQudjEuUmVwb3J0U2NyaXB0Q29tcGFyaXNvblJlcXVlc3QaLC50YXNrZ3VpbGQudjEuUmVwb3J0U2NyaXB0Q29tcGFyaXNvblJlc3BvbnNlEmoKE0dldFNjcmlwdENvbXBhcmlzb24SKC50YXNrZ3VpbGQudjEuR2V0U2NyaXB0Q29tcGFyaXNvblJlcXVlc3QaKS50YXNrZ3VpbGQudjEuR2V0U2NyaXB0Q29tcGFyaXNvblJlc3BvbnNlEnAKFVJlc29sdmVTY3JpcHRDb25mbGljdBIqLnRhc2tndWlsZC52MS5SZXNvbHZlU2NyaXB0Q29uZmxpY3RSZXF1ZXN0GisudGFza2d1aWxkLnYxLlJlc29sdmVTY3JpcHRDb25mbGljdFJlc3BvbnNlQr8BChBjb20udGFza2d1aWxkLnYxQhFBZ2VudE1hbmFnZXJQcm90b1ABWkdnaXRodWIuY29tL2thenoxODcvdGFza2d1aWxkL2JhY2tlbmQvZ2VuL3Byb3RvL3Rhc2tndWlsZC92MTt0YXNrZ3VpbGR2MaICA1RYWKoCDFRhc2tndWlsZC5WMcoCDFRhc2tndWlsZFxWMeICGFRhc2tndWlsZFxWMVxHUEJNZXRhZGF0YeoCDVRhc2tndWlsZDo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_taskguild_v1_agent, file_taskguild_v1_interaction, file_taskguild_v1_permission, file_taskguild_v1_script, file_taskguild_v1_task_log]);
 
 /**
  * @generated from message taskguild.v1.AgentManagerSubscribeRequest
@@ -151,6 +151,12 @@ export type AgentCommand = Message<"taskguild.v1.AgentCommand"> & {
      */
     value: PingCommand;
     case: "ping";
+  } | {
+    /**
+     * @generated from field: taskguild.v1.CompareScriptsCommand compare_scripts = 13;
+     */
+    value: CompareScriptsCommand;
+    case: "compareScripts";
   } | { case: undefined; value?: undefined };
 };
 
@@ -1137,10 +1143,16 @@ export const ReportGitPullMainResultResponseSchema: GenMessage<ReportGitPullMain
 
 /**
  * SyncScriptsCommand tells the agent to re-sync its local .claude/scripts/* files.
+ * When force_overwrite_script_ids is non-empty, those scripts should be overwritten
+ * on the agent even if the local file already exists.
  *
  * @generated from message taskguild.v1.SyncScriptsCommand
  */
 export type SyncScriptsCommand = Message<"taskguild.v1.SyncScriptsCommand"> & {
+  /**
+   * @generated from field: repeated string force_overwrite_script_ids = 1;
+   */
+  forceOverwriteScriptIds: string[];
 };
 
 /**
@@ -1149,6 +1161,33 @@ export type SyncScriptsCommand = Message<"taskguild.v1.SyncScriptsCommand"> & {
  */
 export const SyncScriptsCommandSchema: GenMessage<SyncScriptsCommand> = /*@__PURE__*/
   messageDesc(file_taskguild_v1_agent_manager, 45);
+
+/**
+ * CompareScriptsCommand tells the agent to compare its local .claude/scripts/*
+ * files with server-side versions and report any differences.
+ *
+ * @generated from message taskguild.v1.CompareScriptsCommand
+ */
+export type CompareScriptsCommand = Message<"taskguild.v1.CompareScriptsCommand"> & {
+  /**
+   * @generated from field: string request_id = 1;
+   */
+  requestId: string;
+
+  /**
+   * all server-side scripts for comparison
+   *
+   * @generated from field: repeated taskguild.v1.ScriptDefinition scripts = 2;
+   */
+  scripts: ScriptDefinition[];
+};
+
+/**
+ * Describes the message taskguild.v1.CompareScriptsCommand.
+ * Use `create(CompareScriptsCommandSchema)` to create a new message.
+ */
+export const CompareScriptsCommandSchema: GenMessage<CompareScriptsCommand> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_agent_manager, 46);
 
 /**
  * ExecuteScriptCommand tells the agent to execute a specific script.
@@ -1186,7 +1225,7 @@ export type ExecuteScriptCommand = Message<"taskguild.v1.ExecuteScriptCommand"> 
  * Use `create(ExecuteScriptCommandSchema)` to create a new message.
  */
 export const ExecuteScriptCommandSchema: GenMessage<ExecuteScriptCommand> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 46);
+  messageDesc(file_taskguild_v1_agent_manager, 47);
 
 /**
  * @generated from message taskguild.v1.SyncScriptsRequest
@@ -1203,7 +1242,7 @@ export type SyncScriptsRequest = Message<"taskguild.v1.SyncScriptsRequest"> & {
  * Use `create(SyncScriptsRequestSchema)` to create a new message.
  */
 export const SyncScriptsRequestSchema: GenMessage<SyncScriptsRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 47);
+  messageDesc(file_taskguild_v1_agent_manager, 48);
 
 /**
  * @generated from message taskguild.v1.SyncScriptsResponse
@@ -1220,7 +1259,7 @@ export type SyncScriptsResponse = Message<"taskguild.v1.SyncScriptsResponse"> & 
  * Use `create(SyncScriptsResponseSchema)` to create a new message.
  */
 export const SyncScriptsResponseSchema: GenMessage<SyncScriptsResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 48);
+  messageDesc(file_taskguild_v1_agent_manager, 49);
 
 /**
  * @generated from message taskguild.v1.ReportScriptExecutionResultRequest
@@ -1276,7 +1315,7 @@ export type ReportScriptExecutionResultRequest = Message<"taskguild.v1.ReportScr
  * Use `create(ReportScriptExecutionResultRequestSchema)` to create a new message.
  */
 export const ReportScriptExecutionResultRequestSchema: GenMessage<ReportScriptExecutionResultRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 49);
+  messageDesc(file_taskguild_v1_agent_manager, 50);
 
 /**
  * @generated from message taskguild.v1.ReportScriptExecutionResultResponse
@@ -1289,7 +1328,7 @@ export type ReportScriptExecutionResultResponse = Message<"taskguild.v1.ReportSc
  * Use `create(ReportScriptExecutionResultResponseSchema)` to create a new message.
  */
 export const ReportScriptExecutionResultResponseSchema: GenMessage<ReportScriptExecutionResultResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 50);
+  messageDesc(file_taskguild_v1_agent_manager, 51);
 
 /**
  * ReportScriptOutputChunk reports a chunk of real-time script output.
@@ -1327,7 +1366,7 @@ export type ReportScriptOutputChunkRequest = Message<"taskguild.v1.ReportScriptO
  * Use `create(ReportScriptOutputChunkRequestSchema)` to create a new message.
  */
 export const ReportScriptOutputChunkRequestSchema: GenMessage<ReportScriptOutputChunkRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 51);
+  messageDesc(file_taskguild_v1_agent_manager, 52);
 
 /**
  * @generated from message taskguild.v1.ReportScriptOutputChunkResponse
@@ -1340,7 +1379,232 @@ export type ReportScriptOutputChunkResponse = Message<"taskguild.v1.ReportScript
  * Use `create(ReportScriptOutputChunkResponseSchema)` to create a new message.
  */
 export const ReportScriptOutputChunkResponseSchema: GenMessage<ReportScriptOutputChunkResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_agent_manager, 52);
+  messageDesc(file_taskguild_v1_agent_manager, 53);
+
+/**
+ * @generated from message taskguild.v1.ScriptDiff
+ */
+export type ScriptDiff = Message<"taskguild.v1.ScriptDiff"> & {
+  /**
+   * empty if agent-only script
+   *
+   * @generated from field: string script_id = 1;
+   */
+  scriptId: string;
+
+  /**
+   * @generated from field: string script_name = 2;
+   */
+  scriptName: string;
+
+  /**
+   * @generated from field: string filename = 3;
+   */
+  filename: string;
+
+  /**
+   * @generated from field: string server_content = 4;
+   */
+  serverContent: string;
+
+  /**
+   * @generated from field: string agent_content = 5;
+   */
+  agentContent: string;
+
+  /**
+   * @generated from field: taskguild.v1.ScriptDiffType diff_type = 6;
+   */
+  diffType: ScriptDiffType;
+};
+
+/**
+ * Describes the message taskguild.v1.ScriptDiff.
+ * Use `create(ScriptDiffSchema)` to create a new message.
+ */
+export const ScriptDiffSchema: GenMessage<ScriptDiff> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_agent_manager, 54);
+
+/**
+ * RequestScriptComparison triggers a comparison on connected agents (called by frontend).
+ *
+ * @generated from message taskguild.v1.RequestScriptComparisonRequest
+ */
+export type RequestScriptComparisonRequest = Message<"taskguild.v1.RequestScriptComparisonRequest"> & {
+  /**
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+};
+
+/**
+ * Describes the message taskguild.v1.RequestScriptComparisonRequest.
+ * Use `create(RequestScriptComparisonRequestSchema)` to create a new message.
+ */
+export const RequestScriptComparisonRequestSchema: GenMessage<RequestScriptComparisonRequest> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_agent_manager, 55);
+
+/**
+ * @generated from message taskguild.v1.RequestScriptComparisonResponse
+ */
+export type RequestScriptComparisonResponse = Message<"taskguild.v1.RequestScriptComparisonResponse"> & {
+  /**
+   * @generated from field: string request_id = 1;
+   */
+  requestId: string;
+};
+
+/**
+ * Describes the message taskguild.v1.RequestScriptComparisonResponse.
+ * Use `create(RequestScriptComparisonResponseSchema)` to create a new message.
+ */
+export const RequestScriptComparisonResponseSchema: GenMessage<RequestScriptComparisonResponse> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_agent_manager, 56);
+
+/**
+ * ReportScriptComparison is sent by the agent after comparing local scripts with server versions.
+ *
+ * @generated from message taskguild.v1.ReportScriptComparisonRequest
+ */
+export type ReportScriptComparisonRequest = Message<"taskguild.v1.ReportScriptComparisonRequest"> & {
+  /**
+   * @generated from field: string request_id = 1;
+   */
+  requestId: string;
+
+  /**
+   * @generated from field: string project_name = 2;
+   */
+  projectName: string;
+
+  /**
+   * @generated from field: repeated taskguild.v1.ScriptDiff diffs = 3;
+   */
+  diffs: ScriptDiff[];
+};
+
+/**
+ * Describes the message taskguild.v1.ReportScriptComparisonRequest.
+ * Use `create(ReportScriptComparisonRequestSchema)` to create a new message.
+ */
+export const ReportScriptComparisonRequestSchema: GenMessage<ReportScriptComparisonRequest> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_agent_manager, 57);
+
+/**
+ * @generated from message taskguild.v1.ReportScriptComparisonResponse
+ */
+export type ReportScriptComparisonResponse = Message<"taskguild.v1.ReportScriptComparisonResponse"> & {
+};
+
+/**
+ * Describes the message taskguild.v1.ReportScriptComparisonResponse.
+ * Use `create(ReportScriptComparisonResponseSchema)` to create a new message.
+ */
+export const ReportScriptComparisonResponseSchema: GenMessage<ReportScriptComparisonResponse> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_agent_manager, 58);
+
+/**
+ * GetScriptComparison returns the cached comparison result for a project.
+ *
+ * @generated from message taskguild.v1.GetScriptComparisonRequest
+ */
+export type GetScriptComparisonRequest = Message<"taskguild.v1.GetScriptComparisonRequest"> & {
+  /**
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+};
+
+/**
+ * Describes the message taskguild.v1.GetScriptComparisonRequest.
+ * Use `create(GetScriptComparisonRequestSchema)` to create a new message.
+ */
+export const GetScriptComparisonRequestSchema: GenMessage<GetScriptComparisonRequest> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_agent_manager, 59);
+
+/**
+ * @generated from message taskguild.v1.GetScriptComparisonResponse
+ */
+export type GetScriptComparisonResponse = Message<"taskguild.v1.GetScriptComparisonResponse"> & {
+  /**
+   * @generated from field: repeated taskguild.v1.ScriptDiff diffs = 1;
+   */
+  diffs: ScriptDiff[];
+};
+
+/**
+ * Describes the message taskguild.v1.GetScriptComparisonResponse.
+ * Use `create(GetScriptComparisonResponseSchema)` to create a new message.
+ */
+export const GetScriptComparisonResponseSchema: GenMessage<GetScriptComparisonResponse> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_agent_manager, 60);
+
+/**
+ * ResolveScriptConflict resolves a single script conflict between server and agent.
+ *
+ * @generated from message taskguild.v1.ResolveScriptConflictRequest
+ */
+export type ResolveScriptConflictRequest = Message<"taskguild.v1.ResolveScriptConflictRequest"> & {
+  /**
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+
+  /**
+   * empty if agent-only (will create new)
+   *
+   * @generated from field: string script_id = 2;
+   */
+  scriptId: string;
+
+  /**
+   * @generated from field: string script_name = 3;
+   */
+  scriptName: string;
+
+  /**
+   * @generated from field: string filename = 4;
+   */
+  filename: string;
+
+  /**
+   * @generated from field: taskguild.v1.ScriptResolutionChoice choice = 5;
+   */
+  choice: ScriptResolutionChoice;
+
+  /**
+   * only needed when choice = AGENT
+   *
+   * @generated from field: string agent_content = 6;
+   */
+  agentContent: string;
+};
+
+/**
+ * Describes the message taskguild.v1.ResolveScriptConflictRequest.
+ * Use `create(ResolveScriptConflictRequestSchema)` to create a new message.
+ */
+export const ResolveScriptConflictRequestSchema: GenMessage<ResolveScriptConflictRequest> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_agent_manager, 61);
+
+/**
+ * @generated from message taskguild.v1.ResolveScriptConflictResponse
+ */
+export type ResolveScriptConflictResponse = Message<"taskguild.v1.ResolveScriptConflictResponse"> & {
+  /**
+   * the resulting script after resolution
+   *
+   * @generated from field: taskguild.v1.ScriptDefinition script = 1;
+   */
+  script?: ScriptDefinition;
+};
+
+/**
+ * Describes the message taskguild.v1.ResolveScriptConflictResponse.
+ * Use `create(ResolveScriptConflictResponseSchema)` to create a new message.
+ */
+export const ResolveScriptConflictResponseSchema: GenMessage<ResolveScriptConflictResponse> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_agent_manager, 62);
 
 /**
  * @generated from enum taskguild.v1.AgentStatus
@@ -1377,6 +1641,69 @@ export enum AgentStatus {
  */
 export const AgentStatusSchema: GenEnum<AgentStatus> = /*@__PURE__*/
   enumDesc(file_taskguild_v1_agent_manager, 0);
+
+/**
+ * @generated from enum taskguild.v1.ScriptDiffType
+ */
+export enum ScriptDiffType {
+  /**
+   * @generated from enum value: SCRIPT_DIFF_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * both exist but content differs
+   *
+   * @generated from enum value: SCRIPT_DIFF_TYPE_MODIFIED = 1;
+   */
+  MODIFIED = 1,
+
+  /**
+   * exists on agent but not on server
+   *
+   * @generated from enum value: SCRIPT_DIFF_TYPE_AGENT_ONLY = 2;
+   */
+  AGENT_ONLY = 2,
+
+  /**
+   * exists on server but not on agent
+   *
+   * @generated from enum value: SCRIPT_DIFF_TYPE_SERVER_ONLY = 3;
+   */
+  SERVER_ONLY = 3,
+}
+
+/**
+ * Describes the enum taskguild.v1.ScriptDiffType.
+ */
+export const ScriptDiffTypeSchema: GenEnum<ScriptDiffType> = /*@__PURE__*/
+  enumDesc(file_taskguild_v1_agent_manager, 1);
+
+/**
+ * @generated from enum taskguild.v1.ScriptResolutionChoice
+ */
+export enum ScriptResolutionChoice {
+  /**
+   * @generated from enum value: SCRIPT_RESOLUTION_CHOICE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: SCRIPT_RESOLUTION_CHOICE_SERVER = 1;
+   */
+  SERVER = 1,
+
+  /**
+   * @generated from enum value: SCRIPT_RESOLUTION_CHOICE_AGENT = 2;
+   */
+  AGENT = 2,
+}
+
+/**
+ * Describes the enum taskguild.v1.ScriptResolutionChoice.
+ */
+export const ScriptResolutionChoiceSchema: GenEnum<ScriptResolutionChoice> = /*@__PURE__*/
+  enumDesc(file_taskguild_v1_agent_manager, 2);
 
 /**
  * AgentManagerService is the bidirectional communication channel between
@@ -1587,6 +1914,46 @@ export const AgentManagerService: GenService<{
     methodKind: "unary";
     input: typeof ReportScriptOutputChunkRequestSchema;
     output: typeof ReportScriptOutputChunkResponseSchema;
+  },
+  /**
+   * RequestScriptComparison triggers a script comparison on connected agent-managers (called by frontend).
+   *
+   * @generated from rpc taskguild.v1.AgentManagerService.RequestScriptComparison
+   */
+  requestScriptComparison: {
+    methodKind: "unary";
+    input: typeof RequestScriptComparisonRequestSchema;
+    output: typeof RequestScriptComparisonResponseSchema;
+  },
+  /**
+   * ReportScriptComparison reports script diffs from the agent-manager after comparison.
+   *
+   * @generated from rpc taskguild.v1.AgentManagerService.ReportScriptComparison
+   */
+  reportScriptComparison: {
+    methodKind: "unary";
+    input: typeof ReportScriptComparisonRequestSchema;
+    output: typeof ReportScriptComparisonResponseSchema;
+  },
+  /**
+   * GetScriptComparison returns the cached script comparison result for a project.
+   *
+   * @generated from rpc taskguild.v1.AgentManagerService.GetScriptComparison
+   */
+  getScriptComparison: {
+    methodKind: "unary";
+    input: typeof GetScriptComparisonRequestSchema;
+    output: typeof GetScriptComparisonResponseSchema;
+  },
+  /**
+   * ResolveScriptConflict resolves a per-script conflict between server and agent versions.
+   *
+   * @generated from rpc taskguild.v1.AgentManagerService.ResolveScriptConflict
+   */
+  resolveScriptConflict: {
+    methodKind: "unary";
+    input: typeof ResolveScriptConflictRequestSchema;
+    output: typeof ResolveScriptConflictResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_taskguild_v1_agent_manager, 0);

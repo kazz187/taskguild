@@ -212,7 +212,7 @@ func runAgent() {
 		// Re-sync agents, permissions, and scripts on each reconnection so local files stay up-to-date.
 		syncAgents(ctx, client, cfg)
 		syncPermissions(ctx, client, cfg, permCache)
-		syncScripts(ctx, client, cfg)
+		syncScripts(ctx, client, cfg, nil) // nil = don't force-overwrite any existing files
 
 		err := runSubscribeLoop(ctx, client, taskClient, interClient, cfg, &mu, activeTasks, &wg, sem, permCache)
 		if ctx.Err() != nil {
@@ -385,8 +385,18 @@ func runSubscribeLoop(
 			syncPermissions(ctx, client, cfg, permCache)
 
 		case *v1.AgentCommand_SyncScripts:
-			slog.Info("received sync scripts command, re-syncing")
-			syncScripts(ctx, client, cfg)
+			syncCmd := c.SyncScripts
+			forceIDs := make(map[string]bool, len(syncCmd.GetForceOverwriteScriptIds()))
+			for _, id := range syncCmd.GetForceOverwriteScriptIds() {
+				forceIDs[id] = true
+			}
+			slog.Info("received sync scripts command, re-syncing", "force_overwrite_count", len(forceIDs))
+			syncScripts(ctx, client, cfg, forceIDs)
+
+		case *v1.AgentCommand_CompareScripts:
+			compareCmd := c.CompareScripts
+			slog.Info("received compare scripts command", "request_id", compareCmd.GetRequestId())
+			go handleCompareScripts(ctx, client, cfg, compareCmd)
 
 		case *v1.AgentCommand_ExecuteScript:
 			execCmd := c.ExecuteScript

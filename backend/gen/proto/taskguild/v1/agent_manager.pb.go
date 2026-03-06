@@ -77,6 +77,107 @@ func (AgentStatus) EnumDescriptor() ([]byte, []int) {
 	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{0}
 }
 
+type ScriptDiffType int32
+
+const (
+	ScriptDiffType_SCRIPT_DIFF_TYPE_UNSPECIFIED ScriptDiffType = 0
+	ScriptDiffType_SCRIPT_DIFF_TYPE_MODIFIED    ScriptDiffType = 1 // both exist but content differs
+	ScriptDiffType_SCRIPT_DIFF_TYPE_AGENT_ONLY  ScriptDiffType = 2 // exists on agent but not on server
+	ScriptDiffType_SCRIPT_DIFF_TYPE_SERVER_ONLY ScriptDiffType = 3 // exists on server but not on agent
+)
+
+// Enum value maps for ScriptDiffType.
+var (
+	ScriptDiffType_name = map[int32]string{
+		0: "SCRIPT_DIFF_TYPE_UNSPECIFIED",
+		1: "SCRIPT_DIFF_TYPE_MODIFIED",
+		2: "SCRIPT_DIFF_TYPE_AGENT_ONLY",
+		3: "SCRIPT_DIFF_TYPE_SERVER_ONLY",
+	}
+	ScriptDiffType_value = map[string]int32{
+		"SCRIPT_DIFF_TYPE_UNSPECIFIED": 0,
+		"SCRIPT_DIFF_TYPE_MODIFIED":    1,
+		"SCRIPT_DIFF_TYPE_AGENT_ONLY":  2,
+		"SCRIPT_DIFF_TYPE_SERVER_ONLY": 3,
+	}
+)
+
+func (x ScriptDiffType) Enum() *ScriptDiffType {
+	p := new(ScriptDiffType)
+	*p = x
+	return p
+}
+
+func (x ScriptDiffType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ScriptDiffType) Descriptor() protoreflect.EnumDescriptor {
+	return file_taskguild_v1_agent_manager_proto_enumTypes[1].Descriptor()
+}
+
+func (ScriptDiffType) Type() protoreflect.EnumType {
+	return &file_taskguild_v1_agent_manager_proto_enumTypes[1]
+}
+
+func (x ScriptDiffType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ScriptDiffType.Descriptor instead.
+func (ScriptDiffType) EnumDescriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{1}
+}
+
+type ScriptResolutionChoice int32
+
+const (
+	ScriptResolutionChoice_SCRIPT_RESOLUTION_CHOICE_UNSPECIFIED ScriptResolutionChoice = 0
+	ScriptResolutionChoice_SCRIPT_RESOLUTION_CHOICE_SERVER      ScriptResolutionChoice = 1
+	ScriptResolutionChoice_SCRIPT_RESOLUTION_CHOICE_AGENT       ScriptResolutionChoice = 2
+)
+
+// Enum value maps for ScriptResolutionChoice.
+var (
+	ScriptResolutionChoice_name = map[int32]string{
+		0: "SCRIPT_RESOLUTION_CHOICE_UNSPECIFIED",
+		1: "SCRIPT_RESOLUTION_CHOICE_SERVER",
+		2: "SCRIPT_RESOLUTION_CHOICE_AGENT",
+	}
+	ScriptResolutionChoice_value = map[string]int32{
+		"SCRIPT_RESOLUTION_CHOICE_UNSPECIFIED": 0,
+		"SCRIPT_RESOLUTION_CHOICE_SERVER":      1,
+		"SCRIPT_RESOLUTION_CHOICE_AGENT":       2,
+	}
+)
+
+func (x ScriptResolutionChoice) Enum() *ScriptResolutionChoice {
+	p := new(ScriptResolutionChoice)
+	*p = x
+	return p
+}
+
+func (x ScriptResolutionChoice) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ScriptResolutionChoice) Descriptor() protoreflect.EnumDescriptor {
+	return file_taskguild_v1_agent_manager_proto_enumTypes[2].Descriptor()
+}
+
+func (ScriptResolutionChoice) Type() protoreflect.EnumType {
+	return &file_taskguild_v1_agent_manager_proto_enumTypes[2]
+}
+
+func (x ScriptResolutionChoice) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ScriptResolutionChoice.Descriptor instead.
+func (ScriptResolutionChoice) EnumDescriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{2}
+}
+
 type AgentManagerSubscribeRequest struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	AgentManagerId     string                 `protobuf:"bytes,1,opt,name=agent_manager_id,json=agentManagerId,proto3" json:"agent_manager_id,omitempty"`
@@ -175,6 +276,7 @@ type AgentCommand struct {
 	//	*AgentCommand_SyncScripts
 	//	*AgentCommand_ExecuteScript
 	//	*AgentCommand_Ping
+	//	*AgentCommand_CompareScripts
 	Command       isAgentCommand_Command `protobuf_oneof:"command"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -325,6 +427,15 @@ func (x *AgentCommand) GetPing() *PingCommand {
 	return nil
 }
 
+func (x *AgentCommand) GetCompareScripts() *CompareScriptsCommand {
+	if x != nil {
+		if x, ok := x.Command.(*AgentCommand_CompareScripts); ok {
+			return x.CompareScripts
+		}
+	}
+	return nil
+}
+
 type isAgentCommand_Command interface {
 	isAgentCommand_Command()
 }
@@ -379,6 +490,10 @@ type AgentCommand_Ping struct {
 	Ping *PingCommand `protobuf:"bytes,12,opt,name=ping,proto3,oneof"`
 }
 
+type AgentCommand_CompareScripts struct {
+	CompareScripts *CompareScriptsCommand `protobuf:"bytes,13,opt,name=compare_scripts,json=compareScripts,proto3,oneof"`
+}
+
 func (*AgentCommand_TaskAvailable) isAgentCommand_Command() {}
 
 func (*AgentCommand_AssignTask) isAgentCommand_Command() {}
@@ -402,6 +517,8 @@ func (*AgentCommand_SyncScripts) isAgentCommand_Command() {}
 func (*AgentCommand_ExecuteScript) isAgentCommand_Command() {}
 
 func (*AgentCommand_Ping) isAgentCommand_Command() {}
+
+func (*AgentCommand_CompareScripts) isAgentCommand_Command() {}
 
 // PingCommand is a keepalive message. The client should silently ignore it.
 type PingCommand struct {
@@ -2625,10 +2742,13 @@ func (*ReportGitPullMainResultResponse) Descriptor() ([]byte, []int) {
 }
 
 // SyncScriptsCommand tells the agent to re-sync its local .claude/scripts/* files.
+// When force_overwrite_script_ids is non-empty, those scripts should be overwritten
+// on the agent even if the local file already exists.
 type SyncScriptsCommand struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	ForceOverwriteScriptIds []string               `protobuf:"bytes,1,rep,name=force_overwrite_script_ids,json=forceOverwriteScriptIds,proto3" json:"force_overwrite_script_ids,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *SyncScriptsCommand) Reset() {
@@ -2661,6 +2781,67 @@ func (*SyncScriptsCommand) Descriptor() ([]byte, []int) {
 	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{45}
 }
 
+func (x *SyncScriptsCommand) GetForceOverwriteScriptIds() []string {
+	if x != nil {
+		return x.ForceOverwriteScriptIds
+	}
+	return nil
+}
+
+// CompareScriptsCommand tells the agent to compare its local .claude/scripts/*
+// files with server-side versions and report any differences.
+type CompareScriptsCommand struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	Scripts       []*ScriptDefinition    `protobuf:"bytes,2,rep,name=scripts,proto3" json:"scripts,omitempty"` // all server-side scripts for comparison
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompareScriptsCommand) Reset() {
+	*x = CompareScriptsCommand{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompareScriptsCommand) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompareScriptsCommand) ProtoMessage() {}
+
+func (x *CompareScriptsCommand) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompareScriptsCommand.ProtoReflect.Descriptor instead.
+func (*CompareScriptsCommand) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *CompareScriptsCommand) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *CompareScriptsCommand) GetScripts() []*ScriptDefinition {
+	if x != nil {
+		return x.Scripts
+	}
+	return nil
+}
+
 // ExecuteScriptCommand tells the agent to execute a specific script.
 type ExecuteScriptCommand struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2674,7 +2855,7 @@ type ExecuteScriptCommand struct {
 
 func (x *ExecuteScriptCommand) Reset() {
 	*x = ExecuteScriptCommand{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[46]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2686,7 +2867,7 @@ func (x *ExecuteScriptCommand) String() string {
 func (*ExecuteScriptCommand) ProtoMessage() {}
 
 func (x *ExecuteScriptCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[46]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2699,7 +2880,7 @@ func (x *ExecuteScriptCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecuteScriptCommand.ProtoReflect.Descriptor instead.
 func (*ExecuteScriptCommand) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{46}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *ExecuteScriptCommand) GetRequestId() string {
@@ -2739,7 +2920,7 @@ type SyncScriptsRequest struct {
 
 func (x *SyncScriptsRequest) Reset() {
 	*x = SyncScriptsRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[47]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2751,7 +2932,7 @@ func (x *SyncScriptsRequest) String() string {
 func (*SyncScriptsRequest) ProtoMessage() {}
 
 func (x *SyncScriptsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[47]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2764,7 +2945,7 @@ func (x *SyncScriptsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncScriptsRequest.ProtoReflect.Descriptor instead.
 func (*SyncScriptsRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{47}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *SyncScriptsRequest) GetProjectName() string {
@@ -2783,7 +2964,7 @@ type SyncScriptsResponse struct {
 
 func (x *SyncScriptsResponse) Reset() {
 	*x = SyncScriptsResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[48]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2795,7 +2976,7 @@ func (x *SyncScriptsResponse) String() string {
 func (*SyncScriptsResponse) ProtoMessage() {}
 
 func (x *SyncScriptsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[48]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2808,7 +2989,7 @@ func (x *SyncScriptsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncScriptsResponse.ProtoReflect.Descriptor instead.
 func (*SyncScriptsResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{48}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *SyncScriptsResponse) GetScripts() []*ScriptDefinition {
@@ -2834,7 +3015,7 @@ type ReportScriptExecutionResultRequest struct {
 
 func (x *ReportScriptExecutionResultRequest) Reset() {
 	*x = ReportScriptExecutionResultRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[49]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2846,7 +3027,7 @@ func (x *ReportScriptExecutionResultRequest) String() string {
 func (*ReportScriptExecutionResultRequest) ProtoMessage() {}
 
 func (x *ReportScriptExecutionResultRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[49]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2859,7 +3040,7 @@ func (x *ReportScriptExecutionResultRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ReportScriptExecutionResultRequest.ProtoReflect.Descriptor instead.
 func (*ReportScriptExecutionResultRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{49}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *ReportScriptExecutionResultRequest) GetRequestId() string {
@@ -2926,7 +3107,7 @@ type ReportScriptExecutionResultResponse struct {
 
 func (x *ReportScriptExecutionResultResponse) Reset() {
 	*x = ReportScriptExecutionResultResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[50]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2938,7 +3119,7 @@ func (x *ReportScriptExecutionResultResponse) String() string {
 func (*ReportScriptExecutionResultResponse) ProtoMessage() {}
 
 func (x *ReportScriptExecutionResultResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[50]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2951,7 +3132,7 @@ func (x *ReportScriptExecutionResultResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ReportScriptExecutionResultResponse.ProtoReflect.Descriptor instead.
 func (*ReportScriptExecutionResultResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{50}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{51}
 }
 
 // ReportScriptOutputChunk reports a chunk of real-time script output.
@@ -2967,7 +3148,7 @@ type ReportScriptOutputChunkRequest struct {
 
 func (x *ReportScriptOutputChunkRequest) Reset() {
 	*x = ReportScriptOutputChunkRequest{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[51]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2979,7 +3160,7 @@ func (x *ReportScriptOutputChunkRequest) String() string {
 func (*ReportScriptOutputChunkRequest) ProtoMessage() {}
 
 func (x *ReportScriptOutputChunkRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[51]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2992,7 +3173,7 @@ func (x *ReportScriptOutputChunkRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportScriptOutputChunkRequest.ProtoReflect.Descriptor instead.
 func (*ReportScriptOutputChunkRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{51}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *ReportScriptOutputChunkRequest) GetRequestId() string {
@@ -3031,7 +3212,7 @@ type ReportScriptOutputChunkResponse struct {
 
 func (x *ReportScriptOutputChunkResponse) Reset() {
 	*x = ReportScriptOutputChunkResponse{}
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[52]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3043,7 +3224,7 @@ func (x *ReportScriptOutputChunkResponse) String() string {
 func (*ReportScriptOutputChunkResponse) ProtoMessage() {}
 
 func (x *ReportScriptOutputChunkResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[52]
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3056,7 +3237,495 @@ func (x *ReportScriptOutputChunkResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportScriptOutputChunkResponse.ProtoReflect.Descriptor instead.
 func (*ReportScriptOutputChunkResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{52}
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{53}
+}
+
+type ScriptDiff struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ScriptId      string                 `protobuf:"bytes,1,opt,name=script_id,json=scriptId,proto3" json:"script_id,omitempty"` // empty if agent-only script
+	ScriptName    string                 `protobuf:"bytes,2,opt,name=script_name,json=scriptName,proto3" json:"script_name,omitempty"`
+	Filename      string                 `protobuf:"bytes,3,opt,name=filename,proto3" json:"filename,omitempty"`
+	ServerContent string                 `protobuf:"bytes,4,opt,name=server_content,json=serverContent,proto3" json:"server_content,omitempty"`
+	AgentContent  string                 `protobuf:"bytes,5,opt,name=agent_content,json=agentContent,proto3" json:"agent_content,omitempty"`
+	DiffType      ScriptDiffType         `protobuf:"varint,6,opt,name=diff_type,json=diffType,proto3,enum=taskguild.v1.ScriptDiffType" json:"diff_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ScriptDiff) Reset() {
+	*x = ScriptDiff{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ScriptDiff) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ScriptDiff) ProtoMessage() {}
+
+func (x *ScriptDiff) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ScriptDiff.ProtoReflect.Descriptor instead.
+func (*ScriptDiff) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *ScriptDiff) GetScriptId() string {
+	if x != nil {
+		return x.ScriptId
+	}
+	return ""
+}
+
+func (x *ScriptDiff) GetScriptName() string {
+	if x != nil {
+		return x.ScriptName
+	}
+	return ""
+}
+
+func (x *ScriptDiff) GetFilename() string {
+	if x != nil {
+		return x.Filename
+	}
+	return ""
+}
+
+func (x *ScriptDiff) GetServerContent() string {
+	if x != nil {
+		return x.ServerContent
+	}
+	return ""
+}
+
+func (x *ScriptDiff) GetAgentContent() string {
+	if x != nil {
+		return x.AgentContent
+	}
+	return ""
+}
+
+func (x *ScriptDiff) GetDiffType() ScriptDiffType {
+	if x != nil {
+		return x.DiffType
+	}
+	return ScriptDiffType_SCRIPT_DIFF_TYPE_UNSPECIFIED
+}
+
+// RequestScriptComparison triggers a comparison on connected agents (called by frontend).
+type RequestScriptComparisonRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestScriptComparisonRequest) Reset() {
+	*x = RequestScriptComparisonRequest{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestScriptComparisonRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestScriptComparisonRequest) ProtoMessage() {}
+
+func (x *RequestScriptComparisonRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestScriptComparisonRequest.ProtoReflect.Descriptor instead.
+func (*RequestScriptComparisonRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{55}
+}
+
+func (x *RequestScriptComparisonRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+type RequestScriptComparisonResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestScriptComparisonResponse) Reset() {
+	*x = RequestScriptComparisonResponse{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestScriptComparisonResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestScriptComparisonResponse) ProtoMessage() {}
+
+func (x *RequestScriptComparisonResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestScriptComparisonResponse.ProtoReflect.Descriptor instead.
+func (*RequestScriptComparisonResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{56}
+}
+
+func (x *RequestScriptComparisonResponse) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+// ReportScriptComparison is sent by the agent after comparing local scripts with server versions.
+type ReportScriptComparisonRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	ProjectName   string                 `protobuf:"bytes,2,opt,name=project_name,json=projectName,proto3" json:"project_name,omitempty"`
+	Diffs         []*ScriptDiff          `protobuf:"bytes,3,rep,name=diffs,proto3" json:"diffs,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportScriptComparisonRequest) Reset() {
+	*x = ReportScriptComparisonRequest{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportScriptComparisonRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportScriptComparisonRequest) ProtoMessage() {}
+
+func (x *ReportScriptComparisonRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportScriptComparisonRequest.ProtoReflect.Descriptor instead.
+func (*ReportScriptComparisonRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{57}
+}
+
+func (x *ReportScriptComparisonRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *ReportScriptComparisonRequest) GetProjectName() string {
+	if x != nil {
+		return x.ProjectName
+	}
+	return ""
+}
+
+func (x *ReportScriptComparisonRequest) GetDiffs() []*ScriptDiff {
+	if x != nil {
+		return x.Diffs
+	}
+	return nil
+}
+
+type ReportScriptComparisonResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportScriptComparisonResponse) Reset() {
+	*x = ReportScriptComparisonResponse{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[58]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportScriptComparisonResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportScriptComparisonResponse) ProtoMessage() {}
+
+func (x *ReportScriptComparisonResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[58]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportScriptComparisonResponse.ProtoReflect.Descriptor instead.
+func (*ReportScriptComparisonResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{58}
+}
+
+// GetScriptComparison returns the cached comparison result for a project.
+type GetScriptComparisonRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetScriptComparisonRequest) Reset() {
+	*x = GetScriptComparisonRequest{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[59]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetScriptComparisonRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetScriptComparisonRequest) ProtoMessage() {}
+
+func (x *GetScriptComparisonRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[59]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetScriptComparisonRequest.ProtoReflect.Descriptor instead.
+func (*GetScriptComparisonRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{59}
+}
+
+func (x *GetScriptComparisonRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+type GetScriptComparisonResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Diffs         []*ScriptDiff          `protobuf:"bytes,1,rep,name=diffs,proto3" json:"diffs,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetScriptComparisonResponse) Reset() {
+	*x = GetScriptComparisonResponse{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[60]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetScriptComparisonResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetScriptComparisonResponse) ProtoMessage() {}
+
+func (x *GetScriptComparisonResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[60]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetScriptComparisonResponse.ProtoReflect.Descriptor instead.
+func (*GetScriptComparisonResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{60}
+}
+
+func (x *GetScriptComparisonResponse) GetDiffs() []*ScriptDiff {
+	if x != nil {
+		return x.Diffs
+	}
+	return nil
+}
+
+// ResolveScriptConflict resolves a single script conflict between server and agent.
+type ResolveScriptConflictRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	ScriptId      string                 `protobuf:"bytes,2,opt,name=script_id,json=scriptId,proto3" json:"script_id,omitempty"` // empty if agent-only (will create new)
+	ScriptName    string                 `protobuf:"bytes,3,opt,name=script_name,json=scriptName,proto3" json:"script_name,omitempty"`
+	Filename      string                 `protobuf:"bytes,4,opt,name=filename,proto3" json:"filename,omitempty"`
+	Choice        ScriptResolutionChoice `protobuf:"varint,5,opt,name=choice,proto3,enum=taskguild.v1.ScriptResolutionChoice" json:"choice,omitempty"`
+	AgentContent  string                 `protobuf:"bytes,6,opt,name=agent_content,json=agentContent,proto3" json:"agent_content,omitempty"` // only needed when choice = AGENT
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResolveScriptConflictRequest) Reset() {
+	*x = ResolveScriptConflictRequest{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[61]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResolveScriptConflictRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResolveScriptConflictRequest) ProtoMessage() {}
+
+func (x *ResolveScriptConflictRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[61]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResolveScriptConflictRequest.ProtoReflect.Descriptor instead.
+func (*ResolveScriptConflictRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{61}
+}
+
+func (x *ResolveScriptConflictRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *ResolveScriptConflictRequest) GetScriptId() string {
+	if x != nil {
+		return x.ScriptId
+	}
+	return ""
+}
+
+func (x *ResolveScriptConflictRequest) GetScriptName() string {
+	if x != nil {
+		return x.ScriptName
+	}
+	return ""
+}
+
+func (x *ResolveScriptConflictRequest) GetFilename() string {
+	if x != nil {
+		return x.Filename
+	}
+	return ""
+}
+
+func (x *ResolveScriptConflictRequest) GetChoice() ScriptResolutionChoice {
+	if x != nil {
+		return x.Choice
+	}
+	return ScriptResolutionChoice_SCRIPT_RESOLUTION_CHOICE_UNSPECIFIED
+}
+
+func (x *ResolveScriptConflictRequest) GetAgentContent() string {
+	if x != nil {
+		return x.AgentContent
+	}
+	return ""
+}
+
+type ResolveScriptConflictResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Script        *ScriptDefinition      `protobuf:"bytes,1,opt,name=script,proto3" json:"script,omitempty"` // the resulting script after resolution
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResolveScriptConflictResponse) Reset() {
+	*x = ResolveScriptConflictResponse{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[62]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResolveScriptConflictResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResolveScriptConflictResponse) ProtoMessage() {}
+
+func (x *ResolveScriptConflictResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[62]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResolveScriptConflictResponse.ProtoReflect.Descriptor instead.
+func (*ResolveScriptConflictResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{62}
+}
+
+func (x *ResolveScriptConflictResponse) GetScript() *ScriptDefinition {
+	if x != nil {
+		return x.Script
+	}
+	return nil
 }
 
 var File_taskguild_v1_agent_manager_proto protoreflect.FileDescriptor
@@ -3069,7 +3738,7 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\fproject_name\x18\x02 \x01(\tR\vprojectName\x120\n" +
 	"\x14max_concurrent_tasks\x18\x03 \x01(\x05R\x12maxConcurrentTasks\x12&\n" +
 	"\x0factive_task_ids\x18\x04 \x03(\tR\ractiveTaskIds\x12#\n" +
-	"\ragent_version\x18\x05 \x01(\tR\fagentVersion\"\x8e\a\n" +
+	"\ragent_version\x18\x05 \x01(\tR\fagentVersion\"\xde\a\n" +
 	"\fAgentCommand\x12K\n" +
 	"\x0etask_available\x18\x01 \x01(\v2\".taskguild.v1.TaskAvailableCommandH\x00R\rtaskAvailable\x12B\n" +
 	"\vassign_task\x18\x02 \x01(\v2\x1f.taskguild.v1.AssignTaskCommandH\x00R\n" +
@@ -3086,7 +3755,8 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\fsync_scripts\x18\n" +
 	" \x01(\v2 .taskguild.v1.SyncScriptsCommandH\x00R\vsyncScripts\x12K\n" +
 	"\x0eexecute_script\x18\v \x01(\v2\".taskguild.v1.ExecuteScriptCommandH\x00R\rexecuteScript\x12/\n" +
-	"\x04ping\x18\f \x01(\v2\x19.taskguild.v1.PingCommandH\x00R\x04pingB\t\n" +
+	"\x04ping\x18\f \x01(\v2\x19.taskguild.v1.PingCommandH\x00R\x04ping\x12N\n" +
+	"\x0fcompare_scripts\x18\r \x01(\v2#.taskguild.v1.CompareScriptsCommandH\x00R\x0ecompareScriptsB\t\n" +
 	"\acommand\"\r\n" +
 	"\vPingCommand\"\xf8\x01\n" +
 	"\x14TaskAvailableCommand\x12\x17\n" +
@@ -3241,8 +3911,13 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\asuccess\x18\x03 \x01(\bR\asuccess\x12\x16\n" +
 	"\x06output\x18\x04 \x01(\tR\x06output\x12#\n" +
 	"\rerror_message\x18\x05 \x01(\tR\ferrorMessage\"!\n" +
-	"\x1fReportGitPullMainResultResponse\"\x14\n" +
-	"\x12SyncScriptsCommand\"\x88\x01\n" +
+	"\x1fReportGitPullMainResultResponse\"Q\n" +
+	"\x12SyncScriptsCommand\x12;\n" +
+	"\x1aforce_overwrite_script_ids\x18\x01 \x03(\tR\x17forceOverwriteScriptIds\"p\n" +
+	"\x15CompareScriptsCommand\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x128\n" +
+	"\ascripts\x18\x02 \x03(\v2\x1e.taskguild.v1.ScriptDefinitionR\ascripts\"\x88\x01\n" +
 	"\x14ExecuteScriptCommand\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x12\x1b\n" +
@@ -3270,13 +3945,59 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\fproject_name\x18\x02 \x01(\tR\vprojectName\x12!\n" +
 	"\fstdout_chunk\x18\x03 \x01(\tR\vstdoutChunk\x12!\n" +
 	"\fstderr_chunk\x18\x04 \x01(\tR\vstderrChunk\"!\n" +
-	"\x1fReportScriptOutputChunkResponse*\x8e\x01\n" +
+	"\x1fReportScriptOutputChunkResponse\"\xed\x01\n" +
+	"\n" +
+	"ScriptDiff\x12\x1b\n" +
+	"\tscript_id\x18\x01 \x01(\tR\bscriptId\x12\x1f\n" +
+	"\vscript_name\x18\x02 \x01(\tR\n" +
+	"scriptName\x12\x1a\n" +
+	"\bfilename\x18\x03 \x01(\tR\bfilename\x12%\n" +
+	"\x0eserver_content\x18\x04 \x01(\tR\rserverContent\x12#\n" +
+	"\ragent_content\x18\x05 \x01(\tR\fagentContent\x129\n" +
+	"\tdiff_type\x18\x06 \x01(\x0e2\x1c.taskguild.v1.ScriptDiffTypeR\bdiffType\"?\n" +
+	"\x1eRequestScriptComparisonRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\"@\n" +
+	"\x1fRequestScriptComparisonResponse\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\"\x91\x01\n" +
+	"\x1dReportScriptComparisonRequest\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12!\n" +
+	"\fproject_name\x18\x02 \x01(\tR\vprojectName\x12.\n" +
+	"\x05diffs\x18\x03 \x03(\v2\x18.taskguild.v1.ScriptDiffR\x05diffs\" \n" +
+	"\x1eReportScriptComparisonResponse\";\n" +
+	"\x1aGetScriptComparisonRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\"M\n" +
+	"\x1bGetScriptComparisonResponse\x12.\n" +
+	"\x05diffs\x18\x01 \x03(\v2\x18.taskguild.v1.ScriptDiffR\x05diffs\"\xfa\x01\n" +
+	"\x1cResolveScriptConflictRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1b\n" +
+	"\tscript_id\x18\x02 \x01(\tR\bscriptId\x12\x1f\n" +
+	"\vscript_name\x18\x03 \x01(\tR\n" +
+	"scriptName\x12\x1a\n" +
+	"\bfilename\x18\x04 \x01(\tR\bfilename\x12<\n" +
+	"\x06choice\x18\x05 \x01(\x0e2$.taskguild.v1.ScriptResolutionChoiceR\x06choice\x12#\n" +
+	"\ragent_content\x18\x06 \x01(\tR\fagentContent\"W\n" +
+	"\x1dResolveScriptConflictResponse\x126\n" +
+	"\x06script\x18\x01 \x01(\v2\x1e.taskguild.v1.ScriptDefinitionR\x06script*\x8e\x01\n" +
 	"\vAgentStatus\x12\x1c\n" +
 	"\x18AGENT_STATUS_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11AGENT_STATUS_IDLE\x10\x01\x12\x18\n" +
 	"\x14AGENT_STATUS_RUNNING\x10\x02\x12\x18\n" +
 	"\x14AGENT_STATUS_WAITING\x10\x03\x12\x16\n" +
-	"\x12AGENT_STATUS_ERROR\x10\x042\x91\x10\n" +
+	"\x12AGENT_STATUS_ERROR\x10\x04*\x94\x01\n" +
+	"\x0eScriptDiffType\x12 \n" +
+	"\x1cSCRIPT_DIFF_TYPE_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19SCRIPT_DIFF_TYPE_MODIFIED\x10\x01\x12\x1f\n" +
+	"\x1bSCRIPT_DIFF_TYPE_AGENT_ONLY\x10\x02\x12 \n" +
+	"\x1cSCRIPT_DIFF_TYPE_SERVER_ONLY\x10\x03*\x8b\x01\n" +
+	"\x16ScriptResolutionChoice\x12(\n" +
+	"$SCRIPT_RESOLUTION_CHOICE_UNSPECIFIED\x10\x00\x12#\n" +
+	"\x1fSCRIPT_RESOLUTION_CHOICE_SERVER\x10\x01\x12\"\n" +
+	"\x1eSCRIPT_RESOLUTION_CHOICE_AGENT\x10\x022\xdc\x13\n" +
 	"\x13AgentManagerService\x12U\n" +
 	"\tSubscribe\x12*.taskguild.v1.AgentManagerSubscribeRequest\x1a\x1a.taskguild.v1.AgentCommand0\x01\x12L\n" +
 	"\tClaimTask\x12\x1e.taskguild.v1.ClaimTaskRequest\x1a\x1f.taskguild.v1.ClaimTaskResponse\x12a\n" +
@@ -3298,7 +4019,11 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\x17ReportGitPullMainResult\x12,.taskguild.v1.ReportGitPullMainResultRequest\x1a-.taskguild.v1.ReportGitPullMainResultResponse\x12R\n" +
 	"\vSyncScripts\x12 .taskguild.v1.SyncScriptsRequest\x1a!.taskguild.v1.SyncScriptsResponse\x12\x82\x01\n" +
 	"\x1bReportScriptExecutionResult\x120.taskguild.v1.ReportScriptExecutionResultRequest\x1a1.taskguild.v1.ReportScriptExecutionResultResponse\x12v\n" +
-	"\x17ReportScriptOutputChunk\x12,.taskguild.v1.ReportScriptOutputChunkRequest\x1a-.taskguild.v1.ReportScriptOutputChunkResponseB\xbf\x01\n" +
+	"\x17ReportScriptOutputChunk\x12,.taskguild.v1.ReportScriptOutputChunkRequest\x1a-.taskguild.v1.ReportScriptOutputChunkResponse\x12v\n" +
+	"\x17RequestScriptComparison\x12,.taskguild.v1.RequestScriptComparisonRequest\x1a-.taskguild.v1.RequestScriptComparisonResponse\x12s\n" +
+	"\x16ReportScriptComparison\x12+.taskguild.v1.ReportScriptComparisonRequest\x1a,.taskguild.v1.ReportScriptComparisonResponse\x12j\n" +
+	"\x13GetScriptComparison\x12(.taskguild.v1.GetScriptComparisonRequest\x1a).taskguild.v1.GetScriptComparisonResponse\x12p\n" +
+	"\x15ResolveScriptConflict\x12*.taskguild.v1.ResolveScriptConflictRequest\x1a+.taskguild.v1.ResolveScriptConflictResponseB\xbf\x01\n" +
 	"\x10com.taskguild.v1B\x11AgentManagerProtoP\x01ZGgithub.com/kazz187/taskguild/backend/gen/proto/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
@@ -3313,152 +4038,179 @@ func file_taskguild_v1_agent_manager_proto_rawDescGZIP() []byte {
 	return file_taskguild_v1_agent_manager_proto_rawDescData
 }
 
-var file_taskguild_v1_agent_manager_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_taskguild_v1_agent_manager_proto_msgTypes = make([]protoimpl.MessageInfo, 57)
+var file_taskguild_v1_agent_manager_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_taskguild_v1_agent_manager_proto_msgTypes = make([]protoimpl.MessageInfo, 67)
 var file_taskguild_v1_agent_manager_proto_goTypes = []any{
 	(AgentStatus)(0),                            // 0: taskguild.v1.AgentStatus
-	(*AgentManagerSubscribeRequest)(nil),        // 1: taskguild.v1.AgentManagerSubscribeRequest
-	(*AgentCommand)(nil),                        // 2: taskguild.v1.AgentCommand
-	(*PingCommand)(nil),                         // 3: taskguild.v1.PingCommand
-	(*TaskAvailableCommand)(nil),                // 4: taskguild.v1.TaskAvailableCommand
-	(*AssignTaskCommand)(nil),                   // 5: taskguild.v1.AssignTaskCommand
-	(*CancelTaskCommand)(nil),                   // 6: taskguild.v1.CancelTaskCommand
-	(*InteractionResponseCommand)(nil),          // 7: taskguild.v1.InteractionResponseCommand
-	(*SyncAgentsCommand)(nil),                   // 8: taskguild.v1.SyncAgentsCommand
-	(*SyncPermissionsCommand)(nil),              // 9: taskguild.v1.SyncPermissionsCommand
-	(*ListWorktreesCommand)(nil),                // 10: taskguild.v1.ListWorktreesCommand
-	(*ClaimTaskRequest)(nil),                    // 11: taskguild.v1.ClaimTaskRequest
-	(*ClaimTaskResponse)(nil),                   // 12: taskguild.v1.ClaimTaskResponse
-	(*ReportTaskResultRequest)(nil),             // 13: taskguild.v1.ReportTaskResultRequest
-	(*ReportTaskResultResponse)(nil),            // 14: taskguild.v1.ReportTaskResultResponse
-	(*ReportAgentStatusRequest)(nil),            // 15: taskguild.v1.ReportAgentStatusRequest
-	(*ReportAgentStatusResponse)(nil),           // 16: taskguild.v1.ReportAgentStatusResponse
-	(*HeartbeatRequest)(nil),                    // 17: taskguild.v1.HeartbeatRequest
-	(*HeartbeatResponse)(nil),                   // 18: taskguild.v1.HeartbeatResponse
-	(*CreateInteractionRequest)(nil),            // 19: taskguild.v1.CreateInteractionRequest
-	(*CreateInteractionResponse)(nil),           // 20: taskguild.v1.CreateInteractionResponse
-	(*GetInteractionResponseRequest)(nil),       // 21: taskguild.v1.GetInteractionResponseRequest
-	(*GetInteractionResponseResponse)(nil),      // 22: taskguild.v1.GetInteractionResponseResponse
-	(*SyncAgentsRequest)(nil),                   // 23: taskguild.v1.SyncAgentsRequest
-	(*SyncAgentsResponse)(nil),                  // 24: taskguild.v1.SyncAgentsResponse
-	(*SyncPermissionsRequest)(nil),              // 25: taskguild.v1.SyncPermissionsRequest
-	(*SyncPermissionsResponse)(nil),             // 26: taskguild.v1.SyncPermissionsResponse
-	(*ReportTaskLogRequest)(nil),                // 27: taskguild.v1.ReportTaskLogRequest
-	(*ReportTaskLogResponse)(nil),               // 28: taskguild.v1.ReportTaskLogResponse
-	(*WorktreeInfo)(nil),                        // 29: taskguild.v1.WorktreeInfo
-	(*DeleteWorktreeCommand)(nil),               // 30: taskguild.v1.DeleteWorktreeCommand
-	(*ReportWorktreeListRequest)(nil),           // 31: taskguild.v1.ReportWorktreeListRequest
-	(*ReportWorktreeListResponse)(nil),          // 32: taskguild.v1.ReportWorktreeListResponse
-	(*RequestWorktreeListRequest)(nil),          // 33: taskguild.v1.RequestWorktreeListRequest
-	(*RequestWorktreeListResponse)(nil),         // 34: taskguild.v1.RequestWorktreeListResponse
-	(*GetWorktreeListRequest)(nil),              // 35: taskguild.v1.GetWorktreeListRequest
-	(*GetWorktreeListResponse)(nil),             // 36: taskguild.v1.GetWorktreeListResponse
-	(*RequestWorktreeDeleteRequest)(nil),        // 37: taskguild.v1.RequestWorktreeDeleteRequest
-	(*RequestWorktreeDeleteResponse)(nil),       // 38: taskguild.v1.RequestWorktreeDeleteResponse
-	(*ReportWorktreeDeleteResultRequest)(nil),   // 39: taskguild.v1.ReportWorktreeDeleteResultRequest
-	(*ReportWorktreeDeleteResultResponse)(nil),  // 40: taskguild.v1.ReportWorktreeDeleteResultResponse
-	(*GitPullMainCommand)(nil),                  // 41: taskguild.v1.GitPullMainCommand
-	(*RequestGitPullMainRequest)(nil),           // 42: taskguild.v1.RequestGitPullMainRequest
-	(*RequestGitPullMainResponse)(nil),          // 43: taskguild.v1.RequestGitPullMainResponse
-	(*ReportGitPullMainResultRequest)(nil),      // 44: taskguild.v1.ReportGitPullMainResultRequest
-	(*ReportGitPullMainResultResponse)(nil),     // 45: taskguild.v1.ReportGitPullMainResultResponse
-	(*SyncScriptsCommand)(nil),                  // 46: taskguild.v1.SyncScriptsCommand
-	(*ExecuteScriptCommand)(nil),                // 47: taskguild.v1.ExecuteScriptCommand
-	(*SyncScriptsRequest)(nil),                  // 48: taskguild.v1.SyncScriptsRequest
-	(*SyncScriptsResponse)(nil),                 // 49: taskguild.v1.SyncScriptsResponse
-	(*ReportScriptExecutionResultRequest)(nil),  // 50: taskguild.v1.ReportScriptExecutionResultRequest
-	(*ReportScriptExecutionResultResponse)(nil), // 51: taskguild.v1.ReportScriptExecutionResultResponse
-	(*ReportScriptOutputChunkRequest)(nil),      // 52: taskguild.v1.ReportScriptOutputChunkRequest
-	(*ReportScriptOutputChunkResponse)(nil),     // 53: taskguild.v1.ReportScriptOutputChunkResponse
-	nil,                                         // 54: taskguild.v1.TaskAvailableCommand.MetadataEntry
-	nil,                                         // 55: taskguild.v1.AssignTaskCommand.MetadataEntry
-	nil,                                         // 56: taskguild.v1.ClaimTaskResponse.MetadataEntry
-	nil,                                         // 57: taskguild.v1.ReportTaskLogRequest.MetadataEntry
-	(*timestamppb.Timestamp)(nil),               // 58: google.protobuf.Timestamp
-	(InteractionType)(0),                        // 59: taskguild.v1.InteractionType
-	(*InteractionOption)(nil),                   // 60: taskguild.v1.InteractionOption
-	(*Interaction)(nil),                         // 61: taskguild.v1.Interaction
-	(*AgentDefinition)(nil),                     // 62: taskguild.v1.AgentDefinition
-	(*PermissionSet)(nil),                       // 63: taskguild.v1.PermissionSet
-	(TaskLogLevel)(0),                           // 64: taskguild.v1.TaskLogLevel
-	(TaskLogCategory)(0),                        // 65: taskguild.v1.TaskLogCategory
-	(*ScriptDefinition)(nil),                    // 66: taskguild.v1.ScriptDefinition
+	(ScriptDiffType)(0),                         // 1: taskguild.v1.ScriptDiffType
+	(ScriptResolutionChoice)(0),                 // 2: taskguild.v1.ScriptResolutionChoice
+	(*AgentManagerSubscribeRequest)(nil),        // 3: taskguild.v1.AgentManagerSubscribeRequest
+	(*AgentCommand)(nil),                        // 4: taskguild.v1.AgentCommand
+	(*PingCommand)(nil),                         // 5: taskguild.v1.PingCommand
+	(*TaskAvailableCommand)(nil),                // 6: taskguild.v1.TaskAvailableCommand
+	(*AssignTaskCommand)(nil),                   // 7: taskguild.v1.AssignTaskCommand
+	(*CancelTaskCommand)(nil),                   // 8: taskguild.v1.CancelTaskCommand
+	(*InteractionResponseCommand)(nil),          // 9: taskguild.v1.InteractionResponseCommand
+	(*SyncAgentsCommand)(nil),                   // 10: taskguild.v1.SyncAgentsCommand
+	(*SyncPermissionsCommand)(nil),              // 11: taskguild.v1.SyncPermissionsCommand
+	(*ListWorktreesCommand)(nil),                // 12: taskguild.v1.ListWorktreesCommand
+	(*ClaimTaskRequest)(nil),                    // 13: taskguild.v1.ClaimTaskRequest
+	(*ClaimTaskResponse)(nil),                   // 14: taskguild.v1.ClaimTaskResponse
+	(*ReportTaskResultRequest)(nil),             // 15: taskguild.v1.ReportTaskResultRequest
+	(*ReportTaskResultResponse)(nil),            // 16: taskguild.v1.ReportTaskResultResponse
+	(*ReportAgentStatusRequest)(nil),            // 17: taskguild.v1.ReportAgentStatusRequest
+	(*ReportAgentStatusResponse)(nil),           // 18: taskguild.v1.ReportAgentStatusResponse
+	(*HeartbeatRequest)(nil),                    // 19: taskguild.v1.HeartbeatRequest
+	(*HeartbeatResponse)(nil),                   // 20: taskguild.v1.HeartbeatResponse
+	(*CreateInteractionRequest)(nil),            // 21: taskguild.v1.CreateInteractionRequest
+	(*CreateInteractionResponse)(nil),           // 22: taskguild.v1.CreateInteractionResponse
+	(*GetInteractionResponseRequest)(nil),       // 23: taskguild.v1.GetInteractionResponseRequest
+	(*GetInteractionResponseResponse)(nil),      // 24: taskguild.v1.GetInteractionResponseResponse
+	(*SyncAgentsRequest)(nil),                   // 25: taskguild.v1.SyncAgentsRequest
+	(*SyncAgentsResponse)(nil),                  // 26: taskguild.v1.SyncAgentsResponse
+	(*SyncPermissionsRequest)(nil),              // 27: taskguild.v1.SyncPermissionsRequest
+	(*SyncPermissionsResponse)(nil),             // 28: taskguild.v1.SyncPermissionsResponse
+	(*ReportTaskLogRequest)(nil),                // 29: taskguild.v1.ReportTaskLogRequest
+	(*ReportTaskLogResponse)(nil),               // 30: taskguild.v1.ReportTaskLogResponse
+	(*WorktreeInfo)(nil),                        // 31: taskguild.v1.WorktreeInfo
+	(*DeleteWorktreeCommand)(nil),               // 32: taskguild.v1.DeleteWorktreeCommand
+	(*ReportWorktreeListRequest)(nil),           // 33: taskguild.v1.ReportWorktreeListRequest
+	(*ReportWorktreeListResponse)(nil),          // 34: taskguild.v1.ReportWorktreeListResponse
+	(*RequestWorktreeListRequest)(nil),          // 35: taskguild.v1.RequestWorktreeListRequest
+	(*RequestWorktreeListResponse)(nil),         // 36: taskguild.v1.RequestWorktreeListResponse
+	(*GetWorktreeListRequest)(nil),              // 37: taskguild.v1.GetWorktreeListRequest
+	(*GetWorktreeListResponse)(nil),             // 38: taskguild.v1.GetWorktreeListResponse
+	(*RequestWorktreeDeleteRequest)(nil),        // 39: taskguild.v1.RequestWorktreeDeleteRequest
+	(*RequestWorktreeDeleteResponse)(nil),       // 40: taskguild.v1.RequestWorktreeDeleteResponse
+	(*ReportWorktreeDeleteResultRequest)(nil),   // 41: taskguild.v1.ReportWorktreeDeleteResultRequest
+	(*ReportWorktreeDeleteResultResponse)(nil),  // 42: taskguild.v1.ReportWorktreeDeleteResultResponse
+	(*GitPullMainCommand)(nil),                  // 43: taskguild.v1.GitPullMainCommand
+	(*RequestGitPullMainRequest)(nil),           // 44: taskguild.v1.RequestGitPullMainRequest
+	(*RequestGitPullMainResponse)(nil),          // 45: taskguild.v1.RequestGitPullMainResponse
+	(*ReportGitPullMainResultRequest)(nil),      // 46: taskguild.v1.ReportGitPullMainResultRequest
+	(*ReportGitPullMainResultResponse)(nil),     // 47: taskguild.v1.ReportGitPullMainResultResponse
+	(*SyncScriptsCommand)(nil),                  // 48: taskguild.v1.SyncScriptsCommand
+	(*CompareScriptsCommand)(nil),               // 49: taskguild.v1.CompareScriptsCommand
+	(*ExecuteScriptCommand)(nil),                // 50: taskguild.v1.ExecuteScriptCommand
+	(*SyncScriptsRequest)(nil),                  // 51: taskguild.v1.SyncScriptsRequest
+	(*SyncScriptsResponse)(nil),                 // 52: taskguild.v1.SyncScriptsResponse
+	(*ReportScriptExecutionResultRequest)(nil),  // 53: taskguild.v1.ReportScriptExecutionResultRequest
+	(*ReportScriptExecutionResultResponse)(nil), // 54: taskguild.v1.ReportScriptExecutionResultResponse
+	(*ReportScriptOutputChunkRequest)(nil),      // 55: taskguild.v1.ReportScriptOutputChunkRequest
+	(*ReportScriptOutputChunkResponse)(nil),     // 56: taskguild.v1.ReportScriptOutputChunkResponse
+	(*ScriptDiff)(nil),                          // 57: taskguild.v1.ScriptDiff
+	(*RequestScriptComparisonRequest)(nil),      // 58: taskguild.v1.RequestScriptComparisonRequest
+	(*RequestScriptComparisonResponse)(nil),     // 59: taskguild.v1.RequestScriptComparisonResponse
+	(*ReportScriptComparisonRequest)(nil),       // 60: taskguild.v1.ReportScriptComparisonRequest
+	(*ReportScriptComparisonResponse)(nil),      // 61: taskguild.v1.ReportScriptComparisonResponse
+	(*GetScriptComparisonRequest)(nil),          // 62: taskguild.v1.GetScriptComparisonRequest
+	(*GetScriptComparisonResponse)(nil),         // 63: taskguild.v1.GetScriptComparisonResponse
+	(*ResolveScriptConflictRequest)(nil),        // 64: taskguild.v1.ResolveScriptConflictRequest
+	(*ResolveScriptConflictResponse)(nil),       // 65: taskguild.v1.ResolveScriptConflictResponse
+	nil,                                         // 66: taskguild.v1.TaskAvailableCommand.MetadataEntry
+	nil,                                         // 67: taskguild.v1.AssignTaskCommand.MetadataEntry
+	nil,                                         // 68: taskguild.v1.ClaimTaskResponse.MetadataEntry
+	nil,                                         // 69: taskguild.v1.ReportTaskLogRequest.MetadataEntry
+	(*timestamppb.Timestamp)(nil),               // 70: google.protobuf.Timestamp
+	(InteractionType)(0),                        // 71: taskguild.v1.InteractionType
+	(*InteractionOption)(nil),                   // 72: taskguild.v1.InteractionOption
+	(*Interaction)(nil),                         // 73: taskguild.v1.Interaction
+	(*AgentDefinition)(nil),                     // 74: taskguild.v1.AgentDefinition
+	(*PermissionSet)(nil),                       // 75: taskguild.v1.PermissionSet
+	(TaskLogLevel)(0),                           // 76: taskguild.v1.TaskLogLevel
+	(TaskLogCategory)(0),                        // 77: taskguild.v1.TaskLogCategory
+	(*ScriptDefinition)(nil),                    // 78: taskguild.v1.ScriptDefinition
 }
 var file_taskguild_v1_agent_manager_proto_depIdxs = []int32{
-	4,  // 0: taskguild.v1.AgentCommand.task_available:type_name -> taskguild.v1.TaskAvailableCommand
-	5,  // 1: taskguild.v1.AgentCommand.assign_task:type_name -> taskguild.v1.AssignTaskCommand
-	6,  // 2: taskguild.v1.AgentCommand.cancel_task:type_name -> taskguild.v1.CancelTaskCommand
-	7,  // 3: taskguild.v1.AgentCommand.interaction_response:type_name -> taskguild.v1.InteractionResponseCommand
-	8,  // 4: taskguild.v1.AgentCommand.sync_agents:type_name -> taskguild.v1.SyncAgentsCommand
-	9,  // 5: taskguild.v1.AgentCommand.sync_permissions:type_name -> taskguild.v1.SyncPermissionsCommand
-	10, // 6: taskguild.v1.AgentCommand.list_worktrees:type_name -> taskguild.v1.ListWorktreesCommand
-	30, // 7: taskguild.v1.AgentCommand.delete_worktree:type_name -> taskguild.v1.DeleteWorktreeCommand
-	41, // 8: taskguild.v1.AgentCommand.git_pull_main:type_name -> taskguild.v1.GitPullMainCommand
-	46, // 9: taskguild.v1.AgentCommand.sync_scripts:type_name -> taskguild.v1.SyncScriptsCommand
-	47, // 10: taskguild.v1.AgentCommand.execute_script:type_name -> taskguild.v1.ExecuteScriptCommand
-	3,  // 11: taskguild.v1.AgentCommand.ping:type_name -> taskguild.v1.PingCommand
-	54, // 12: taskguild.v1.TaskAvailableCommand.metadata:type_name -> taskguild.v1.TaskAvailableCommand.MetadataEntry
-	55, // 13: taskguild.v1.AssignTaskCommand.metadata:type_name -> taskguild.v1.AssignTaskCommand.MetadataEntry
-	56, // 14: taskguild.v1.ClaimTaskResponse.metadata:type_name -> taskguild.v1.ClaimTaskResponse.MetadataEntry
-	0,  // 15: taskguild.v1.ReportAgentStatusRequest.status:type_name -> taskguild.v1.AgentStatus
-	58, // 16: taskguild.v1.HeartbeatRequest.timestamp:type_name -> google.protobuf.Timestamp
-	59, // 17: taskguild.v1.CreateInteractionRequest.type:type_name -> taskguild.v1.InteractionType
-	60, // 18: taskguild.v1.CreateInteractionRequest.options:type_name -> taskguild.v1.InteractionOption
-	61, // 19: taskguild.v1.CreateInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
-	61, // 20: taskguild.v1.GetInteractionResponseResponse.interaction:type_name -> taskguild.v1.Interaction
-	62, // 21: taskguild.v1.SyncAgentsResponse.agents:type_name -> taskguild.v1.AgentDefinition
-	63, // 22: taskguild.v1.SyncPermissionsResponse.permissions:type_name -> taskguild.v1.PermissionSet
-	64, // 23: taskguild.v1.ReportTaskLogRequest.level:type_name -> taskguild.v1.TaskLogLevel
-	65, // 24: taskguild.v1.ReportTaskLogRequest.category:type_name -> taskguild.v1.TaskLogCategory
-	57, // 25: taskguild.v1.ReportTaskLogRequest.metadata:type_name -> taskguild.v1.ReportTaskLogRequest.MetadataEntry
-	29, // 26: taskguild.v1.ReportWorktreeListRequest.worktrees:type_name -> taskguild.v1.WorktreeInfo
-	29, // 27: taskguild.v1.GetWorktreeListResponse.worktrees:type_name -> taskguild.v1.WorktreeInfo
-	66, // 28: taskguild.v1.SyncScriptsResponse.scripts:type_name -> taskguild.v1.ScriptDefinition
-	1,  // 29: taskguild.v1.AgentManagerService.Subscribe:input_type -> taskguild.v1.AgentManagerSubscribeRequest
-	11, // 30: taskguild.v1.AgentManagerService.ClaimTask:input_type -> taskguild.v1.ClaimTaskRequest
-	13, // 31: taskguild.v1.AgentManagerService.ReportTaskResult:input_type -> taskguild.v1.ReportTaskResultRequest
-	15, // 32: taskguild.v1.AgentManagerService.ReportAgentStatus:input_type -> taskguild.v1.ReportAgentStatusRequest
-	17, // 33: taskguild.v1.AgentManagerService.Heartbeat:input_type -> taskguild.v1.HeartbeatRequest
-	19, // 34: taskguild.v1.AgentManagerService.CreateInteraction:input_type -> taskguild.v1.CreateInteractionRequest
-	21, // 35: taskguild.v1.AgentManagerService.GetInteractionResponse:input_type -> taskguild.v1.GetInteractionResponseRequest
-	23, // 36: taskguild.v1.AgentManagerService.SyncAgents:input_type -> taskguild.v1.SyncAgentsRequest
-	27, // 37: taskguild.v1.AgentManagerService.ReportTaskLog:input_type -> taskguild.v1.ReportTaskLogRequest
-	25, // 38: taskguild.v1.AgentManagerService.SyncPermissions:input_type -> taskguild.v1.SyncPermissionsRequest
-	31, // 39: taskguild.v1.AgentManagerService.ReportWorktreeList:input_type -> taskguild.v1.ReportWorktreeListRequest
-	33, // 40: taskguild.v1.AgentManagerService.RequestWorktreeList:input_type -> taskguild.v1.RequestWorktreeListRequest
-	35, // 41: taskguild.v1.AgentManagerService.GetWorktreeList:input_type -> taskguild.v1.GetWorktreeListRequest
-	37, // 42: taskguild.v1.AgentManagerService.RequestWorktreeDelete:input_type -> taskguild.v1.RequestWorktreeDeleteRequest
-	39, // 43: taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult:input_type -> taskguild.v1.ReportWorktreeDeleteResultRequest
-	42, // 44: taskguild.v1.AgentManagerService.RequestGitPullMain:input_type -> taskguild.v1.RequestGitPullMainRequest
-	44, // 45: taskguild.v1.AgentManagerService.ReportGitPullMainResult:input_type -> taskguild.v1.ReportGitPullMainResultRequest
-	48, // 46: taskguild.v1.AgentManagerService.SyncScripts:input_type -> taskguild.v1.SyncScriptsRequest
-	50, // 47: taskguild.v1.AgentManagerService.ReportScriptExecutionResult:input_type -> taskguild.v1.ReportScriptExecutionResultRequest
-	52, // 48: taskguild.v1.AgentManagerService.ReportScriptOutputChunk:input_type -> taskguild.v1.ReportScriptOutputChunkRequest
-	2,  // 49: taskguild.v1.AgentManagerService.Subscribe:output_type -> taskguild.v1.AgentCommand
-	12, // 50: taskguild.v1.AgentManagerService.ClaimTask:output_type -> taskguild.v1.ClaimTaskResponse
-	14, // 51: taskguild.v1.AgentManagerService.ReportTaskResult:output_type -> taskguild.v1.ReportTaskResultResponse
-	16, // 52: taskguild.v1.AgentManagerService.ReportAgentStatus:output_type -> taskguild.v1.ReportAgentStatusResponse
-	18, // 53: taskguild.v1.AgentManagerService.Heartbeat:output_type -> taskguild.v1.HeartbeatResponse
-	20, // 54: taskguild.v1.AgentManagerService.CreateInteraction:output_type -> taskguild.v1.CreateInteractionResponse
-	22, // 55: taskguild.v1.AgentManagerService.GetInteractionResponse:output_type -> taskguild.v1.GetInteractionResponseResponse
-	24, // 56: taskguild.v1.AgentManagerService.SyncAgents:output_type -> taskguild.v1.SyncAgentsResponse
-	28, // 57: taskguild.v1.AgentManagerService.ReportTaskLog:output_type -> taskguild.v1.ReportTaskLogResponse
-	26, // 58: taskguild.v1.AgentManagerService.SyncPermissions:output_type -> taskguild.v1.SyncPermissionsResponse
-	32, // 59: taskguild.v1.AgentManagerService.ReportWorktreeList:output_type -> taskguild.v1.ReportWorktreeListResponse
-	34, // 60: taskguild.v1.AgentManagerService.RequestWorktreeList:output_type -> taskguild.v1.RequestWorktreeListResponse
-	36, // 61: taskguild.v1.AgentManagerService.GetWorktreeList:output_type -> taskguild.v1.GetWorktreeListResponse
-	38, // 62: taskguild.v1.AgentManagerService.RequestWorktreeDelete:output_type -> taskguild.v1.RequestWorktreeDeleteResponse
-	40, // 63: taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult:output_type -> taskguild.v1.ReportWorktreeDeleteResultResponse
-	43, // 64: taskguild.v1.AgentManagerService.RequestGitPullMain:output_type -> taskguild.v1.RequestGitPullMainResponse
-	45, // 65: taskguild.v1.AgentManagerService.ReportGitPullMainResult:output_type -> taskguild.v1.ReportGitPullMainResultResponse
-	49, // 66: taskguild.v1.AgentManagerService.SyncScripts:output_type -> taskguild.v1.SyncScriptsResponse
-	51, // 67: taskguild.v1.AgentManagerService.ReportScriptExecutionResult:output_type -> taskguild.v1.ReportScriptExecutionResultResponse
-	53, // 68: taskguild.v1.AgentManagerService.ReportScriptOutputChunk:output_type -> taskguild.v1.ReportScriptOutputChunkResponse
-	49, // [49:69] is the sub-list for method output_type
-	29, // [29:49] is the sub-list for method input_type
-	29, // [29:29] is the sub-list for extension type_name
-	29, // [29:29] is the sub-list for extension extendee
-	0,  // [0:29] is the sub-list for field type_name
+	6,  // 0: taskguild.v1.AgentCommand.task_available:type_name -> taskguild.v1.TaskAvailableCommand
+	7,  // 1: taskguild.v1.AgentCommand.assign_task:type_name -> taskguild.v1.AssignTaskCommand
+	8,  // 2: taskguild.v1.AgentCommand.cancel_task:type_name -> taskguild.v1.CancelTaskCommand
+	9,  // 3: taskguild.v1.AgentCommand.interaction_response:type_name -> taskguild.v1.InteractionResponseCommand
+	10, // 4: taskguild.v1.AgentCommand.sync_agents:type_name -> taskguild.v1.SyncAgentsCommand
+	11, // 5: taskguild.v1.AgentCommand.sync_permissions:type_name -> taskguild.v1.SyncPermissionsCommand
+	12, // 6: taskguild.v1.AgentCommand.list_worktrees:type_name -> taskguild.v1.ListWorktreesCommand
+	32, // 7: taskguild.v1.AgentCommand.delete_worktree:type_name -> taskguild.v1.DeleteWorktreeCommand
+	43, // 8: taskguild.v1.AgentCommand.git_pull_main:type_name -> taskguild.v1.GitPullMainCommand
+	48, // 9: taskguild.v1.AgentCommand.sync_scripts:type_name -> taskguild.v1.SyncScriptsCommand
+	50, // 10: taskguild.v1.AgentCommand.execute_script:type_name -> taskguild.v1.ExecuteScriptCommand
+	5,  // 11: taskguild.v1.AgentCommand.ping:type_name -> taskguild.v1.PingCommand
+	49, // 12: taskguild.v1.AgentCommand.compare_scripts:type_name -> taskguild.v1.CompareScriptsCommand
+	66, // 13: taskguild.v1.TaskAvailableCommand.metadata:type_name -> taskguild.v1.TaskAvailableCommand.MetadataEntry
+	67, // 14: taskguild.v1.AssignTaskCommand.metadata:type_name -> taskguild.v1.AssignTaskCommand.MetadataEntry
+	68, // 15: taskguild.v1.ClaimTaskResponse.metadata:type_name -> taskguild.v1.ClaimTaskResponse.MetadataEntry
+	0,  // 16: taskguild.v1.ReportAgentStatusRequest.status:type_name -> taskguild.v1.AgentStatus
+	70, // 17: taskguild.v1.HeartbeatRequest.timestamp:type_name -> google.protobuf.Timestamp
+	71, // 18: taskguild.v1.CreateInteractionRequest.type:type_name -> taskguild.v1.InteractionType
+	72, // 19: taskguild.v1.CreateInteractionRequest.options:type_name -> taskguild.v1.InteractionOption
+	73, // 20: taskguild.v1.CreateInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
+	73, // 21: taskguild.v1.GetInteractionResponseResponse.interaction:type_name -> taskguild.v1.Interaction
+	74, // 22: taskguild.v1.SyncAgentsResponse.agents:type_name -> taskguild.v1.AgentDefinition
+	75, // 23: taskguild.v1.SyncPermissionsResponse.permissions:type_name -> taskguild.v1.PermissionSet
+	76, // 24: taskguild.v1.ReportTaskLogRequest.level:type_name -> taskguild.v1.TaskLogLevel
+	77, // 25: taskguild.v1.ReportTaskLogRequest.category:type_name -> taskguild.v1.TaskLogCategory
+	69, // 26: taskguild.v1.ReportTaskLogRequest.metadata:type_name -> taskguild.v1.ReportTaskLogRequest.MetadataEntry
+	31, // 27: taskguild.v1.ReportWorktreeListRequest.worktrees:type_name -> taskguild.v1.WorktreeInfo
+	31, // 28: taskguild.v1.GetWorktreeListResponse.worktrees:type_name -> taskguild.v1.WorktreeInfo
+	78, // 29: taskguild.v1.CompareScriptsCommand.scripts:type_name -> taskguild.v1.ScriptDefinition
+	78, // 30: taskguild.v1.SyncScriptsResponse.scripts:type_name -> taskguild.v1.ScriptDefinition
+	1,  // 31: taskguild.v1.ScriptDiff.diff_type:type_name -> taskguild.v1.ScriptDiffType
+	57, // 32: taskguild.v1.ReportScriptComparisonRequest.diffs:type_name -> taskguild.v1.ScriptDiff
+	57, // 33: taskguild.v1.GetScriptComparisonResponse.diffs:type_name -> taskguild.v1.ScriptDiff
+	2,  // 34: taskguild.v1.ResolveScriptConflictRequest.choice:type_name -> taskguild.v1.ScriptResolutionChoice
+	78, // 35: taskguild.v1.ResolveScriptConflictResponse.script:type_name -> taskguild.v1.ScriptDefinition
+	3,  // 36: taskguild.v1.AgentManagerService.Subscribe:input_type -> taskguild.v1.AgentManagerSubscribeRequest
+	13, // 37: taskguild.v1.AgentManagerService.ClaimTask:input_type -> taskguild.v1.ClaimTaskRequest
+	15, // 38: taskguild.v1.AgentManagerService.ReportTaskResult:input_type -> taskguild.v1.ReportTaskResultRequest
+	17, // 39: taskguild.v1.AgentManagerService.ReportAgentStatus:input_type -> taskguild.v1.ReportAgentStatusRequest
+	19, // 40: taskguild.v1.AgentManagerService.Heartbeat:input_type -> taskguild.v1.HeartbeatRequest
+	21, // 41: taskguild.v1.AgentManagerService.CreateInteraction:input_type -> taskguild.v1.CreateInteractionRequest
+	23, // 42: taskguild.v1.AgentManagerService.GetInteractionResponse:input_type -> taskguild.v1.GetInteractionResponseRequest
+	25, // 43: taskguild.v1.AgentManagerService.SyncAgents:input_type -> taskguild.v1.SyncAgentsRequest
+	29, // 44: taskguild.v1.AgentManagerService.ReportTaskLog:input_type -> taskguild.v1.ReportTaskLogRequest
+	27, // 45: taskguild.v1.AgentManagerService.SyncPermissions:input_type -> taskguild.v1.SyncPermissionsRequest
+	33, // 46: taskguild.v1.AgentManagerService.ReportWorktreeList:input_type -> taskguild.v1.ReportWorktreeListRequest
+	35, // 47: taskguild.v1.AgentManagerService.RequestWorktreeList:input_type -> taskguild.v1.RequestWorktreeListRequest
+	37, // 48: taskguild.v1.AgentManagerService.GetWorktreeList:input_type -> taskguild.v1.GetWorktreeListRequest
+	39, // 49: taskguild.v1.AgentManagerService.RequestWorktreeDelete:input_type -> taskguild.v1.RequestWorktreeDeleteRequest
+	41, // 50: taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult:input_type -> taskguild.v1.ReportWorktreeDeleteResultRequest
+	44, // 51: taskguild.v1.AgentManagerService.RequestGitPullMain:input_type -> taskguild.v1.RequestGitPullMainRequest
+	46, // 52: taskguild.v1.AgentManagerService.ReportGitPullMainResult:input_type -> taskguild.v1.ReportGitPullMainResultRequest
+	51, // 53: taskguild.v1.AgentManagerService.SyncScripts:input_type -> taskguild.v1.SyncScriptsRequest
+	53, // 54: taskguild.v1.AgentManagerService.ReportScriptExecutionResult:input_type -> taskguild.v1.ReportScriptExecutionResultRequest
+	55, // 55: taskguild.v1.AgentManagerService.ReportScriptOutputChunk:input_type -> taskguild.v1.ReportScriptOutputChunkRequest
+	58, // 56: taskguild.v1.AgentManagerService.RequestScriptComparison:input_type -> taskguild.v1.RequestScriptComparisonRequest
+	60, // 57: taskguild.v1.AgentManagerService.ReportScriptComparison:input_type -> taskguild.v1.ReportScriptComparisonRequest
+	62, // 58: taskguild.v1.AgentManagerService.GetScriptComparison:input_type -> taskguild.v1.GetScriptComparisonRequest
+	64, // 59: taskguild.v1.AgentManagerService.ResolveScriptConflict:input_type -> taskguild.v1.ResolveScriptConflictRequest
+	4,  // 60: taskguild.v1.AgentManagerService.Subscribe:output_type -> taskguild.v1.AgentCommand
+	14, // 61: taskguild.v1.AgentManagerService.ClaimTask:output_type -> taskguild.v1.ClaimTaskResponse
+	16, // 62: taskguild.v1.AgentManagerService.ReportTaskResult:output_type -> taskguild.v1.ReportTaskResultResponse
+	18, // 63: taskguild.v1.AgentManagerService.ReportAgentStatus:output_type -> taskguild.v1.ReportAgentStatusResponse
+	20, // 64: taskguild.v1.AgentManagerService.Heartbeat:output_type -> taskguild.v1.HeartbeatResponse
+	22, // 65: taskguild.v1.AgentManagerService.CreateInteraction:output_type -> taskguild.v1.CreateInteractionResponse
+	24, // 66: taskguild.v1.AgentManagerService.GetInteractionResponse:output_type -> taskguild.v1.GetInteractionResponseResponse
+	26, // 67: taskguild.v1.AgentManagerService.SyncAgents:output_type -> taskguild.v1.SyncAgentsResponse
+	30, // 68: taskguild.v1.AgentManagerService.ReportTaskLog:output_type -> taskguild.v1.ReportTaskLogResponse
+	28, // 69: taskguild.v1.AgentManagerService.SyncPermissions:output_type -> taskguild.v1.SyncPermissionsResponse
+	34, // 70: taskguild.v1.AgentManagerService.ReportWorktreeList:output_type -> taskguild.v1.ReportWorktreeListResponse
+	36, // 71: taskguild.v1.AgentManagerService.RequestWorktreeList:output_type -> taskguild.v1.RequestWorktreeListResponse
+	38, // 72: taskguild.v1.AgentManagerService.GetWorktreeList:output_type -> taskguild.v1.GetWorktreeListResponse
+	40, // 73: taskguild.v1.AgentManagerService.RequestWorktreeDelete:output_type -> taskguild.v1.RequestWorktreeDeleteResponse
+	42, // 74: taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult:output_type -> taskguild.v1.ReportWorktreeDeleteResultResponse
+	45, // 75: taskguild.v1.AgentManagerService.RequestGitPullMain:output_type -> taskguild.v1.RequestGitPullMainResponse
+	47, // 76: taskguild.v1.AgentManagerService.ReportGitPullMainResult:output_type -> taskguild.v1.ReportGitPullMainResultResponse
+	52, // 77: taskguild.v1.AgentManagerService.SyncScripts:output_type -> taskguild.v1.SyncScriptsResponse
+	54, // 78: taskguild.v1.AgentManagerService.ReportScriptExecutionResult:output_type -> taskguild.v1.ReportScriptExecutionResultResponse
+	56, // 79: taskguild.v1.AgentManagerService.ReportScriptOutputChunk:output_type -> taskguild.v1.ReportScriptOutputChunkResponse
+	59, // 80: taskguild.v1.AgentManagerService.RequestScriptComparison:output_type -> taskguild.v1.RequestScriptComparisonResponse
+	61, // 81: taskguild.v1.AgentManagerService.ReportScriptComparison:output_type -> taskguild.v1.ReportScriptComparisonResponse
+	63, // 82: taskguild.v1.AgentManagerService.GetScriptComparison:output_type -> taskguild.v1.GetScriptComparisonResponse
+	65, // 83: taskguild.v1.AgentManagerService.ResolveScriptConflict:output_type -> taskguild.v1.ResolveScriptConflictResponse
+	60, // [60:84] is the sub-list for method output_type
+	36, // [36:60] is the sub-list for method input_type
+	36, // [36:36] is the sub-list for extension type_name
+	36, // [36:36] is the sub-list for extension extendee
+	0,  // [0:36] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_agent_manager_proto_init() }
@@ -3484,14 +4236,15 @@ func file_taskguild_v1_agent_manager_proto_init() {
 		(*AgentCommand_SyncScripts)(nil),
 		(*AgentCommand_ExecuteScript)(nil),
 		(*AgentCommand_Ping)(nil),
+		(*AgentCommand_CompareScripts)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_agent_manager_proto_rawDesc), len(file_taskguild_v1_agent_manager_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   57,
+			NumEnums:      3,
+			NumMessages:   67,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

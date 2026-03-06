@@ -55,6 +55,14 @@ service AgentManagerService {
   rpc ReportScriptExecutionResult(ReportScriptExecutionResultRequest) returns (ReportScriptExecutionResultResponse);
   // ReportScriptOutputChunk reports a chunk of real-time script output from the agent.
   rpc ReportScriptOutputChunk(ReportScriptOutputChunkRequest) returns (ReportScriptOutputChunkResponse);
+  // RequestScriptComparison triggers a script comparison on connected agent-managers (called by frontend).
+  rpc RequestScriptComparison(RequestScriptComparisonRequest) returns (RequestScriptComparisonResponse);
+  // ReportScriptComparison reports script diffs from the agent-manager after comparison.
+  rpc ReportScriptComparison(ReportScriptComparisonRequest) returns (ReportScriptComparisonResponse);
+  // GetScriptComparison returns the cached script comparison result for a project.
+  rpc GetScriptComparison(GetScriptComparisonRequest) returns (GetScriptComparisonResponse);
+  // ResolveScriptConflict resolves a per-script conflict between server and agent versions.
+  rpc ResolveScriptConflict(ResolveScriptConflictRequest) returns (ResolveScriptConflictResponse);
 }
 
 // --- Subscribe stream ---
@@ -89,6 +97,7 @@ message AgentCommand {
     // Ping is a keepalive message sent periodically by the server to prevent
     // idle stream timeouts from HTTP/2 intermediaries or OS-level TCP settings.
     PingCommand ping = 12;
+    CompareScriptsCommand compare_scripts = 13;
   }
 }
 
@@ -320,7 +329,18 @@ message ReportGitPullMainResultResponse {}
 // --- Script sync & execution ---
 
 // SyncScriptsCommand tells the agent to re-sync its local .claude/scripts/* files.
-message SyncScriptsCommand {}
+// When force_overwrite_script_ids is non-empty, those scripts should be overwritten
+// on the agent even if the local file already exists.
+message SyncScriptsCommand {
+  repeated string force_overwrite_script_ids = 1;
+}
+
+// CompareScriptsCommand tells the agent to compare its local .claude/scripts/*
+// files with server-side versions and report any differences.
+message CompareScriptsCommand {
+  string request_id = 1;
+  repeated ScriptDefinition scripts = 2;  // all server-side scripts for comparison
+}
 
 // ExecuteScriptCommand tells the agent to execute a specific script.
 message ExecuteScriptCommand {
@@ -357,3 +377,64 @@ message ReportScriptOutputChunkRequest {
   string stderr_chunk = 4;  // incremental stderr since last chunk
 }
 message ReportScriptOutputChunkResponse {}
+
+// --- Script comparison & conflict resolution ---
+
+enum ScriptDiffType {
+  SCRIPT_DIFF_TYPE_UNSPECIFIED = 0;
+  SCRIPT_DIFF_TYPE_MODIFIED = 1;      // both exist but content differs
+  SCRIPT_DIFF_TYPE_AGENT_ONLY = 2;    // exists on agent but not on server
+  SCRIPT_DIFF_TYPE_SERVER_ONLY = 3;   // exists on server but not on agent
+}
+
+message ScriptDiff {
+  string script_id = 1;         // empty if agent-only script
+  string script_name = 2;
+  string filename = 3;
+  string server_content = 4;
+  string agent_content = 5;
+  ScriptDiffType diff_type = 6;
+}
+
+enum ScriptResolutionChoice {
+  SCRIPT_RESOLUTION_CHOICE_UNSPECIFIED = 0;
+  SCRIPT_RESOLUTION_CHOICE_SERVER = 1;
+  SCRIPT_RESOLUTION_CHOICE_AGENT = 2;
+}
+
+// RequestScriptComparison triggers a comparison on connected agents (called by frontend).
+message RequestScriptComparisonRequest {
+  string project_id = 1;
+}
+message RequestScriptComparisonResponse {
+  string request_id = 1;
+}
+
+// ReportScriptComparison is sent by the agent after comparing local scripts with server versions.
+message ReportScriptComparisonRequest {
+  string request_id = 1;
+  string project_name = 2;
+  repeated ScriptDiff diffs = 3;
+}
+message ReportScriptComparisonResponse {}
+
+// GetScriptComparison returns the cached comparison result for a project.
+message GetScriptComparisonRequest {
+  string project_id = 1;
+}
+message GetScriptComparisonResponse {
+  repeated ScriptDiff diffs = 1;
+}
+
+// ResolveScriptConflict resolves a single script conflict between server and agent.
+message ResolveScriptConflictRequest {
+  string project_id = 1;
+  string script_id = 2;          // empty if agent-only (will create new)
+  string script_name = 3;
+  string filename = 4;
+  ScriptResolutionChoice choice = 5;
+  string agent_content = 6;      // only needed when choice = AGENT
+}
+message ResolveScriptConflictResponse {
+  ScriptDefinition script = 1;   // the resulting script after resolution
+}
