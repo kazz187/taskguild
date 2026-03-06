@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import {
   listScripts,
@@ -10,15 +10,24 @@ import {
 } from '@taskguild/proto/taskguild/v1/script-ScriptService_connectquery.ts'
 import { saveAsTemplate, listTemplates } from '@taskguild/proto/taskguild/v1/template-TemplateService_connectquery.ts'
 import {
+  requestScriptComparison,
+  getScriptComparison,
+  resolveScriptConflict,
+} from '@taskguild/proto/taskguild/v1/agent_manager-AgentManagerService_connectquery.ts'
+import {
   ScriptService,
   StreamScriptExecutionRequestSchema,
 } from '@taskguild/proto/taskguild/v1/script_pb.ts'
 import type { ScriptDefinition } from '@taskguild/proto/taskguild/v1/script_pb.ts'
+import type { ScriptDiff } from '@taskguild/proto/taskguild/v1/agent_manager_pb.ts'
+import { ScriptDiffType, ScriptResolutionChoice } from '@taskguild/proto/taskguild/v1/agent_manager_pb.ts'
 import type { Template } from '@taskguild/proto/taskguild/v1/template_pb.ts'
-import { Terminal, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud, Play, CheckCircle, XCircle, Loader2, Layers, Copy } from 'lucide-react'
+import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
+import { Terminal, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud, Play, CheckCircle, XCircle, Loader2, Layers, Copy, AlertTriangle, Server, Monitor } from 'lucide-react'
 import { createClient } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import { transport } from '@/lib/transport'
+import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { AutoScrollPre } from './AutoScrollPre'
 import { Button, Input, Textarea, Badge } from '../atoms/index.ts'
 import { Card, FormField, Modal } from '../molecules/index.ts'
@@ -57,6 +66,15 @@ interface ExecutionResult {
   errorMessage?: string
 }
 
+function diffTypeLabel(dt: ScriptDiffType): string {
+  switch (dt) {
+    case ScriptDiffType.MODIFIED: return 'Modified'
+    case ScriptDiffType.AGENT_ONLY: return 'Agent only'
+    case ScriptDiffType.SERVER_ONLY: return 'Server only'
+    default: return 'Unknown'
+  }
+}
+
 export function ScriptList({ projectId }: { projectId: string }) {
   const { data, refetch, isLoading } = useQuery(listScripts, { projectId })
   const createMut = useMutation(createScript)
@@ -67,6 +85,11 @@ export function ScriptList({ projectId }: { projectId: string }) {
   const saveTemplateMut = useMutation(saveAsTemplate)
   const { data: templatesData, refetch: refetchTemplates } = useQuery(listTemplates, { entityType: 'script' })
 
+  // Script comparison
+  const requestComparisonMut = useMutation(requestScriptComparison)
+  const { data: comparisonData, refetch: refetchComparison } = useQuery(getScriptComparison, { projectId })
+  const resolveConflictMut = useMutation(resolveScriptConflict)
+
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<ScriptFormData>(emptyForm)
@@ -76,11 +99,42 @@ export function ScriptList({ projectId }: { projectId: string }) {
   const [saveTemplateDialog, setSaveTemplateDialog] = useState<{ scriptId: string; name: string; description: string } | null>(null)
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
 
+  // Diff resolution dialog state
+  const [diffDialog, setDiffDialog] = useState<ScriptDiff | null>(null)
+  // When resolving from a Run click, store the script to execute after resolution
+  const [pendingExecuteScript, setPendingExecuteScript] = useState<ScriptDefinition | null>(null)
+
   // Track AbortControllers for active streams.
   const streamAbortRef = useRef<Map<string, AbortController>>(new Map())
 
   const scripts = data?.scripts ?? []
   const scriptTemplates = templatesData?.templates ?? []
+  const diffs = comparisonData?.diffs ?? []
+
+  // Build a lookup map for diffs by script_id and filename.
+  const diffByScriptId = useMemo(() => {
+    const map = new Map<string, ScriptDiff>()
+    for (const d of diffs) {
+      if (d.scriptId) map.set(d.scriptId, d)
+    }
+    return map
+  }, [diffs])
+
+  const diffByFilename = useMemo(() => {
+    const map = new Map<string, ScriptDiff>()
+    for (const d of diffs) {
+      if (d.filename) map.set(d.filename, d)
+    }
+    return map
+  }, [diffs])
+
+  // Subscribe to SCRIPT_COMPARISON events to refetch diffs when comparison completes.
+  const comparisonEventTypes = useMemo(() => [EventType.SCRIPT_COMPARISON], [])
+  const onComparisonEvent = useCallback(() => {
+    refetchComparison()
+    refetch()
+  }, [refetchComparison, refetch])
+  useEventSubscription(comparisonEventTypes, projectId, onComparisonEvent)
 
   // Cleanup active streams on unmount.
   useEffect(() => {
@@ -131,7 +185,13 @@ export function ScriptList({ projectId }: { projectId: string }) {
   const handleSync = () => {
     syncMut.mutate(
       { projectId, directory: '.' },
-      { onSuccess: () => refetch() },
+      {
+        onSuccess: () => {
+          refetch()
+          // After syncing from repo, automatically trigger comparison with agent.
+          requestComparisonMut.mutate({ projectId })
+        },
+      },
     )
   }
 
@@ -222,7 +282,7 @@ export function ScriptList({ projectId }: { projectId: string }) {
     }
   }, [])
 
-  const handleExecute = (script: ScriptDefinition) => {
+  const doExecute = (script: ScriptDefinition) => {
     // Set pending state.
     setExecutionResults(prev => {
       const next = new Map(prev)
@@ -269,6 +329,45 @@ export function ScriptList({ projectId }: { projectId: string }) {
     )
   }
 
+  const handleExecute = (script: ScriptDefinition) => {
+    // Check if this script has an unresolved diff.
+    const diff = diffByScriptId.get(script.id)
+    if (diff) {
+      // Show resolution dialog and defer execution.
+      setDiffDialog(diff)
+      setPendingExecuteScript(script)
+      return
+    }
+    doExecute(script)
+  }
+
+  const handleResolveConflict = (diff: ScriptDiff, choice: ScriptResolutionChoice) => {
+    resolveConflictMut.mutate(
+      {
+        projectId,
+        scriptId: diff.scriptId,
+        scriptName: diff.scriptName,
+        filename: diff.filename,
+        choice,
+        agentContent: choice === ScriptResolutionChoice.AGENT ? diff.agentContent : '',
+      },
+      {
+        onSuccess: () => {
+          // Refresh diffs and script list.
+          refetchComparison()
+          refetch()
+          setDiffDialog(null)
+
+          // If we were pending execution, now execute.
+          if (pendingExecuteScript) {
+            doExecute(pendingExecuteScript)
+            setPendingExecuteScript(null)
+          }
+        },
+      },
+    )
+  }
+
   const clearResult = (scriptId: string) => {
     // Abort any active stream.
     const controller = streamAbortRef.current.get(scriptId)
@@ -285,6 +384,9 @@ export function ScriptList({ projectId }: { projectId: string }) {
 
   const mutation = formMode === 'create' ? createMut : updateMut
 
+  // Agent-only diffs (scripts that exist only on agent, not in server DB).
+  const agentOnlyDiffs = diffs.filter(d => d.diffType === ScriptDiffType.AGENT_ONLY)
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
@@ -294,14 +396,19 @@ export function ScriptList({ projectId }: { projectId: string }) {
           <span className="text-xs text-gray-500 bg-slate-800 rounded-full px-2 py-0.5">
             {scripts.length}
           </span>
+          {diffs.length > 0 && (
+            <Badge color="amber" size="xs" variant="outline" pill icon={<AlertTriangle className="w-2.5 h-2.5" />}>
+              {diffs.length} diff{diffs.length > 1 ? 's' : ''}
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="sm"
             onClick={handleSync}
-            disabled={syncMut.isPending}
-            icon={<RefreshCw className={`w-4 h-4 ${syncMut.isPending ? 'animate-spin' : ''}`} />}
+            disabled={syncMut.isPending || requestComparisonMut.isPending}
+            icon={<RefreshCw className={`w-4 h-4 ${(syncMut.isPending || requestComparisonMut.isPending) ? 'animate-spin' : ''}`} />}
             title="Sync scripts from .claude/scripts/ directory"
             className="border border-slate-700 hover:border-slate-600"
           >
@@ -332,6 +439,12 @@ export function ScriptList({ projectId }: { projectId: string }) {
       {syncMut.isSuccess && (
         <div className="mb-4 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-sm">
           Synced: {syncMut.data?.created ?? 0} created, {syncMut.data?.updated ?? 0} updated
+          {requestComparisonMut.isPending && (
+            <span className="ml-2 text-blue-400">
+              <Loader2 className="w-3 h-3 animate-spin inline mr-1" />
+              Comparing with agent...
+            </span>
+          )}
         </div>
       )}
 
@@ -428,10 +541,11 @@ export function ScriptList({ projectId }: { projectId: string }) {
       <div className="space-y-3">
         {scripts.map(script => {
           const result = executionResults.get(script.id)
+          const diff = diffByScriptId.get(script.id)
           return (
             <Card
               key={script.id}
-              className="hover:border-slate-700 transition-colors"
+              className={`hover:border-slate-700 transition-colors ${diff ? 'border-amber-500/30' : ''}`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -445,6 +559,19 @@ export function ScriptList({ projectId }: { projectId: string }) {
                       {script.isSynced && (
                         <Badge color="blue" size="xs" variant="outline" pill icon={<Cloud className="w-2.5 h-2.5" />}>
                           synced
+                        </Badge>
+                      )}
+                      {diff && (
+                        <Badge
+                          color="amber"
+                          size="xs"
+                          variant="outline"
+                          pill
+                          icon={<AlertTriangle className="w-2.5 h-2.5" />}
+                          className="cursor-pointer hover:bg-amber-500/10"
+                          onClick={() => { setDiffDialog(diff); setPendingExecuteScript(null) }}
+                        >
+                          {diffTypeLabel(diff.diffType)}
                         </Badge>
                       )}
                     </div>
@@ -597,7 +724,48 @@ export function ScriptList({ projectId }: { projectId: string }) {
           )
         })}
 
-        {!isLoading && scripts.length === 0 && !formMode && (
+        {/* Agent-only scripts (exist on agent but not on server) */}
+        {agentOnlyDiffs.map(diff => (
+          <Card
+            key={`agent-only-${diff.filename}`}
+            className="hover:border-slate-700 transition-colors border-amber-500/30"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                <Terminal className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-sm font-semibold text-white truncate">{diff.scriptName}</h3>
+                    <Badge color="gray" size="xs" className="font-mono bg-slate-800 text-gray-500">
+                      {diff.filename}
+                    </Badge>
+                    <Badge color="amber" size="xs" variant="outline" pill icon={<Monitor className="w-2.5 h-2.5" />}>
+                      Agent only
+                    </Badge>
+                  </div>
+                  {diff.agentContent && (
+                    <pre className="text-[11px] text-gray-600 mt-1 truncate max-w-lg font-mono">
+                      {diff.agentContent.slice(0, 120)}{diff.agentContent.length > 120 ? '...' : ''}
+                    </pre>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-1 shrink-0 ml-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setDiffDialog(diff); setPendingExecuteScript(null) }}
+                  icon={<AlertTriangle className="w-3.5 h-3.5" />}
+                  className="text-amber-400 hover:text-amber-300 border border-amber-500/30"
+                >
+                  Resolve
+                </Button>
+              </div>
+            </div>
+          </Card>
+        ))}
+
+        {!isLoading && scripts.length === 0 && agentOnlyDiffs.length === 0 && !formMode && (
           <div className="text-center py-12 text-gray-500">
             <Terminal className="w-8 h-8 mx-auto mb-3 opacity-30" />
             <p className="text-sm">No scripts defined yet.</p>
@@ -605,6 +773,82 @@ export function ScriptList({ projectId }: { projectId: string }) {
           </div>
         )}
       </div>
+
+      {/* Diff Resolution Dialog */}
+      <Modal open={!!diffDialog} onClose={() => { setDiffDialog(null); setPendingExecuteScript(null) }} size="lg">
+        <Modal.Header onClose={() => { setDiffDialog(null); setPendingExecuteScript(null) }}>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-400" />
+            <h3 className="text-lg font-semibold text-white">Script Conflict</h3>
+          </div>
+        </Modal.Header>
+        <Modal.Body>
+          {diffDialog && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-gray-400">Script:</span>
+                <span className="text-white font-medium">{diffDialog.scriptName}</span>
+                <Badge color="gray" size="xs" className="font-mono">{diffDialog.filename}</Badge>
+                <Badge color="amber" size="xs" variant="outline">{diffTypeLabel(diffDialog.diffType)}</Badge>
+              </div>
+
+              {pendingExecuteScript && (
+                <div className="px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-400 text-sm">
+                  This script has local modifications on the agent. Please choose which version to use before execution.
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* Server version */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Server className="w-4 h-4 text-blue-400" />
+                    <span className="text-sm font-medium text-blue-400">Server Version</span>
+                  </div>
+                  <pre className="text-xs text-gray-300 font-mono bg-slate-900 rounded p-3 whitespace-pre-wrap max-h-[400px] overflow-y-auto border border-slate-700">
+                    {diffDialog.serverContent || <span className="text-gray-600 italic">No server version</span>}
+                  </pre>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleResolveConflict(diffDialog, ScriptResolutionChoice.SERVER)}
+                    disabled={resolveConflictMut.isPending || diffDialog.diffType === ScriptDiffType.AGENT_ONLY}
+                    icon={<Server className="w-3.5 h-3.5" />}
+                    className="w-full bg-blue-600 hover:bg-blue-500"
+                  >
+                    {resolveConflictMut.isPending ? 'Resolving...' : 'Use Server Version'}
+                  </Button>
+                </div>
+
+                {/* Agent version */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Monitor className="w-4 h-4 text-green-400" />
+                    <span className="text-sm font-medium text-green-400">Agent Version</span>
+                  </div>
+                  <pre className="text-xs text-gray-300 font-mono bg-slate-900 rounded p-3 whitespace-pre-wrap max-h-[400px] overflow-y-auto border border-slate-700">
+                    {diffDialog.agentContent || <span className="text-gray-600 italic">No agent version</span>}
+                  </pre>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleResolveConflict(diffDialog, ScriptResolutionChoice.AGENT)}
+                    disabled={resolveConflictMut.isPending || diffDialog.diffType === ScriptDiffType.SERVER_ONLY}
+                    icon={<Monitor className="w-3.5 h-3.5" />}
+                    className="w-full bg-green-600 hover:bg-green-500"
+                  >
+                    {resolveConflictMut.isPending ? 'Resolving...' : 'Use Agent Version'}
+                  </Button>
+                </div>
+              </div>
+
+              {resolveConflictMut.error && (
+                <p className="text-red-400 text-sm">{resolveConflictMut.error.message}</p>
+              )}
+            </div>
+          )}
+        </Modal.Body>
+      </Modal>
 
       {/* Template Picker Dialog */}
       <Modal open={templatePickerOpen} onClose={() => setTemplatePickerOpen(false)} size="sm">

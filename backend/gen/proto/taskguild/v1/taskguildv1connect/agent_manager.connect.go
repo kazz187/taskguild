@@ -93,6 +93,18 @@ const (
 	// AgentManagerServiceReportScriptOutputChunkProcedure is the fully-qualified name of the
 	// AgentManagerService's ReportScriptOutputChunk RPC.
 	AgentManagerServiceReportScriptOutputChunkProcedure = "/taskguild.v1.AgentManagerService/ReportScriptOutputChunk"
+	// AgentManagerServiceRequestScriptComparisonProcedure is the fully-qualified name of the
+	// AgentManagerService's RequestScriptComparison RPC.
+	AgentManagerServiceRequestScriptComparisonProcedure = "/taskguild.v1.AgentManagerService/RequestScriptComparison"
+	// AgentManagerServiceReportScriptComparisonProcedure is the fully-qualified name of the
+	// AgentManagerService's ReportScriptComparison RPC.
+	AgentManagerServiceReportScriptComparisonProcedure = "/taskguild.v1.AgentManagerService/ReportScriptComparison"
+	// AgentManagerServiceGetScriptComparisonProcedure is the fully-qualified name of the
+	// AgentManagerService's GetScriptComparison RPC.
+	AgentManagerServiceGetScriptComparisonProcedure = "/taskguild.v1.AgentManagerService/GetScriptComparison"
+	// AgentManagerServiceResolveScriptConflictProcedure is the fully-qualified name of the
+	// AgentManagerService's ResolveScriptConflict RPC.
+	AgentManagerServiceResolveScriptConflictProcedure = "/taskguild.v1.AgentManagerService/ResolveScriptConflict"
 )
 
 // AgentManagerServiceClient is a client for the taskguild.v1.AgentManagerService service.
@@ -140,6 +152,14 @@ type AgentManagerServiceClient interface {
 	ReportScriptExecutionResult(context.Context, *connect.Request[v1.ReportScriptExecutionResultRequest]) (*connect.Response[v1.ReportScriptExecutionResultResponse], error)
 	// ReportScriptOutputChunk reports a chunk of real-time script output from the agent.
 	ReportScriptOutputChunk(context.Context, *connect.Request[v1.ReportScriptOutputChunkRequest]) (*connect.Response[v1.ReportScriptOutputChunkResponse], error)
+	// RequestScriptComparison triggers a script comparison on connected agent-managers (called by frontend).
+	RequestScriptComparison(context.Context, *connect.Request[v1.RequestScriptComparisonRequest]) (*connect.Response[v1.RequestScriptComparisonResponse], error)
+	// ReportScriptComparison reports script diffs from the agent-manager after comparison.
+	ReportScriptComparison(context.Context, *connect.Request[v1.ReportScriptComparisonRequest]) (*connect.Response[v1.ReportScriptComparisonResponse], error)
+	// GetScriptComparison returns the cached script comparison result for a project.
+	GetScriptComparison(context.Context, *connect.Request[v1.GetScriptComparisonRequest]) (*connect.Response[v1.GetScriptComparisonResponse], error)
+	// ResolveScriptConflict resolves a per-script conflict between server and agent versions.
+	ResolveScriptConflict(context.Context, *connect.Request[v1.ResolveScriptConflictRequest]) (*connect.Response[v1.ResolveScriptConflictResponse], error)
 }
 
 // NewAgentManagerServiceClient constructs a client for the taskguild.v1.AgentManagerService
@@ -273,6 +293,30 @@ func NewAgentManagerServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(agentManagerServiceMethods.ByName("ReportScriptOutputChunk")),
 			connect.WithClientOptions(opts...),
 		),
+		requestScriptComparison: connect.NewClient[v1.RequestScriptComparisonRequest, v1.RequestScriptComparisonResponse](
+			httpClient,
+			baseURL+AgentManagerServiceRequestScriptComparisonProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("RequestScriptComparison")),
+			connect.WithClientOptions(opts...),
+		),
+		reportScriptComparison: connect.NewClient[v1.ReportScriptComparisonRequest, v1.ReportScriptComparisonResponse](
+			httpClient,
+			baseURL+AgentManagerServiceReportScriptComparisonProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("ReportScriptComparison")),
+			connect.WithClientOptions(opts...),
+		),
+		getScriptComparison: connect.NewClient[v1.GetScriptComparisonRequest, v1.GetScriptComparisonResponse](
+			httpClient,
+			baseURL+AgentManagerServiceGetScriptComparisonProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("GetScriptComparison")),
+			connect.WithClientOptions(opts...),
+		),
+		resolveScriptConflict: connect.NewClient[v1.ResolveScriptConflictRequest, v1.ResolveScriptConflictResponse](
+			httpClient,
+			baseURL+AgentManagerServiceResolveScriptConflictProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("ResolveScriptConflict")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -298,6 +342,10 @@ type agentManagerServiceClient struct {
 	syncScripts                 *connect.Client[v1.SyncScriptsRequest, v1.SyncScriptsResponse]
 	reportScriptExecutionResult *connect.Client[v1.ReportScriptExecutionResultRequest, v1.ReportScriptExecutionResultResponse]
 	reportScriptOutputChunk     *connect.Client[v1.ReportScriptOutputChunkRequest, v1.ReportScriptOutputChunkResponse]
+	requestScriptComparison     *connect.Client[v1.RequestScriptComparisonRequest, v1.RequestScriptComparisonResponse]
+	reportScriptComparison      *connect.Client[v1.ReportScriptComparisonRequest, v1.ReportScriptComparisonResponse]
+	getScriptComparison         *connect.Client[v1.GetScriptComparisonRequest, v1.GetScriptComparisonResponse]
+	resolveScriptConflict       *connect.Client[v1.ResolveScriptConflictRequest, v1.ResolveScriptConflictResponse]
 }
 
 // Subscribe calls taskguild.v1.AgentManagerService.Subscribe.
@@ -400,6 +448,26 @@ func (c *agentManagerServiceClient) ReportScriptOutputChunk(ctx context.Context,
 	return c.reportScriptOutputChunk.CallUnary(ctx, req)
 }
 
+// RequestScriptComparison calls taskguild.v1.AgentManagerService.RequestScriptComparison.
+func (c *agentManagerServiceClient) RequestScriptComparison(ctx context.Context, req *connect.Request[v1.RequestScriptComparisonRequest]) (*connect.Response[v1.RequestScriptComparisonResponse], error) {
+	return c.requestScriptComparison.CallUnary(ctx, req)
+}
+
+// ReportScriptComparison calls taskguild.v1.AgentManagerService.ReportScriptComparison.
+func (c *agentManagerServiceClient) ReportScriptComparison(ctx context.Context, req *connect.Request[v1.ReportScriptComparisonRequest]) (*connect.Response[v1.ReportScriptComparisonResponse], error) {
+	return c.reportScriptComparison.CallUnary(ctx, req)
+}
+
+// GetScriptComparison calls taskguild.v1.AgentManagerService.GetScriptComparison.
+func (c *agentManagerServiceClient) GetScriptComparison(ctx context.Context, req *connect.Request[v1.GetScriptComparisonRequest]) (*connect.Response[v1.GetScriptComparisonResponse], error) {
+	return c.getScriptComparison.CallUnary(ctx, req)
+}
+
+// ResolveScriptConflict calls taskguild.v1.AgentManagerService.ResolveScriptConflict.
+func (c *agentManagerServiceClient) ResolveScriptConflict(ctx context.Context, req *connect.Request[v1.ResolveScriptConflictRequest]) (*connect.Response[v1.ResolveScriptConflictResponse], error) {
+	return c.resolveScriptConflict.CallUnary(ctx, req)
+}
+
 // AgentManagerServiceHandler is an implementation of the taskguild.v1.AgentManagerService service.
 type AgentManagerServiceHandler interface {
 	// Subscribe opens a server-stream for receiving commands from the backend.
@@ -445,6 +513,14 @@ type AgentManagerServiceHandler interface {
 	ReportScriptExecutionResult(context.Context, *connect.Request[v1.ReportScriptExecutionResultRequest]) (*connect.Response[v1.ReportScriptExecutionResultResponse], error)
 	// ReportScriptOutputChunk reports a chunk of real-time script output from the agent.
 	ReportScriptOutputChunk(context.Context, *connect.Request[v1.ReportScriptOutputChunkRequest]) (*connect.Response[v1.ReportScriptOutputChunkResponse], error)
+	// RequestScriptComparison triggers a script comparison on connected agent-managers (called by frontend).
+	RequestScriptComparison(context.Context, *connect.Request[v1.RequestScriptComparisonRequest]) (*connect.Response[v1.RequestScriptComparisonResponse], error)
+	// ReportScriptComparison reports script diffs from the agent-manager after comparison.
+	ReportScriptComparison(context.Context, *connect.Request[v1.ReportScriptComparisonRequest]) (*connect.Response[v1.ReportScriptComparisonResponse], error)
+	// GetScriptComparison returns the cached script comparison result for a project.
+	GetScriptComparison(context.Context, *connect.Request[v1.GetScriptComparisonRequest]) (*connect.Response[v1.GetScriptComparisonResponse], error)
+	// ResolveScriptConflict resolves a per-script conflict between server and agent versions.
+	ResolveScriptConflict(context.Context, *connect.Request[v1.ResolveScriptConflictRequest]) (*connect.Response[v1.ResolveScriptConflictResponse], error)
 }
 
 // NewAgentManagerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -574,6 +650,30 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 		connect.WithSchema(agentManagerServiceMethods.ByName("ReportScriptOutputChunk")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentManagerServiceRequestScriptComparisonHandler := connect.NewUnaryHandler(
+		AgentManagerServiceRequestScriptComparisonProcedure,
+		svc.RequestScriptComparison,
+		connect.WithSchema(agentManagerServiceMethods.ByName("RequestScriptComparison")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentManagerServiceReportScriptComparisonHandler := connect.NewUnaryHandler(
+		AgentManagerServiceReportScriptComparisonProcedure,
+		svc.ReportScriptComparison,
+		connect.WithSchema(agentManagerServiceMethods.ByName("ReportScriptComparison")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentManagerServiceGetScriptComparisonHandler := connect.NewUnaryHandler(
+		AgentManagerServiceGetScriptComparisonProcedure,
+		svc.GetScriptComparison,
+		connect.WithSchema(agentManagerServiceMethods.ByName("GetScriptComparison")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentManagerServiceResolveScriptConflictHandler := connect.NewUnaryHandler(
+		AgentManagerServiceResolveScriptConflictProcedure,
+		svc.ResolveScriptConflict,
+		connect.WithSchema(agentManagerServiceMethods.ByName("ResolveScriptConflict")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/taskguild.v1.AgentManagerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AgentManagerServiceSubscribeProcedure:
@@ -616,6 +716,14 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 			agentManagerServiceReportScriptExecutionResultHandler.ServeHTTP(w, r)
 		case AgentManagerServiceReportScriptOutputChunkProcedure:
 			agentManagerServiceReportScriptOutputChunkHandler.ServeHTTP(w, r)
+		case AgentManagerServiceRequestScriptComparisonProcedure:
+			agentManagerServiceRequestScriptComparisonHandler.ServeHTTP(w, r)
+		case AgentManagerServiceReportScriptComparisonProcedure:
+			agentManagerServiceReportScriptComparisonHandler.ServeHTTP(w, r)
+		case AgentManagerServiceGetScriptComparisonProcedure:
+			agentManagerServiceGetScriptComparisonHandler.ServeHTTP(w, r)
+		case AgentManagerServiceResolveScriptConflictProcedure:
+			agentManagerServiceResolveScriptConflictHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -703,4 +811,20 @@ func (UnimplementedAgentManagerServiceHandler) ReportScriptExecutionResult(conte
 
 func (UnimplementedAgentManagerServiceHandler) ReportScriptOutputChunk(context.Context, *connect.Request[v1.ReportScriptOutputChunkRequest]) (*connect.Response[v1.ReportScriptOutputChunkResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportScriptOutputChunk is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) RequestScriptComparison(context.Context, *connect.Request[v1.RequestScriptComparisonRequest]) (*connect.Response[v1.RequestScriptComparisonResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.RequestScriptComparison is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) ReportScriptComparison(context.Context, *connect.Request[v1.ReportScriptComparisonRequest]) (*connect.Response[v1.ReportScriptComparisonResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportScriptComparison is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) GetScriptComparison(context.Context, *connect.Request[v1.GetScriptComparisonRequest]) (*connect.Response[v1.GetScriptComparisonResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.GetScriptComparison is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) ResolveScriptConflict(context.Context, *connect.Request[v1.ResolveScriptConflictRequest]) (*connect.Response[v1.ResolveScriptConflictResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ResolveScriptConflict is not implemented"))
 }

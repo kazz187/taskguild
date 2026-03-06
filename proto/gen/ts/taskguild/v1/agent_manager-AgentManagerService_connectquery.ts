@@ -139,3 +139,31 @@ export const reportScriptExecutionResult = AgentManagerService.method.reportScri
  * @generated from rpc taskguild.v1.AgentManagerService.ReportScriptOutputChunk
  */
 export const reportScriptOutputChunk = AgentManagerService.method.reportScriptOutputChunk;
+
+/**
+ * RequestScriptComparison triggers a script comparison on connected agent-managers (called by frontend).
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.RequestScriptComparison
+ */
+export const requestScriptComparison = AgentManagerService.method.requestScriptComparison;
+
+/**
+ * ReportScriptComparison reports script diffs from the agent-manager after comparison.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.ReportScriptComparison
+ */
+export const reportScriptComparison = AgentManagerService.method.reportScriptComparison;
+
+/**
+ * GetScriptComparison returns the cached script comparison result for a project.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.GetScriptComparison
+ */
+export const getScriptComparison = AgentManagerService.method.getScriptComparison;
+
+/**
+ * ResolveScriptConflict resolves a per-script conflict between server and agent versions.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.ResolveScriptConflict
+ */
+export const resolveScriptConflict = AgentManagerService.method.resolveScriptConflict;
