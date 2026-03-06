@@ -31,7 +31,7 @@ export function DropdownMenu({
   children,
   className = '',
 }: DropdownMenuProps) {
-  const { refs, floatingStyles, context } = useFloating({
+  const { refs, floatingStyles, context, isPositioned } = useFloating({
     open,
     onOpenChange,
     placement: align === 'left' ? 'bottom-start' : 'bottom-end',
@@ -57,9 +57,15 @@ export function DropdownMenu({
     <FloatingPortal>
       <div
         ref={refs.setFloating}
-        style={floatingStyles}
+        style={{
+          ...floatingStyles,
+          // Hide the floating element until floating-ui has computed the
+          // correct position.  Without this the element briefly flashes at
+          // (0, 0) on mobile before jumping to the anchor.
+          ...(isPositioned ? {} : { visibility: 'hidden' as const }),
+        }}
         {...getFloatingProps()}
-        className={`z-50 bg-slate-800 border border-slate-600 rounded-lg shadow-xl py-1 min-w-[160px] animate-fade-in-down ${className}`}
+        className={`z-50 bg-slate-800 border border-slate-600 rounded-lg shadow-xl py-1 min-w-[160px] ${isPositioned ? 'animate-fade-in-down' : ''} ${className}`}
       >
         {children}
       </div>
