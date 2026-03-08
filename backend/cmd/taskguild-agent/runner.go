@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -40,6 +41,10 @@ const (
 	// maxUserResponseRetries is the maximum number of auto-expire + retry
 	// cycles before the task is force-completed.
 	maxUserResponseRetries = 2
+
+	// maxStatusTransitionRetries is the maximum number of retry attempts
+	// when the agent outputs an invalid NEXT_STATUS value.
+	maxStatusTransitionRetries = 2
 )
 
 const (
@@ -129,6 +134,7 @@ func runTask(
 	consecutiveErrors := 0
 	backoff := initialBackoff
 	userResponseRetries := 0
+	statusTransitionRetries := 0
 
 	for turn := 0; ; turn++ {
 		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, worktreeName, client, ctx, taskID, agentManagerID, waiter, permCache, tl)
@@ -331,8 +337,6 @@ func runTask(
 		// Check completion: NEXT_STATUS present means task is done.
 		nextStatusID := parseNextStatus(summary)
 		if nextStatusID != "" {
-			displaySummary := stripNextStatus(summary)
-			logger.Info("completed with NEXT_STATUS", "next_status", nextStatusID, "turn", turn)
 			// Log the NEXT_STATUS directive to timeline.
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_DIRECTIVE, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Status transition: %s", nextStatusID),
@@ -341,6 +345,42 @@ func runTask(
 					"next_status":    nextStatusID,
 					"turn":           fmt.Sprintf("%d", turn),
 				})
+
+			// Validate the transition before reporting completion.
+			resolvedID, err := validateAndResolveTransition(nextStatusID, metadata)
+			if err != nil && errors.Is(err, errInvalidTransition) {
+				statusTransitionRetries++
+				logger.Warn("invalid status transition, retrying",
+					"next_status", nextStatusID,
+					"retry", statusTransitionRetries,
+					"max_retries", maxStatusTransitionRetries,
+					"error", err)
+				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
+					fmt.Sprintf("Invalid status transition to %q (retry %d/%d): %v", nextStatusID, statusTransitionRetries, maxStatusTransitionRetries, err), nil)
+
+				if statusTransitionRetries > maxStatusTransitionRetries {
+					logger.Warn("max status transition retries reached, completing without transition")
+					tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
+						"Max status transition retries reached, completing without transition", nil)
+					displaySummary := stripNextStatus(summary)
+					reportTaskResult(ctx, client, taskID, displaySummary, "")
+					reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (invalid transition after retries)")
+					afterHooks()
+					return
+				}
+
+				// Retry with a corrective prompt.
+				reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "retrying: invalid status transition")
+				prompt = buildTransitionRetryPrompt(nextStatusID, metadata)
+				continue
+			}
+
+			// Valid transition (or non-retryable error) — proceed with completion.
+			if resolvedID != "" {
+				nextStatusID = resolvedID
+			}
+			displaySummary := stripNextStatus(summary)
+			logger.Info("completed with NEXT_STATUS", "next_status", nextStatusID, "turn", turn)
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Task completed with status transition (turn %d)", turn),
 				map[string]string{"next_status": nextStatusID})
