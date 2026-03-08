@@ -70,7 +70,7 @@ export function ArchivedTaskList({ projectId, workflowId, statusById }: Archived
       </button>
 
       {expanded && (
-        <div className="mt-3 space-y-2">
+        <div className="mt-3 space-y-2 max-h-[50vh] overflow-y-auto">
           {archivedTasks.map((task) => (
             <ArchivedTaskCard
               key={task.id}
