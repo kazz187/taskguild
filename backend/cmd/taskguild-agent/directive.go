@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -11,6 +12,10 @@ import (
 	"github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1/taskguildv1connect"
 	"github.com/kazz187/taskguild/backend/pkg/clog"
 )
+
+// errInvalidTransition is returned when the agent outputs a NEXT_STATUS
+// that does not match any of the available transitions.
+var errInvalidTransition = errors.New("invalid status transition")
 
 // createTaskDirective holds parsed CREATE_TASK directive fields.
 type createTaskDirective struct {
@@ -284,6 +289,84 @@ func stripTaskDescription(resultText string) string {
 	return strings.TrimSpace(resultText[:lineStart] + resultText[fullEndIdx:])
 }
 
+// transitionEntry represents one available status transition.
+type transitionEntry struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// parseAvailableTransitions parses the _available_transitions JSON from metadata.
+func parseAvailableTransitions(metadata map[string]string) ([]transitionEntry, error) {
+	transitionsJSON := metadata["_available_transitions"]
+	if transitionsJSON == "" {
+		return nil, fmt.Errorf("no available transitions in metadata")
+	}
+	var transitions []transitionEntry
+	if err := json.Unmarshal([]byte(transitionsJSON), &transitions); err != nil {
+		return nil, fmt.Errorf("failed to parse available transitions: %w", err)
+	}
+	if len(transitions) == 0 {
+		return nil, fmt.Errorf("available transitions list is empty")
+	}
+	return transitions, nil
+}
+
+// validateAndResolveTransition checks whether nextStatusID matches one of the
+// available transitions in metadata. It first tries an exact ID match, then
+// falls back to case-insensitive name matching. Returns the resolved status ID
+// on success, or errInvalidTransition if no match is found.
+func validateAndResolveTransition(nextStatusID string, metadata map[string]string) (string, error) {
+	transitions, err := parseAvailableTransitions(metadata)
+	if err != nil {
+		return "", err
+	}
+
+	// Exact ID match.
+	for _, t := range transitions {
+		if t.ID == nextStatusID {
+			return t.ID, nil
+		}
+	}
+
+	// Case-insensitive name match.
+	for _, t := range transitions {
+		if strings.EqualFold(t.Name, nextStatusID) {
+			return t.ID, nil
+		}
+	}
+
+	return "", fmt.Errorf("%w: %q (available: %s)", errInvalidTransition, nextStatusID, formatTransitionList(transitions))
+}
+
+// formatTransitionList formats a list of transitions as "ID (Name), ..." for error messages.
+func formatTransitionList(transitions []transitionEntry) string {
+	parts := make([]string, len(transitions))
+	for i, t := range transitions {
+		parts[i] = fmt.Sprintf("%s (%s)", t.ID, t.Name)
+	}
+	return strings.Join(parts, ", ")
+}
+
+// buildTransitionRetryPrompt constructs a corrective prompt to send to the agent
+// when it outputs an invalid NEXT_STATUS value.
+func buildTransitionRetryPrompt(failedStatusID string, metadata map[string]string) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("The status transition to %q failed because it is not a valid transition from the current status.\n\n", failedStatusID))
+
+	transitions, err := parseAvailableTransitions(metadata)
+	if err == nil && len(transitions) > 0 {
+		sb.WriteString("Valid transitions are:\n")
+		for _, t := range transitions {
+			sb.WriteString(fmt.Sprintf("- %s: %s\n", t.ID, t.Name))
+		}
+	}
+
+	sb.WriteString("\nPlease output the correct status on the LAST LINE of your response in the format:\n")
+	sb.WriteString("NEXT_STATUS: <status_id>\n\n")
+	sb.WriteString("Use ONLY one of the status IDs listed above.")
+	return sb.String()
+}
+
 // handleStatusTransition validates and executes a task status transition.
 // nextStatusID is the pre-parsed target status ID (from parseNextStatus).
 // When nextStatusID is empty, auto-transition is attempted if exactly one
@@ -299,21 +382,9 @@ func handleStatusTransition(
 ) error {
 	logger := clog.LoggerFromContext(ctx)
 
-	transitionsJSON := metadata["_available_transitions"]
-	if transitionsJSON == "" {
-		return fmt.Errorf("no available transitions in metadata")
-	}
-
-	type transitionEntry struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-	}
-	var transitions []transitionEntry
-	if err := json.Unmarshal([]byte(transitionsJSON), &transitions); err != nil {
-		return fmt.Errorf("failed to parse available transitions: %w", err)
-	}
-	if len(transitions) == 0 {
-		return fmt.Errorf("available transitions list is empty")
+	transitions, err := parseAvailableTransitions(metadata)
+	if err != nil {
+		return err
 	}
 
 	if nextStatusID == "" {
@@ -324,31 +395,18 @@ func handleStatusTransition(
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Auto-transitioning to %s (%s)", nextStatusID, transitions[0].Name), nil)
 		} else {
-			var ids []string
-			for _, t := range transitions {
-				ids = append(ids, t.ID)
-			}
-			return fmt.Errorf("no NEXT_STATUS found and %d transitions available (%s), cannot auto-transition", len(transitions), strings.Join(ids, ", "))
+			return fmt.Errorf("no NEXT_STATUS found and %d transitions available (%s), cannot auto-transition", len(transitions), formatTransitionList(transitions))
 		}
 	} else {
-		// Validate the chosen status is in available transitions.
-		valid := false
-		for _, t := range transitions {
-			if t.ID == nextStatusID {
-				valid = true
-				break
-			}
+		// Validate and resolve the chosen status (supports name fallback).
+		resolvedID, err := validateAndResolveTransition(nextStatusID, metadata)
+		if err != nil {
+			return err
 		}
-		if !valid {
-			var ids []string
-			for _, t := range transitions {
-				ids = append(ids, t.ID)
-			}
-			return fmt.Errorf("NEXT_STATUS %q is not a valid transition (available: %s)", nextStatusID, strings.Join(ids, ", "))
-		}
+		nextStatusID = resolvedID
 	}
 
-	_, err := taskClient.UpdateTaskStatus(ctx, connect.NewRequest(&v1.UpdateTaskStatusRequest{
+	_, err = taskClient.UpdateTaskStatus(ctx, connect.NewRequest(&v1.UpdateTaskStatusRequest{
 		Id:       taskID,
 		StatusId: nextStatusID,
 	}))
