@@ -194,25 +194,26 @@ export function PermissionList({ projectId }: { projectId: string }) {
             value={newRule}
             onChange={(e) => setNewRule(e.target.value)}
             placeholder='e.g. Read, Bash(git *), Bash(npm test *)'
-            className="flex-1"
+            className="flex-1 min-w-0"
           />
-          <Select
-            selectSize="md"
-            value={newCategory}
-            onChange={(e) => setNewCategory(e.target.value as PermissionCategory)}
-            className="w-auto flex-none"
-          >
-            <option value="allow">Allow</option>
-            <option value="ask">Ask</option>
-            <option value="deny">Deny</option>
-          </Select>
+          <div className="shrink-0">
+            <Select
+              selectSize="md"
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value as PermissionCategory)}
+            >
+              <option value="allow">Allow</option>
+              <option value="ask">Ask</option>
+              <option value="deny">Deny</option>
+            </Select>
+          </div>
           <Button
             type="submit"
             variant="secondary"
             size="md"
             icon={<Plus className="w-3.5 h-3.5" />}
             disabled={!newRule.trim()}
-            className="bg-slate-700 hover:bg-slate-600"
+            className="bg-slate-700 hover:bg-slate-600 shrink-0"
           >
             Add
           </Button>
