@@ -86,15 +86,17 @@ function InteractionEntry({ interaction }: { interaction: Interaction }) {
           {interaction.title}
         </span>
         {statusBadge}
-        {expandable && (
-          <span className="shrink-0 mt-0.5 text-gray-600">
-            {expanded ? (
+        <span className="shrink-0 mt-0.5 text-gray-600">
+          {expandable ? (
+            expanded ? (
               <ChevronDown className="w-3 h-3" />
             ) : (
               <ChevronRight className="w-3 h-3" />
-            )}
-          </span>
-        )}
+            )
+          ) : (
+            <span className="w-3 h-3 inline-block" />
+          )}
+        </span>
       </div>
 
       {expanded && (
