@@ -3,6 +3,18 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
 import { ConfigProvider } from './components/organisms/ConfigProvider'
 
+// Handle stale asset errors after deployments by reloading the page once.
+// When Cloudflare Pages deploys new assets with different hashes, browsers
+// with cached index.html will fail to load the old chunks.
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault()
+  const reloadedKey = 'vite-preload-reloaded'
+  if (!sessionStorage.getItem(reloadedKey)) {
+    sessionStorage.setItem(reloadedKey, '1')
+    window.location.reload()
+  }
+})
+
 const router = createRouter({
   routeTree,
   defaultPreload: 'intent',
