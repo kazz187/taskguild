@@ -201,48 +201,15 @@ func (c *singleCommandPermissionCache) CheckAllCommands(parsed *shellparse.Parse
 }
 
 // SuggestCommandPattern generates a suggested wildcard pattern for a command.
-// The pattern is broad enough to be useful but specific enough to be safe.
+// Returns the full command string as-is so users can see the exact command
+// and manually generalize it with wildcards (e.g. *) if desired.
 func SuggestCommandPattern(cmd shellparse.ParsedCommand) string {
-	exe := cmd.Executable
-	if exe == "" {
-		return cmd.Raw
-	}
-
-	// For commands with no arguments, match exactly.
-	if len(cmd.Args) == 0 {
-		return exe
-	}
-
-	// For common commands that take subcommands, include the subcommand.
-	switch exe {
-	case "git", "npm", "pnpm", "yarn", "bun", "make", "docker", "docker-compose", "kubectl":
-		if len(cmd.Args) >= 1 {
-			subCmd := cmd.Args[0]
-			if len(cmd.Args) > 1 {
-				return fmt.Sprintf("%s %s *", exe, subCmd)
-			}
-			return fmt.Sprintf("%s %s", exe, subCmd)
-		}
-		return fmt.Sprintf("%s *", exe)
-	default:
-		// Default: command name + wildcard
-		return fmt.Sprintf("%s *", exe)
-	}
+	return cmd.Raw
 }
 
 // SuggestRedirectPattern generates a suggested wildcard pattern for a redirect path.
+// Returns the exact path so users can see the full path and manually generalize
+// it with wildcards (e.g. *) if desired.
 func SuggestRedirectPattern(path string) string {
-	switch {
-	case path == "/dev/null":
-		return "/dev/null"
-	case strings.HasPrefix(path, "./"):
-		return "./*"
-	case strings.HasPrefix(path, "../"):
-		return "../*"
-	case strings.HasPrefix(path, "/tmp/") || strings.HasPrefix(path, "/tmp"):
-		return "/tmp/*"
-	default:
-		// Exact match by default
-		return path
-	}
+	return path
 }

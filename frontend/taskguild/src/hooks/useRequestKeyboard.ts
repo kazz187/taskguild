@@ -68,17 +68,17 @@ function buildDefaultAlwaysAllowResponse(meta: BashPermissionMeta): string {
   const rules: Array<{ pattern: string; type: string; label: string }> = []
 
   for (const cmd of meta.parsed_commands) {
-    const pattern = cmd.matched
-      ? (cmd.matched_pattern ?? cmd.command)
-      : (cmd.suggested_pattern ?? cmd.command)
+    // Skip already-matched commands — they are already allowed by existing rules
+    if (cmd.matched) continue
+    const pattern = cmd.suggested_pattern ?? cmd.command
     rules.push({ pattern, type: 'command', label: cmd.command })
   }
 
   if (meta.redirects) {
     for (const redir of meta.redirects) {
-      const pattern = redir.matched
-        ? (redir.matched_pattern ?? redir.path)
-        : (redir.suggested_pattern ?? redir.path)
+      // Skip already-matched redirects — they are already allowed by existing rules
+      if (redir.matched) continue
+      const pattern = redir.suggested_pattern ?? redir.path
       rules.push({ pattern, type: 'redirect', label: `${redir.operator} ${redir.path}` })
     }
   }

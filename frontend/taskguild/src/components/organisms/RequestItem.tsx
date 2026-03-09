@@ -63,7 +63,7 @@ function buildPatternRows(meta: BashPermissionMetadata): PatternRow[] {
       label: cmd.command,
       matched: cmd.matched,
       pattern: cmd.matched ? (cmd.matched_pattern ?? cmd.command) : (cmd.suggested_pattern ?? cmd.command),
-      checked: true,
+      checked: !cmd.matched,
     })
   }
 
@@ -75,7 +75,7 @@ function buildPatternRows(meta: BashPermissionMetadata): PatternRow[] {
       label: `${redir.operator} ${redir.path}`,
       matched: redir.matched,
       pattern: redir.matched ? (redir.matched_pattern ?? redir.path) : (redir.suggested_pattern ?? redir.path),
-      checked: true,
+      checked: !redir.matched,
     })
   }
 
@@ -224,33 +224,12 @@ export function RequestItem({
     )
   }, [])
 
-  // Build options list based on whether this is a Bash interaction
+  // Build options list — backend already provides the correct options per tool type.
+  // Only filter out legacy "always_allow" if present.
   const displayOptions = useMemo(() => {
     if (!isPending) return interaction.options
-
-    if (isBash) {
-      // Bash: Allow (y) / Always Allow Command (a) / Deny (n)
-      // Replace "always_allow" with "always_allow_command"
-      return interaction.options
-        .filter((opt) => opt.value !== 'always_allow')
-        .flatMap((opt) => {
-          if (opt.value === 'allow') {
-            return [
-              opt,
-              {
-                label: 'Always Allow Command',
-                value: 'always_allow_command',
-                description: 'Allow and save command patterns as rules',
-              },
-            ]
-          }
-          return [opt]
-        })
-    }
-
-    // Non-Bash: Allow (y) / Deny (n) — remove "Always Allow"
     return interaction.options.filter((opt) => opt.value !== 'always_allow')
-  }, [interaction.options, isBash, isPending])
+  }, [interaction.options, isPending])
 
   // Handle respond with special logic for always_allow_command
   const handleRespond = useCallback(

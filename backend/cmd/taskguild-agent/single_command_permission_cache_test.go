@@ -194,54 +194,39 @@ func TestSuggestCommandPattern(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "git status (single arg)",
-			cmd:      shellparse.ParsedCommand{Executable: "git", Args: []string{"status"}},
+			name:     "returns raw command as-is",
+			cmd:      shellparse.ParsedCommand{Raw: "git status", Executable: "git", Args: []string{"status"}},
 			expected: "git status",
 		},
 		{
-			name:     "git checkout with args",
-			cmd:      shellparse.ParsedCommand{Executable: "git", Args: []string{"checkout", "-b", "feature"}},
-			expected: "git checkout *",
+			name:     "returns full command with args",
+			cmd:      shellparse.ParsedCommand{Raw: "git checkout -b feature", Executable: "git", Args: []string{"checkout", "-b", "feature"}},
+			expected: "git checkout -b feature",
 		},
 		{
-			name:     "npm test (single arg)",
-			cmd:      shellparse.ParsedCommand{Executable: "npm", Args: []string{"test"}},
-			expected: "npm test",
-		},
-		{
-			name:     "npm test with args",
-			cmd:      shellparse.ParsedCommand{Executable: "npm", Args: []string{"test", "--coverage"}},
-			expected: "npm test *",
+			name:     "npm test with coverage",
+			cmd:      shellparse.ParsedCommand{Raw: "npm test --coverage", Executable: "npm", Args: []string{"test", "--coverage"}},
+			expected: "npm test --coverage",
 		},
 		{
 			name:     "no args",
-			cmd:      shellparse.ParsedCommand{Executable: "ls"},
+			cmd:      shellparse.ParsedCommand{Raw: "ls", Executable: "ls"},
 			expected: "ls",
 		},
 		{
 			name:     "unknown command with args",
-			cmd:      shellparse.ParsedCommand{Executable: "myapp", Args: []string{"serve", "--port", "8080"}},
-			expected: "myapp *",
+			cmd:      shellparse.ParsedCommand{Raw: "myapp serve --port 8080", Executable: "myapp", Args: []string{"serve", "--port", "8080"}},
+			expected: "myapp serve --port 8080",
 		},
 		{
-			name:     "command with flag-like first arg",
-			cmd:      shellparse.ParsedCommand{Executable: "ls", Args: []string{"-la"}},
-			expected: "ls *",
-		},
-		{
-			name:     "cd with path",
-			cmd:      shellparse.ParsedCommand{Executable: "cd", Args: []string{"/home"}},
-			expected: "cd *",
-		},
-		{
-			name:     "empty executable",
+			name:     "empty executable falls back to raw",
 			cmd:      shellparse.ParsedCommand{Raw: "some raw command"},
 			expected: "some raw command",
 		},
 		{
-			name:     "docker compose",
-			cmd:      shellparse.ParsedCommand{Executable: "docker", Args: []string{"compose", "up"}},
-			expected: "docker compose *",
+			name:     "command with command substitution",
+			cmd:      shellparse.ParsedCommand{Raw: "cd $(git rev-parse --show-toplevel)/.claude/worktrees/foo", Executable: "cd", Args: []string{"$(git rev-parse --show-toplevel)/.claude/worktrees/foo"}},
+			expected: "cd $(git rev-parse --show-toplevel)/.claude/worktrees/foo",
 		},
 	}
 
@@ -261,9 +246,9 @@ func TestSuggestRedirectPattern(t *testing.T) {
 		expected string
 	}{
 		{"/dev/null", "/dev/null"},
-		{"./output.txt", "./*"},
-		{"../output.txt", "../*"},
-		{"/tmp/foo", "/tmp/*"},
+		{"./output.txt", "./output.txt"},
+		{"../output.txt", "../output.txt"},
+		{"/tmp/foo", "/tmp/foo"},
 		{"/etc/passwd", "/etc/passwd"},
 	}
 
