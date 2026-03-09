@@ -680,7 +680,7 @@ export function WorkflowForm({
                       )}
                       <div className="space-y-2">
                         {s.hooks.map((h, hi) => (
-                          <div key={h.key} className="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded p-2">
+                          <div key={h.key} className="flex items-center gap-2 bg-slate-900/50 rounded p-2">
                             <div className="flex flex-col -my-1">
                               <Button
                                 type="button"
@@ -744,7 +744,7 @@ export function WorkflowForm({
                                   })
                                 }}
                                 selectSize="xs"
-                                className="flex-1 min-w-[140px] rounded text-[11px]"
+                                className="flex-1 min-w-0 rounded text-[11px]"
                               >
                                 <option value="">Select script...</option>
                                 {scripts.map((sc) => (
@@ -765,7 +765,7 @@ export function WorkflowForm({
                                   })
                                 }}
                                 selectSize="xs"
-                                className="flex-1 min-w-[140px] rounded text-[11px]"
+                                className="flex-1 min-w-0 rounded text-[11px]"
                               >
                                 <option value="">Select skill...</option>
                                 {skills.map((sk) => (
