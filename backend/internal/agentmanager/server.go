@@ -817,15 +817,16 @@ func (s *Server) CreateInteraction(ctx context.Context, req *connect.Request[tas
 		return nil, err
 	}
 
+	interProto := interaction.ToProto(inter)
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_INTERACTION_CREATED,
 		inter.ID,
-		"",
+		interaction.MarshalInteractionPayload(interProto),
 		map[string]string{"task_id": inter.TaskID, "agent_id": inter.AgentID},
 	)
 
 	return connect.NewResponse(&taskguildv1.CreateInteractionResponse{
-		Interaction: interactionToProto(inter),
+		Interaction: interProto,
 	}), nil
 }
 
@@ -835,7 +836,7 @@ func (s *Server) GetInteractionResponse(ctx context.Context, req *connect.Reques
 		return nil, err
 	}
 	return connect.NewResponse(&taskguildv1.GetInteractionResponseResponse{
-		Interaction: interactionToProto(inter),
+		Interaction: interaction.ToProto(inter),
 	}), nil
 }
 
@@ -1568,27 +1569,3 @@ func (s *Server) removeScriptDiff(projectID, scriptID, filename string) {
 	s.scriptDiffCache[projectID] = filtered
 }
 
-func interactionToProto(i *interaction.Interaction) *taskguildv1.Interaction {
-	pb := &taskguildv1.Interaction{
-		Id:          i.ID,
-		TaskId:      i.TaskID,
-		AgentId:     i.AgentID,
-		Type:        taskguildv1.InteractionType(i.Type),
-		Status:      taskguildv1.InteractionStatus(i.Status),
-		Title:       i.Title,
-		Description: i.Description,
-		Response:    i.Response,
-		CreatedAt:   timestamppb.New(i.CreatedAt),
-	}
-	for _, opt := range i.Options {
-		pb.Options = append(pb.Options, &taskguildv1.InteractionOption{
-			Label:       opt.Label,
-			Value:       opt.Value,
-			Description: opt.Description,
-		})
-	}
-	if i.RespondedAt != nil {
-		pb.RespondedAt = timestamppb.New(*i.RespondedAt)
-	}
-	return pb
-}

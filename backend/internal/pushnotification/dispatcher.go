@@ -52,6 +52,17 @@ func (d *Dispatcher) Start(ctx context.Context) {
 }
 
 func (d *Dispatcher) handleInteractionCreated(ctx context.Context, event *taskguildv1.Event) {
+	// Quick-filter using event payload to avoid DB fetch for
+	// interaction types that don't need push notifications.
+	if pb := interaction.UnmarshalInteractionPayload(event.Payload); pb != nil {
+		if pb.Type != taskguildv1.InteractionType_INTERACTION_TYPE_PERMISSION_REQUEST &&
+			pb.Type != taskguildv1.InteractionType_INTERACTION_TYPE_QUESTION {
+			return
+		}
+	}
+
+	// Fetch full interaction from DB because ResponseToken (not
+	// included in the proto) is required for push notification actions.
 	inter, err := d.interactionRepo.Get(ctx, event.ResourceId)
 	if err != nil {
 		slog.Error("push dispatcher: failed to get interaction", "id", event.ResourceId, "error", err)

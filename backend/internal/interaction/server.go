@@ -70,7 +70,7 @@ func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[task
 
 	protos := make([]*taskguildv1.Interaction, len(interactions))
 	for i, inter := range interactions {
-		protos[i] = toProto(inter)
+		protos[i] = ToProto(inter)
 	}
 	return connect.NewResponse(&taskguildv1.ListInteractionsResponse{
 		Interactions: protos,
@@ -103,15 +103,16 @@ func (s *Server) RespondToInteraction(ctx context.Context, req *connect.Request[
 		return nil, err
 	}
 
+	interProto := ToProto(inter)
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_INTERACTION_RESPONDED,
 		inter.ID,
-		"",
+		MarshalInteractionPayload(interProto),
 		map[string]string{"task_id": inter.TaskID, "agent_id": inter.AgentID},
 	)
 
 	return connect.NewResponse(&taskguildv1.RespondToInteractionResponse{
-		Interaction: toProto(inter),
+		Interaction: interProto,
 	}), nil
 }
 
@@ -143,15 +144,16 @@ func (s *Server) RespondToInteractionByToken(ctx context.Context, req *connect.R
 		return nil, err
 	}
 
+	interProto := ToProto(inter)
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_INTERACTION_RESPONDED,
 		inter.ID,
-		"",
+		MarshalInteractionPayload(interProto),
 		map[string]string{"task_id": inter.TaskID, "agent_id": inter.AgentID},
 	)
 
 	return connect.NewResponse(&taskguildv1.RespondToInteractionByTokenResponse{
-		Interaction: toProto(inter),
+		Interaction: interProto,
 	}), nil
 }
 
@@ -173,15 +175,16 @@ func (s *Server) ExpireInteraction(ctx context.Context, req *connect.Request[tas
 		return nil, err
 	}
 
+	interProto := ToProto(inter)
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_INTERACTION_RESPONDED,
 		inter.ID,
-		"",
+		MarshalInteractionPayload(interProto),
 		map[string]string{"task_id": inter.TaskID, "agent_id": inter.AgentID},
 	)
 
 	return connect.NewResponse(&taskguildv1.ExpireInteractionResponse{
-		Interaction: toProto(inter),
+		Interaction: interProto,
 	}), nil
 }
 
@@ -213,15 +216,16 @@ func (s *Server) SendMessage(ctx context.Context, req *connect.Request[taskguild
 		return nil, err
 	}
 
+	interProto := ToProto(inter)
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_INTERACTION_CREATED,
 		inter.ID,
-		"",
+		MarshalInteractionPayload(interProto),
 		map[string]string{"task_id": inter.TaskID, "project_id": t.ProjectID},
 	)
 
 	return connect.NewResponse(&taskguildv1.SendMessageResponse{
-		Interaction: toProto(inter),
+		Interaction: interProto,
 	}), nil
 }
 
@@ -250,14 +254,19 @@ func (s *Server) SubscribeInteractions(ctx context.Context, req *connect.Request
 					continue
 				}
 			}
-			// Fetch latest interaction state.
-			inter, err := s.repo.Get(ctx, event.ResourceId)
-			if err != nil {
-				slog.Warn("failed to get interaction for stream", "id", event.ResourceId, "error", err)
-				continue
+			// Use interaction data from event payload if available;
+			// fall back to fetching from the repository.
+			interProto := UnmarshalInteractionPayload(event.Payload)
+			if interProto == nil {
+				inter, err := s.repo.Get(ctx, event.ResourceId)
+				if err != nil {
+					slog.Warn("failed to get interaction for stream", "id", event.ResourceId, "error", err)
+					continue
+				}
+				interProto = ToProto(inter)
 			}
 			if err := stream.Send(&taskguildv1.InteractionEvent{
-				Interaction: toProto(inter),
+				Interaction: interProto,
 			}); err != nil {
 				return err
 			}
@@ -265,7 +274,8 @@ func (s *Server) SubscribeInteractions(ctx context.Context, req *connect.Request
 	}
 }
 
-func toProto(i *Interaction) *taskguildv1.Interaction {
+// ToProto converts a domain Interaction to its protobuf representation.
+func ToProto(i *Interaction) *taskguildv1.Interaction {
 	pb := &taskguildv1.Interaction{
 		Id:          i.ID,
 		TaskId:      i.TaskID,
