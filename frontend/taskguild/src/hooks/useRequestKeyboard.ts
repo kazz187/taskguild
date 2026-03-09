@@ -27,14 +27,63 @@ function isInputFocused(): boolean {
   )
 }
 
-function hasBashMetadata(interaction: Interaction): boolean {
-  if (!interaction.metadata) return false
+interface BashCommandCheckResult {
+  command: string
+  matched: boolean
+  matched_pattern?: string
+  suggested_pattern?: string
+}
+
+interface BashRedirectCheckResult {
+  operator: string
+  path: string
+  matched: boolean
+  matched_pattern?: string
+  suggested_pattern?: string
+}
+
+interface BashPermissionMeta {
+  parsed_commands: BashCommandCheckResult[]
+  redirects?: BashRedirectCheckResult[]
+}
+
+function parseBashMeta(interaction: Interaction): BashPermissionMeta | null {
+  if (!interaction.metadata) return null
   try {
     const parsed = JSON.parse(interaction.metadata)
-    return parsed && Array.isArray(parsed.parsed_commands)
+    if (parsed && Array.isArray(parsed.parsed_commands)) {
+      return parsed as BashPermissionMeta
+    }
   } catch {
-    return false
+    // not bash metadata
   }
+  return null
+}
+
+/**
+ * Build the default JSON response for always_allow_command from metadata.
+ * Uses suggested/matched patterns as-is (no user edits — those require clicking the button).
+ */
+function buildDefaultAlwaysAllowResponse(meta: BashPermissionMeta): string {
+  const rules: Array<{ pattern: string; type: string; label: string }> = []
+
+  for (const cmd of meta.parsed_commands) {
+    const pattern = cmd.matched
+      ? (cmd.matched_pattern ?? cmd.command)
+      : (cmd.suggested_pattern ?? cmd.command)
+    rules.push({ pattern, type: 'command', label: cmd.command })
+  }
+
+  if (meta.redirects) {
+    for (const redir of meta.redirects) {
+      const pattern = redir.matched
+        ? (redir.matched_pattern ?? redir.path)
+        : (redir.suggested_pattern ?? redir.path)
+      rules.push({ pattern, type: 'redirect', label: `${redir.operator} ${redir.path}` })
+    }
+  }
+
+  return JSON.stringify({ action: 'always_allow_command', rules })
 }
 
 /**
@@ -217,7 +266,8 @@ export function useRequestKeyboard({
           const selected = pendingRequests.find((r) => r.id === selectedId)
           if (!selected || selected.type !== InteractionType.PERMISSION_REQUEST) return
 
-          const isBash = hasBashMetadata(selected)
+          const bashMeta = parseBashMeta(selected)
+          const isBash = bashMeta !== null
           const value = getPermissionShortcutValue(e.key, isBash)
           if (!value) return
 
@@ -227,11 +277,17 @@ export function useRequestKeyboard({
             if (!selected.options.some((opt) => opt.value === value)) return
           } else {
             // always_allow_command is only available for bash
-            if (!isBash) return
+            if (!isBash || !bashMeta) return
           }
 
           e.preventDefault()
-          guardedRespond(selectedId, value)
+
+          // For always_allow_command, build the JSON response with default patterns
+          if (value === 'always_allow_command' && bashMeta) {
+            guardedRespond(selectedId, buildDefaultAlwaysAllowResponse(bashMeta))
+          } else {
+            guardedRespond(selectedId, value)
+          }
           break
         }
         default: {

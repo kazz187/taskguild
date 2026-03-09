@@ -41,11 +41,6 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
 
   const validatePattern = (pattern: string): string | null => {
     if (!pattern.trim()) return 'Pattern is required'
-    try {
-      new RegExp(pattern)
-    } catch {
-      return 'Invalid regex pattern'
-    }
     return null
   }
 
@@ -159,13 +154,13 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
               />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <FormField label="Pattern *" hint="Regex pattern (e.g. ^git\\s+status$)">
+              <FormField label="Pattern *" hint="Wildcard pattern (e.g. git status, git *, npm test *)">
                 <Input
                   type="text"
                   required
                   value={form.pattern}
                   onChange={e => { setForm(prev => ({ ...prev, pattern: e.target.value })); setValidationError(null) }}
-                  placeholder="^git\\s+.*$"
+                  placeholder="git *"
                   className="focus:border-purple-500 font-mono text-sm"
                 />
               </FormField>
@@ -238,7 +233,7 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
                         type="text"
                         value={editForm.pattern}
                         onChange={e => { setEditForm(prev => ({ ...prev, pattern: e.target.value })); setValidationError(null) }}
-                        placeholder="^git\\s+.*$"
+                        placeholder="git *"
                         className="focus:border-purple-500 font-mono text-sm"
                       />
                     </FormField>
@@ -346,7 +341,7 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
           <Terminal className="w-8 h-8 mx-auto mb-3 opacity-30" />
           <p className="text-sm">No single command permission rules defined yet.</p>
           <p className="text-xs mt-1 text-gray-600">
-            Add regex-based rules to allow specific shell commands without confirmation.
+            Add wildcard-based rules to allow specific shell commands without confirmation.
           </p>
         </div>
       )}

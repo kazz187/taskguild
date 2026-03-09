@@ -13,7 +13,6 @@ import (
 )
 
 // mockAgentManagerClient is a minimal mock for testing handlePermissionRequest.
-// It embeds the unimplemented handler to satisfy the interface.
 type mockAgentManagerClient struct {
 	taskguildv1connect.UnimplementedAgentManagerServiceHandler
 
@@ -58,7 +57,6 @@ func (m *mockAgentManagerClient) GetInteractionResponse(_ context.Context, _ *co
 	return connect.NewResponse(&v1.GetInteractionResponseResponse{}), nil
 }
 
-// Stub remaining methods that may be called.
 func (m *mockAgentManagerClient) Subscribe(_ context.Context, _ *connect.Request[v1.AgentManagerSubscribeRequest]) (*connect.ServerStreamForClient[v1.AgentCommand], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, nil)
 }
@@ -105,23 +103,6 @@ func (m *mockAgentManagerClient) ReportGitPullMainResult(_ context.Context, _ *c
 	return connect.NewResponse(&v1.ReportGitPullMainResultResponse{}), nil
 }
 
-func (m *mockAgentManagerClient) ReportCompareScriptsResult(_ context.Context, _ *connect.Request[v1.ReportCompareScriptsResultRequest]) (*connect.Response[v1.ReportCompareScriptsResultResponse], error) {
-	return connect.NewResponse(&v1.ReportCompareScriptsResultResponse{}), nil
-}
-
-func (m *mockAgentManagerClient) ReportExecuteScriptResult(_ context.Context, _ *connect.Request[v1.ReportExecuteScriptResultRequest]) (*connect.Response[v1.ReportExecuteScriptResultResponse], error) {
-	return connect.NewResponse(&v1.ReportExecuteScriptResultResponse{}), nil
-}
-
-func (m *mockAgentManagerClient) ListSingleCommandPermissionsAgent(_ context.Context, _ *connect.Request[v1.ListSingleCommandPermissionsAgentRequest]) (*connect.Response[v1.ListSingleCommandPermissionsAgentResponse], error) {
-	return connect.NewResponse(&v1.ListSingleCommandPermissionsAgentResponse{
-		Permissions: m.listPermissions,
-	}), nil
-}
-
-func (m *mockAgentManagerClient) StreamTaskLogs(_ context.Context, _ *connect.Request[v1.StreamTaskLogsRequest]) (*connect.Response[v1.StreamTaskLogsResponse], error) {
-	return connect.NewResponse(&v1.StreamTaskLogsResponse{}), nil
-}
 
 func TestHandlePermissionRequest_BashAutoAllow(t *testing.T) {
 	mock := &mockAgentManagerClient{}
@@ -163,9 +144,10 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	waiter := newInteractionWaiter()
 
-	// Run handlePermissionRequest in a goroutine because it blocks waiting for response.
+	// Run in goroutine since it blocks waiting for response.
 	resultCh := make(chan claudeagent.PermissionResult, 1)
 	errCh := make(chan error, 1)
 	go func() {
@@ -180,7 +162,6 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 		errCh <- err
 	}()
 
-	// Wait briefly for the interaction to be created.
 	time.Sleep(50 * time.Millisecond)
 
 	if len(mock.interactions) != 1 {
@@ -189,7 +170,7 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 
 	inter := mock.interactions[0]
 
-	// Verify interaction has 3 options for Bash.
+	// Bash tools should have 3 options.
 	if len(inter.Options) != 3 {
 		t.Errorf("expected 3 options, got %d", len(inter.Options))
 	}
@@ -205,30 +186,26 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 
 	// Verify metadata contains parsed command info.
 	if inter.Metadata == "" {
-		t.Error("expected metadata to be set")
-	} else {
-		var meta bashPermissionMetadata
-		if err := json.Unmarshal([]byte(inter.Metadata), &meta); err != nil {
-			t.Errorf("failed to parse metadata: %v", err)
-		} else {
-			if len(meta.ParsedCommands) != 2 {
-				t.Errorf("expected 2 parsed commands, got %d", len(meta.ParsedCommands))
-			}
-			// First command (cd /home) should be matched.
-			if !meta.ParsedCommands[0].Matched {
-				t.Error("expected first command to be matched")
-			}
-			// Second command (npm test) should NOT be matched.
-			if meta.ParsedCommands[1].Matched {
-				t.Error("expected second command to be unmatched")
-			}
-			if meta.ParsedCommands[1].SuggestedPattern == "" {
-				t.Error("expected suggested pattern for unmatched command")
-			}
-		}
+		t.Fatal("expected metadata to be set")
+	}
+	var meta bashPermissionMetadata
+	if err := json.Unmarshal([]byte(inter.Metadata), &meta); err != nil {
+		t.Fatalf("failed to parse metadata: %v", err)
+	}
+	if len(meta.ParsedCommands) != 2 {
+		t.Errorf("expected 2 parsed commands, got %d", len(meta.ParsedCommands))
+	}
+	if !meta.ParsedCommands[0].Matched {
+		t.Error("expected first command (cd /home) to be matched")
+	}
+	if meta.ParsedCommands[1].Matched {
+		t.Error("expected second command (npm test) to be unmatched")
+	}
+	if meta.ParsedCommands[1].SuggestedPattern == "" {
+		t.Error("expected suggested pattern for unmatched command")
 	}
 
-	// Simulate "allow" response.
+	// Respond with "allow".
 	waiter.Deliver(&v1.Interaction{
 		Id:       "test-interaction-id",
 		Status:   v1.InteractionStatus_INTERACTION_STATUS_RESPONDED,
@@ -242,14 +219,13 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 	if _, ok := result.(claudeagent.PermissionResultAllow); !ok {
 		t.Fatalf("expected PermissionResultAllow, got %T", result)
 	}
-
-	cancel()
 }
 
 func TestHandlePermissionRequest_NonBashToolOptions(t *testing.T) {
 	mock := &mockAgentManagerClient{}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	waiter := newInteractionWaiter()
 
 	go func() {
@@ -265,7 +241,6 @@ func TestHandlePermissionRequest_NonBashToolOptions(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	if len(mock.interactions) != 1 {
-		cancel()
 		t.Fatalf("expected 1 interaction, got %d", len(mock.interactions))
 	}
 
@@ -286,8 +261,6 @@ func TestHandlePermissionRequest_NonBashToolOptions(t *testing.T) {
 	if inter.Metadata != "" {
 		t.Errorf("expected empty metadata for non-Bash tool, got %q", inter.Metadata)
 	}
-
-	cancel()
 }
 
 func TestHandlePermissionRequest_AlwaysAllowCommand(t *testing.T) {
@@ -320,21 +293,20 @@ func TestHandlePermissionRequest_AlwaysAllowCommand(t *testing.T) {
 		t.Fatalf("expected 1 interaction, got %d", len(mock.interactions))
 	}
 
-	// Build the metadata that the frontend would return (with suggested patterns).
-	meta := bashPermissionMetadata{
-		ParsedCommands: []commandCheckResult{
-			{Command: "cd /home", Matched: true, MatchedPattern: "cd *"},
-			{Command: "npm test", Matched: false, SuggestedPattern: "npm test"},
+	// Build JSON response that the frontend would send.
+	aacResp := alwaysAllowCommandResponse{
+		Action: "always_allow_command",
+		Rules: []alwaysAllowCommandResponseRule{
+			{Pattern: "npm test", Type: "command", Label: "npm test"},
 		},
 	}
-	metaBytes, _ := json.Marshal(meta)
+	respBytes, _ := json.Marshal(aacResp)
 
-	// Simulate "always_allow_command" response with metadata.
+	// Simulate response.
 	waiter.Deliver(&v1.Interaction{
 		Id:       "test-interaction-id",
 		Status:   v1.InteractionStatus_INTERACTION_STATUS_RESPONDED,
-		Response: "always_allow_command",
-		Metadata: string(metaBytes),
+		Response: string(respBytes),
 	})
 
 	result := <-resultCh
@@ -345,7 +317,10 @@ func TestHandlePermissionRequest_AlwaysAllowCommand(t *testing.T) {
 		t.Fatalf("expected PermissionResultAllow, got %T", result)
 	}
 
-	// Verify AddSingleCommandPermission was called for the unmatched command.
+	// Wait briefly for async RPC calls.
+	time.Sleep(50 * time.Millisecond)
+
+	// Verify AddSingleCommandPermission was called.
 	if len(mock.addedPermissions) != 1 {
 		t.Fatalf("expected 1 added permission, got %d", len(mock.addedPermissions))
 	}
@@ -361,7 +336,7 @@ func TestHandlePermissionRequest_AlwaysAllowCommand(t *testing.T) {
 	}
 }
 
-func TestHandlePermissionRequest_AlwaysAllowCommand_InvalidMetadata(t *testing.T) {
+func TestHandlePermissionRequest_AlwaysAllowCommand_InvalidJSON(t *testing.T) {
 	mock := &mockAgentManagerClient{}
 	scpCache := newSingleCommandPermissionCache("test-project", mock)
 
@@ -384,12 +359,11 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_InvalidMetadata(t *testing.T
 
 	time.Sleep(50 * time.Millisecond)
 
-	// Simulate "always_allow_command" response with invalid metadata.
+	// Simulate non-JSON response that doesn't match any known action → deny.
 	waiter.Deliver(&v1.Interaction{
 		Id:       "test-interaction-id",
 		Status:   v1.InteractionStatus_INTERACTION_STATUS_RESPONDED,
-		Response: "always_allow_command",
-		Metadata: "invalid-json",
+		Response: "invalid-response",
 	})
 
 	result := <-resultCh
@@ -397,13 +371,95 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_InvalidMetadata(t *testing.T
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Should fall back to simple allow.
-	if _, ok := result.(claudeagent.PermissionResultAllow); !ok {
-		t.Fatalf("expected PermissionResultAllow fallback, got %T", result)
+	// Unknown response falls through to deny.
+	if _, ok := result.(claudeagent.PermissionResultDeny); !ok {
+		t.Fatalf("expected PermissionResultDeny for unknown response, got %T", result)
 	}
 
 	// No permissions should have been added.
 	if len(mock.addedPermissions) != 0 {
-		t.Errorf("expected no added permissions on invalid metadata, got %d", len(mock.addedPermissions))
+		t.Errorf("expected no added permissions, got %d", len(mock.addedPermissions))
+	}
+}
+
+func TestHandlePermissionRequest_AlwaysAllowCommand_WithRedirects(t *testing.T) {
+	mock := &mockAgentManagerClient{}
+	scpCache := newSingleCommandPermissionCache("test-project", mock)
+	// No patterns cached.
+
+	ctx := context.Background()
+	waiter := newInteractionWaiter()
+
+	resultCh := make(chan claudeagent.PermissionResult, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		result, err := handlePermissionRequest(
+			ctx, mock, "task-1", "agent-1",
+			"Bash", map[string]any{"command": "echo hello > /dev/null"},
+			waiter, claudeagent.PermissionModeDefault,
+			claudeagent.ToolPermissionContext{},
+			nil, scpCache,
+		)
+		resultCh <- result
+		errCh <- err
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	if len(mock.interactions) != 1 {
+		t.Fatalf("expected 1 interaction, got %d", len(mock.interactions))
+	}
+
+	// Verify metadata includes redirect info.
+	inter := mock.interactions[0]
+	if inter.Metadata == "" {
+		t.Fatal("expected metadata to be set")
+	}
+	var meta bashPermissionMetadata
+	if err := json.Unmarshal([]byte(inter.Metadata), &meta); err != nil {
+		t.Fatalf("failed to parse metadata: %v", err)
+	}
+	if len(meta.Redirects) != 1 {
+		t.Errorf("expected 1 redirect, got %d", len(meta.Redirects))
+	}
+	if meta.Redirects[0].Path != "/dev/null" {
+		t.Errorf("expected redirect path '/dev/null', got %q", meta.Redirects[0].Path)
+	}
+
+	// Respond with always_allow_command including both command and redirect rules.
+	aacResp := alwaysAllowCommandResponse{
+		Action: "always_allow_command",
+		Rules: []alwaysAllowCommandResponseRule{
+			{Pattern: "echo *", Type: "command", Label: "echo hello"},
+			{Pattern: "/dev/null", Type: "redirect", Label: "/dev/null"},
+		},
+	}
+	respBytes, _ := json.Marshal(aacResp)
+
+	waiter.Deliver(&v1.Interaction{
+		Id:       "test-interaction-id",
+		Status:   v1.InteractionStatus_INTERACTION_STATUS_RESPONDED,
+		Response: string(respBytes),
+	})
+
+	result := <-resultCh
+	if err := <-errCh; err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := result.(claudeagent.PermissionResultAllow); !ok {
+		t.Fatalf("expected PermissionResultAllow, got %T", result)
+	}
+
+	time.Sleep(50 * time.Millisecond)
+
+	// Two permissions should have been registered (command + redirect).
+	if len(mock.addedPermissions) != 2 {
+		t.Fatalf("expected 2 added permissions, got %d", len(mock.addedPermissions))
+	}
+	if mock.addedPermissions[0].Type != "command" {
+		t.Errorf("expected first permission type 'command', got %q", mock.addedPermissions[0].Type)
+	}
+	if mock.addedPermissions[1].Type != "redirect" {
+		t.Errorf("expected second permission type 'redirect', got %q", mock.addedPermissions[1].Type)
 	}
 }
