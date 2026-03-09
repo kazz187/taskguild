@@ -488,7 +488,6 @@ func buildClaudeOptions(
 	}
 
 	opts := &claudeagent.ClaudeAgentOptions{
-		SystemPrompt:   instructions,
 		Cwd:            cwd,
 		PermissionMode: permMode,
 		CanUseTool: func(toolName string, input map[string]any, toolCtx claudeagent.ToolPermissionContext) (claudeagent.PermissionResult, error) {
@@ -498,6 +497,20 @@ func buildClaudeOptions(
 			logger.Debug("claude-stderr", "line", line)
 		},
 		Hooks: buildToolUseHooks(tl, taskID),
+	}
+
+	// Use --agent flag when a named agent is assigned; otherwise fall back to --system-prompt.
+	if agentName := metadata["_agent_name"]; agentName != "" {
+		opts.Agent = agentName
+		// Pass workflow custom prompt (if any) as append-system-prompt.
+		if instructions != "" {
+			opts.SystemPrompt = &claudeagent.SystemPromptPreset{
+				Type:   "preset",
+				Append: instructions,
+			}
+		}
+	} else {
+		opts.SystemPrompt = instructions
 	}
 
 	// Parse and pass sub-agents from metadata.

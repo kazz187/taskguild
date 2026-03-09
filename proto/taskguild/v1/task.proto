@@ -44,7 +44,8 @@ message Task {
 
   // execution options
   bool use_worktree = 9;
-  string permission_mode = 10;                   // default, acceptEdits, bypassPermissions
+  reserved 10; // was permission_mode, now on WorkflowStatus
+  reserved "permission_mode";
 
   // metadata
   map<string, string> metadata = 11;
@@ -63,7 +64,8 @@ message CreateTaskRequest {
 
   // execution options
   bool use_worktree = 5;
-  string permission_mode = 6;
+  reserved 6; // was permission_mode, now on WorkflowStatus
+  reserved "permission_mode";
 
   // metadata
   map<string, string> metadata = 7;
@@ -104,7 +106,8 @@ message UpdateTaskRequest {
 
   // execution options
   optional bool use_worktree = 4;
-  optional string permission_mode = 5;
+  reserved 5; // was permission_mode, now on WorkflowStatus
+  reserved "permission_mode";
 
   // metadata
   map<string, string> metadata = 6;

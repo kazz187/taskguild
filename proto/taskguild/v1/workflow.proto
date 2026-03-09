@@ -85,6 +85,10 @@ message WorkflowStatus {
   // Explicitly tracks whether enable_agent_md_harness was set by the user.
   // When false (default), the harness is treated as enabled.
   bool agent_md_harness_explicitly_disabled = 10;
+
+  // permission mode for agents executing tasks in this status
+  // (default, acceptEdits, dontAsk, bypassPermissions, plan)
+  string permission_mode = 11;
 }
 
 // AgentConfig defines how an agent should behave for a specific status.

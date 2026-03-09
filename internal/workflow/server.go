@@ -170,6 +170,7 @@ func statusToProto(s Status) *taskguildv1.WorkflowStatus {
 		AgentId:       s.AgentID,
 		EnableAgentMdHarness:              s.EnableAgentMDHarness,
 		AgentMdHarnessExplicitlyDisabled:  s.AgentMDHarnessExplicitlyDisabled,
+		PermissionMode:                    s.PermissionMode,
 	}
 	for _, h := range s.Hooks {
 		pb.Hooks = append(pb.Hooks, hookToProto(h))
@@ -246,6 +247,7 @@ func statusFromProto(ps *taskguildv1.WorkflowStatus) Status {
 		AgentID:       ps.AgentId,
 		EnableAgentMDHarness:              ps.EnableAgentMdHarness,
 		AgentMDHarnessExplicitlyDisabled:  ps.AgentMdHarnessExplicitlyDisabled,
+		PermissionMode:                    ps.PermissionMode,
 	}
 	for _, ph := range ps.Hooks {
 		s.Hooks = append(s.Hooks, hookFromProto(ph))

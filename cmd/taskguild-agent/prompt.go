@@ -65,7 +65,6 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 	sb.WriteString("status: Status ID or status name (optional)\n")
 	sb.WriteString("use_worktree: true or false (optional, inherits current task setting)\n")
 	sb.WriteString("worktree: existing-worktree-name (optional)\n")
-	sb.WriteString("permission_mode: acceptEdits (optional)\n")
 	sb.WriteString("\n")
 	sb.WriteString("Task description here.\n")
 	sb.WriteString("Multiple lines supported.\n")

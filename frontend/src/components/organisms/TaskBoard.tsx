@@ -422,7 +422,6 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
                 isDragging={activeTask !== null}
                 transitionTargets={transitionTargetsByStatus.get(status.id) ?? []}
                 onTransition={handleMobileTransition}
-                defaultPermissionMode={workflow.defaultPermissionMode}
                 defaultUseWorktree={workflow.defaultUseWorktree}
                 childTasksByParentId={childTasksByParentId}
                 parentTaskById={parentTaskById}
@@ -514,7 +513,6 @@ function StatusColumn({
   isDragging,
   transitionTargets,
   onTransition,
-  defaultPermissionMode,
   defaultUseWorktree,
   childTasksByParentId,
   parentTaskById,
@@ -532,7 +530,6 @@ function StatusColumn({
   isDragging: boolean
   transitionTargets: { id: string; name: string; isForce: boolean }[]
   onTransition: (taskId: string, targetStatusId: string, isForce: boolean) => void
-  defaultPermissionMode?: string
   defaultUseWorktree?: boolean
   childTasksByParentId: Map<string, { id: string; title: string; statusId: string }[]>
   parentTaskById: Map<string, { id: string; title: string }>
@@ -619,7 +616,6 @@ function StatusColumn({
         <TaskCreateModal
           projectId={projectId}
           workflowId={workflowId}
-          defaultPermissionMode={defaultPermissionMode}
           defaultUseWorktree={defaultUseWorktree}
           onCreated={onCreated}
           onClose={() => setShowCreateModal(false)}

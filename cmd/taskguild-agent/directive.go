@@ -24,7 +24,6 @@ type createTaskDirective struct {
 	StatusID       string // could be status name, resolved from _workflow_statuses
 	UseWorktree    *bool
 	Worktree       string
-	PermissionMode string
 }
 
 // parseCreateTasks extracts all CREATE_TASK_START...CREATE_TASK_END blocks from the result text.
@@ -72,8 +71,6 @@ func parseCreateTasks(resultText string) []createTaskDirective {
 					d.UseWorktree = &b
 				case "worktree":
 					d.Worktree = value
-				case "permission_mode":
-					d.PermissionMode = value
 				}
 			}
 			descStart = i + 1
@@ -160,7 +157,6 @@ func createTaskFromDirective(
 		Title:          directive.Title,
 		Description:    directive.Description,
 		UseWorktree:    useWorktree,
-		PermissionMode: directive.PermissionMode,
 		Metadata:       taskMeta,
 	}
 	if statusID != "" {

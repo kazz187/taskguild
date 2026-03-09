@@ -9,7 +9,7 @@ import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { X, GitBranch, RefreshCw, AlertTriangle, ArrowUpRight } from 'lucide-react'
 import { shortId } from '@/lib/id'
 import { Button, Input, Textarea, Select, Checkbox, Badge } from '../atoms/index.ts'
-import { Modal, FormField, Card } from '../molecules/index.ts'
+import { Modal, Card } from '../molecules/index.ts'
 
 interface ChildTaskCreateModalProps {
   parentTask: Task
@@ -30,7 +30,6 @@ export function ChildTaskCreateModal({
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState(parentRef)
-  const [permissionMode, setPermissionMode] = useState(parentTask.permissionMode ?? '')
   const [useWorktree, setUseWorktree] = useState(parentTask.useWorktree ?? false)
   const [selectedWorktree, setSelectedWorktree] = useState(parentTask.metadata?.['worktree'] ?? '')
   const [forkSession, setForkSession] = useState(false)
@@ -80,7 +79,6 @@ export function ChildTaskCreateModal({
         title: title.trim(),
         description,
         metadata,
-        permissionMode,
         useWorktree,
       },
       {
@@ -158,26 +156,11 @@ export function ChildTaskCreateModal({
         </div>
 
         {/* Agent settings */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <FormField label="Permission Mode" className="flex-1 w-full sm:w-auto" labelSize="xs">
-            <Select
-              value={permissionMode}
-              onChange={(e) => setPermissionMode(e.target.value)}
-              selectSize="xs"
-              className="!rounded"
-            >
-              <option value="">Default (ask for permission)</option>
-              <option value="acceptEdits">Accept Edits (auto-approve file changes)</option>
-              <option value="bypassPermissions">Bypass Permissions (auto-approve all)</option>
-            </Select>
-          </FormField>
-          <Checkbox
-            label="Use Worktree"
-            checked={useWorktree}
-            onChange={(e) => setUseWorktree(e.target.checked)}
-            className="!text-xs sm:pt-4"
-          />
-        </div>
+        <Checkbox
+          label="Use Worktree (isolate changes in a git worktree)"
+          checked={useWorktree}
+          onChange={(e) => setUseWorktree(e.target.checked)}
+        />
 
         {/* Worktree selection */}
         {useWorktree && (

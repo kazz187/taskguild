@@ -11,7 +11,7 @@ import { X, Bot, Clock, GitBranch, Loader, Trash2, ArrowRight, AlertTriangle, Re
 import { ForceTransitionDialog } from './ForceTransitionDialog'
 import { shortId } from '@/lib/id'
 import { Button, Input, Textarea, Select, Checkbox, Badge } from '../atoms/index.ts'
-import { Modal, FormField, Card } from '../molecules/index.ts'
+import { Modal, Card } from '../molecules/index.ts'
 
 const TASK_DETAIL_EVENT_TYPES = [
   EventType.TASK_UPDATED,
@@ -66,7 +66,6 @@ export function TaskDetailModal({
 
   const [titleDraft, setTitleDraft] = useState('')
   const [descDraft, setDescDraft] = useState('')
-  const [permModeDraft, setPermModeDraft] = useState('')
   const [worktreeDraft, setWorktreeDraft] = useState(false)
   const [selectedWorktree, setSelectedWorktree] = useState('')
 
@@ -87,7 +86,6 @@ export function TaskDetailModal({
     if (task) {
       setTitleDraft(task.title)
       setDescDraft(task.description)
-      setPermModeDraft(task.permissionMode ?? '')
       setWorktreeDraft(task.useWorktree ?? false)
       setSelectedWorktree(task.metadata?.['worktree'] ?? '')
     }
@@ -135,7 +133,6 @@ export function TaskDetailModal({
   const hasChanges = task ? (
     titleDraft !== task.title ||
     descDraft !== task.description ||
-    permModeDraft !== (task.permissionMode ?? '') ||
     worktreeDraft !== (task.useWorktree ?? false) ||
     selectedWorktree !== (task.metadata?.['worktree'] ?? '')
   ) : false
@@ -149,7 +146,7 @@ export function TaskDetailModal({
       metadata['worktree'] = ''
     }
     updateMut.mutate(
-      { id: task.id, title: titleDraft.trim(), description: descDraft, metadata, permissionMode: permModeDraft, useWorktree: worktreeDraft },
+      { id: task.id, title: titleDraft.trim(), description: descDraft, metadata, useWorktree: worktreeDraft },
       { onSuccess: () => { refetchTask(); onChanged() } },
     )
   }
@@ -158,7 +155,6 @@ export function TaskDetailModal({
     if (task) {
       setTitleDraft(task.title)
       setDescDraft(task.description)
-      setPermModeDraft(task.permissionMode ?? '')
       setWorktreeDraft(task.useWorktree ?? false)
       setSelectedWorktree(task.metadata?.['worktree'] ?? '')
     }
@@ -247,27 +243,12 @@ export function TaskDetailModal({
         />
 
         {/* Agent settings */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <FormField label="Permission Mode" className="flex-1 w-full sm:w-auto" labelSize="xs">
-            <Select
-              value={permModeDraft}
-              onChange={(e) => setPermModeDraft(e.target.value)}
-              selectSize="xs"
-              className="!rounded"
-            >
-              <option value="">Default (ask for permission)</option>
-              <option value="acceptEdits">Accept Edits (auto-approve file changes)</option>
-              <option value="bypassPermissions">Bypass Permissions (auto-approve all)</option>
-            </Select>
-          </FormField>
-          <Checkbox
-            label="Use Worktree"
-            checked={worktreeDraft}
-            onChange={(e) => setWorktreeDraft(e.target.checked)}
-            disabled={isTaskLocked}
-            className="!text-xs sm:pt-4"
-          />
-        </div>
+        <Checkbox
+          label="Use Worktree (isolate changes in a git worktree)"
+          checked={worktreeDraft}
+          onChange={(e) => setWorktreeDraft(e.target.checked)}
+          disabled={isTaskLocked}
+        />
 
         {/* Worktree selection / display */}
         {isTaskLocked && task.metadata?.['worktree'] ? (
