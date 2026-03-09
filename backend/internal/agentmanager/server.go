@@ -565,6 +565,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 
 	var instructions string
 	var agentConfigID string
+	var agentName string
 
 	// Try new approach: status-level agent_id referencing Agent entity.
 	var currentAgentID string
@@ -581,6 +582,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		if err == nil {
 			instructions = ag.Prompt
 			agentConfigID = ag.ID
+			agentName = ag.Name
 		}
 	}
 
@@ -617,6 +619,9 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	}
 	if t.PermissionMode != "" {
 		enrichedMetadata["_permission_mode"] = t.PermissionMode
+	}
+	if agentName != "" {
+		enrichedMetadata["_agent_name"] = agentName
 	}
 
 	// Resolve current status name and available transitions from workflow.

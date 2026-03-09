@@ -17,6 +17,7 @@ require (
 	github.com/kazz187/claude-agent-sdk-go v0.0.10
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/oklog/ulid/v2 v2.1.1
+	github.com/pmezard/go-difflib v1.0.0
 	github.com/rs/cors v1.11.1
 	golang.org/x/net v0.43.0
 	google.golang.org/protobuf v1.36.7
