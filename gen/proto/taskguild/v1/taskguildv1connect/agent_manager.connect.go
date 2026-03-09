@@ -105,6 +105,18 @@ const (
 	// AgentManagerServiceResolveScriptConflictProcedure is the fully-qualified name of the
 	// AgentManagerService's ResolveScriptConflict RPC.
 	AgentManagerServiceResolveScriptConflictProcedure = "/taskguild.v1.AgentManagerService/ResolveScriptConflict"
+	// AgentManagerServiceRequestAgentComparisonProcedure is the fully-qualified name of the
+	// AgentManagerService's RequestAgentComparison RPC.
+	AgentManagerServiceRequestAgentComparisonProcedure = "/taskguild.v1.AgentManagerService/RequestAgentComparison"
+	// AgentManagerServiceReportAgentComparisonProcedure is the fully-qualified name of the
+	// AgentManagerService's ReportAgentComparison RPC.
+	AgentManagerServiceReportAgentComparisonProcedure = "/taskguild.v1.AgentManagerService/ReportAgentComparison"
+	// AgentManagerServiceGetAgentComparisonProcedure is the fully-qualified name of the
+	// AgentManagerService's GetAgentComparison RPC.
+	AgentManagerServiceGetAgentComparisonProcedure = "/taskguild.v1.AgentManagerService/GetAgentComparison"
+	// AgentManagerServiceResolveAgentConflictProcedure is the fully-qualified name of the
+	// AgentManagerService's ResolveAgentConflict RPC.
+	AgentManagerServiceResolveAgentConflictProcedure = "/taskguild.v1.AgentManagerService/ResolveAgentConflict"
 	// AgentManagerServiceListSingleCommandPermissionsProcedure is the fully-qualified name of the
 	// AgentManagerService's ListSingleCommandPermissions RPC.
 	AgentManagerServiceListSingleCommandPermissionsProcedure = "/taskguild.v1.AgentManagerService/ListSingleCommandPermissions"
@@ -166,6 +178,14 @@ type AgentManagerServiceClient interface {
 	GetScriptComparison(context.Context, *connect.Request[v1.GetScriptComparisonRequest]) (*connect.Response[v1.GetScriptComparisonResponse], error)
 	// ResolveScriptConflict resolves a per-script conflict between server and agent versions.
 	ResolveScriptConflict(context.Context, *connect.Request[v1.ResolveScriptConflictRequest]) (*connect.Response[v1.ResolveScriptConflictResponse], error)
+	// RequestAgentComparison triggers an agent comparison on connected agent-managers (called by frontend).
+	RequestAgentComparison(context.Context, *connect.Request[v1.RequestAgentComparisonRequest]) (*connect.Response[v1.RequestAgentComparisonResponse], error)
+	// ReportAgentComparison reports agent diffs from the agent-manager after comparison.
+	ReportAgentComparison(context.Context, *connect.Request[v1.ReportAgentComparisonRequest]) (*connect.Response[v1.ReportAgentComparisonResponse], error)
+	// GetAgentComparison returns the cached agent comparison result for a project.
+	GetAgentComparison(context.Context, *connect.Request[v1.GetAgentComparisonRequest]) (*connect.Response[v1.GetAgentComparisonResponse], error)
+	// ResolveAgentConflict resolves a single agent conflict between server and agent versions.
+	ResolveAgentConflict(context.Context, *connect.Request[v1.ResolveAgentConflictRequest]) (*connect.Response[v1.ResolveAgentConflictResponse], error)
 	// ListSingleCommandPermissions returns all regex-based single-command permission
 	// rules for a project (used by agents to populate their cache).
 	ListSingleCommandPermissions(context.Context, *connect.Request[v1.ListSingleCommandPermissionsAgentRequest]) (*connect.Response[v1.ListSingleCommandPermissionsAgentResponse], error)
@@ -328,6 +348,30 @@ func NewAgentManagerServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(agentManagerServiceMethods.ByName("ResolveScriptConflict")),
 			connect.WithClientOptions(opts...),
 		),
+		requestAgentComparison: connect.NewClient[v1.RequestAgentComparisonRequest, v1.RequestAgentComparisonResponse](
+			httpClient,
+			baseURL+AgentManagerServiceRequestAgentComparisonProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("RequestAgentComparison")),
+			connect.WithClientOptions(opts...),
+		),
+		reportAgentComparison: connect.NewClient[v1.ReportAgentComparisonRequest, v1.ReportAgentComparisonResponse](
+			httpClient,
+			baseURL+AgentManagerServiceReportAgentComparisonProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("ReportAgentComparison")),
+			connect.WithClientOptions(opts...),
+		),
+		getAgentComparison: connect.NewClient[v1.GetAgentComparisonRequest, v1.GetAgentComparisonResponse](
+			httpClient,
+			baseURL+AgentManagerServiceGetAgentComparisonProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("GetAgentComparison")),
+			connect.WithClientOptions(opts...),
+		),
+		resolveAgentConflict: connect.NewClient[v1.ResolveAgentConflictRequest, v1.ResolveAgentConflictResponse](
+			httpClient,
+			baseURL+AgentManagerServiceResolveAgentConflictProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("ResolveAgentConflict")),
+			connect.WithClientOptions(opts...),
+		),
 		listSingleCommandPermissions: connect.NewClient[v1.ListSingleCommandPermissionsAgentRequest, v1.ListSingleCommandPermissionsAgentResponse](
 			httpClient,
 			baseURL+AgentManagerServiceListSingleCommandPermissionsProcedure,
@@ -369,6 +413,10 @@ type agentManagerServiceClient struct {
 	reportScriptComparison       *connect.Client[v1.ReportScriptComparisonRequest, v1.ReportScriptComparisonResponse]
 	getScriptComparison          *connect.Client[v1.GetScriptComparisonRequest, v1.GetScriptComparisonResponse]
 	resolveScriptConflict        *connect.Client[v1.ResolveScriptConflictRequest, v1.ResolveScriptConflictResponse]
+	requestAgentComparison       *connect.Client[v1.RequestAgentComparisonRequest, v1.RequestAgentComparisonResponse]
+	reportAgentComparison        *connect.Client[v1.ReportAgentComparisonRequest, v1.ReportAgentComparisonResponse]
+	getAgentComparison           *connect.Client[v1.GetAgentComparisonRequest, v1.GetAgentComparisonResponse]
+	resolveAgentConflict         *connect.Client[v1.ResolveAgentConflictRequest, v1.ResolveAgentConflictResponse]
 	listSingleCommandPermissions *connect.Client[v1.ListSingleCommandPermissionsAgentRequest, v1.ListSingleCommandPermissionsAgentResponse]
 	addSingleCommandPermission   *connect.Client[v1.AddSingleCommandPermissionRequest, v1.AddSingleCommandPermissionResponse]
 }
@@ -493,6 +541,26 @@ func (c *agentManagerServiceClient) ResolveScriptConflict(ctx context.Context, r
 	return c.resolveScriptConflict.CallUnary(ctx, req)
 }
 
+// RequestAgentComparison calls taskguild.v1.AgentManagerService.RequestAgentComparison.
+func (c *agentManagerServiceClient) RequestAgentComparison(ctx context.Context, req *connect.Request[v1.RequestAgentComparisonRequest]) (*connect.Response[v1.RequestAgentComparisonResponse], error) {
+	return c.requestAgentComparison.CallUnary(ctx, req)
+}
+
+// ReportAgentComparison calls taskguild.v1.AgentManagerService.ReportAgentComparison.
+func (c *agentManagerServiceClient) ReportAgentComparison(ctx context.Context, req *connect.Request[v1.ReportAgentComparisonRequest]) (*connect.Response[v1.ReportAgentComparisonResponse], error) {
+	return c.reportAgentComparison.CallUnary(ctx, req)
+}
+
+// GetAgentComparison calls taskguild.v1.AgentManagerService.GetAgentComparison.
+func (c *agentManagerServiceClient) GetAgentComparison(ctx context.Context, req *connect.Request[v1.GetAgentComparisonRequest]) (*connect.Response[v1.GetAgentComparisonResponse], error) {
+	return c.getAgentComparison.CallUnary(ctx, req)
+}
+
+// ResolveAgentConflict calls taskguild.v1.AgentManagerService.ResolveAgentConflict.
+func (c *agentManagerServiceClient) ResolveAgentConflict(ctx context.Context, req *connect.Request[v1.ResolveAgentConflictRequest]) (*connect.Response[v1.ResolveAgentConflictResponse], error) {
+	return c.resolveAgentConflict.CallUnary(ctx, req)
+}
+
 // ListSingleCommandPermissions calls taskguild.v1.AgentManagerService.ListSingleCommandPermissions.
 func (c *agentManagerServiceClient) ListSingleCommandPermissions(ctx context.Context, req *connect.Request[v1.ListSingleCommandPermissionsAgentRequest]) (*connect.Response[v1.ListSingleCommandPermissionsAgentResponse], error) {
 	return c.listSingleCommandPermissions.CallUnary(ctx, req)
@@ -556,6 +624,14 @@ type AgentManagerServiceHandler interface {
 	GetScriptComparison(context.Context, *connect.Request[v1.GetScriptComparisonRequest]) (*connect.Response[v1.GetScriptComparisonResponse], error)
 	// ResolveScriptConflict resolves a per-script conflict between server and agent versions.
 	ResolveScriptConflict(context.Context, *connect.Request[v1.ResolveScriptConflictRequest]) (*connect.Response[v1.ResolveScriptConflictResponse], error)
+	// RequestAgentComparison triggers an agent comparison on connected agent-managers (called by frontend).
+	RequestAgentComparison(context.Context, *connect.Request[v1.RequestAgentComparisonRequest]) (*connect.Response[v1.RequestAgentComparisonResponse], error)
+	// ReportAgentComparison reports agent diffs from the agent-manager after comparison.
+	ReportAgentComparison(context.Context, *connect.Request[v1.ReportAgentComparisonRequest]) (*connect.Response[v1.ReportAgentComparisonResponse], error)
+	// GetAgentComparison returns the cached agent comparison result for a project.
+	GetAgentComparison(context.Context, *connect.Request[v1.GetAgentComparisonRequest]) (*connect.Response[v1.GetAgentComparisonResponse], error)
+	// ResolveAgentConflict resolves a single agent conflict between server and agent versions.
+	ResolveAgentConflict(context.Context, *connect.Request[v1.ResolveAgentConflictRequest]) (*connect.Response[v1.ResolveAgentConflictResponse], error)
 	// ListSingleCommandPermissions returns all regex-based single-command permission
 	// rules for a project (used by agents to populate their cache).
 	ListSingleCommandPermissions(context.Context, *connect.Request[v1.ListSingleCommandPermissionsAgentRequest]) (*connect.Response[v1.ListSingleCommandPermissionsAgentResponse], error)
@@ -714,6 +790,30 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 		connect.WithSchema(agentManagerServiceMethods.ByName("ResolveScriptConflict")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentManagerServiceRequestAgentComparisonHandler := connect.NewUnaryHandler(
+		AgentManagerServiceRequestAgentComparisonProcedure,
+		svc.RequestAgentComparison,
+		connect.WithSchema(agentManagerServiceMethods.ByName("RequestAgentComparison")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentManagerServiceReportAgentComparisonHandler := connect.NewUnaryHandler(
+		AgentManagerServiceReportAgentComparisonProcedure,
+		svc.ReportAgentComparison,
+		connect.WithSchema(agentManagerServiceMethods.ByName("ReportAgentComparison")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentManagerServiceGetAgentComparisonHandler := connect.NewUnaryHandler(
+		AgentManagerServiceGetAgentComparisonProcedure,
+		svc.GetAgentComparison,
+		connect.WithSchema(agentManagerServiceMethods.ByName("GetAgentComparison")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentManagerServiceResolveAgentConflictHandler := connect.NewUnaryHandler(
+		AgentManagerServiceResolveAgentConflictProcedure,
+		svc.ResolveAgentConflict,
+		connect.WithSchema(agentManagerServiceMethods.ByName("ResolveAgentConflict")),
+		connect.WithHandlerOptions(opts...),
+	)
 	agentManagerServiceListSingleCommandPermissionsHandler := connect.NewUnaryHandler(
 		AgentManagerServiceListSingleCommandPermissionsProcedure,
 		svc.ListSingleCommandPermissions,
@@ -776,6 +876,14 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 			agentManagerServiceGetScriptComparisonHandler.ServeHTTP(w, r)
 		case AgentManagerServiceResolveScriptConflictProcedure:
 			agentManagerServiceResolveScriptConflictHandler.ServeHTTP(w, r)
+		case AgentManagerServiceRequestAgentComparisonProcedure:
+			agentManagerServiceRequestAgentComparisonHandler.ServeHTTP(w, r)
+		case AgentManagerServiceReportAgentComparisonProcedure:
+			agentManagerServiceReportAgentComparisonHandler.ServeHTTP(w, r)
+		case AgentManagerServiceGetAgentComparisonProcedure:
+			agentManagerServiceGetAgentComparisonHandler.ServeHTTP(w, r)
+		case AgentManagerServiceResolveAgentConflictProcedure:
+			agentManagerServiceResolveAgentConflictHandler.ServeHTTP(w, r)
 		case AgentManagerServiceListSingleCommandPermissionsProcedure:
 			agentManagerServiceListSingleCommandPermissionsHandler.ServeHTTP(w, r)
 		case AgentManagerServiceAddSingleCommandPermissionProcedure:
@@ -883,6 +991,22 @@ func (UnimplementedAgentManagerServiceHandler) GetScriptComparison(context.Conte
 
 func (UnimplementedAgentManagerServiceHandler) ResolveScriptConflict(context.Context, *connect.Request[v1.ResolveScriptConflictRequest]) (*connect.Response[v1.ResolveScriptConflictResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ResolveScriptConflict is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) RequestAgentComparison(context.Context, *connect.Request[v1.RequestAgentComparisonRequest]) (*connect.Response[v1.RequestAgentComparisonResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.RequestAgentComparison is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) ReportAgentComparison(context.Context, *connect.Request[v1.ReportAgentComparisonRequest]) (*connect.Response[v1.ReportAgentComparisonResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportAgentComparison is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) GetAgentComparison(context.Context, *connect.Request[v1.GetAgentComparisonRequest]) (*connect.Response[v1.GetAgentComparisonResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.GetAgentComparison is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) ResolveAgentConflict(context.Context, *connect.Request[v1.ResolveAgentConflictRequest]) (*connect.Response[v1.ResolveAgentConflictResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ResolveAgentConflict is not implemented"))
 }
 
 func (UnimplementedAgentManagerServiceHandler) ListSingleCommandPermissions(context.Context, *connect.Request[v1.ListSingleCommandPermissionsAgentRequest]) (*connect.Response[v1.ListSingleCommandPermissionsAgentResponse], error) {

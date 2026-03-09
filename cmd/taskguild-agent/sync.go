@@ -14,8 +14,11 @@ import (
 )
 
 // syncAgents calls the SyncAgents RPC and writes .claude/agents/*.md files locally.
-// It also removes stale .md files that no longer exist on the server.
-func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, cfg *config) {
+// By default, existing local files are preserved (not overwritten).
+// forceOverwriteNames controls which agents are overwritten even if local files exist.
+// If forceOverwriteNames is nil, no agents are force-overwritten.
+// forceAll overrides all agents unconditionally (used by --override-agent-md).
+func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, cfg *config, forceOverwriteNames map[string]bool, forceAll bool) {
 	if cfg.ProjectName == "" {
 		slog.Info("skipping agent sync: no project name configured")
 		return
@@ -38,7 +41,8 @@ func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServi
 		return
 	}
 
-	writtenFiles := make(map[string]bool)
+	// serverFiles tracks filenames known to the server (regardless of whether we wrote them).
+	serverFiles := make(map[string]bool)
 	for _, ag := range agents {
 		name := ag.GetName()
 
@@ -50,6 +54,21 @@ func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServi
 
 		filename := name + ".md"
 		filePath := filepath.Join(agentsDir, filename)
+		serverFiles[filename] = true
+
+		// Check if the file already exists.
+		if _, err := os.Stat(filePath); err == nil {
+			// File exists — only overwrite if forced.
+			if forceAll {
+				slog.Debug("force-overwriting all: overwriting existing agent", "filename", filename)
+			} else if forceOverwriteNames != nil && forceOverwriteNames[name] {
+				slog.Debug("force-overwriting existing agent", "filename", filename, "agent_name", name)
+			} else {
+				slog.Debug("agent file already exists, preserving local version", "filename", filename)
+				continue
+			}
+		}
+
 		content := buildAgentMDContent(ag)
 
 		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
@@ -57,10 +76,9 @@ func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServi
 			continue
 		}
 		slog.Debug("synced agent", "filename", filename)
-		writtenFiles[filename] = true
 	}
 
-	cleanupStaleAgentFiles(agentsDir, writtenFiles)
+	cleanupStaleAgentFiles(agentsDir, serverFiles, forceAll)
 }
 
 // buildAgentMDContent generates markdown content with YAML frontmatter
@@ -110,8 +128,9 @@ func buildAgentMDContent(ag *v1.AgentDefinition) string {
 }
 
 // cleanupStaleAgentFiles removes .md files from the agents directory
-// that were not written during the current sync.
-func cleanupStaleAgentFiles(agentsDir string, writtenFiles map[string]bool) {
+// that were not found on the server during the current sync.
+// When forceAll is false, local-only files are preserved.
+func cleanupStaleAgentFiles(agentsDir string, serverFiles map[string]bool, forceAll bool) {
 	entries, err := os.ReadDir(agentsDir)
 	if err != nil {
 		return
@@ -121,8 +140,12 @@ func cleanupStaleAgentFiles(agentsDir string, writtenFiles map[string]bool) {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
 			continue
 		}
-		if !writtenFiles[entry.Name()] {
+		if !serverFiles[entry.Name()] {
 			filePath := filepath.Join(agentsDir, entry.Name())
+			if !forceAll {
+				slog.Debug("preserving locally-modified agent file not found on server", "filename", entry.Name())
+				continue
+			}
 			if err := os.Remove(filePath); err != nil {
 				slog.Error("failed to remove stale agent file", "path", filePath, "error", err)
 			} else {

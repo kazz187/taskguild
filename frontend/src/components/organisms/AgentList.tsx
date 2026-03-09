@@ -1,13 +1,22 @@
-import { useState } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { listAgents, createAgent, updateAgent, deleteAgent, syncAgentsFromDir } from '@taskguild/proto/taskguild/v1/agent-AgentService_connectquery.ts'
 import { saveAsTemplate, listTemplates } from '@taskguild/proto/taskguild/v1/template-TemplateService_connectquery.ts'
+import {
+  requestAgentComparison,
+  getAgentComparison,
+  resolveAgentConflict,
+} from '@taskguild/proto/taskguild/v1/agent_manager-AgentManagerService_connectquery.ts'
 import type { AgentDefinition } from '@taskguild/proto/taskguild/v1/agent_pb.ts'
+import type { AgentDiff } from '@taskguild/proto/taskguild/v1/agent_manager_pb.ts'
+import { AgentDiffType, AgentResolutionChoice } from '@taskguild/proto/taskguild/v1/agent_manager_pb.ts'
 import type { Template } from '@taskguild/proto/taskguild/v1/template_pb.ts'
-import { Bot, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud, Layers, Copy } from 'lucide-react'
+import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
+import { Bot, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud, Layers, Copy, AlertTriangle, Server, Monitor } from 'lucide-react'
+import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { Button } from '../atoms/index.ts'
 import { Input, Textarea, Select, Badge, Checkbox } from '../atoms/index.ts'
-import { Card, FormField } from '../molecules/index.ts'
+import { Card, FormField, Modal } from '../molecules/index.ts'
 
 const AVAILABLE_TOOLS = [
   'Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash',
@@ -75,6 +84,15 @@ function agentToForm(a: AgentDefinition): AgentFormData {
   }
 }
 
+function diffTypeLabel(dt: AgentDiffType): string {
+  switch (dt) {
+    case AgentDiffType.MODIFIED: return 'Modified'
+    case AgentDiffType.AGENT_ONLY: return 'Agent Only'
+    case AgentDiffType.SERVER_ONLY: return 'Server Only'
+    default: return 'Unknown'
+  }
+}
+
 export function AgentList({ projectId }: { projectId: string }) {
   const { data, refetch, isLoading } = useQuery(listAgents, { projectId })
   const createMut = useMutation(createAgent)
@@ -83,6 +101,11 @@ export function AgentList({ projectId }: { projectId: string }) {
   const syncMut = useMutation(syncAgentsFromDir)
   const saveTemplateMut = useMutation(saveAsTemplate)
   const { data: templatesData, refetch: refetchTemplates } = useQuery(listTemplates, { entityType: 'agent' })
+
+  // Agent comparison
+  const requestComparisonMut = useMutation(requestAgentComparison)
+  const { data: comparisonData, refetch: refetchComparison } = useQuery(getAgentComparison, { projectId })
+  const resolveConflictMut = useMutation(resolveAgentConflict)
 
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -93,8 +116,29 @@ export function AgentList({ projectId }: { projectId: string }) {
   const [saveTemplateDialog, setSaveTemplateDialog] = useState<{ agentId: string; name: string; description: string; includeSkills: boolean } | null>(null)
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
 
+  // Diff resolution dialog state
+  const [diffDialog, setDiffDialog] = useState<AgentDiff | null>(null)
+
   const agents = data?.agents ?? []
   const agentTemplates = templatesData?.templates ?? []
+  const diffs = comparisonData?.diffs ?? []
+
+  // Build a lookup map for diffs by agent_id.
+  const diffByAgentId = useMemo(() => {
+    const map = new Map<string, AgentDiff>()
+    for (const d of diffs) {
+      if (d.agentId) map.set(d.agentId, d)
+    }
+    return map
+  }, [diffs])
+
+  // Subscribe to AGENT_COMPARISON events to refetch diffs when comparison completes.
+  const comparisonEventTypes = useMemo(() => [EventType.AGENT_COMPARISON], [])
+  const onComparisonEvent = useCallback(() => {
+    refetchComparison()
+    refetch()
+  }, [refetchComparison, refetch])
+  useEventSubscription(comparisonEventTypes, projectId, onComparisonEvent)
 
   const openCreate = () => {
     setFormMode('create')
@@ -188,7 +232,33 @@ export function AgentList({ projectId }: { projectId: string }) {
   const handleSync = () => {
     syncMut.mutate(
       { projectId, directory: '.' },
-      { onSuccess: () => refetch() },
+      {
+        onSuccess: () => {
+          refetch()
+          // After syncing from repo, automatically trigger comparison with agent.
+          requestComparisonMut.mutate({ projectId })
+        },
+      },
+    )
+  }
+
+  const handleResolveConflict = (diff: AgentDiff, choice: AgentResolutionChoice) => {
+    resolveConflictMut.mutate(
+      {
+        projectId,
+        agentId: diff.agentId,
+        agentName: diff.agentName,
+        filename: diff.filename,
+        choice,
+        agentContent: choice === AgentResolutionChoice.AGENT ? diff.agentContent : '',
+      },
+      {
+        onSuccess: () => {
+          refetchComparison()
+          refetch()
+          setDiffDialog(null)
+        },
+      },
     )
   }
 
@@ -224,6 +294,9 @@ export function AgentList({ projectId }: { projectId: string }) {
 
   const mutation = formMode === 'create' ? createMut : updateMut
 
+  // Agent-only diffs (agents that exist only on agent, not in server DB).
+  const agentOnlyDiffs = diffs.filter(d => d.diffType === AgentDiffType.AGENT_ONLY)
+
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-4 md:mb-6">
@@ -233,15 +306,20 @@ export function AgentList({ projectId }: { projectId: string }) {
           <Badge color="gray" size="xs" pill variant="outline">
             {agents.length}
           </Badge>
+          {diffs.length > 0 && (
+            <Badge color="amber" size="xs" variant="outline" pill icon={<AlertTriangle className="w-2.5 h-2.5" />}>
+              {diffs.length} diff{diffs.length > 1 ? 's' : ''}
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button
             variant="secondary"
             size="sm"
-            icon={<RefreshCw className={`w-4 h-4 ${syncMut.isPending ? 'animate-spin' : ''}`} />}
+            icon={<RefreshCw className={`w-4 h-4 ${(syncMut.isPending || requestComparisonMut.isPending) ? 'animate-spin' : ''}`} />}
             onClick={handleSync}
-            disabled={syncMut.isPending}
-            title="Sync agents from .claude/agents/ directory"
+            disabled={syncMut.isPending || requestComparisonMut.isPending}
+            title="Sync agents from .claude/agents/ directory and compare with agent"
             className="border border-slate-700 hover:border-slate-600"
           >
             <span className="hidden sm:inline">Sync from Repo</span>
@@ -476,103 +554,146 @@ export function AgentList({ projectId }: { projectId: string }) {
       {isLoading && <p className="text-gray-400 text-sm">Loading agents...</p>}
 
       <div className="space-y-3">
-        {agents.map(agent => (
+        {agents.map(agent => {
+          const diff = diffByAgentId.get(agent.id)
+          return (
+            <Card
+              key={agent.id}
+              className={`hover:border-slate-700 transition-colors ${diff ? 'border-amber-500/30' : ''}`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <Bot className="w-5 h-5 text-cyan-400 mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-sm font-semibold text-white truncate">{agent.name}</h3>
+                      {agent.isSynced && (
+                        <Badge color="blue" size="xs" pill variant="outline" icon={<Cloud className="w-2.5 h-2.5" />}>
+                          synced
+                        </Badge>
+                      )}
+                      {diff && (
+                        <Badge
+                          color="amber"
+                          size="xs"
+                          pill
+                          variant="outline"
+                          icon={<AlertTriangle className="w-2.5 h-2.5" />}
+                          className="cursor-pointer hover:bg-amber-500/20"
+                          onClick={() => setDiffDialog(diff)}
+                        >
+                          {diffTypeLabel(diff.diffType)}
+                        </Badge>
+                      )}
+                      {agent.model && (
+                        <Badge color="gray" size="xs" pill variant="outline">
+                          {agent.model}
+                        </Badge>
+                      )}
+                      {agent.memory && (
+                        <Badge color="purple" size="xs" pill variant="outline">
+                          memory: {agent.memory}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 mb-2">{agent.description}</p>
+                    {agent.tools?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-1">
+                        {agent.tools.map(tool => (
+                          <Badge key={tool} color="gray" size="xs">
+                            {tool}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    {agent.disallowedTools?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-1">
+                        {agent.disallowedTools.map(tool => (
+                          <Badge key={tool} color="red" size="xs">
+                            -{tool}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    {agent.skills?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-1">
+                        {agent.skills.map(skill => (
+                          <Badge key={skill} color="purple" size="xs">
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    {agent.prompt && (
+                      <pre className="text-[11px] text-gray-600 mt-1 truncate max-w-lg font-mono">
+                        {agent.prompt.slice(0, 120)}{agent.prompt.length > 120 ? '...' : ''}
+                      </pre>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 ml-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    iconOnly
+                    icon={<Copy className="w-3.5 h-3.5" />}
+                    onClick={() => handleSaveAsTemplate(agent)}
+                    title="Save as Template"
+                    className="hover:text-amber-400"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    iconOnly
+                    icon={<Edit2 className="w-3.5 h-3.5" />}
+                    onClick={() => openEdit(agent)}
+                    title="Edit"
+                    className="hover:text-cyan-400"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    iconOnly
+                    icon={<Trash2 className="w-3.5 h-3.5" />}
+                    onClick={() => handleDelete(agent.id)}
+                    disabled={deleteMut.isPending}
+                    title="Delete"
+                    className="hover:text-red-400"
+                  />
+                </div>
+              </div>
+            </Card>
+          )
+        })}
+
+        {/* Agent-only diffs (exist on agent but not in server DB) */}
+        {agentOnlyDiffs.map(diff => (
           <Card
-            key={agent.id}
-            className="hover:border-slate-700 transition-colors"
+            key={`agent-only-${diff.filename}`}
+            className="border-amber-500/30 hover:border-amber-500/50 transition-colors cursor-pointer"
+            onClick={() => setDiffDialog(diff)}
           >
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-3 flex-1 min-w-0">
-                <Bot className="w-5 h-5 text-cyan-400 mt-0.5 shrink-0" />
+                <Bot className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-sm font-semibold text-white truncate">{agent.name}</h3>
-                    {agent.isSynced && (
-                      <Badge color="blue" size="xs" pill variant="outline" icon={<Cloud className="w-2.5 h-2.5" />}>
-                        synced
-                      </Badge>
-                    )}
-                    {agent.model && (
-                      <Badge color="gray" size="xs" pill variant="outline">
-                        {agent.model}
-                      </Badge>
-                    )}
-                    {agent.memory && (
-                      <Badge color="purple" size="xs" pill variant="outline">
-                        memory: {agent.memory}
-                      </Badge>
-                    )}
+                    <h3 className="text-sm font-semibold text-white truncate">{diff.agentName}</h3>
+                    <Badge color="amber" size="xs" pill variant="outline" icon={<AlertTriangle className="w-2.5 h-2.5" />}>
+                      Agent Only
+                    </Badge>
+                    <Badge color="gray" size="xs" className="font-mono">{diff.filename}</Badge>
                   </div>
-                  <p className="text-xs text-gray-400 mb-2">{agent.description}</p>
-                  {agent.tools?.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-1">
-                      {agent.tools.map(tool => (
-                        <Badge key={tool} color="gray" size="xs">
-                          {tool}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  {agent.disallowedTools?.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-1">
-                      {agent.disallowedTools.map(tool => (
-                        <Badge key={tool} color="red" size="xs">
-                          -{tool}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  {agent.skills?.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-1">
-                      {agent.skills.map(skill => (
-                        <Badge key={skill} color="purple" size="xs">
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  {agent.prompt && (
-                    <pre className="text-[11px] text-gray-600 mt-1 truncate max-w-lg font-mono">
-                      {agent.prompt.slice(0, 120)}{agent.prompt.length > 120 ? '...' : ''}
-                    </pre>
-                  )}
+                  <p className="text-xs text-gray-400">
+                    This agent exists on the local agent but not in the server database. Click to resolve.
+                  </p>
                 </div>
-              </div>
-              <div className="flex items-center gap-1 shrink-0 ml-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  iconOnly
-                  icon={<Copy className="w-3.5 h-3.5" />}
-                  onClick={() => handleSaveAsTemplate(agent)}
-                  title="Save as Template"
-                  className="hover:text-amber-400"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  iconOnly
-                  icon={<Edit2 className="w-3.5 h-3.5" />}
-                  onClick={() => openEdit(agent)}
-                  title="Edit"
-                  className="hover:text-cyan-400"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  iconOnly
-                  icon={<Trash2 className="w-3.5 h-3.5" />}
-                  onClick={() => handleDelete(agent.id)}
-                  disabled={deleteMut.isPending}
-                  title="Delete"
-                  className="hover:text-red-400"
-                />
               </div>
             </div>
           </Card>
         ))}
 
-        {!isLoading && agents.length === 0 && !formMode && (
+        {!isLoading && agents.length === 0 && agentOnlyDiffs.length === 0 && !formMode && (
           <div className="text-center py-12 text-gray-500">
             <Bot className="w-8 h-8 mx-auto mb-3 opacity-30" />
             <p className="text-sm">No agents defined yet.</p>
@@ -580,6 +701,76 @@ export function AgentList({ projectId }: { projectId: string }) {
           </div>
         )}
       </div>
+
+      {/* Diff Resolution Dialog */}
+      <Modal open={!!diffDialog} onClose={() => setDiffDialog(null)} size="lg">
+        <Modal.Header onClose={() => setDiffDialog(null)}>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-400" />
+            <h3 className="text-lg font-semibold text-white">Agent Conflict</h3>
+          </div>
+        </Modal.Header>
+        <Modal.Body>
+          {diffDialog && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-gray-400">Agent:</span>
+                <span className="text-white font-medium">{diffDialog.agentName}</span>
+                <Badge color="gray" size="xs" className="font-mono">{diffDialog.filename}</Badge>
+                <Badge color="amber" size="xs" variant="outline">{diffTypeLabel(diffDialog.diffType)}</Badge>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* Server version */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Server className="w-4 h-4 text-blue-400" />
+                    <span className="text-sm font-medium text-blue-400">Server Version</span>
+                  </div>
+                  <pre className="text-xs text-gray-300 font-mono bg-slate-900 rounded p-3 whitespace-pre-wrap max-h-[400px] overflow-y-auto border border-slate-700">
+                    {diffDialog.serverContent || <span className="text-gray-600 italic">No server version</span>}
+                  </pre>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleResolveConflict(diffDialog, AgentResolutionChoice.SERVER)}
+                    disabled={resolveConflictMut.isPending || diffDialog.diffType === AgentDiffType.AGENT_ONLY}
+                    icon={<Server className="w-3.5 h-3.5" />}
+                    className="w-full bg-blue-600 hover:bg-blue-500"
+                  >
+                    {resolveConflictMut.isPending ? 'Resolving...' : 'Use Server Version'}
+                  </Button>
+                </div>
+
+                {/* Agent version */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Monitor className="w-4 h-4 text-green-400" />
+                    <span className="text-sm font-medium text-green-400">Agent Version</span>
+                  </div>
+                  <pre className="text-xs text-gray-300 font-mono bg-slate-900 rounded p-3 whitespace-pre-wrap max-h-[400px] overflow-y-auto border border-slate-700">
+                    {diffDialog.agentContent || <span className="text-gray-600 italic">No agent version</span>}
+                  </pre>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleResolveConflict(diffDialog, AgentResolutionChoice.AGENT)}
+                    disabled={resolveConflictMut.isPending || diffDialog.diffType === AgentDiffType.SERVER_ONLY}
+                    icon={<Monitor className="w-3.5 h-3.5" />}
+                    className="w-full bg-green-600 hover:bg-green-500"
+                  >
+                    {resolveConflictMut.isPending ? 'Resolving...' : 'Use Agent Version'}
+                  </Button>
+                </div>
+              </div>
+
+              {resolveConflictMut.error && (
+                <p className="text-red-400 text-sm">{resolveConflictMut.error.message}</p>
+              )}
+            </div>
+          )}
+        </Modal.Body>
+      </Modal>
 
       {/* Template Picker Dialog */}
       {templatePickerOpen && (
