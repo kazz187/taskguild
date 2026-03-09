@@ -223,6 +223,11 @@ func TestSuggestCommandPattern(t *testing.T) {
 			cmd:      shellparse.ParsedCommand{Raw: "some raw command"},
 			expected: "some raw command",
 		},
+		{
+			name:     "command with command substitution",
+			cmd:      shellparse.ParsedCommand{Raw: "cd $(git rev-parse --show-toplevel)/.claude/worktrees/foo", Executable: "cd", Args: []string{"$(git rev-parse --show-toplevel)/.claude/worktrees/foo"}},
+			expected: "cd $(git rev-parse --show-toplevel)/.claude/worktrees/foo",
+		},
 	}
 
 	for _, tt := range tests {
