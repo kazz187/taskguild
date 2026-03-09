@@ -16,29 +16,28 @@ import (
 )
 
 const (
-	// harnessTimeout is the maximum time allowed for the AGENT.md harness to run.
+	// harnessTimeout is the maximum time allowed for the agent MD harness to run.
 	harnessTimeout = 3 * time.Minute
 	// harnessMaxTurns is the maximum number of turns for the harness agent.
 	harnessMaxTurns = 10
-
-	// agentMDFilename is the name of the AGENT.md file.
-	agentMDFilename = "AGENT.md"
 )
 
-// agentMDHarnessPrompt is the system prompt for the AGENT.md harness agent.
-const agentMDHarnessPrompt = `You are a retrospective reviewer. Your job is to review the work just completed on a task and update the project's AGENT.md file with lessons learned.
+// agentMDHarnessPrompt is the system prompt for the agent MD harness agent.
+const agentMDHarnessPrompt = `You are a retrospective reviewer. Your job is to review the work just completed on a task and update the agent's definition file (.claude/agents/<name>.md) with lessons learned.
+
+The agent definition file uses YAML frontmatter (between --- delimiters) followed by the system prompt body. You MUST preserve the YAML frontmatter exactly as-is. Only modify the prompt body below the closing ---.
 
 Rules:
-1. Read the existing AGENT.md file (create it if it doesn't exist).
+1. Read the existing agent definition file.
 2. Analyze the task summary and identify any failures, mistakes, or inefficiencies encountered.
-3. For each failure, determine a concise preventive guideline that would help avoid the same mistake in future tasks within this project.
-4. Update AGENT.md by appending or merging new lessons into an existing "## Lessons Learned" section.
+3. For each failure, determine a concise preventive guideline.
+4. Append or merge new lessons into a "## Lessons Learned" section at the end of the prompt body.
 5. Keep entries concise (one line per lesson). Do not duplicate existing entries.
 6. If no failures or issues were encountered, do not modify the file.
-7. Do NOT remove any existing content from AGENT.md.
+7. Do NOT modify the YAML frontmatter between the --- delimiters.
 8. Write in English.`
 
-// maybeRunAgentMDHarness checks the metadata flag and launches the AGENT.md
+// maybeRunAgentMDHarness checks the metadata flag and launches the agent MD
 // harness in a background goroutine if enabled.
 // It creates a dedicated taskLogger for the harness goroutine so that it is
 // independent of the caller's taskLogger lifecycle.
@@ -55,10 +54,15 @@ func maybeRunAgentMDHarness(
 		return
 	}
 
+	agentName := metadata["_agent_name"]
+	if agentName == "" {
+		return
+	}
+
 	// Log the start using the caller's taskLogger (still alive at this point).
 	if tl != nil {
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-			"AGENT.md harness started in background", nil)
+			fmt.Sprintf("Agent MD harness started in background (agent: %s)", agentName), nil)
 	}
 
 	taskTitle := metadata["_task_title"]
@@ -69,12 +73,12 @@ func maybeRunAgentMDHarness(
 	// and will remain valid for the full lifetime of the harness execution.
 	harnessTL := newTaskLogger(context.Background(), client, taskID)
 
-	go runAgentMDHarness(ctx, taskID, taskTitle, taskDescription, taskSummary, workDir, harnessTL)
+	go runAgentMDHarness(ctx, taskID, taskTitle, taskDescription, taskSummary, workDir, agentName, harnessTL)
 }
 
-// runAgentMDHarness runs the AGENT.md review harness in a background goroutine.
-// It reviews the task summary, identifies failures, and updates AGENT.md
-// with lessons learned to prevent the same failures in future tasks.
+// runAgentMDHarness runs the agent MD review harness in a background goroutine.
+// It reviews the task summary, identifies failures, and updates the agent's
+// .claude/agents/<name>.md file with lessons learned.
 // The provided taskLogger is owned by this goroutine and will be closed on exit.
 func runAgentMDHarness(
 	ctx context.Context,
@@ -83,20 +87,36 @@ func runAgentMDHarness(
 	taskDescription string,
 	taskSummary string,
 	workDir string,
+	agentName string,
 	tl *taskLogger,
 ) {
 	defer tl.Close()
 
 	logger := clog.LoggerFromContext(ctx)
-	logger.Info("starting AGENT.md harness in background", "task_id", taskID)
 
-	agentMDPath := filepath.Join(workDir, agentMDFilename)
+	agentMDFilename := agentName + ".md"
+	agentMDPath := filepath.Join(workDir, ".claude", "agents", agentMDFilename)
 
-	// Capture AGENT.md content before the harness runs.
+	logger.Info("starting agent MD harness in background",
+		"task_id", taskID,
+		"agent_name", agentName,
+		"agent_md_path", agentMDPath,
+	)
+
+	// Skip if the agent definition file doesn't exist (nothing to update).
+	if _, err := os.Stat(agentMDPath); os.IsNotExist(err) {
+		logger.Info("agent MD file does not exist, skipping harness",
+			"task_id", taskID, "path", agentMDPath)
+		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+			fmt.Sprintf("Agent MD harness skipped: %s does not exist", agentMDPath), nil)
+		return
+	}
+
+	// Capture content before the harness runs.
 	beforeContent := readFileOrEmpty(agentMDPath)
 
 	// Build the user prompt with task context.
-	userPrompt := buildHarnessUserPrompt(taskID, taskTitle, taskDescription, taskSummary, workDir)
+	userPrompt := buildHarnessUserPrompt(taskID, taskTitle, taskDescription, taskSummary, agentMDPath)
 
 	harnessCtx, cancel := context.WithTimeout(context.Background(), harnessTimeout)
 	defer cancel()
@@ -111,39 +131,37 @@ func runAgentMDHarness(
 
 	result, err := claudeagent.RunQuerySync(harnessCtx, userPrompt, opts)
 	if err != nil {
-		logger.Error("AGENT.md harness failed", "task_id", taskID, "error", err)
+		logger.Error("agent MD harness failed", "task_id", taskID, "error", err)
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
-			fmt.Sprintf("AGENT.md harness failed: %v", err), nil)
+			fmt.Sprintf("Agent MD harness failed: %v", err), nil)
 		return
 	}
 
 	if result.Result != nil && result.Result.IsError {
-		logger.Error("AGENT.md harness returned error", "task_id", taskID, "result", result.Result.Result)
+		logger.Error("agent MD harness returned error", "task_id", taskID, "result", result.Result.Result)
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
-			fmt.Sprintf("AGENT.md harness error: %s", result.Result.Result), nil)
+			fmt.Sprintf("Agent MD harness error: %s", result.Result.Result), nil)
 		return
 	}
 
-	// Capture AGENT.md content after the harness runs and compute diff.
+	// Capture content after the harness runs and compute diff.
 	afterContent := readFileOrEmpty(agentMDPath)
 	diff := computeUnifiedDiff(agentMDFilename, beforeContent, afterContent)
 
 	if diff == "" {
-		logger.Info("AGENT.md harness completed, no changes", "task_id", taskID)
+		logger.Info("agent MD harness completed, no changes", "task_id", taskID)
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-			"AGENT.md harness completed: No changes to AGENT.md", nil)
+			fmt.Sprintf("Agent MD harness completed: No changes to %s", agentMDFilename), nil)
 	} else {
-		logger.Info("AGENT.md harness completed with changes", "task_id", taskID)
+		logger.Info("agent MD harness completed with changes", "task_id", taskID)
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-			fmt.Sprintf("AGENT.md harness completed\n\n%s", diff), nil)
+			fmt.Sprintf("Agent MD harness completed\n\n%s", diff), nil)
 	}
 }
 
 // buildHarnessUserPrompt constructs the prompt for the harness agent.
-func buildHarnessUserPrompt(taskID, title, description, summary, workDir string) string {
-	agentMDPath := filepath.Join(workDir, agentMDFilename)
-
-	prompt := fmt.Sprintf(`## Completed Task
+func buildHarnessUserPrompt(taskID, title, description, summary, agentMDPath string) string {
+	return fmt.Sprintf(`## Completed Task
 
 **Task ID:** %s
 **Title:** %s
@@ -156,23 +174,14 @@ func buildHarnessUserPrompt(taskID, title, description, summary, workDir string)
 
 ## Instructions
 
-1. Check if %s exists at: %s
-2. If it exists, read it. If not, create it with a header "# AGENT.md" followed by a "## Lessons Learned" section.
-3. Review the task summary above for any failures, mistakes, regressions, or inefficiencies.
-4. If issues are found, add concise one-line prevention guidelines to the "## Lessons Learned" section.
-5. Do not duplicate existing lessons. Merge similar ones.
+1. Read the agent definition file at: %s
+2. Review the task summary above for any failures, mistakes, regressions, or inefficiencies.
+3. If issues are found, append concise one-line prevention guidelines to a "## Lessons Learned" section at the end of the prompt body (after the YAML frontmatter).
+4. Do not duplicate existing lessons. Merge similar ones.
+5. Do NOT modify the YAML frontmatter (the content between --- delimiters).
 6. If no issues were found, leave the file unchanged.
 `,
-		taskID, title, description, summary, agentMDFilename, agentMDPath)
-
-	// Check if AGENT.md already exists and mention it.
-	if _, err := os.Stat(agentMDPath); err == nil {
-		prompt += fmt.Sprintf("\nNote: %s already exists. Read it first before making changes.\n", agentMDFilename)
-	} else {
-		prompt += fmt.Sprintf("\nNote: %s does not exist yet. Create it if lessons are found.\n", agentMDFilename)
-	}
-
-	return prompt
+		taskID, title, description, summary, agentMDPath)
 }
 
 // readFileOrEmpty reads a file and returns its content as a string.
