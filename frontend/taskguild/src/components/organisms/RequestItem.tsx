@@ -63,7 +63,7 @@ function buildPatternRows(meta: BashPermissionMetadata): PatternRow[] {
       label: cmd.command,
       matched: cmd.matched,
       pattern: cmd.matched ? (cmd.matched_pattern ?? cmd.command) : (cmd.suggested_pattern ?? cmd.command),
-      checked: true,
+      checked: !cmd.matched,
     })
   }
 
@@ -75,7 +75,7 @@ function buildPatternRows(meta: BashPermissionMetadata): PatternRow[] {
       label: `${redir.operator} ${redir.path}`,
       matched: redir.matched,
       pattern: redir.matched ? (redir.matched_pattern ?? redir.path) : (redir.suggested_pattern ?? redir.path),
-      checked: true,
+      checked: !redir.matched,
     })
   }
 
