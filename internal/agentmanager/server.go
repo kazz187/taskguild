@@ -585,16 +585,17 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 
 	if currentAgentID != "" {
 		// New approach: fetch Agent entity.
+		// The agent's prompt is provided by the .claude/agents/<name>.md file
+		// via the --agent CLI flag, so we don't include ag.Prompt in instructions.
 		ag, err := s.agentRepo.Get(ctx, currentAgentID)
 		if err == nil {
-			instructions = ag.Prompt
 			agentConfigID = ag.ID
 			agentName = ag.Name
 		}
 	}
 
 	// Fall back to legacy AgentConfig list.
-	if instructions == "" {
+	if agentName == "" {
 		for _, cfg := range wf.AgentConfigs {
 			if cfg.WorkflowStatusID == t.StatusID {
 				instructions = cfg.Instructions
@@ -604,8 +605,12 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		}
 	}
 
-	// Prepend workflow custom prompt to agent instructions (if non-empty).
-	if wf.CustomPrompt != "" && instructions != "" {
+	// Prepend workflow custom prompt to agent instructions.
+	// For named agents, CustomPrompt is passed as append-system-prompt via metadata.
+	if agentName != "" {
+		// Named agent: pass CustomPrompt separately (not merged into instructions).
+		instructions = wf.CustomPrompt
+	} else if wf.CustomPrompt != "" && instructions != "" {
 		instructions = wf.CustomPrompt + "\n\n" + instructions
 	} else if wf.CustomPrompt != "" {
 		instructions = wf.CustomPrompt
@@ -624,8 +629,15 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	if t.UseWorktree {
 		enrichedMetadata["_use_worktree"] = "true"
 	}
-	if t.PermissionMode != "" {
-		enrichedMetadata["_permission_mode"] = t.PermissionMode
+	// Resolve permission mode from workflow status, falling back to workflow default.
+	for _, st := range wf.Statuses {
+		if st.ID == t.StatusID && st.PermissionMode != "" {
+			enrichedMetadata["_permission_mode"] = st.PermissionMode
+			break
+		}
+	}
+	if _, ok := enrichedMetadata["_permission_mode"]; !ok && wf.DefaultPermissionMode != "" {
+		enrichedMetadata["_permission_mode"] = wf.DefaultPermissionMode
 	}
 	if agentName != "" {
 		enrichedMetadata["_agent_name"] = agentName

@@ -40,7 +40,7 @@ function ProjectDetailPage() {
 
   // Select workflow from search params or auto-select first.
   // Always sync selectedWorkflow with the latest workflows data so that
-  // workflow-level defaults (e.g. defaultPermissionMode, defaultUseWorktree)
+  // workflow-level defaults (e.g. defaultUseWorktree)
   // stay up-to-date when the data is refetched.
   useEffect(() => {
     if (workflows.length === 0) return

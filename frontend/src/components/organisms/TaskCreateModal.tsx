@@ -6,21 +6,19 @@ import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { X, GitBranch, RefreshCw } from 'lucide-react'
 import { Button, Input, Textarea, Select, Checkbox } from '../atoms/index.ts'
-import { Modal, FormField } from '../molecules/index.ts'
+import { Modal } from '../molecules/index.ts'
 
 interface TaskCreateModalProps {
   projectId: string
   workflowId: string
-  defaultPermissionMode?: string
   defaultUseWorktree?: boolean
   onCreated: () => void
   onClose: () => void
 }
 
-export function TaskCreateModal({ projectId, workflowId, defaultPermissionMode, defaultUseWorktree, onCreated, onClose }: TaskCreateModalProps) {
+export function TaskCreateModal({ projectId, workflowId, defaultUseWorktree, onCreated, onClose }: TaskCreateModalProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [permissionMode, setPermissionMode] = useState(defaultPermissionMode ?? '')
   const [useWorktree, setUseWorktree] = useState(defaultUseWorktree ?? false)
   const [selectedWorktree, setSelectedWorktree] = useState('')
   const createMut = useMutation(createTask)
@@ -54,7 +52,7 @@ export function TaskCreateModal({ projectId, workflowId, defaultPermissionMode, 
       metadata['worktree'] = selectedWorktree
     }
     createMut.mutate(
-      { projectId, workflowId, title: title.trim(), description, metadata, permissionMode, useWorktree },
+      { projectId, workflowId, title: title.trim(), description, metadata, useWorktree },
       {
         onSuccess: () => {
           onCreated()
@@ -91,17 +89,6 @@ export function TaskCreateModal({ projectId, workflowId, defaultPermissionMode, 
           textareaSize="md"
           placeholder="Add description..."
         />
-
-        <FormField label="Permission Mode">
-          <Select
-            value={permissionMode}
-            onChange={(e) => setPermissionMode(e.target.value)}
-          >
-            <option value="">Default (ask for permission)</option>
-            <option value="acceptEdits">Accept Edits (auto-approve file changes)</option>
-            <option value="bypassPermissions">Bypass Permissions (auto-approve all)</option>
-          </Select>
-        </FormField>
 
         <Checkbox
           label="Use Worktree (isolate changes in a git worktree)"

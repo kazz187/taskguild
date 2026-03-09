@@ -366,8 +366,11 @@ type WorkflowStatus struct {
 	// Explicitly tracks whether enable_agent_md_harness was set by the user.
 	// When false (default), the harness is treated as enabled.
 	AgentMdHarnessExplicitlyDisabled bool `protobuf:"varint,10,opt,name=agent_md_harness_explicitly_disabled,json=agentMdHarnessExplicitlyDisabled,proto3" json:"agent_md_harness_explicitly_disabled,omitempty"`
-	unknownFields                    protoimpl.UnknownFields
-	sizeCache                        protoimpl.SizeCache
+	// permission mode for agents executing tasks in this status
+	// (default, acceptEdits, dontAsk, bypassPermissions, plan)
+	PermissionMode string `protobuf:"bytes,11,opt,name=permission_mode,json=permissionMode,proto3" json:"permission_mode,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *WorkflowStatus) Reset() {
@@ -468,6 +471,13 @@ func (x *WorkflowStatus) GetAgentMdHarnessExplicitlyDisabled() bool {
 		return x.AgentMdHarnessExplicitlyDisabled
 	}
 	return false
+}
+
+func (x *WorkflowStatus) GetPermissionMode() string {
+	if x != nil {
+		return x.PermissionMode
+	}
+	return ""
 }
 
 // AgentConfig defines how an agent should behave for a specific status.
@@ -1155,7 +1165,7 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\x04name\x18\x05 \x01(\tR\x04name\x12=\n" +
 	"\vaction_type\x18\x06 \x01(\x0e2\x1c.taskguild.v1.HookActionTypeR\n" +
 	"actionType\x12\x1b\n" +
-	"\taction_id\x18\a \x01(\tR\bactionId\"\x83\x03\n" +
+	"\taction_id\x18\a \x01(\tR\bactionId\"\xac\x03\n" +
 	"\x0eWorkflowStatus\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -1169,7 +1179,8 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\x05hooks\x18\b \x03(\v2\x18.taskguild.v1.StatusHookR\x05hooks\x125\n" +
 	"\x17enable_agent_md_harness\x18\t \x01(\bR\x14enableAgentMdHarness\x12N\n" +
 	"$agent_md_harness_explicitly_disabled\x18\n" +
-	" \x01(\bR agentMdHarnessExplicitlyDisabled\"\xca\x01\n" +
+	" \x01(\bR agentMdHarnessExplicitlyDisabled\x12'\n" +
+	"\x0fpermission_mode\x18\v \x01(\tR\x0epermissionMode\"\xca\x01\n" +
 	"\vAgentConfig\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
 	"\x12workflow_status_id\x18\x02 \x01(\tR\x10workflowStatusId\x12\x12\n" +
