@@ -72,5 +72,3 @@ __pycache__/
 **/CLAUDE.md
 .claude
 frontend/.vite/
-backend/taskguild-server
-backend/taskguild-agent
