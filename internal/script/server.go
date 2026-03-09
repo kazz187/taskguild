@@ -21,8 +21,8 @@ var _ taskguildv1connect.ScriptServiceHandler = (*Server)(nil)
 // ExecutionRequester is an interface for triggering script execution on agent-managers.
 type ExecutionRequester interface {
 	// RequestScriptExecution sends an execute command to a connected agent-manager
-	// and returns a request_id for tracking the result.
-	RequestScriptExecution(projectID string, script *Script) (string, error)
+	// using the provided requestID for tracking the result.
+	RequestScriptExecution(requestID string, projectID string, script *Script) error
 	// RequestScriptStop sends a stop command to connected agent-managers
 	// for the given project to cancel a running script execution.
 	RequestScriptStop(projectID string, requestID string) error
@@ -234,13 +234,18 @@ func (s *Server) ExecuteScript(ctx context.Context, req *connect.Request[taskgui
 		return nil, err
 	}
 
-	requestID, err := s.execReq.RequestScriptExecution(sc.ProjectID, sc)
-	if err != nil {
+	// Generate requestID and register with the broker BEFORE sending the
+	// command to the agent. This prevents a race where the agent starts
+	// sending output (via ReportScriptOutputChunk) before the broker knows
+	// about the execution, which would silently drop all log entries.
+	requestID := ulid.Make().String()
+	s.broker.RegisterExecution(requestID, sc.ID, sc.ProjectID)
+
+	if err := s.execReq.RequestScriptExecution(requestID, sc.ProjectID, sc); err != nil {
+		// Clean up the broker registration on failure.
+		s.broker.RemoveExecution(requestID)
 		return nil, fmt.Errorf("failed to request script execution: %w", err)
 	}
-
-	// Register execution in the broker so subscribers can stream output.
-	s.broker.RegisterExecution(requestID, sc.ID, sc.ProjectID)
 
 	return connect.NewResponse(&taskguildv1.ExecuteScriptResponse{
 		RequestId: requestID,

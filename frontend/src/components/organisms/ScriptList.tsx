@@ -296,6 +296,7 @@ export function ScriptList({ projectId }: { projectId: string }) {
         if (event.event.case === 'output') {
           const chunk = event.event.value
           const newEntries = protoLogToLocal(chunk.entries)
+          console.debug('[ScriptStream] output event', { scriptId, requestId, entryCount: newEntries.length })
           setExecutionResults(prev => {
             const next = new Map(prev)
             const existing = next.get(scriptId)
@@ -308,6 +309,11 @@ export function ScriptList({ projectId }: { projectId: string }) {
           })
         } else if (event.event.case === 'complete') {
           const result = event.event.value
+          console.debug('[ScriptStream] complete event', {
+            scriptId, requestId,
+            success: result.success,
+            logEntryCount: result.logEntries.length,
+          })
           const completeEntries = result.logEntries.length > 0
             ? protoLogToLocal(result.logEntries)
             : undefined
@@ -326,6 +332,8 @@ export function ScriptList({ projectId }: { projectId: string }) {
             })
             return next
           })
+        } else {
+          console.warn('[ScriptStream] unknown event case', event.event.case)
         }
       }
     } catch (e) {
