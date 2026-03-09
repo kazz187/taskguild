@@ -33,6 +33,7 @@ interface StatusDraft {
   hooks: HookDraft[]
   enableAgentMdHarness: boolean // default true: review AGENT.md on status exit
   agentMdHarnessExplicitlyDisabled: boolean // tracks explicit user choice
+  permissionMode: string // permission mode for agents in this status
 }
 
 interface AgentConfigDraft {
@@ -65,6 +66,7 @@ function workflowToDrafts(wf: Workflow) {
       agentId: s.agentId ?? '',
       enableAgentMdHarness: s.agentMdHarnessExplicitlyDisabled ? s.enableAgentMdHarness : true,
       agentMdHarnessExplicitlyDisabled: s.agentMdHarnessExplicitlyDisabled,
+      permissionMode: s.permissionMode ?? '',
       hooks: (s.hooks ?? []).map((h) => ({
         key: genKey(),
         id: h.id,
@@ -127,11 +129,11 @@ export function WorkflowForm({
         const kClosed = genKey()
         return {
           statusDrafts: [
-            { key: kDraft, id: '', name: 'Draft', order: 0, isInitial: true, isTerminal: false, transitionsTo: [kDevelop], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false },
-            { key: kDevelop, id: '', name: 'Develop', order: 1, isInitial: false, isTerminal: false, transitionsTo: [kReview, kDraft], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false },
-            { key: kReview, id: '', name: 'Review', order: 2, isInitial: false, isTerminal: false, transitionsTo: [kTest], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false },
-            { key: kTest, id: '', name: 'Test', order: 3, isInitial: false, isTerminal: false, transitionsTo: [kClosed], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false },
-            { key: kClosed, id: '', name: 'Closed', order: 4, isInitial: false, isTerminal: true, transitionsTo: [], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false },
+            { key: kDraft, id: '', name: 'Draft', order: 0, isInitial: true, isTerminal: false, transitionsTo: [kDevelop], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '' },
+            { key: kDevelop, id: '', name: 'Develop', order: 1, isInitial: false, isTerminal: false, transitionsTo: [kReview, kDraft], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '' },
+            { key: kReview, id: '', name: 'Review', order: 2, isInitial: false, isTerminal: false, transitionsTo: [kTest], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '' },
+            { key: kTest, id: '', name: 'Test', order: 3, isInitial: false, isTerminal: false, transitionsTo: [kClosed], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '' },
+            { key: kClosed, id: '', name: 'Closed', order: 4, isInitial: false, isTerminal: true, transitionsTo: [], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '' },
           ],
           agentDrafts: [],
         }
@@ -139,7 +141,6 @@ export function WorkflowForm({
 
   const [name, setName] = useState(workflow?.name ?? '')
   const [description, setDescription] = useState(workflow?.description ?? '')
-  const [defaultPermissionMode, setDefaultPermissionMode] = useState(workflow?.defaultPermissionMode ?? '')
   const [defaultUseWorktree, setDefaultUseWorktree] = useState(workflow?.defaultUseWorktree ?? false)
   const [customPrompt, setCustomPrompt] = useState(workflow?.customPrompt ?? '')
   const [statuses, setStatuses] = useState<StatusDraft[]>(initial.statusDrafts)
@@ -224,7 +225,7 @@ export function WorkflowForm({
   const addStatus = () => {
     setStatuses((prev) => [
       ...prev,
-      { key: genKey(), id: '', name: '', order: prev.length, isInitial: false, isTerminal: false, transitionsTo: [], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false },
+      { key: genKey(), id: '', name: '', order: prev.length, isInitial: false, isTerminal: false, transitionsTo: [], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '' },
     ])
   }
 
@@ -292,6 +293,7 @@ export function WorkflowForm({
       agentId: s.agentId,
       enableAgentMdHarness: s.enableAgentMdHarness,
       agentMdHarnessExplicitlyDisabled: s.agentMdHarnessExplicitlyDisabled,
+      permissionMode: s.permissionMode,
       hooks: s.hooks
         .filter((h) => h.actionId)
         .map((h) => ({
@@ -361,7 +363,7 @@ export function WorkflowForm({
           description,
           statuses: protoStatuses,
           agentConfigs: protoAgentConfigs,
-          defaultPermissionMode,
+          defaultPermissionMode: '',
           defaultUseWorktree,
           customPrompt,
         },
@@ -375,7 +377,7 @@ export function WorkflowForm({
           description,
           statuses: protoStatuses,
           agentConfigs: protoAgentConfigs,
-          defaultPermissionMode,
+          defaultPermissionMode: '',
           defaultUseWorktree,
           customPrompt,
         },
@@ -428,16 +430,6 @@ export function WorkflowForm({
             Task Defaults
           </h3>
           <div className="space-y-3">
-            <FormField label="Permission Mode" labelSize="sm">
-              <Select
-                value={defaultPermissionMode}
-                onChange={(e) => setDefaultPermissionMode(e.target.value)}
-              >
-                <option value="">Default (ask for permission)</option>
-                <option value="acceptEdits">Accept Edits (auto-approve file changes)</option>
-                <option value="bypassPermissions">Bypass Permissions (auto-approve all)</option>
-              </Select>
-            </FormField>
             <Checkbox
               checked={defaultUseWorktree}
               onChange={(e) => setDefaultUseWorktree(e.target.checked)}
@@ -626,6 +618,25 @@ export function WorkflowForm({
                         </p>
                       )}
                     </Card>
+                  )}
+
+                  {/* Permission Mode */}
+                  {!s.isTerminal && (
+                    <div className="mt-2 px-1">
+                      <FormField label="Permission Mode" labelSize="xs">
+                        <Select
+                          value={s.permissionMode}
+                          onChange={(e) => updateStatus(s.key, { permissionMode: e.target.value })}
+                          selectSize="xs"
+                          className="rounded"
+                        >
+                          <option value="">Default (ask for permission)</option>
+                          <option value="acceptEdits">Accept Edits (auto-approve file changes)</option>
+                          <option value="plan">Plan (no tool execution, plan only)</option>
+                          <option value="bypassPermissions">Bypass Permissions (auto-approve all)</option>
+                        </Select>
+                      </FormField>
+                    </div>
                   )}
 
                   {/* AGENT.md Harness Toggle */}
