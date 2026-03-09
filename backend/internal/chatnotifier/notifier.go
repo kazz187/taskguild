@@ -99,10 +99,11 @@ func (n *Notifier) handleTaskStatusChanged(ctx context.Context, event *taskguild
 	}
 
 	// Publish event so that Chat and Global Chat receive the notification in real time.
+	interProto := interaction.ToProto(inter)
 	n.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_INTERACTION_CREATED,
 		inter.ID,
-		"",
+		interaction.MarshalInteractionPayload(interProto),
 		map[string]string{"task_id": inter.TaskID, "project_id": t.ProjectID},
 	)
 
