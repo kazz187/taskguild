@@ -538,6 +538,23 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		}
 	}
 
+	// Inject AGENT.md harness flag for the current status.
+	// Default is enabled (true) unless explicitly disabled.
+	for _, st := range wf.Statuses {
+		if st.ID == t.StatusID {
+			harnessEnabled := !st.AgentMDHarnessExplicitlyDisabled
+			if st.AgentMDHarnessExplicitlyDisabled {
+				harnessEnabled = st.EnableAgentMDHarness
+			}
+			if harnessEnabled {
+				enrichedMetadata["_enable_agent_md_harness"] = "true"
+			} else {
+				enrichedMetadata["_enable_agent_md_harness"] = "false"
+			}
+			break
+		}
+	}
+
 	// Build sub-agents from project's Agent definitions.
 	// All agents in the project (except the current one) are passed as sub-agents.
 	if s.agentRepo != nil {

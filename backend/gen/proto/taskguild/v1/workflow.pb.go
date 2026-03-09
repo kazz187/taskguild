@@ -359,9 +359,15 @@ type WorkflowStatus struct {
 	TransitionsTo []string `protobuf:"bytes,6,rep,name=transitions_to,json=transitionsTo,proto3" json:"transitions_to,omitempty"` // IDs of statuses this can transition to
 	AgentId       string   `protobuf:"bytes,7,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`                   // ID of the AgentDefinition assigned to this status
 	// hooks
-	Hooks         []*StatusHook `protobuf:"bytes,8,rep,name=hooks,proto3" json:"hooks,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Hooks []*StatusHook `protobuf:"bytes,8,rep,name=hooks,proto3" json:"hooks,omitempty"`
+	// harness: when true, a background agent reviews and updates AGENT.md
+	// with lessons learned upon status exit. Defaults to true when not set.
+	EnableAgentMdHarness bool `protobuf:"varint,9,opt,name=enable_agent_md_harness,json=enableAgentMdHarness,proto3" json:"enable_agent_md_harness,omitempty"`
+	// Explicitly tracks whether enable_agent_md_harness was set by the user.
+	// When false (default), the harness is treated as enabled.
+	AgentMdHarnessExplicitlyDisabled bool `protobuf:"varint,10,opt,name=agent_md_harness_explicitly_disabled,json=agentMdHarnessExplicitlyDisabled,proto3" json:"agent_md_harness_explicitly_disabled,omitempty"`
+	unknownFields                    protoimpl.UnknownFields
+	sizeCache                        protoimpl.SizeCache
 }
 
 func (x *WorkflowStatus) Reset() {
@@ -448,6 +454,20 @@ func (x *WorkflowStatus) GetHooks() []*StatusHook {
 		return x.Hooks
 	}
 	return nil
+}
+
+func (x *WorkflowStatus) GetEnableAgentMdHarness() bool {
+	if x != nil {
+		return x.EnableAgentMdHarness
+	}
+	return false
+}
+
+func (x *WorkflowStatus) GetAgentMdHarnessExplicitlyDisabled() bool {
+	if x != nil {
+		return x.AgentMdHarnessExplicitlyDisabled
+	}
+	return false
 }
 
 // AgentConfig defines how an agent should behave for a specific status.
@@ -1135,7 +1155,7 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\x04name\x18\x05 \x01(\tR\x04name\x12=\n" +
 	"\vaction_type\x18\x06 \x01(\x0e2\x1c.taskguild.v1.HookActionTypeR\n" +
 	"actionType\x12\x1b\n" +
-	"\taction_id\x18\a \x01(\tR\bactionId\"\xfc\x01\n" +
+	"\taction_id\x18\a \x01(\tR\bactionId\"\x83\x03\n" +
 	"\x0eWorkflowStatus\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -1146,7 +1166,10 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"isTerminal\x12%\n" +
 	"\x0etransitions_to\x18\x06 \x03(\tR\rtransitionsTo\x12\x19\n" +
 	"\bagent_id\x18\a \x01(\tR\aagentId\x12.\n" +
-	"\x05hooks\x18\b \x03(\v2\x18.taskguild.v1.StatusHookR\x05hooks\"\xca\x01\n" +
+	"\x05hooks\x18\b \x03(\v2\x18.taskguild.v1.StatusHookR\x05hooks\x125\n" +
+	"\x17enable_agent_md_harness\x18\t \x01(\bR\x14enableAgentMdHarness\x12N\n" +
+	"$agent_md_harness_explicitly_disabled\x18\n" +
+	" \x01(\bR agentMdHarnessExplicitlyDisabled\"\xca\x01\n" +
 	"\vAgentConfig\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
 	"\x12workflow_status_id\x18\x02 \x01(\tR\x10workflowStatusId\x12\x12\n" +
