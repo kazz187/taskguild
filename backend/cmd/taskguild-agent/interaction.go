@@ -71,15 +71,10 @@ func (w *interactionWaiter) Deliver(inter *v1.Interaction) {
 
 // runInteractionListener subscribes to interaction events for a task and delivers
 // responded interactions to the waiter. It automatically reconnects on stream
-// errors with exponential backoff. It also runs a polling fallback to catch
-// responses that may have been missed during disconnections.
+// errors with exponential backoff.
 // It returns only when ctx is cancelled (task finished).
-func runInteractionListener(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, interClient taskguildv1connect.InteractionServiceClient, taskID string, waiter *interactionWaiter) {
+func runInteractionListener(ctx context.Context, interClient taskguildv1connect.InteractionServiceClient, taskID string, waiter *interactionWaiter) {
 	logger := clog.LoggerFromContext(ctx)
-
-	// Start a polling fallback that periodically checks pending interactions.
-	// This ensures responses are delivered even if the stream is temporarily down.
-	go runInteractionPoller(ctx, client, taskID, waiter)
 
 	backoff := 1 * time.Second
 	const maxBackoff = 30 * time.Second
@@ -136,53 +131,6 @@ func runInteractionStream(ctx context.Context, interClient taskguildv1connect.In
 		return fmt.Errorf("stream error: %w", err)
 	}
 	return nil
-}
-
-// runInteractionPoller periodically polls for responded/expired interactions
-// for pending waiters. This is a safety net for when the stream is disconnected
-// and events are missed.
-func runInteractionPoller(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, taskID string, waiter *interactionWaiter) {
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			pollPendingInteractions(ctx, client, taskID, waiter)
-		}
-	}
-}
-
-// pollPendingInteractions checks each pending waiter's interaction status via
-// the GetInteractionResponse RPC. If the interaction has been responded to or
-// expired, it delivers the result.
-func pollPendingInteractions(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, taskID string, waiter *interactionWaiter) {
-	waiter.mu.Lock()
-	ids := make([]string, 0, len(waiter.waiters))
-	for id := range waiter.waiters {
-		ids = append(ids, id)
-	}
-	waiter.mu.Unlock()
-
-	for _, id := range ids {
-		if ctx.Err() != nil {
-			return
-		}
-		resp, err := client.GetInteractionResponse(ctx, connect.NewRequest(&v1.GetInteractionResponseRequest{
-			InteractionId: id,
-		}))
-		if err != nil {
-			// Don't log errors during polling — they're expected during brief disconnects.
-			continue
-		}
-		inter := resp.Msg.GetInteraction()
-		if inter == nil {
-			continue
-		}
-		deliverInteraction(taskID, inter, waiter, "poll")
-	}
 }
 
 // deliverInteraction checks the interaction status and delivers responded/expired
