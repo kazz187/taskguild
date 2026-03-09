@@ -29,6 +29,9 @@ func TestWildcardToRegex(t *testing.T) {
 		// Wildcard only
 		{"*", "anything at all", true},
 		{"*", "", true},
+		// Multiline commands (heredoc-style)
+		{"git commit -m *", "git commit -m \"$(cat <<'EOF'\nfix: some message\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\"", true},
+		{"git *", "git commit -m \"$(cat <<'EOF'\nfix: message\nEOF\n)\"", true},
 		// Special regex characters in pattern are escaped
 		{"npm test (coverage)", "npm test (coverage)", true},
 		{"file.txt", "fileTtxt", false}, // dot is literal, not regex dot
