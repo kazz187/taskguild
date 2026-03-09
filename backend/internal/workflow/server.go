@@ -168,6 +168,8 @@ func statusToProto(s Status) *taskguildv1.WorkflowStatus {
 		IsTerminal:    s.IsTerminal,
 		TransitionsTo: s.TransitionsTo,
 		AgentId:       s.AgentID,
+		EnableAgentMdHarness:              s.EnableAgentMDHarness,
+		AgentMdHarnessExplicitlyDisabled:  s.AgentMDHarnessExplicitlyDisabled,
 	}
 	for _, h := range s.Hooks {
 		pb.Hooks = append(pb.Hooks, hookToProto(h))
@@ -242,6 +244,8 @@ func statusFromProto(ps *taskguildv1.WorkflowStatus) Status {
 		IsTerminal:    ps.IsTerminal,
 		TransitionsTo: ps.TransitionsTo,
 		AgentID:       ps.AgentId,
+		EnableAgentMDHarness:              ps.EnableAgentMdHarness,
+		AgentMDHarnessExplicitlyDisabled:  ps.AgentMdHarnessExplicitlyDisabled,
 	}
 	for _, ph := range ps.Hooks {
 		s.Hooks = append(s.Hooks, hookFromProto(ph))

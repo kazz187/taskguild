@@ -70,8 +70,7 @@ func (o *Orchestrator) handleTaskEvent(ctx context.Context, event *taskguildv1.E
 	}
 
 	// Determine the agent config ID for this status.
-	// Prefer agent_id on the status; fall back to legacy AgentConfig list.
-	agentConfigID := findAgentIDForStatus(wf, t.StatusID)
+	agentConfigID := wf.FindAgentIDForStatus(t.StatusID)
 	if agentConfigID == "" {
 		return // no agent config for this status (terminal or manual)
 	}
@@ -112,21 +111,3 @@ func (o *Orchestrator) handleTaskEvent(ctx context.Context, event *taskguildv1.E
 	)
 }
 
-// findAgentIDForStatus returns the agent ID for the given status.
-// It first checks if the status has a direct agent_id set, then falls back
-// to the legacy AgentConfig list on the workflow.
-func findAgentIDForStatus(wf *workflow.Workflow, statusID string) string {
-	// Check status-level agent_id first (new approach).
-	for _, s := range wf.Statuses {
-		if s.ID == statusID && s.AgentID != "" {
-			return s.AgentID
-		}
-	}
-	// Fall back to legacy AgentConfig list.
-	for i := range wf.AgentConfigs {
-		if wf.AgentConfigs[i].WorkflowStatusID == statusID {
-			return wf.AgentConfigs[i].ID
-		}
-	}
-	return ""
-}

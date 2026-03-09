@@ -56,6 +56,28 @@ type Status struct {
 	TransitionsTo []string     `yaml:"transitions_to"`
 	AgentID       string       `yaml:"agent_id,omitempty"`
 	Hooks         []StatusHook `yaml:"hooks,omitempty"`
+
+	// EnableAgentMDHarness controls whether a background AGENT.md review
+	// harness runs when a task exits this status. Default is true (enabled).
+	EnableAgentMDHarness              bool `yaml:"enable_agent_md_harness"`
+	AgentMDHarnessExplicitlyDisabled  bool `yaml:"agent_md_harness_explicitly_disabled,omitempty"`
+}
+
+// FindAgentIDForStatus returns the agent ID configured for the given status.
+// It first checks the status-level AgentID field, then falls back to the
+// legacy AgentConfig list on the workflow. Returns "" if no agent is configured.
+func (w *Workflow) FindAgentIDForStatus(statusID string) string {
+	for _, s := range w.Statuses {
+		if s.ID == statusID && s.AgentID != "" {
+			return s.AgentID
+		}
+	}
+	for _, cfg := range w.AgentConfigs {
+		if cfg.WorkflowStatusID == statusID {
+			return cfg.ID
+		}
+	}
+	return ""
 }
 
 type AgentConfig struct {
