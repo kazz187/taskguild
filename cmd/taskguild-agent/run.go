@@ -151,10 +151,19 @@ func runAgent() {
 	signal.Notify(usr1Ch, syscall.SIGUSR1)
 	go func() {
 		<-usr1Ch
-		slog.Info("received SIGUSR1 (hot reload), waiting for running scripts to complete")
+		slog.Info("received SIGUSR1 (hot reload), cancelling running scripts")
 		scriptTracker.mu.Lock()
 		scriptTracker.reject = true
 		scriptTracker.mu.Unlock()
+
+		// Cancel all running script executions so they terminate promptly.
+		runningScripts.mu.Lock()
+		for reqID, cancelFn := range runningScripts.cancels {
+			slog.Info("cancelling script for hot reload", "request_id", reqID)
+			cancelFn()
+		}
+		runningScripts.mu.Unlock()
+
 		scriptTracker.wg.Wait()
 		slog.Info("all scripts completed, shutting down for hot reload restart")
 		cancel()
