@@ -93,6 +93,14 @@ func (b *ScriptExecutionBroker) RegisterExecution(requestID, scriptID, projectID
 	}
 }
 
+// RemoveExecution removes a registered execution that was never started
+// (e.g. when sending the command to the agent fails after registration).
+func (b *ScriptExecutionBroker) RemoveExecution(requestID string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	delete(b.executions, requestID)
+}
+
 // IsDraining returns true if the broker is in draining mode (rejecting new
 // executions in preparation for graceful shutdown).
 func (b *ScriptExecutionBroker) IsDraining() bool {
@@ -122,6 +130,8 @@ func (b *ScriptExecutionBroker) PushOutput(requestID string, entries []*taskguil
 	es, ok := b.executions[requestID]
 	b.mu.Unlock()
 	if !ok {
+		slog.Warn("PushOutput: execution not registered, dropping entries",
+			"request_id", requestID, "entry_count", len(entries))
 		return
 	}
 
@@ -155,8 +165,12 @@ func (b *ScriptExecutionBroker) CompleteExecution(requestID string, success bool
 	es, ok := b.executions[requestID]
 	b.mu.Unlock()
 	if !ok {
+		slog.Warn("CompleteExecution: execution not registered, dropping completion",
+			"request_id", requestID, "log_entry_count", len(logEntries))
 		return
 	}
+	slog.Debug("CompleteExecution: completing execution",
+		"request_id", requestID, "success", success, "log_entry_count", len(logEntries))
 
 	event := &taskguildv1.ScriptExecutionEvent{
 		Event: &taskguildv1.ScriptExecutionEvent_Complete{

@@ -1331,13 +1331,11 @@ func (s *Server) ReportScriptOutputChunk(ctx context.Context, req *connect.Reque
 
 // RequestScriptExecution sends an ExecuteScriptCommand to connected agent-managers
 // for the project and returns a request_id.
-func (s *Server) RequestScriptExecution(projectID string, sc *script.Script) (string, error) {
+func (s *Server) RequestScriptExecution(requestID string, projectID string, sc *script.Script) error {
 	proj, err := s.projectRepo.Get(context.Background(), projectID)
 	if err != nil {
-		return "", fmt.Errorf("failed to look up project: %w", err)
+		return fmt.Errorf("failed to look up project: %w", err)
 	}
-
-	requestID := ulid.Make().String()
 
 	s.registry.BroadcastCommandToProject(proj.Name, &taskguildv1.AgentCommand{
 		Command: &taskguildv1.AgentCommand_ExecuteScript{
@@ -1357,7 +1355,7 @@ func (s *Server) RequestScriptExecution(projectID string, sc *script.Script) (st
 		"request_id", requestID,
 	)
 
-	return requestID, nil
+	return nil
 }
 
 // RequestScriptStop sends a StopScriptCommand to connected agent-managers
