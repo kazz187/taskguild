@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	_ "net/http/pprof" // registers /debug/pprof/* handlers on DefaultServeMux
 	"os"
 	"os/signal"
 	"syscall"
@@ -221,6 +222,17 @@ func runServer() {
 		}
 		cancel()
 	}()
+
+	// Start pprof server on a separate port for profiling (only when --prof is set).
+	if *runProf {
+		go func() {
+			pprofAddr := ":6060"
+			slog.Info("starting pprof server", "addr", pprofAddr)
+			if err := http.ListenAndServe(pprofAddr, nil); err != nil {
+				slog.Error("pprof server error", "error", err)
+			}
+		}()
+	}
 
 	go orch.Start(ctx)
 	go pushDispatcher.Start(ctx)
