@@ -58,6 +58,23 @@ type Status struct {
 	Hooks         []StatusHook `yaml:"hooks,omitempty"`
 }
 
+// FindAgentIDForStatus returns the agent ID configured for the given status.
+// It first checks the status-level AgentID field, then falls back to the
+// legacy AgentConfig list on the workflow. Returns "" if no agent is configured.
+func (w *Workflow) FindAgentIDForStatus(statusID string) string {
+	for _, s := range w.Statuses {
+		if s.ID == statusID && s.AgentID != "" {
+			return s.AgentID
+		}
+	}
+	for _, cfg := range w.AgentConfigs {
+		if cfg.WorkflowStatusID == statusID {
+			return cfg.ID
+		}
+	}
+	return ""
+}
+
 type AgentConfig struct {
 	ID               string   `yaml:"id"`
 	WorkflowStatusID string   `yaml:"workflow_status_id"`
