@@ -12,6 +12,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/kazz187/taskguild/backend/internal/agent"
@@ -631,15 +632,15 @@ func (s *Server) CreateInteraction(ctx context.Context, req *connect.Request[tas
 		return nil, err
 	}
 
-	s.eventBus.PublishNew(
+	pb := interactionToProto(inter)
+	publishInteractionEvent(s.eventBus,
 		taskguildv1.EventType_EVENT_TYPE_INTERACTION_CREATED,
-		inter.ID,
-		"",
+		inter.ID, pb,
 		map[string]string{"task_id": inter.TaskID, "agent_id": inter.AgentID},
 	)
 
 	return connect.NewResponse(&taskguildv1.CreateInteractionResponse{
-		Interaction: interactionToProto(inter),
+		Interaction: pb,
 	}), nil
 }
 
@@ -1405,4 +1406,18 @@ func interactionToProto(i *interaction.Interaction) *taskguildv1.Interaction {
 		pb.RespondedAt = timestamppb.New(*i.RespondedAt)
 	}
 	return pb
+}
+
+// publishInteractionEvent publishes an interaction event with the proto-JSON
+// serialized interaction embedded in the event payload. This allows stream
+// subscribers to use the payload directly instead of re-reading from the
+// repository.
+func publishInteractionEvent(bus *eventbus.Bus, eventType taskguildv1.EventType, resourceID string, pb *taskguildv1.Interaction, metadata map[string]string) {
+	payload := ""
+	if pb != nil {
+		if data, err := protojson.Marshal(pb); err == nil {
+			payload = string(data)
+		}
+	}
+	bus.PublishNew(eventType, resourceID, payload, metadata)
 }

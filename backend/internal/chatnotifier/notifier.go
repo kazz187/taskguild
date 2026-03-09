@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/oklog/ulid/v2"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/kazz187/taskguild/backend/internal/eventbus"
 	"github.com/kazz187/taskguild/backend/internal/interaction"
@@ -98,11 +99,17 @@ func (n *Notifier) handleTaskStatusChanged(ctx context.Context, event *taskguild
 		return
 	}
 
-	// Publish event so that Chat and Global Chat receive the notification in real time.
+	// Publish event with the interaction proto embedded in the payload so that
+	// stream subscribers can use it directly without re-reading from the repo.
+	pb := interaction.ToProto(inter)
+	payload := ""
+	if data, err := protojson.Marshal(pb); err == nil {
+		payload = string(data)
+	}
 	n.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_INTERACTION_CREATED,
 		inter.ID,
-		"",
+		payload,
 		map[string]string{"task_id": inter.TaskID, "project_id": t.ProjectID},
 	)
 

@@ -7,6 +7,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/kazz187/taskguild/backend/internal/eventbus"
@@ -70,7 +71,7 @@ func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[task
 
 	protos := make([]*taskguildv1.Interaction, len(interactions))
 	for i, inter := range interactions {
-		protos[i] = toProto(inter)
+		protos[i] = ToProto(inter)
 	}
 	return connect.NewResponse(&taskguildv1.ListInteractionsResponse{
 		Interactions: protos,
@@ -103,15 +104,15 @@ func (s *Server) RespondToInteraction(ctx context.Context, req *connect.Request[
 		return nil, err
 	}
 
-	s.eventBus.PublishNew(
+	pb := ToProto(inter)
+	s.publishInteractionEvent(
 		taskguildv1.EventType_EVENT_TYPE_INTERACTION_RESPONDED,
-		inter.ID,
-		"",
+		inter.ID, pb,
 		map[string]string{"task_id": inter.TaskID, "agent_id": inter.AgentID},
 	)
 
 	return connect.NewResponse(&taskguildv1.RespondToInteractionResponse{
-		Interaction: toProto(inter),
+		Interaction: pb,
 	}), nil
 }
 
@@ -143,15 +144,15 @@ func (s *Server) RespondToInteractionByToken(ctx context.Context, req *connect.R
 		return nil, err
 	}
 
-	s.eventBus.PublishNew(
+	pb := ToProto(inter)
+	s.publishInteractionEvent(
 		taskguildv1.EventType_EVENT_TYPE_INTERACTION_RESPONDED,
-		inter.ID,
-		"",
+		inter.ID, pb,
 		map[string]string{"task_id": inter.TaskID, "agent_id": inter.AgentID},
 	)
 
 	return connect.NewResponse(&taskguildv1.RespondToInteractionByTokenResponse{
-		Interaction: toProto(inter),
+		Interaction: pb,
 	}), nil
 }
 
@@ -173,15 +174,15 @@ func (s *Server) ExpireInteraction(ctx context.Context, req *connect.Request[tas
 		return nil, err
 	}
 
-	s.eventBus.PublishNew(
+	pb := ToProto(inter)
+	s.publishInteractionEvent(
 		taskguildv1.EventType_EVENT_TYPE_INTERACTION_RESPONDED,
-		inter.ID,
-		"",
+		inter.ID, pb,
 		map[string]string{"task_id": inter.TaskID, "agent_id": inter.AgentID},
 	)
 
 	return connect.NewResponse(&taskguildv1.ExpireInteractionResponse{
-		Interaction: toProto(inter),
+		Interaction: pb,
 	}), nil
 }
 
@@ -213,15 +214,15 @@ func (s *Server) SendMessage(ctx context.Context, req *connect.Request[taskguild
 		return nil, err
 	}
 
-	s.eventBus.PublishNew(
+	pb := ToProto(inter)
+	s.publishInteractionEvent(
 		taskguildv1.EventType_EVENT_TYPE_INTERACTION_CREATED,
-		inter.ID,
-		"",
+		inter.ID, pb,
 		map[string]string{"task_id": inter.TaskID, "project_id": t.ProjectID},
 	)
 
 	return connect.NewResponse(&taskguildv1.SendMessageResponse{
-		Interaction: toProto(inter),
+		Interaction: pb,
 	}), nil
 }
 
@@ -250,14 +251,28 @@ func (s *Server) SubscribeInteractions(ctx context.Context, req *connect.Request
 					continue
 				}
 			}
-			// Fetch latest interaction state.
-			inter, err := s.repo.Get(ctx, event.ResourceId)
-			if err != nil {
-				slog.Warn("failed to get interaction for stream", "id", event.ResourceId, "error", err)
-				continue
+
+			// Try to use the interaction proto embedded in the event payload
+			// to avoid an extra repo.Get() call. Fall back to reading from
+			// the repository when the payload is missing or malformed.
+			var pb *taskguildv1.Interaction
+			if event.Payload != "" {
+				var candidate taskguildv1.Interaction
+				if err := protojson.Unmarshal([]byte(event.Payload), &candidate); err == nil {
+					pb = &candidate
+				}
 			}
+			if pb == nil {
+				inter, err := s.repo.Get(ctx, event.ResourceId)
+				if err != nil {
+					slog.Warn("failed to get interaction for stream", "id", event.ResourceId, "error", err)
+					continue
+				}
+				pb = ToProto(inter)
+			}
+
 			if err := stream.Send(&taskguildv1.InteractionEvent{
-				Interaction: toProto(inter),
+				Interaction: pb,
 			}); err != nil {
 				return err
 			}
@@ -265,7 +280,21 @@ func (s *Server) SubscribeInteractions(ctx context.Context, req *connect.Request
 	}
 }
 
-func toProto(i *Interaction) *taskguildv1.Interaction {
+// publishInteractionEvent publishes an interaction event with the proto-JSON
+// serialized interaction embedded in the event payload. This allows stream
+// subscribers to use the payload directly instead of re-reading from the
+// repository.
+func (s *Server) publishInteractionEvent(eventType taskguildv1.EventType, resourceID string, pb *taskguildv1.Interaction, metadata map[string]string) {
+	payload := ""
+	if pb != nil {
+		if data, err := protojson.Marshal(pb); err == nil {
+			payload = string(data)
+		}
+	}
+	s.eventBus.PublishNew(eventType, resourceID, payload, metadata)
+}
+
+func ToProto(i *Interaction) *taskguildv1.Interaction {
 	pb := &taskguildv1.Interaction{
 		Id:          i.ID,
 		TaskId:      i.TaskID,
