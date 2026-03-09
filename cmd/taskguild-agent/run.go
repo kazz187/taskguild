@@ -413,6 +413,11 @@ func runSubscribeLoop(
 			)
 			go handleExecuteScript(ctx, client, cfg, execCmd)
 
+		case *v1.AgentCommand_StopScript:
+			stopCmd := c.StopScript
+			slog.Info("received stop script command", "request_id", stopCmd.GetRequestId())
+			handleStopScript(stopCmd)
+
 		case *v1.AgentCommand_CancelTask:
 			cancelCmd := c.CancelTask
 			taskID := cancelCmd.GetTaskId()

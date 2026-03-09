@@ -16,8 +16,12 @@ service ScriptService {
   rpc SyncScriptsFromDir(SyncScriptsFromDirRequest) returns (SyncScriptsFromDirResponse);
   // ExecuteScript triggers execution of a script on a connected agent-manager.
   rpc ExecuteScript(ExecuteScriptRequest) returns (ExecuteScriptResponse);
+  // StopScriptExecution stops a running script execution.
+  rpc StopScriptExecution(StopScriptExecutionRequest) returns (StopScriptExecutionResponse);
   // StreamScriptExecution streams real-time output from a script execution.
   rpc StreamScriptExecution(StreamScriptExecutionRequest) returns (stream ScriptExecutionEvent);
+  // ListActiveExecutions lists currently running and recently completed script executions.
+  rpc ListActiveExecutions(ListActiveExecutionsRequest) returns (ListActiveExecutionsResponse);
 }
 
 // ScriptDefinition defines a shell script that can be executed on the agent-manager.
@@ -100,6 +104,12 @@ message ExecuteScriptResponse {
   string request_id = 1;  // unique ID for tracking the execution
 }
 
+// StopScriptExecution stops a running script execution.
+message StopScriptExecutionRequest {
+  string request_id = 1;
+}
+message StopScriptExecutionResponse {}
+
 // StreamScriptExecution streams real-time output from a script execution.
 message StreamScriptExecutionRequest {
   string request_id = 1;
@@ -112,15 +122,46 @@ message ScriptExecutionEvent {
   }
 }
 
+// ScriptLogStream identifies the output stream for a log entry.
+enum ScriptLogStream {
+  SCRIPT_LOG_STREAM_STDOUT = 0;
+  SCRIPT_LOG_STREAM_STDERR = 1;
+}
+
+// ScriptLogEntry represents a single log entry from script execution.
+message ScriptLogEntry {
+  ScriptLogStream stream = 1;
+  string text = 2;
+}
+
 message ScriptOutputChunk {
-  string stdout = 1;  // incremental stdout chunk
-  string stderr = 2;  // incremental stderr chunk
+  reserved 1, 2;
+  reserved "stdout", "stderr";
+  repeated ScriptLogEntry entries = 3;  // interleaved log entries
 }
 
 message ScriptExecutionComplete {
   bool success = 1;
   int32 exit_code = 2;
-  string stdout = 3;        // full stdout (for late joiners)
-  string stderr = 4;        // full stderr
+  reserved 3, 4;
+  reserved "stdout", "stderr";
   string error_message = 5;
+  repeated ScriptLogEntry log_entries = 6;  // full log (for late joiners)
+  bool stopped_by_user = 7;  // true if stopped via StopScriptExecution
+}
+
+// ListActiveExecutions lists currently running and recently completed script executions.
+message ListActiveExecutionsRequest {
+  string project_id = 1;
+}
+message ListActiveExecutionsResponse {
+  repeated ScriptExecutionInfo executions = 1;
+}
+message ScriptExecutionInfo {
+  string request_id = 1;
+  string script_id = 2;
+  bool completed = 3;
+  bool success = 4;
+  int32 exit_code = 5;
+  string error_message = 6;
 }

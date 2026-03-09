@@ -7,6 +7,8 @@ import {
   deleteScript,
   syncScriptsFromDir,
   executeScript,
+  stopScriptExecution,
+  listActiveExecutions,
 } from '@taskguild/proto/taskguild/v1/script-ScriptService_connectquery.ts'
 import { saveAsTemplate, listTemplates } from '@taskguild/proto/taskguild/v1/template-TemplateService_connectquery.ts'
 import {
@@ -17,13 +19,14 @@ import {
 import {
   ScriptService,
   StreamScriptExecutionRequestSchema,
+  ScriptLogStream,
 } from '@taskguild/proto/taskguild/v1/script_pb.ts'
-import type { ScriptDefinition } from '@taskguild/proto/taskguild/v1/script_pb.ts'
+import type { ScriptDefinition, ScriptLogEntry } from '@taskguild/proto/taskguild/v1/script_pb.ts'
 import type { ScriptDiff } from '@taskguild/proto/taskguild/v1/agent_manager_pb.ts'
 import { ScriptDiffType, ScriptResolutionChoice } from '@taskguild/proto/taskguild/v1/agent_manager_pb.ts'
 import type { Template } from '@taskguild/proto/taskguild/v1/template_pb.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
-import { Terminal, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud, Play, CheckCircle, XCircle, Loader2, Layers, Copy, AlertTriangle, Server, Monitor } from 'lucide-react'
+import { Terminal, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud, Play, Square, CheckCircle, XCircle, StopCircle, Loader2, Layers, Copy, AlertTriangle, Server, Monitor } from 'lucide-react'
 import { createClient } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
 import { transport } from '@/lib/transport'
@@ -55,15 +58,27 @@ function scriptToForm(s: ScriptDefinition): ScriptFormData {
   }
 }
 
+interface LogEntry {
+  stream: 'stdout' | 'stderr'
+  text: string
+}
+
 interface ExecutionResult {
   scriptId: string
   requestId: string
   completed: boolean
   success?: boolean
   exitCode?: number
-  stdout?: string
-  stderr?: string
+  logEntries: LogEntry[]
   errorMessage?: string
+  stoppedByUser?: boolean
+}
+
+function protoLogToLocal(entries: ScriptLogEntry[]): LogEntry[] {
+  return entries.map(e => ({
+    stream: e.stream === ScriptLogStream.STDERR ? 'stderr' : 'stdout',
+    text: e.text,
+  }))
 }
 
 function diffTypeLabel(dt: ScriptDiffType): string {
@@ -75,6 +90,25 @@ function diffTypeLabel(dt: ScriptDiffType): string {
   }
 }
 
+/** Renders interleaved log entries with stderr in red */
+function LogOutput({ entries, className }: { entries: LogEntry[]; className: string }) {
+  return (
+    <AutoScrollPre
+      scrollKey={entries.length}
+      className={className}
+    >
+      {entries.map((entry, i) => (
+        <span
+          key={i}
+          className={entry.stream === 'stderr' ? 'text-red-400' : 'text-gray-300'}
+        >
+          {entry.text}
+        </span>
+      ))}
+    </AutoScrollPre>
+  )
+}
+
 export function ScriptList({ projectId }: { projectId: string }) {
   const { data, refetch, isLoading } = useQuery(listScripts, { projectId })
   const createMut = useMutation(createScript)
@@ -82,6 +116,7 @@ export function ScriptList({ projectId }: { projectId: string }) {
   const deleteMut = useMutation(deleteScript)
   const syncMut = useMutation(syncScriptsFromDir)
   const executeMut = useMutation(executeScript)
+  const stopMut = useMutation(stopScriptExecution)
   const saveTemplateMut = useMutation(saveAsTemplate)
   const { data: templatesData, refetch: refetchTemplates } = useQuery(listTemplates, { entityType: 'script' })
 
@@ -107,6 +142,9 @@ export function ScriptList({ projectId }: { projectId: string }) {
   // Track AbortControllers for active streams.
   const streamAbortRef = useRef<Map<string, AbortController>>(new Map())
 
+  // Track whether we've already reconnected to active executions on mount.
+  const reconnectedRef = useRef(false)
+
   const scripts = data?.scripts ?? []
   const scriptTemplates = templatesData?.templates ?? []
   const diffs = comparisonData?.diffs ?? []
@@ -116,14 +154,6 @@ export function ScriptList({ projectId }: { projectId: string }) {
     const map = new Map<string, ScriptDiff>()
     for (const d of diffs) {
       if (d.scriptId) map.set(d.scriptId, d)
-    }
-    return map
-  }, [diffs])
-
-  const diffByFilename = useMemo(() => {
-    const map = new Map<string, ScriptDiff>()
-    for (const d of diffs) {
-      if (d.filename) map.set(d.filename, d)
     }
     return map
   }, [diffs])
@@ -142,6 +172,39 @@ export function ScriptList({ projectId }: { projectId: string }) {
       streamAbortRef.current.forEach((controller) => controller.abort())
     }
   }, [])
+
+  // Reconnect to active/recent executions on mount (page reload support).
+  useEffect(() => {
+    if (reconnectedRef.current) return
+    reconnectedRef.current = true
+
+    const client = createClient(ScriptService, transport)
+    // Use the listActiveExecutions query descriptor to build a manual call
+    const fetchActiveExecutions = async () => {
+      try {
+        const resp = await client.listActiveExecutions({ projectId })
+        for (const exec of resp.executions) {
+          // Set initial state
+          setExecutionResults(prev => {
+            const next = new Map(prev)
+            if (next.has(exec.scriptId)) return next // already tracked
+            next.set(exec.scriptId, {
+              scriptId: exec.scriptId,
+              requestId: exec.requestId,
+              completed: false,
+              logEntries: [],
+            })
+            return next
+          })
+          // Reconnect to stream (late-joiner will get buffered events)
+          startStream(exec.scriptId, exec.requestId)
+        }
+      } catch (e) {
+        console.error('Failed to fetch active executions:', e)
+      }
+    }
+    fetchActiveExecutions()
+  }, [projectId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const openCreate = () => {
     setFormMode('create')
@@ -232,30 +295,34 @@ export function ScriptList({ projectId }: { projectId: string }) {
       })) {
         if (event.event.case === 'output') {
           const chunk = event.event.value
+          const newEntries = protoLogToLocal(chunk.entries)
           setExecutionResults(prev => {
             const next = new Map(prev)
             const existing = next.get(scriptId)
             if (!existing) return next
             next.set(scriptId, {
               ...existing,
-              stdout: (existing.stdout ?? '') + chunk.stdout,
-              stderr: (existing.stderr ?? '') + chunk.stderr,
+              logEntries: [...existing.logEntries, ...newEntries],
             })
             return next
           })
         } else if (event.event.case === 'complete') {
           const result = event.event.value
+          const completeEntries = result.logEntries.length > 0
+            ? protoLogToLocal(result.logEntries)
+            : undefined
           setExecutionResults(prev => {
             const next = new Map(prev)
+            const existing = next.get(scriptId)
             next.set(scriptId, {
               scriptId,
               requestId,
               completed: true,
               success: result.success,
               exitCode: result.exitCode,
-              stdout: result.stdout || prev.get(scriptId)?.stdout || '',
-              stderr: result.stderr || prev.get(scriptId)?.stderr || '',
+              logEntries: completeEntries ?? existing?.logEntries ?? [],
               errorMessage: result.errorMessage,
+              stoppedByUser: result.stoppedByUser,
             })
             return next
           })
@@ -290,6 +357,7 @@ export function ScriptList({ projectId }: { projectId: string }) {
         scriptId: script.id,
         requestId: '',
         completed: false,
+        logEntries: [],
       })
       return next
     })
@@ -305,6 +373,7 @@ export function ScriptList({ projectId }: { projectId: string }) {
               scriptId: script.id,
               requestId,
               completed: false,
+              logEntries: [],
             })
             return next
           })
@@ -320,6 +389,7 @@ export function ScriptList({ projectId }: { projectId: string }) {
               requestId: '',
               completed: true,
               success: false,
+              logEntries: [],
               errorMessage: err.message,
             })
             return next
@@ -339,6 +409,10 @@ export function ScriptList({ projectId }: { projectId: string }) {
       return
     }
     doExecute(script)
+  }
+
+  const handleStop = (requestId: string) => {
+    stopMut.mutate({ requestId })
   }
 
   const handleResolveConflict = (diff: ScriptDiff, choice: ScriptResolutionChoice) => {
@@ -542,6 +616,7 @@ export function ScriptList({ projectId }: { projectId: string }) {
         {scripts.map(script => {
           const result = executionResults.get(script.id)
           const diff = diffByScriptId.get(script.id)
+          const isRunning = result && !result.completed
           return (
             <Card
               key={script.id}
@@ -586,21 +661,30 @@ export function ScriptList({ projectId }: { projectId: string }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0 ml-2">
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => handleExecute(script)}
-                    disabled={result && !result.completed}
-                    icon={result && !result.completed ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Play className="w-3.5 h-3.5" />
-                    )}
-                    title="Run script"
-                    className="bg-green-600 hover:bg-green-500"
-                  >
-                    Run
-                  </Button>
+                  {isRunning ? (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => handleStop(result.requestId)}
+                      disabled={stopMut.isPending}
+                      icon={<Square className="w-3.5 h-3.5" />}
+                      title="Stop script"
+                      className="bg-red-600 hover:bg-red-500"
+                    >
+                      Stop
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleExecute(script)}
+                      icon={<Play className="w-3.5 h-3.5" />}
+                      title="Run script"
+                      className="bg-green-600 hover:bg-green-500"
+                    >
+                      Run
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -637,14 +721,23 @@ export function ScriptList({ projectId }: { projectId: string }) {
                 <Card variant={result.success ? 'success' : 'error'} className="mt-3">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      {result.success ? (
+                      {result.stoppedByUser ? (
+                        <StopCircle className="w-4 h-4 text-amber-400" />
+                      ) : result.success ? (
                         <CheckCircle className="w-4 h-4 text-green-400" />
                       ) : (
                         <XCircle className="w-4 h-4 text-red-400" />
                       )}
-                      <span className={`text-sm font-medium ${result.success ? 'text-green-400' : 'text-red-400'}`}>
-                        {result.success ? 'Success' : 'Failed'}
-                        {result.exitCode !== undefined && ` (exit code: ${result.exitCode})`}
+                      <span className={`text-sm font-medium ${
+                        result.stoppedByUser ? 'text-amber-400' :
+                        result.success ? 'text-green-400' : 'text-red-400'
+                      }`}>
+                        {result.stoppedByUser
+                          ? 'Stopped by user'
+                          : result.success
+                            ? 'Success'
+                            : 'Failed'}
+                        {result.exitCode !== undefined && !result.stoppedByUser && ` (exit code: ${result.exitCode})`}
                       </span>
                     </div>
                     <Button
@@ -655,26 +748,16 @@ export function ScriptList({ projectId }: { projectId: string }) {
                       icon={<X className="w-3.5 h-3.5" />}
                     />
                   </div>
-                  {result.errorMessage && (
+                  {result.errorMessage && !result.stoppedByUser && (
                     <div className="text-xs text-red-400 font-mono bg-slate-900/50 rounded p-2 mb-2 whitespace-pre-wrap">
                       {result.errorMessage}
                     </div>
                   )}
-                  {result.stdout && (
-                    <div className="mb-2">
-                      <span className="text-[10px] text-gray-500 uppercase tracking-wider">stdout</span>
-                      <pre className="text-xs text-gray-300 font-mono bg-slate-900/50 rounded p-2 mt-0.5 whitespace-pre-wrap max-h-[300px] overflow-y-auto">
-                        {result.stdout}
-                      </pre>
-                    </div>
-                  )}
-                  {result.stderr && (
-                    <div>
-                      <span className="text-[10px] text-gray-500 uppercase tracking-wider">stderr</span>
-                      <pre className="text-xs text-red-300 font-mono bg-slate-900/50 rounded p-2 mt-0.5 whitespace-pre-wrap max-h-[300px] overflow-y-auto">
-                        {result.stderr}
-                      </pre>
-                    </div>
+                  {result.logEntries.length > 0 && (
+                    <LogOutput
+                      entries={result.logEntries}
+                      className="text-xs font-mono bg-slate-900/50 rounded p-2 mt-0.5 whitespace-pre-wrap max-h-[300px] overflow-y-auto"
+                    />
                   )}
                 </Card>
               )}
@@ -682,41 +765,15 @@ export function ScriptList({ projectId }: { projectId: string }) {
               {/* Execution in progress -- streaming output */}
               {result && !result.completed && (
                 <div className="mt-3 border border-blue-500/20 bg-blue-500/5 rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
-                      <span className="text-sm text-blue-400">Executing script...</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      iconOnly
-                      onClick={() => clearResult(script.id)}
-                      title="Cancel stream"
-                      icon={<X className="w-3.5 h-3.5" />}
-                    />
+                  <div className="flex items-center gap-2 mb-2">
+                    <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+                    <span className="text-sm text-blue-400">Executing script...</span>
                   </div>
-                  {(result.stdout || result.stderr) && (
-                    <div className="space-y-2">
-                      {result.stdout && (
-                        <div>
-                          <span className="text-[10px] text-gray-500 uppercase tracking-wider">stdout</span>
-                          <AutoScrollPre
-                            content={result.stdout}
-                            className="text-xs text-gray-300 font-mono bg-slate-900/50 rounded p-2 mt-0.5 whitespace-pre-wrap max-h-[300px] overflow-y-auto"
-                          />
-                        </div>
-                      )}
-                      {result.stderr && (
-                        <div>
-                          <span className="text-[10px] text-gray-500 uppercase tracking-wider">stderr</span>
-                          <AutoScrollPre
-                            content={result.stderr}
-                            className="text-xs text-red-300 font-mono bg-slate-900/50 rounded p-2 mt-0.5 whitespace-pre-wrap max-h-[300px] overflow-y-auto"
-                          />
-                        </div>
-                      )}
-                    </div>
+                  {result.logEntries.length > 0 && (
+                    <LogOutput
+                      entries={result.logEntries}
+                      className="text-xs font-mono bg-slate-900/50 rounded p-2 mt-0.5 whitespace-pre-wrap max-h-[300px] overflow-y-auto"
+                    />
                   )}
                 </div>
               )}

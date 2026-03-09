@@ -2,9 +2,20 @@ package script
 
 import (
 	"context"
+	"log/slog"
 	"sync"
+	"time"
 
 	taskguildv1 "github.com/kazz187/taskguild/gen/proto/taskguild/v1"
+)
+
+const (
+	// executionTTL is how long completed executions are kept in memory
+	// so that page reloads can still retrieve results.
+	executionTTL = 10 * time.Minute
+
+	// cleanupInterval is how often the broker checks for expired executions.
+	cleanupInterval = 1 * time.Minute
 )
 
 // ScriptExecutionBroker manages per-request channels for streaming script
@@ -19,9 +30,15 @@ type ScriptExecutionBroker struct {
 
 type executionState struct {
 	mu          sync.Mutex
+	scriptID    string
+	projectID   string
 	subscribers []chan *taskguildv1.ScriptExecutionEvent
 	buffer      []*taskguildv1.ScriptExecutionEvent
 	completed   bool
+	completedAt time.Time
+	success     bool
+	exitCode    int32
+	errMessage  string
 }
 
 // NewScriptExecutionBroker creates a new broker for streaming script output.
@@ -31,12 +48,49 @@ func NewScriptExecutionBroker() *ScriptExecutionBroker {
 	}
 }
 
-// RegisterExecution registers a new script execution. Must be called before
-// PushOutput or CompleteExecution for the given requestID.
-func (b *ScriptExecutionBroker) RegisterExecution(requestID string) {
+// StartCleanup starts a background goroutine that periodically removes
+// expired completed executions. It stops when the context is cancelled.
+func (b *ScriptExecutionBroker) StartCleanup(ctx context.Context) {
+	go func() {
+		ticker := time.NewTicker(cleanupInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				b.cleanupExpired()
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+// cleanupExpired removes completed executions older than executionTTL.
+func (b *ScriptExecutionBroker) cleanupExpired() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.executions[requestID] = &executionState{}
+	now := time.Now()
+	for id, es := range b.executions {
+		es.mu.Lock()
+		if es.completed && !es.completedAt.IsZero() && now.Sub(es.completedAt) > executionTTL {
+			es.mu.Unlock()
+			delete(b.executions, id)
+			slog.Debug("cleaned up expired script execution", "request_id", id)
+			continue
+		}
+		es.mu.Unlock()
+	}
+}
+
+// RegisterExecution registers a new script execution. Must be called before
+// PushOutput or CompleteExecution for the given requestID.
+func (b *ScriptExecutionBroker) RegisterExecution(requestID, scriptID, projectID string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.executions[requestID] = &executionState{
+		scriptID:  scriptID,
+		projectID: projectID,
+	}
 }
 
 // IsDraining returns true if the broker is in draining mode (rejecting new
@@ -47,10 +101,23 @@ func (b *ScriptExecutionBroker) IsDraining() bool {
 	return b.draining
 }
 
+// GetProjectID returns the projectID for a given requestID, or empty string if unknown.
+func (b *ScriptExecutionBroker) GetProjectID(requestID string) string {
+	b.mu.Lock()
+	es, ok := b.executions[requestID]
+	b.mu.Unlock()
+	if !ok {
+		return ""
+	}
+	es.mu.Lock()
+	defer es.mu.Unlock()
+	return es.projectID
+}
+
 // PushOutput sends an output chunk to all subscribers and buffers it for
 // late joiners. It is a no-op if the execution is not registered or already
 // completed.
-func (b *ScriptExecutionBroker) PushOutput(requestID, stdoutChunk, stderrChunk string) {
+func (b *ScriptExecutionBroker) PushOutput(requestID string, entries []*taskguildv1.ScriptLogEntry) {
 	b.mu.Lock()
 	es, ok := b.executions[requestID]
 	b.mu.Unlock()
@@ -61,8 +128,7 @@ func (b *ScriptExecutionBroker) PushOutput(requestID, stdoutChunk, stderrChunk s
 	event := &taskguildv1.ScriptExecutionEvent{
 		Event: &taskguildv1.ScriptExecutionEvent_Output{
 			Output: &taskguildv1.ScriptOutputChunk{
-				Stdout: stdoutChunk,
-				Stderr: stderrChunk,
+				Entries: entries,
 			},
 		},
 	}
@@ -84,7 +150,7 @@ func (b *ScriptExecutionBroker) PushOutput(requestID, stdoutChunk, stderrChunk s
 
 // CompleteExecution marks an execution as complete and sends the completion
 // event to all subscribers. Subscriber channels are closed after sending.
-func (b *ScriptExecutionBroker) CompleteExecution(requestID string, success bool, exitCode int32, stdout, stderr, errorMessage string) {
+func (b *ScriptExecutionBroker) CompleteExecution(requestID string, success bool, exitCode int32, logEntries []*taskguildv1.ScriptLogEntry, errorMessage string, stoppedByUser bool) {
 	b.mu.Lock()
 	es, ok := b.executions[requestID]
 	b.mu.Unlock()
@@ -95,11 +161,11 @@ func (b *ScriptExecutionBroker) CompleteExecution(requestID string, success bool
 	event := &taskguildv1.ScriptExecutionEvent{
 		Event: &taskguildv1.ScriptExecutionEvent_Complete{
 			Complete: &taskguildv1.ScriptExecutionComplete{
-				Success:      success,
-				ExitCode:     exitCode,
-				Stdout:       stdout,
-				Stderr:       stderr,
-				ErrorMessage: errorMessage,
+				Success:       success,
+				ExitCode:      exitCode,
+				LogEntries:    logEntries,
+				ErrorMessage:  errorMessage,
+				StoppedByUser: stoppedByUser,
 			},
 		},
 	}
@@ -107,6 +173,10 @@ func (b *ScriptExecutionBroker) CompleteExecution(requestID string, success bool
 	es.mu.Lock()
 	es.buffer = append(es.buffer, event)
 	es.completed = true
+	es.completedAt = time.Now()
+	es.success = success
+	es.exitCode = exitCode
+	es.errMessage = errorMessage
 	subs := es.subscribers
 	es.subscribers = nil
 	es.mu.Unlock()
@@ -174,6 +244,33 @@ func (b *ScriptExecutionBroker) Subscribe(requestID string) (<-chan *taskguildv1
 	}
 
 	return ch, unsubscribe
+}
+
+// ListExecutions returns information about all executions for a given project
+// (both active and recently completed within TTL).
+func (b *ScriptExecutionBroker) ListExecutions(projectID string) []*taskguildv1.ScriptExecutionInfo {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	var result []*taskguildv1.ScriptExecutionInfo
+	for reqID, es := range b.executions {
+		es.mu.Lock()
+		if es.projectID != projectID {
+			es.mu.Unlock()
+			continue
+		}
+		info := &taskguildv1.ScriptExecutionInfo{
+			RequestId: reqID,
+			ScriptId:  es.scriptID,
+			Completed: es.completed,
+			Success:   es.success,
+			ExitCode:  es.exitCode,
+			ErrorMessage: es.errMessage,
+		}
+		es.mu.Unlock()
+		result = append(result, info)
+	}
+	return result
 }
 
 // ActiveCount returns the number of currently active (non-completed) executions.

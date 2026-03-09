@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react'
 import { ArrowDown } from 'lucide-react'
 import { Button } from '../atoms/index.ts'
 
@@ -7,8 +7,9 @@ const BOTTOM_THRESHOLD = 30
 
 /**
  * Hook that manages auto-scroll behavior for a scrollable container.
+ * @param scrollKey - a value that changes when content updates (triggers auto-scroll)
  */
-function useAutoScroll(content: string | undefined) {
+function useAutoScroll(scrollKey: string | number | undefined) {
   const scrollRef = useRef<HTMLPreElement>(null)
   const isAutoScrollEnabled = useRef(true)
   const [showScrollButton, setShowScrollButton] = useState(false)
@@ -31,7 +32,7 @@ function useAutoScroll(content: string | undefined) {
     const el = scrollRef.current
     if (!el || !isAutoScrollEnabled.current) return
     el.scrollTop = el.scrollHeight
-  }, [content])
+  }, [scrollKey])
 
   const scrollToBottom = useCallback(() => {
     const el = scrollRef.current
@@ -45,23 +46,29 @@ function useAutoScroll(content: string | undefined) {
 }
 
 interface AutoScrollPreProps {
-  /** The text content to display and auto-scroll */
-  content: string
+  /** The text content to display and auto-scroll (simple string mode) */
+  content?: string
+  /** Children to render inside the <pre> element (rich mode) */
+  children?: ReactNode
+  /** Optional key to trigger auto-scroll when children change */
+  scrollKey?: string | number
   /** CSS classes for the <pre> element */
   className: string
 }
 
 /**
  * A <pre> element with auto-scroll behavior.
+ * Supports either plain `content` string or rich `children` with a `scrollKey`.
  */
-export function AutoScrollPre({ content, className }: AutoScrollPreProps) {
+export function AutoScrollPre({ content, children, scrollKey, className }: AutoScrollPreProps) {
+  const effectiveScrollKey = scrollKey ?? content
   const { scrollRef, handleScroll, showScrollButton, scrollToBottom } =
-    useAutoScroll(content)
+    useAutoScroll(effectiveScrollKey)
 
   return (
     <div className="relative">
       <pre ref={scrollRef} onScroll={handleScroll} className={className}>
-        {content}
+        {children ?? content}
       </pre>
       {showScrollButton && (
         <Button

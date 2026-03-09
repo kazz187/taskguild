@@ -43,3 +43,17 @@ export const syncScriptsFromDir = ScriptService.method.syncScriptsFromDir;
  * @generated from rpc taskguild.v1.ScriptService.ExecuteScript
  */
 export const executeScript = ScriptService.method.executeScript;
+
+/**
+ * StopScriptExecution stops a running script execution.
+ *
+ * @generated from rpc taskguild.v1.ScriptService.StopScriptExecution
+ */
+export const stopScriptExecution = ScriptService.method.stopScriptExecution;
+
+/**
+ * ListActiveExecutions lists currently running and recently completed script executions.
+ *
+ * @generated from rpc taskguild.v1.ScriptService.ListActiveExecutions
+ */
+export const listActiveExecutions = ScriptService.method.listActiveExecutions;
