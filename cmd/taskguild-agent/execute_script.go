@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	scriptExecutionTimeout = 5 * time.Minute
+	scriptExecutionTimeout = 30 * time.Minute
 	outputFlushInterval    = 200 * time.Millisecond
 )
 

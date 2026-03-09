@@ -229,12 +229,17 @@ func (b *ScriptExecutionBroker) Subscribe(requestID string) (<-chan *taskguildv1
 		return nil, func() {}
 	}
 
-	ch := make(chan *taskguildv1.ScriptExecutionEvent, 128)
-
 	es.mu.Lock()
 	defer es.mu.Unlock()
 
-	// Replay buffered events.
+	// Size the channel to hold all buffered events plus room for future
+	// events. This prevents a deadlock where the replay loop blocks because
+	// the channel is full and nobody is reading yet (the caller hasn't
+	// started its read loop).
+	chanSize := len(es.buffer) + 128
+	ch := make(chan *taskguildv1.ScriptExecutionEvent, chanSize)
+
+	// Replay buffered events (guaranteed not to block).
 	for _, evt := range es.buffer {
 		ch <- evt
 	}
