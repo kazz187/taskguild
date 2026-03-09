@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
-import { getTask, updateTaskStatus } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
+import { getTask, listTasks, updateTaskStatus } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import { getProject } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
 import { listWorkflows } from '@taskguild/proto/taskguild/v1/workflow-WorkflowService_connectquery.ts'
 import { listInteractions, respondToInteraction, expireInteraction, sendMessage } from '@taskguild/proto/taskguild/v1/interaction-InteractionService_connectquery.ts'
@@ -13,6 +13,7 @@ import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { useTaskLogs } from '@/hooks/useTaskLogs'
 import { useNotificationSound } from '@/hooks/useNotificationSound'
 import { TaskDetailModal } from '@/components/organisms/TaskDetailModal'
+import { ChildTaskCreateModal } from '@/components/organisms/ChildTaskCreateModal'
 import { ForceTransitionDialog } from '@/components/organisms/ForceTransitionDialog'
 import { shortId } from '@/lib/id'
 import { InputBar } from '@/components/organisms/InputBar'
@@ -24,10 +25,13 @@ import {
   AlertTriangle,
   ArrowLeft,
   ArrowRight,
+  ArrowUpRight,
   Bot,
   Clock,
+  CopyPlus,
   ExternalLink,
   GitBranch,
+  Layers,
   Loader,
   Pencil,
 } from 'lucide-react'
@@ -40,6 +44,7 @@ function TaskDetailPage() {
   const { projectId, taskId } = Route.useParams()
   const navigate = useNavigate()
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showChildCreateModal, setShowChildCreateModal] = useState(false)
   const timelineScrollRef = useRef<HTMLDivElement>(null)
   const prevTimelineCountRef = useRef(0)
 
@@ -64,6 +69,30 @@ function TaskDetailPage() {
   const sortedStatuses = workflow ? [...workflow.statuses].sort((a, b) => a.order - b.order) : []
   const currentStatus = sortedStatuses.find((s) => s.id === task?.statusId)
   const allowedTransitions = currentStatus?.transitionsTo ?? []
+
+  // Fetch sibling tasks for parent-child relationship display
+  const { data: allTasksData, refetch: refetchAllTasks } = useQuery(
+    listTasks,
+    { projectId, workflowId: workflow?.id ?? '', pagination: { limit: 0 } },
+    { enabled: !!workflow },
+  )
+  const allTasks = allTasksData?.tasks ?? []
+
+  // Child tasks: tasks whose metadata.source_task_id matches this task
+  const childTasks = useMemo(() => {
+    return allTasks
+      .filter((t) => t.metadata?.['source_task_id'] === taskId)
+      .map((t) => ({ id: t.id, title: t.title, statusId: t.statusId }))
+  }, [allTasks, taskId])
+
+  // Parent task: if this task has a source_task_id, find the parent
+  const parentTaskId = task?.metadata?.['source_task_id'] ?? ''
+  const parentTask = useMemo(() => {
+    if (!parentTaskId) return null
+    const parent = allTasks.find((t) => t.id === parentTaskId)
+    if (!parent) return null
+    return { id: parent.id, title: parent.title }
+  }, [allTasks, parentTaskId])
 
   // Force transition targets: all statuses except current and normal transitions
   const forceTransitions = useMemo(() => {
@@ -118,10 +147,11 @@ function TaskDetailPage() {
   const onEvent = useCallback(() => {
     refetchTask()
     refetchInteractions()
-  }, [refetchTask, refetchInteractions])
+    refetchAllTasks()
+  }, [refetchTask, refetchInteractions, refetchAllTasks])
 
   const eventTypes = useMemo(() => [
-    EventType.TASK_UPDATED, EventType.TASK_STATUS_CHANGED, EventType.AGENT_ASSIGNED,
+    EventType.TASK_CREATED, EventType.TASK_UPDATED, EventType.TASK_STATUS_CHANGED, EventType.AGENT_ASSIGNED,
     EventType.AGENT_STATUS_CHANGED, EventType.INTERACTION_CREATED, EventType.INTERACTION_RESPONDED,
     EventType.TASK_LOG,
   ], [])
@@ -297,6 +327,13 @@ function TaskDetailPage() {
             <span className="text-[11px] text-gray-600 font-mono ml-auto hidden sm:inline">{task.id}</span>
 
             <button
+              onClick={() => setShowChildCreateModal(true)}
+              className="flex items-center gap-1 px-3 py-1 text-xs text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors shrink-0"
+            >
+              <CopyPlus className="w-3.5 h-3.5" />
+              Subtask
+            </button>
+            <button
               onClick={() => setShowEditModal(true)}
               className="flex items-center gap-1 px-3 py-1 text-xs text-gray-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg transition-colors shrink-0"
             >
@@ -310,6 +347,20 @@ function TaskDetailPage() {
       {/* Timeline area — full height */}
       <div ref={timelineScrollRef} className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-4 py-4 md:px-6 md:py-6 space-y-4">
+          {/* Parent task link */}
+          {parentTask && (
+            <Link
+              to="/projects/$projectId/tasks/$taskId"
+              params={{ projectId, taskId: parentTask.id }}
+              className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-gray-400 hover:text-white hover:border-slate-700 transition-colors"
+            >
+              <ArrowUpRight className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+              <span className="text-gray-500">Parent:</span>
+              <span className="font-medium text-gray-300 truncate">{parentTask.title}</span>
+              <span className="text-gray-600 font-mono shrink-0">{shortId(parentTask.id)}</span>
+            </Link>
+          )}
+
           {/* Description card */}
           {task.description && (
             <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
@@ -352,6 +403,41 @@ function TaskDetailPage() {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Child tasks */}
+          {childTasks.length > 0 && (
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <Layers className="w-3 h-3" />
+                Subtasks ({childTasks.length})
+              </p>
+              <div className="space-y-1">
+                {childTasks.map((child) => {
+                  const childStatus = sortedStatuses.find((s) => s.id === child.statusId)
+                  return (
+                    <Link
+                      key={child.id}
+                      to="/projects/$projectId/tasks/$taskId"
+                      params={{ projectId, taskId: child.id }}
+                      className="flex items-center gap-2 w-full text-left px-2.5 py-1.5 text-xs bg-slate-800/50 border border-slate-700/50 rounded-lg hover:border-slate-600 hover:bg-slate-800 transition-colors"
+                    >
+                      <span className="text-white font-medium truncate flex-1">{child.title}</span>
+                      {childStatus && (
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                          childStatus.isInitial ? 'bg-blue-500/20 text-blue-400' :
+                          childStatus.isTerminal ? 'bg-green-500/20 text-green-400' :
+                          'bg-gray-500/20 text-gray-300'
+                        }`}>
+                          {childStatus.name}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-gray-600 font-mono shrink-0">{shortId(child.id)}</span>
+                    </Link>
+                  )
+                })}
+              </div>
             </div>
           )}
 
@@ -421,6 +507,26 @@ function TaskDetailPage() {
           onClose={() => setShowEditModal(false)}
           onChanged={() => refetchTask()}
           onDeleted={handleDeleted}
+        />
+      )}
+
+      {/* Child task creation modal */}
+      {showChildCreateModal && workflow && (
+        <ChildTaskCreateModal
+          parentTask={task}
+          projectId={projectId}
+          workflowId={workflow.id}
+          onCreated={(newTaskId) => {
+            refetchAllTasks()
+            setShowChildCreateModal(false)
+            if (newTaskId) {
+              navigate({
+                to: '/projects/$projectId/tasks/$taskId',
+                params: { projectId, taskId: newTaskId },
+              })
+            }
+          }}
+          onClose={() => setShowChildCreateModal(false)}
         />
       )}
 

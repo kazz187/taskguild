@@ -15,7 +15,7 @@ interface ChildTaskCreateModalProps {
   parentTask: Task
   projectId: string
   workflowId: string
-  onCreated: () => void
+  onCreated: (taskId: string) => void
   onClose: () => void
 }
 
@@ -84,8 +84,8 @@ export function ChildTaskCreateModal({
         useWorktree,
       },
       {
-        onSuccess: () => {
-          onCreated()
+        onSuccess: (res) => {
+          onCreated(res.task?.id ?? '')
           onClose()
         },
       },
