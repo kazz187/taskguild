@@ -365,7 +365,7 @@ func runTask(
 					reportTaskResult(ctx, client, taskID, displaySummary, "")
 					reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (invalid transition after retries)")
 					afterHooks()
-					maybeRunAgentMDHarness(ctx, metadata, taskID, displaySummary, resolveHookDir(), tl, client)
+					maybeRunAgentMDHarness(ctx, metadata, taskID, displaySummary, workDir, tl, client)
 					return
 				}
 
@@ -391,7 +391,7 @@ func runTask(
 			// only after all hooks complete.
 			afterHooks()
 			// Launch AGENT.md harness in background goroutine if enabled.
-			maybeRunAgentMDHarness(ctx, metadata, taskID, displaySummary, resolveHookDir(), tl, client)
+			maybeRunAgentMDHarness(ctx, metadata, taskID, displaySummary, workDir, tl, client)
 			if err := handleStatusTransition(ctx, taskClient, taskID, nextStatusID, metadata, tl); err != nil {
 				logger.Error("status transition failed", "error", err)
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
@@ -408,7 +408,7 @@ func runTask(
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed")
 			// Launch AGENT.md harness in background goroutine if enabled.
-			maybeRunAgentMDHarness(ctx, metadata, taskID, summary, resolveHookDir(), tl, client)
+			maybeRunAgentMDHarness(ctx, metadata, taskID, summary, workDir, tl, client)
 			return
 		}
 
