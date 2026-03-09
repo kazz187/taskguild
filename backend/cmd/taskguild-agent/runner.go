@@ -64,6 +64,7 @@ func runTask(
 	metadata map[string]string,
 	workDir string,
 	permCache *permissionCache,
+	scpCache *singleCommandPermissionCache,
 ) {
 	// Create task-scoped logger and embed in context.
 	logger := slog.Default().With("task_id", taskID)
@@ -135,7 +136,7 @@ func runTask(
 	statusTransitionRetries := 0
 
 	for turn := 0; ; turn++ {
-		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, worktreeName, client, ctx, taskID, agentManagerID, waiter, permCache, tl)
+		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, worktreeName, client, ctx, taskID, agentManagerID, waiter, permCache, scpCache, tl)
 		// Override StderrCallback to also send to task logger.
 		opts.StderrCallback = func(line string) {
 			logger.Debug("claude-stderr", "line", line)
@@ -463,6 +464,7 @@ func buildClaudeOptions(
 	agentManagerID string,
 	waiter *interactionWaiter,
 	permCache *permissionCache,
+	scpCache *singleCommandPermissionCache,
 	tl *taskLogger,
 ) *claudeagent.ClaudeAgentOptions {
 	logger := clog.LoggerFromContext(ctx)
@@ -490,7 +492,7 @@ func buildClaudeOptions(
 		Cwd:            cwd,
 		PermissionMode: permMode,
 		CanUseTool: func(toolName string, input map[string]any, toolCtx claudeagent.ToolPermissionContext) (claudeagent.PermissionResult, error) {
-			return handlePermissionRequest(ctx, client, taskID, agentManagerID, toolName, input, waiter, permMode, toolCtx, permCache)
+			return handlePermissionRequest(ctx, client, taskID, agentManagerID, toolName, input, waiter, permMode, toolCtx, permCache, scpCache)
 		},
 		StderrCallback: func(line string) {
 			logger.Debug("claude-stderr", "line", line)

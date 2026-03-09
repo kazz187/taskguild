@@ -105,6 +105,12 @@ const (
 	// AgentManagerServiceResolveScriptConflictProcedure is the fully-qualified name of the
 	// AgentManagerService's ResolveScriptConflict RPC.
 	AgentManagerServiceResolveScriptConflictProcedure = "/taskguild.v1.AgentManagerService/ResolveScriptConflict"
+	// AgentManagerServiceListSingleCommandPermissionsProcedure is the fully-qualified name of the
+	// AgentManagerService's ListSingleCommandPermissions RPC.
+	AgentManagerServiceListSingleCommandPermissionsProcedure = "/taskguild.v1.AgentManagerService/ListSingleCommandPermissions"
+	// AgentManagerServiceAddSingleCommandPermissionProcedure is the fully-qualified name of the
+	// AgentManagerService's AddSingleCommandPermission RPC.
+	AgentManagerServiceAddSingleCommandPermissionProcedure = "/taskguild.v1.AgentManagerService/AddSingleCommandPermission"
 )
 
 // AgentManagerServiceClient is a client for the taskguild.v1.AgentManagerService service.
@@ -160,6 +166,11 @@ type AgentManagerServiceClient interface {
 	GetScriptComparison(context.Context, *connect.Request[v1.GetScriptComparisonRequest]) (*connect.Response[v1.GetScriptComparisonResponse], error)
 	// ResolveScriptConflict resolves a per-script conflict between server and agent versions.
 	ResolveScriptConflict(context.Context, *connect.Request[v1.ResolveScriptConflictRequest]) (*connect.Response[v1.ResolveScriptConflictResponse], error)
+	// ListSingleCommandPermissions returns all regex-based single-command permission
+	// rules for a project (used by agents to populate their cache).
+	ListSingleCommandPermissions(context.Context, *connect.Request[v1.ListSingleCommandPermissionsAgentRequest]) (*connect.Response[v1.ListSingleCommandPermissionsAgentResponse], error)
+	// AddSingleCommandPermission adds a new regex permission rule from an agent.
+	AddSingleCommandPermission(context.Context, *connect.Request[v1.AddSingleCommandPermissionRequest]) (*connect.Response[v1.AddSingleCommandPermissionResponse], error)
 }
 
 // NewAgentManagerServiceClient constructs a client for the taskguild.v1.AgentManagerService
@@ -317,35 +328,49 @@ func NewAgentManagerServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(agentManagerServiceMethods.ByName("ResolveScriptConflict")),
 			connect.WithClientOptions(opts...),
 		),
+		listSingleCommandPermissions: connect.NewClient[v1.ListSingleCommandPermissionsAgentRequest, v1.ListSingleCommandPermissionsAgentResponse](
+			httpClient,
+			baseURL+AgentManagerServiceListSingleCommandPermissionsProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("ListSingleCommandPermissions")),
+			connect.WithClientOptions(opts...),
+		),
+		addSingleCommandPermission: connect.NewClient[v1.AddSingleCommandPermissionRequest, v1.AddSingleCommandPermissionResponse](
+			httpClient,
+			baseURL+AgentManagerServiceAddSingleCommandPermissionProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("AddSingleCommandPermission")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // agentManagerServiceClient implements AgentManagerServiceClient.
 type agentManagerServiceClient struct {
-	subscribe                   *connect.Client[v1.AgentManagerSubscribeRequest, v1.AgentCommand]
-	claimTask                   *connect.Client[v1.ClaimTaskRequest, v1.ClaimTaskResponse]
-	reportTaskResult            *connect.Client[v1.ReportTaskResultRequest, v1.ReportTaskResultResponse]
-	reportAgentStatus           *connect.Client[v1.ReportAgentStatusRequest, v1.ReportAgentStatusResponse]
-	heartbeat                   *connect.Client[v1.HeartbeatRequest, v1.HeartbeatResponse]
-	createInteraction           *connect.Client[v1.CreateInteractionRequest, v1.CreateInteractionResponse]
-	getInteractionResponse      *connect.Client[v1.GetInteractionResponseRequest, v1.GetInteractionResponseResponse]
-	syncAgents                  *connect.Client[v1.SyncAgentsRequest, v1.SyncAgentsResponse]
-	reportTaskLog               *connect.Client[v1.ReportTaskLogRequest, v1.ReportTaskLogResponse]
-	syncPermissions             *connect.Client[v1.SyncPermissionsRequest, v1.SyncPermissionsResponse]
-	reportWorktreeList          *connect.Client[v1.ReportWorktreeListRequest, v1.ReportWorktreeListResponse]
-	requestWorktreeList         *connect.Client[v1.RequestWorktreeListRequest, v1.RequestWorktreeListResponse]
-	getWorktreeList             *connect.Client[v1.GetWorktreeListRequest, v1.GetWorktreeListResponse]
-	requestWorktreeDelete       *connect.Client[v1.RequestWorktreeDeleteRequest, v1.RequestWorktreeDeleteResponse]
-	reportWorktreeDeleteResult  *connect.Client[v1.ReportWorktreeDeleteResultRequest, v1.ReportWorktreeDeleteResultResponse]
-	requestGitPullMain          *connect.Client[v1.RequestGitPullMainRequest, v1.RequestGitPullMainResponse]
-	reportGitPullMainResult     *connect.Client[v1.ReportGitPullMainResultRequest, v1.ReportGitPullMainResultResponse]
-	syncScripts                 *connect.Client[v1.SyncScriptsRequest, v1.SyncScriptsResponse]
-	reportScriptExecutionResult *connect.Client[v1.ReportScriptExecutionResultRequest, v1.ReportScriptExecutionResultResponse]
-	reportScriptOutputChunk     *connect.Client[v1.ReportScriptOutputChunkRequest, v1.ReportScriptOutputChunkResponse]
-	requestScriptComparison     *connect.Client[v1.RequestScriptComparisonRequest, v1.RequestScriptComparisonResponse]
-	reportScriptComparison      *connect.Client[v1.ReportScriptComparisonRequest, v1.ReportScriptComparisonResponse]
-	getScriptComparison         *connect.Client[v1.GetScriptComparisonRequest, v1.GetScriptComparisonResponse]
-	resolveScriptConflict       *connect.Client[v1.ResolveScriptConflictRequest, v1.ResolveScriptConflictResponse]
+	subscribe                    *connect.Client[v1.AgentManagerSubscribeRequest, v1.AgentCommand]
+	claimTask                    *connect.Client[v1.ClaimTaskRequest, v1.ClaimTaskResponse]
+	reportTaskResult             *connect.Client[v1.ReportTaskResultRequest, v1.ReportTaskResultResponse]
+	reportAgentStatus            *connect.Client[v1.ReportAgentStatusRequest, v1.ReportAgentStatusResponse]
+	heartbeat                    *connect.Client[v1.HeartbeatRequest, v1.HeartbeatResponse]
+	createInteraction            *connect.Client[v1.CreateInteractionRequest, v1.CreateInteractionResponse]
+	getInteractionResponse       *connect.Client[v1.GetInteractionResponseRequest, v1.GetInteractionResponseResponse]
+	syncAgents                   *connect.Client[v1.SyncAgentsRequest, v1.SyncAgentsResponse]
+	reportTaskLog                *connect.Client[v1.ReportTaskLogRequest, v1.ReportTaskLogResponse]
+	syncPermissions              *connect.Client[v1.SyncPermissionsRequest, v1.SyncPermissionsResponse]
+	reportWorktreeList           *connect.Client[v1.ReportWorktreeListRequest, v1.ReportWorktreeListResponse]
+	requestWorktreeList          *connect.Client[v1.RequestWorktreeListRequest, v1.RequestWorktreeListResponse]
+	getWorktreeList              *connect.Client[v1.GetWorktreeListRequest, v1.GetWorktreeListResponse]
+	requestWorktreeDelete        *connect.Client[v1.RequestWorktreeDeleteRequest, v1.RequestWorktreeDeleteResponse]
+	reportWorktreeDeleteResult   *connect.Client[v1.ReportWorktreeDeleteResultRequest, v1.ReportWorktreeDeleteResultResponse]
+	requestGitPullMain           *connect.Client[v1.RequestGitPullMainRequest, v1.RequestGitPullMainResponse]
+	reportGitPullMainResult      *connect.Client[v1.ReportGitPullMainResultRequest, v1.ReportGitPullMainResultResponse]
+	syncScripts                  *connect.Client[v1.SyncScriptsRequest, v1.SyncScriptsResponse]
+	reportScriptExecutionResult  *connect.Client[v1.ReportScriptExecutionResultRequest, v1.ReportScriptExecutionResultResponse]
+	reportScriptOutputChunk      *connect.Client[v1.ReportScriptOutputChunkRequest, v1.ReportScriptOutputChunkResponse]
+	requestScriptComparison      *connect.Client[v1.RequestScriptComparisonRequest, v1.RequestScriptComparisonResponse]
+	reportScriptComparison       *connect.Client[v1.ReportScriptComparisonRequest, v1.ReportScriptComparisonResponse]
+	getScriptComparison          *connect.Client[v1.GetScriptComparisonRequest, v1.GetScriptComparisonResponse]
+	resolveScriptConflict        *connect.Client[v1.ResolveScriptConflictRequest, v1.ResolveScriptConflictResponse]
+	listSingleCommandPermissions *connect.Client[v1.ListSingleCommandPermissionsAgentRequest, v1.ListSingleCommandPermissionsAgentResponse]
+	addSingleCommandPermission   *connect.Client[v1.AddSingleCommandPermissionRequest, v1.AddSingleCommandPermissionResponse]
 }
 
 // Subscribe calls taskguild.v1.AgentManagerService.Subscribe.
@@ -468,6 +493,16 @@ func (c *agentManagerServiceClient) ResolveScriptConflict(ctx context.Context, r
 	return c.resolveScriptConflict.CallUnary(ctx, req)
 }
 
+// ListSingleCommandPermissions calls taskguild.v1.AgentManagerService.ListSingleCommandPermissions.
+func (c *agentManagerServiceClient) ListSingleCommandPermissions(ctx context.Context, req *connect.Request[v1.ListSingleCommandPermissionsAgentRequest]) (*connect.Response[v1.ListSingleCommandPermissionsAgentResponse], error) {
+	return c.listSingleCommandPermissions.CallUnary(ctx, req)
+}
+
+// AddSingleCommandPermission calls taskguild.v1.AgentManagerService.AddSingleCommandPermission.
+func (c *agentManagerServiceClient) AddSingleCommandPermission(ctx context.Context, req *connect.Request[v1.AddSingleCommandPermissionRequest]) (*connect.Response[v1.AddSingleCommandPermissionResponse], error) {
+	return c.addSingleCommandPermission.CallUnary(ctx, req)
+}
+
 // AgentManagerServiceHandler is an implementation of the taskguild.v1.AgentManagerService service.
 type AgentManagerServiceHandler interface {
 	// Subscribe opens a server-stream for receiving commands from the backend.
@@ -521,6 +556,11 @@ type AgentManagerServiceHandler interface {
 	GetScriptComparison(context.Context, *connect.Request[v1.GetScriptComparisonRequest]) (*connect.Response[v1.GetScriptComparisonResponse], error)
 	// ResolveScriptConflict resolves a per-script conflict between server and agent versions.
 	ResolveScriptConflict(context.Context, *connect.Request[v1.ResolveScriptConflictRequest]) (*connect.Response[v1.ResolveScriptConflictResponse], error)
+	// ListSingleCommandPermissions returns all regex-based single-command permission
+	// rules for a project (used by agents to populate their cache).
+	ListSingleCommandPermissions(context.Context, *connect.Request[v1.ListSingleCommandPermissionsAgentRequest]) (*connect.Response[v1.ListSingleCommandPermissionsAgentResponse], error)
+	// AddSingleCommandPermission adds a new regex permission rule from an agent.
+	AddSingleCommandPermission(context.Context, *connect.Request[v1.AddSingleCommandPermissionRequest]) (*connect.Response[v1.AddSingleCommandPermissionResponse], error)
 }
 
 // NewAgentManagerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -674,6 +714,18 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 		connect.WithSchema(agentManagerServiceMethods.ByName("ResolveScriptConflict")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentManagerServiceListSingleCommandPermissionsHandler := connect.NewUnaryHandler(
+		AgentManagerServiceListSingleCommandPermissionsProcedure,
+		svc.ListSingleCommandPermissions,
+		connect.WithSchema(agentManagerServiceMethods.ByName("ListSingleCommandPermissions")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentManagerServiceAddSingleCommandPermissionHandler := connect.NewUnaryHandler(
+		AgentManagerServiceAddSingleCommandPermissionProcedure,
+		svc.AddSingleCommandPermission,
+		connect.WithSchema(agentManagerServiceMethods.ByName("AddSingleCommandPermission")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/taskguild.v1.AgentManagerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AgentManagerServiceSubscribeProcedure:
@@ -724,6 +776,10 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 			agentManagerServiceGetScriptComparisonHandler.ServeHTTP(w, r)
 		case AgentManagerServiceResolveScriptConflictProcedure:
 			agentManagerServiceResolveScriptConflictHandler.ServeHTTP(w, r)
+		case AgentManagerServiceListSingleCommandPermissionsProcedure:
+			agentManagerServiceListSingleCommandPermissionsHandler.ServeHTTP(w, r)
+		case AgentManagerServiceAddSingleCommandPermissionProcedure:
+			agentManagerServiceAddSingleCommandPermissionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -827,4 +883,12 @@ func (UnimplementedAgentManagerServiceHandler) GetScriptComparison(context.Conte
 
 func (UnimplementedAgentManagerServiceHandler) ResolveScriptConflict(context.Context, *connect.Request[v1.ResolveScriptConflictRequest]) (*connect.Response[v1.ResolveScriptConflictResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ResolveScriptConflict is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) ListSingleCommandPermissions(context.Context, *connect.Request[v1.ListSingleCommandPermissionsAgentRequest]) (*connect.Response[v1.ListSingleCommandPermissionsAgentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ListSingleCommandPermissions is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) AddSingleCommandPermission(context.Context, *connect.Request[v1.AddSingleCommandPermissionRequest]) (*connect.Response[v1.AddSingleCommandPermissionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.AddSingleCommandPermission is not implemented"))
 }

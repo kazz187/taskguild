@@ -32,6 +32,7 @@ type Interaction struct {
 	Options       []Option          `yaml:"options"`
 	Response      string            `yaml:"response"`
 	ResponseToken string            `yaml:"response_token,omitempty"`
+	Metadata      string            `yaml:"metadata,omitempty"`
 	CreatedAt     time.Time         `yaml:"created_at"`
 	RespondedAt   *time.Time        `yaml:"responded_at"`
 }

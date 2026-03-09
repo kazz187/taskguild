@@ -21,6 +21,7 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/permission"
 	"github.com/kazz187/taskguild/backend/internal/project"
 	"github.com/kazz187/taskguild/backend/internal/script"
+	scp "github.com/kazz187/taskguild/backend/internal/singlecommandpermission"
 	"github.com/kazz187/taskguild/backend/internal/skill"
 	"github.com/kazz187/taskguild/backend/internal/task"
 	"github.com/kazz187/taskguild/backend/internal/tasklog"
@@ -44,6 +45,7 @@ type Server struct {
 	scriptRepo      script.Repository
 	taskLogRepo     tasklog.Repository
 	permissionRepo  permission.Repository
+	scpRepo         scp.Repository
 	eventBus        *eventbus.Bus
 
 	// scriptBroker manages streaming script execution output.
@@ -60,7 +62,7 @@ type Server struct {
 	scriptDiffCache map[string][]*taskguildv1.ScriptDiff // project_id -> diffs
 }
 
-func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, projectRepo project.Repository, skillRepo skill.Repository, scriptRepo script.Repository, taskLogRepo tasklog.Repository, permissionRepo permission.Repository, eventBus *eventbus.Bus, scriptBroker *script.ScriptExecutionBroker) *Server {
+func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, projectRepo project.Repository, skillRepo skill.Repository, scriptRepo script.Repository, taskLogRepo tasklog.Repository, permissionRepo permission.Repository, scpRepo scp.Repository, eventBus *eventbus.Bus, scriptBroker *script.ScriptExecutionBroker) *Server {
 	return &Server{
 		registry:        registry,
 		taskRepo:        taskRepo,
@@ -72,6 +74,7 @@ func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workfl
 		scriptRepo:      scriptRepo,
 		taskLogRepo:     taskLogRepo,
 		permissionRepo:  permissionRepo,
+		scpRepo:         scpRepo,
 		eventBus:        eventBus,
 		scriptBroker:    scriptBroker,
 		worktreeCache:   make(map[string][]*taskguildv1.WorktreeInfo),
@@ -809,6 +812,7 @@ func (s *Server) CreateInteraction(ctx context.Context, req *connect.Request[tas
 		Status:      interaction.StatusPending,
 		Title:       req.Msg.Title,
 		Description: req.Msg.Description,
+		Metadata:    req.Msg.Metadata,
 		CreatedAt:   now,
 	}
 	for _, opt := range req.Msg.Options {
@@ -1586,3 +1590,78 @@ func (s *Server) removeScriptDiff(projectID, scriptID, filename string) {
 	s.scriptDiffCache[projectID] = filtered
 }
 
+// --- Single Command Permissions ---
+
+// ListSingleCommandPermissions returns all wildcard-based single-command permission
+// rules for a project (used by agents to populate their permission cache).
+func (s *Server) ListSingleCommandPermissions(ctx context.Context, req *connect.Request[taskguildv1.ListSingleCommandPermissionsAgentRequest]) (*connect.Response[taskguildv1.ListSingleCommandPermissionsAgentResponse], error) {
+	projectName := req.Msg.ProjectName
+	if projectName == "" {
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+	}
+
+	// Resolve project name to ID.
+	proj, err := s.projectRepo.FindByName(ctx, projectName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve project: %w", err)
+	}
+
+	perms, err := s.scpRepo.List(ctx, proj.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list single command permissions: %w", err)
+	}
+
+	var pbPerms []*taskguildv1.SingleCommandPermission
+	for _, p := range perms {
+		pbPerms = append(pbPerms, &taskguildv1.SingleCommandPermission{
+			Id:        p.ID,
+			ProjectId: p.ProjectID,
+			Pattern:   p.Pattern,
+			Type:      p.Type,
+			Label:     p.Label,
+			CreatedAt: timestamppb.New(p.CreatedAt),
+		})
+	}
+
+	return connect.NewResponse(&taskguildv1.ListSingleCommandPermissionsAgentResponse{
+		Permissions: pbPerms,
+	}), nil
+}
+
+// AddSingleCommandPermission adds a new wildcard permission rule from an agent.
+func (s *Server) AddSingleCommandPermission(ctx context.Context, req *connect.Request[taskguildv1.AddSingleCommandPermissionRequest]) (*connect.Response[taskguildv1.AddSingleCommandPermissionResponse], error) {
+	projectName := req.Msg.ProjectName
+	if projectName == "" {
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+	}
+
+	// Resolve project name to ID.
+	proj, err := s.projectRepo.FindByName(ctx, projectName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve project: %w", err)
+	}
+
+	p := &scp.SingleCommandPermission{
+		ID:        ulid.Make().String(),
+		ProjectID: proj.ID,
+		Pattern:   req.Msg.Pattern,
+		Type:      req.Msg.Type,
+		Label:     req.Msg.Label,
+		CreatedAt: time.Now(),
+	}
+
+	if err := s.scpRepo.Create(ctx, p); err != nil {
+		return nil, fmt.Errorf("failed to create single command permission: %w", err)
+	}
+
+	return connect.NewResponse(&taskguildv1.AddSingleCommandPermissionResponse{
+		Permission: &taskguildv1.SingleCommandPermission{
+			Id:        p.ID,
+			ProjectId: p.ProjectID,
+			Pattern:   p.Pattern,
+			Type:      p.Type,
+			Label:     p.Label,
+			CreatedAt: timestamppb.New(p.CreatedAt),
+		},
+	}), nil
+}

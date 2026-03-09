@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -12,6 +13,7 @@ import (
 	v1 "github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1"
 	"github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1/taskguildv1connect"
 	"github.com/kazz187/taskguild/backend/pkg/clog"
+	"github.com/kazz187/taskguild/backend/pkg/shellparse"
 )
 
 // interactionWaiter dispatches streamed interaction responses to waiting goroutines.
@@ -429,6 +431,7 @@ func handlePermissionRequest(
 	permMode claudeagent.PermissionMode,
 	toolCtx claudeagent.ToolPermissionContext,
 	permCache *permissionCache,
+	scpCache *singleCommandPermissionCache,
 ) (claudeagent.PermissionResult, error) {
 	logger := clog.LoggerFromContext(ctx)
 
@@ -461,7 +464,46 @@ func handlePermissionRequest(
 		return claudeagent.PermissionResultAllow{}, nil
 	}
 
+	// Single-command permission check for Bash tool.
+	var bashMeta *bashPermissionMetadata
+	if toolName == "Bash" && scpCache != nil {
+		if cmdRaw, ok := input["command"]; ok {
+			if cmdStr, ok := cmdRaw.(string); ok && cmdStr != "" {
+				parsed := shellparse.Parse(cmdStr)
+				allMatched, meta := scpCache.CheckAllCommands(parsed)
+				if allMatched {
+					logger.Debug("auto-allowing Bash (all commands matched)", "command", cmdStr)
+					return claudeagent.PermissionResultAllow{}, nil
+				}
+				bashMeta = meta
+			}
+		}
+	}
+
 	description := formatToolDescription(toolName, input)
+
+	// Build interaction options based on tool type.
+	var options []*v1.InteractionOption
+	if toolName == "Bash" {
+		options = []*v1.InteractionOption{
+			{Label: "Allow", Value: "allow", Description: "Allow this tool use"},
+			{Label: "Always Allow Command", Value: "always_allow_command", Description: "Allow and create rules for individual commands"},
+			{Label: "Deny", Value: "deny", Description: "Deny this tool use"},
+		}
+	} else {
+		options = []*v1.InteractionOption{
+			{Label: "Allow", Value: "allow", Description: "Allow this tool use"},
+			{Label: "Deny", Value: "deny", Description: "Deny this tool use"},
+		}
+	}
+
+	// Attach parsed command metadata for Bash interactions.
+	var metadataJSON string
+	if bashMeta != nil {
+		if data, err := json.Marshal(bashMeta); err == nil {
+			metadataJSON = string(data)
+		}
+	}
 
 	resp, err := client.CreateInteraction(ctx, connect.NewRequest(&v1.CreateInteractionRequest{
 		TaskId:      taskID,
@@ -469,11 +511,8 @@ func handlePermissionRequest(
 		Type:        v1.InteractionType_INTERACTION_TYPE_PERMISSION_REQUEST,
 		Title:       fmt.Sprintf("Permission request: %s", toolName),
 		Description: description,
-		Options: []*v1.InteractionOption{
-			{Label: "Allow", Value: "allow", Description: "Allow this tool use"},
-			{Label: "Always Allow", Value: "always_allow", Description: "Allow and remember the rule for future uses"},
-			{Label: "Deny", Value: "deny", Description: "Deny this tool use"},
-		},
+		Options:     options,
+		Metadata:    metadataJSON,
 	}))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create interaction: %w", err)
@@ -493,26 +532,77 @@ func handlePermissionRequest(
 			logger.Info("permission request expired", "tool", toolName)
 			return claudeagent.PermissionResultDeny{Message: "permission request expired"}, nil
 		}
-		switch inter.GetResponse() {
+
+		responseStr := inter.GetResponse()
+
+		// Try to parse the response as JSON (always_allow_command from frontend).
+		var aacResp alwaysAllowCommandResponse
+		if json.Unmarshal([]byte(responseStr), &aacResp) == nil && aacResp.Action == "always_allow_command" {
+			return handleAlwaysAllowCommand(ctx, client, scpCache, aacResp.Rules, toolName, logger)
+		}
+
+		switch responseStr {
 		case "allow":
 			logger.Info("permission granted", "tool", toolName)
 			return claudeagent.PermissionResultAllow{}, nil
-		case "always_allow":
-			updates := buildPermissionUpdate(toolName, input, toolCtx.Suggestions)
-			logger.Info("permission granted (always allow)", "tool", toolName, "rules", len(updates))
-
-			// Persist to cache and backend so future calls are auto-allowed.
-			if permCache != nil {
-				ruleStrings := extractRuleStrings(updates)
-				go permCache.AddAndSync(ctx, ruleStrings)
-			}
-
-			return claudeagent.PermissionResultAllow{
-				UpdatedPermissions: updates,
-			}, nil
 		default:
 			logger.Info("permission denied", "tool", toolName)
 			return claudeagent.PermissionResultDeny{Message: "user denied permission"}, nil
 		}
 	}
+}
+
+// alwaysAllowCommandResponse is the JSON structure sent by the frontend when
+// the user clicks "Always Allow Command".
+type alwaysAllowCommandResponse struct {
+	Action string                           `json:"action"`
+	Rules  []alwaysAllowCommandResponseRule `json:"rules"`
+}
+
+type alwaysAllowCommandResponseRule struct {
+	Pattern string `json:"pattern"`
+	Type    string `json:"type"`
+	Label   string `json:"label"`
+}
+
+// handleAlwaysAllowCommand processes the "always_allow_command" response by
+// registering the user-edited wildcard rules via the AddSingleCommandPermission RPC.
+func handleAlwaysAllowCommand(
+	ctx context.Context,
+	client taskguildv1connect.AgentManagerServiceClient,
+	scpCache *singleCommandPermissionCache,
+	rules []alwaysAllowCommandResponseRule,
+	toolName string,
+	logger *slog.Logger,
+) (claudeagent.PermissionResult, error) {
+	var registered int
+	for _, rule := range rules {
+		if rule.Pattern == "" {
+			continue
+		}
+		ruleType := rule.Type
+		if ruleType == "" {
+			ruleType = "command"
+		}
+		_, err := client.AddSingleCommandPermission(ctx, connect.NewRequest(&v1.AddSingleCommandPermissionRequest{
+			ProjectName: scpCache.projectName,
+			Pattern:     rule.Pattern,
+			Type:        ruleType,
+			Label:       rule.Label,
+		}))
+		if err != nil {
+			logger.Error("failed to add single command permission", "pattern", rule.Pattern, "error", err)
+			continue
+		}
+		registered++
+	}
+
+	logger.Info("permission granted (always allow command)", "tool", toolName, "rules_registered", registered)
+
+	// Immediately refresh the cache so subsequent calls are auto-allowed.
+	if scpCache != nil {
+		go scpCache.Sync(ctx)
+	}
+
+	return claudeagent.PermissionResultAllow{}, nil
 }
