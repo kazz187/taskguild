@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package taskguild.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// SingleCommandPermissionService manages regex-based permission rules for
+// individual shell commands. Each rule matches against a single parsed command
+// (not a full one-liner) using regular expressions.
+service SingleCommandPermissionService {
+  // ListSingleCommandPermissions returns all single-command permission rules for a project.
+  rpc ListSingleCommandPermissions(ListSingleCommandPermissionsRequest) returns (ListSingleCommandPermissionsResponse);
+
+  // CreateSingleCommandPermission adds a new regex permission rule for a project.
+  rpc CreateSingleCommandPermission(CreateSingleCommandPermissionRequest) returns (CreateSingleCommandPermissionResponse);
+
+  // UpdateSingleCommandPermission modifies an existing permission rule.
+  rpc UpdateSingleCommandPermission(UpdateSingleCommandPermissionRequest) returns (UpdateSingleCommandPermissionResponse);
+
+  // DeleteSingleCommandPermission removes a permission rule.
+  rpc DeleteSingleCommandPermission(DeleteSingleCommandPermissionRequest) returns (DeleteSingleCommandPermissionResponse);
+}
+
+// SingleCommandPermission represents a single regex-based permission rule.
+message SingleCommandPermission {
+  string id = 1;
+  string project_id = 2;
+  string pattern = 3;        // regex pattern (e.g. "^git\\s+status$")
+  string type = 4;            // "command" or "redirect"
+  string label = 5;           // human-readable label (e.g. "git status")
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message ListSingleCommandPermissionsRequest {
+  string project_id = 1;
+}
+message ListSingleCommandPermissionsResponse {
+  repeated SingleCommandPermission permissions = 1;
+}
+
+message CreateSingleCommandPermissionRequest {
+  string project_id = 1;
+  string pattern = 2;
+  string type = 3;
+  string label = 4;
+}
+message CreateSingleCommandPermissionResponse {
+  SingleCommandPermission permission = 1;
+}
+
+message UpdateSingleCommandPermissionRequest {
+  string id = 1;
+  string pattern = 2;
+  string type = 3;
+  string label = 4;
+}
+message UpdateSingleCommandPermissionResponse {
+  SingleCommandPermission permission = 1;
+}
+
+message DeleteSingleCommandPermissionRequest {
+  string id = 1;
+}
+message DeleteSingleCommandPermissionResponse {}

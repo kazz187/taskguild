@@ -52,6 +52,10 @@ message Interaction {
   // timestamps
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp responded_at = 11;
+
+  // metadata holds optional structured data as a JSON string.
+  // For Bash permission requests, this contains parsed command information.
+  string metadata = 12;
 }
 
 message InteractionOption {

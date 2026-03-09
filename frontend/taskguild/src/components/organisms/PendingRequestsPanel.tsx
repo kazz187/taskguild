@@ -87,7 +87,7 @@ export function PendingRequestsPanel({
           {pendingRequests.length}
         </Badge>
         <span className="ml-auto text-[10px] text-gray-600 font-mono hidden sm:inline">
-          j/k navigate · y allow · Y always · n deny · x dismiss
+          j/k navigate · y allow · a always (bash) · n deny · x dismiss
         </span>
       </div>
       <div className="space-y-4">

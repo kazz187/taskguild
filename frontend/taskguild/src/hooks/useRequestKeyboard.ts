@@ -27,12 +27,82 @@ function isInputFocused(): boolean {
   )
 }
 
-function getPermissionShortcutValue(key: string): string | null {
+interface BashCommandCheckResult {
+  command: string
+  matched: boolean
+  matched_pattern?: string
+  suggested_pattern?: string
+}
+
+interface BashRedirectCheckResult {
+  operator: string
+  path: string
+  matched: boolean
+  matched_pattern?: string
+  suggested_pattern?: string
+}
+
+interface BashPermissionMeta {
+  parsed_commands: BashCommandCheckResult[]
+  redirects?: BashRedirectCheckResult[]
+}
+
+function parseBashMeta(interaction: Interaction): BashPermissionMeta | null {
+  if (!interaction.metadata) return null
+  try {
+    const parsed = JSON.parse(interaction.metadata)
+    if (parsed && Array.isArray(parsed.parsed_commands)) {
+      return parsed as BashPermissionMeta
+    }
+  } catch {
+    // not bash metadata
+  }
+  return null
+}
+
+/**
+ * Build the default JSON response for always_allow_command from metadata.
+ * Uses suggested/matched patterns as-is (no user edits — those require clicking the button).
+ */
+function buildDefaultAlwaysAllowResponse(meta: BashPermissionMeta): string {
+  const rules: Array<{ pattern: string; type: string; label: string }> = []
+
+  for (const cmd of meta.parsed_commands) {
+    const pattern = cmd.matched
+      ? (cmd.matched_pattern ?? cmd.command)
+      : (cmd.suggested_pattern ?? cmd.command)
+    rules.push({ pattern, type: 'command', label: cmd.command })
+  }
+
+  if (meta.redirects) {
+    for (const redir of meta.redirects) {
+      const pattern = redir.matched
+        ? (redir.matched_pattern ?? redir.path)
+        : (redir.suggested_pattern ?? redir.path)
+      rules.push({ pattern, type: 'redirect', label: `${redir.operator} ${redir.path}` })
+    }
+  }
+
+  return JSON.stringify({ action: 'always_allow_command', rules })
+}
+
+/**
+ * Returns the response value for a keyboard shortcut key.
+ *
+ * For Bash permission requests:
+ *   y = allow, a = always_allow_command, n = deny
+ *
+ * For non-Bash permission requests:
+ *   y = allow, n = deny
+ *
+ * The old Y (shift+y) = always_allow shortcut is removed.
+ */
+function getPermissionShortcutValue(key: string, isBash: boolean): string | null {
   switch (key) {
     case 'y':
       return 'allow'
-    case 'Y':
-      return 'always_allow'
+    case 'a':
+      return isBash ? 'always_allow_command' : null
     case 'n':
       return 'deny'
     default:
@@ -190,17 +260,34 @@ export function useRequestKeyboard({
           break
         }
         case 'y':
-        case 'Y':
+        case 'a':
         case 'n': {
           if (!selectedId) return
           const selected = pendingRequests.find((r) => r.id === selectedId)
           if (!selected || selected.type !== InteractionType.PERMISSION_REQUEST) return
-          const value = getPermissionShortcutValue(e.key)
+
+          const bashMeta = parseBashMeta(selected)
+          const isBash = bashMeta !== null
+          const value = getPermissionShortcutValue(e.key, isBash)
           if (!value) return
-          // Verify the option actually exists in the interaction
-          if (!selected.options.some((opt) => opt.value === value)) return
+
+          // For 'y' and 'n', verify the option exists in the interaction
+          // For 'a' (always_allow_command), it's a synthetic option not in the original list
+          if (value !== 'always_allow_command') {
+            if (!selected.options.some((opt) => opt.value === value)) return
+          } else {
+            // always_allow_command is only available for bash
+            if (!isBash || !bashMeta) return
+          }
+
           e.preventDefault()
-          guardedRespond(selectedId, value)
+
+          // For always_allow_command, build the JSON response with default patterns
+          if (value === 'always_allow_command' && bashMeta) {
+            guardedRespond(selectedId, buildDefaultAlwaysAllowResponse(bashMeta))
+          } else {
+            guardedRespond(selectedId, value)
+          }
           break
         }
         default: {

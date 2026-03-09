@@ -25,6 +25,7 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/skill"
 	"github.com/kazz187/taskguild/backend/internal/task"
 	"github.com/kazz187/taskguild/backend/internal/tasklog"
+	"github.com/kazz187/taskguild/backend/internal/singlecommandpermission"
 	tmpl "github.com/kazz187/taskguild/backend/internal/template"
 	"github.com/kazz187/taskguild/backend/internal/workflow"
 	"github.com/kazz187/taskguild/backend/internal/config"
@@ -47,8 +48,9 @@ type Server struct {
 	eventServer            *event.Server
 	taskLogServer          *tasklog.Server
 	pushNotificationServer *pushnotification.Server
-	permissionServer       *permission.Server
-	templateServer         *tmpl.Server
+	permissionServer              *permission.Server
+	singleCommandPermissionServer *singlecommandpermission.Server
+	templateServer                *tmpl.Server
 }
 
 func NewServer(
@@ -65,23 +67,25 @@ func NewServer(
 	taskLogServer *tasklog.Server,
 	pushNotificationServer *pushnotification.Server,
 	permissionServer *permission.Server,
+	singleCommandPermissionServer *singlecommandpermission.Server,
 	templateServer *tmpl.Server,
 ) *Server {
 	return &Server{
-		env:                    env,
-		projectServer:          projectServer,
-		workflowServer:         workflowServer,
-		taskServer:             taskServer,
-		interactionServer:      interactionServer,
-		agentManagerServer:     agentManagerServer,
-		agentServer:            agentServer,
-		skillServer:            skillServer,
-		scriptServer:           scriptServer,
-		eventServer:            eventServer,
-		taskLogServer:          taskLogServer,
-		pushNotificationServer: pushNotificationServer,
-		permissionServer:       permissionServer,
-		templateServer:         templateServer,
+		env:                           env,
+		projectServer:                 projectServer,
+		workflowServer:                workflowServer,
+		taskServer:                    taskServer,
+		interactionServer:             interactionServer,
+		agentManagerServer:            agentManagerServer,
+		agentServer:                   agentServer,
+		skillServer:                   skillServer,
+		scriptServer:                  scriptServer,
+		eventServer:                   eventServer,
+		taskLogServer:                 taskLogServer,
+		pushNotificationServer:        pushNotificationServer,
+		permissionServer:              permissionServer,
+		singleCommandPermissionServer: singleCommandPermissionServer,
+		templateServer:                templateServer,
 	}
 }
 
@@ -122,6 +126,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	mux.Handle(taskguildv1connect.NewTaskLogServiceHandler(s.taskLogServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewPushNotificationServiceHandler(s.pushNotificationServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewPermissionServiceHandler(s.permissionServer, handlerOpts))
+	mux.Handle(taskguildv1connect.NewSingleCommandPermissionServiceHandler(s.singleCommandPermissionServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewTemplateServiceHandler(s.templateServer, handlerOpts))
 
 	addr := net.JoinHostPort(s.env.HTTPHost, s.env.HTTPPort)

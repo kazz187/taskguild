@@ -144,8 +144,11 @@ type Interaction struct {
 	Options     []*InteractionOption `protobuf:"bytes,8,rep,name=options,proto3" json:"options,omitempty"`
 	Response    string               `protobuf:"bytes,9,opt,name=response,proto3" json:"response,omitempty"`
 	// timestamps
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	RespondedAt   *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=responded_at,json=respondedAt,proto3" json:"responded_at,omitempty"`
+	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	RespondedAt *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=responded_at,json=respondedAt,proto3" json:"responded_at,omitempty"`
+	// metadata holds optional structured data as a JSON string.
+	// For Bash permission requests, this contains parsed command information.
+	Metadata      string `protobuf:"bytes,12,opt,name=metadata,proto3" json:"metadata,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -255,6 +258,13 @@ func (x *Interaction) GetRespondedAt() *timestamppb.Timestamp {
 		return x.RespondedAt
 	}
 	return nil
+}
+
+func (x *Interaction) GetMetadata() string {
+	if x != nil {
+		return x.Metadata
+	}
+	return ""
 }
 
 type InteractionOption struct {
@@ -924,7 +934,7 @@ var File_taskguild_v1_interaction_proto protoreflect.FileDescriptor
 
 const file_taskguild_v1_interaction_proto_rawDesc = "" +
 	"\n" +
-	"\x1etaskguild/v1/interaction.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19taskguild/v1/common.proto\"\xc6\x03\n" +
+	"\x1etaskguild/v1/interaction.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19taskguild/v1/common.proto\"\xe2\x03\n" +
 	"\vInteraction\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\atask_id\x18\x02 \x01(\tR\x06taskId\x12\x19\n" +
@@ -938,7 +948,8 @@ const file_taskguild_v1_interaction_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12=\n" +
-	"\fresponded_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\vrespondedAt\"a\n" +
+	"\fresponded_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\vrespondedAt\x12\x1a\n" +
+	"\bmetadata\x18\f \x01(\tR\bmetadata\"a\n" +
 	"\x11InteractionOption\x12\x14\n" +
 	"\x05label\x18\x01 \x01(\tR\x05label\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x12 \n" +

@@ -7,6 +7,7 @@ import "taskguild/v1/agent.proto";
 import "taskguild/v1/interaction.proto";
 import "taskguild/v1/permission.proto";
 import "taskguild/v1/script.proto";
+import "taskguild/v1/single_command_permission.proto";
 import "taskguild/v1/task_log.proto";
 
 // AgentManagerService is the bidirectional communication channel between
@@ -63,6 +64,11 @@ service AgentManagerService {
   rpc GetScriptComparison(GetScriptComparisonRequest) returns (GetScriptComparisonResponse);
   // ResolveScriptConflict resolves a per-script conflict between server and agent versions.
   rpc ResolveScriptConflict(ResolveScriptConflictRequest) returns (ResolveScriptConflictResponse);
+  // ListSingleCommandPermissions returns all regex-based single-command permission
+  // rules for a project (used by agents to populate their cache).
+  rpc ListSingleCommandPermissions(ListSingleCommandPermissionsAgentRequest) returns (ListSingleCommandPermissionsAgentResponse);
+  // AddSingleCommandPermission adds a new regex permission rule from an agent.
+  rpc AddSingleCommandPermission(AddSingleCommandPermissionRequest) returns (AddSingleCommandPermissionResponse);
 }
 
 // --- Subscribe stream ---
@@ -202,6 +208,7 @@ message CreateInteractionRequest {
   string title = 4;
   string description = 5;
   repeated InteractionOption options = 6;
+  string metadata = 7;  // Optional JSON metadata (e.g. parsed Bash commands)
 }
 message CreateInteractionResponse {
   Interaction interaction = 1;
@@ -437,4 +444,23 @@ message ResolveScriptConflictRequest {
 }
 message ResolveScriptConflictResponse {
   ScriptDefinition script = 1;   // the resulting script after resolution
+}
+
+// --- Single Command Permissions ---
+
+message ListSingleCommandPermissionsAgentRequest {
+  string project_name = 1;
+}
+message ListSingleCommandPermissionsAgentResponse {
+  repeated SingleCommandPermission permissions = 1;
+}
+
+message AddSingleCommandPermissionRequest {
+  string project_name = 1;
+  string pattern = 2;
+  string type = 3;   // "command" or "redirect"
+  string label = 4;
+}
+message AddSingleCommandPermissionResponse {
+  SingleCommandPermission permission = 1;
 }

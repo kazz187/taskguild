@@ -182,6 +182,10 @@ func runAgent() {
 	// Permission cache: shared across all tasks within this agent-manager.
 	permCache := newPermissionCache(cfg.ProjectName, client)
 
+	// Single-command permission cache: regex-based per-command rules.
+	scpCache := newSingleCommandPermissionCache(cfg.ProjectName, client)
+	scpCache.Sync(ctx)
+
 	// Task tracking
 	var (
 		mu          sync.Mutex
@@ -214,7 +218,7 @@ func runAgent() {
 		syncPermissions(ctx, client, cfg, permCache)
 		syncScripts(ctx, client, cfg, nil) // nil = don't force-overwrite any existing files
 
-		err := runSubscribeLoop(ctx, client, taskClient, interClient, cfg, &mu, activeTasks, &wg, sem, permCache)
+		err := runSubscribeLoop(ctx, client, taskClient, interClient, cfg, &mu, activeTasks, &wg, sem, permCache, scpCache)
 		if ctx.Err() != nil {
 			break
 		}
@@ -259,6 +263,7 @@ func runSubscribeLoop(
 	wg *sync.WaitGroup,
 	sem chan struct{},
 	permCache *permissionCache,
+	scpCache *singleCommandPermissionCache,
 ) error {
 	// Collect active task IDs so the server knows which tasks are still running
 	// and should NOT be released during reconnection.
@@ -354,7 +359,7 @@ func runSubscribeLoop(
 					taskCancel()
 				}()
 
-				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache)
+				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache, scpCache)
 			}(taskID)
 
 		case *v1.AgentCommand_ListWorktrees:
@@ -383,6 +388,7 @@ func runSubscribeLoop(
 		case *v1.AgentCommand_SyncPermissions:
 			slog.Info("received sync permissions command, re-syncing")
 			syncPermissions(ctx, client, cfg, permCache)
+			scpCache.Sync(ctx)
 
 		case *v1.AgentCommand_SyncScripts:
 			syncCmd := c.SyncScripts
@@ -459,7 +465,7 @@ func runSubscribeLoop(
 					taskCancel()
 				}()
 
-				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache)
+				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache, scpCache)
 			}(taskID)
 
 		case *v1.AgentCommand_InteractionResponse:

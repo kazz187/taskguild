@@ -167,3 +167,18 @@ export const getScriptComparison = AgentManagerService.method.getScriptCompariso
  * @generated from rpc taskguild.v1.AgentManagerService.ResolveScriptConflict
  */
 export const resolveScriptConflict = AgentManagerService.method.resolveScriptConflict;
+
+/**
+ * ListSingleCommandPermissions returns all regex-based single-command permission
+ * rules for a project (used by agents to populate their cache).
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.ListSingleCommandPermissions
+ */
+export const listSingleCommandPermissions = AgentManagerService.method.listSingleCommandPermissions;
+
+/**
+ * AddSingleCommandPermission adds a new regex permission rule from an agent.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.AddSingleCommandPermission
+ */
+export const addSingleCommandPermission = AgentManagerService.method.addSingleCommandPermission;

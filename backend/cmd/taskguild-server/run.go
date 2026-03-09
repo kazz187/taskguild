@@ -22,6 +22,8 @@ import (
 	"github.com/kazz187/taskguild/backend/internal/orchestrator"
 	"github.com/kazz187/taskguild/backend/internal/permission"
 	permissionrepo "github.com/kazz187/taskguild/backend/internal/permission/repositoryimpl"
+	"github.com/kazz187/taskguild/backend/internal/singlecommandpermission"
+	scprepo "github.com/kazz187/taskguild/backend/internal/singlecommandpermission/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/project"
 	projectrepo "github.com/kazz187/taskguild/backend/internal/project/repositoryimpl"
 	"github.com/kazz187/taskguild/backend/internal/pushnotification"
@@ -87,6 +89,27 @@ func (n *permissionChangeNotifier) NotifyPermissionChange(projectID string) {
 	})
 }
 
+// scpChangeNotifier implements singlecommandpermission.ChangeNotifier by
+// broadcasting a SyncPermissionsCommand to connected agents in the same project.
+// This reuses the existing sync mechanism so agents refresh all permission caches.
+type scpChangeNotifier struct {
+	registry    *agentmanager.Registry
+	projectRepo project.Repository
+}
+
+func (n *scpChangeNotifier) NotifySingleCommandPermissionChange(projectID string) {
+	p, err := n.projectRepo.Get(context.Background(), projectID)
+	if err != nil {
+		slog.Error("failed to look up project for single command permission change notification", "project_id", projectID, "error", err)
+		return
+	}
+	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
+		Command: &taskguildv1.AgentCommand_SyncPermissions{
+			SyncPermissions: &taskguildv1.SyncPermissionsCommand{},
+		},
+	})
+}
+
 func runServer() {
 	env, err := config.LoadEnv()
 	if err != nil {
@@ -137,6 +160,7 @@ func runServer() {
 	taskLogRepo := tasklogrepo.NewYAMLRepository(store)
 	pushSubRepo := pushsubrepo.NewYAMLRepository(store)
 	permissionRepo := permissionrepo.NewYAMLRepository(store)
+	scpRepo := scprepo.NewYAMLRepository(store)
 	templateRepo := tmplrepo.NewYAMLRepository(store)
 
 	// Setup agent-manager registry
@@ -150,7 +174,7 @@ func runServer() {
 	workflowServer := workflow.NewServer(workflowRepo)
 	taskServer := task.NewServer(taskRepo, workflowRepo, bus, taskLogRepo, interactionRepo)
 	interactionServer := interaction.NewServer(interactionRepo, taskRepo, bus)
-	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, projectRepo, skillRepo, scriptRepo, taskLogRepo, permissionRepo, bus, scriptBroker)
+	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, projectRepo, skillRepo, scriptRepo, taskLogRepo, permissionRepo, scpRepo, bus, scriptBroker)
 	agentChangeNotifier := &agentChangeNotifier{
 		registry:    agentManagerRegistry,
 		projectRepo: projectRepo,
@@ -165,6 +189,11 @@ func runServer() {
 		projectRepo: projectRepo,
 	}
 	permissionServer := permission.NewServer(permissionRepo, permissionChangeNotifier)
+	scpChangeNotifier := &scpChangeNotifier{
+		registry:    agentManagerRegistry,
+		projectRepo: projectRepo,
+	}
+	scpServer := singlecommandpermission.NewServer(scpRepo, scpChangeNotifier)
 	templateServer := tmpl.NewServer(templateRepo, agentRepo, skillRepo, scriptRepo)
 
 	// Setup push notification
@@ -188,6 +217,7 @@ func runServer() {
 		taskLogServer,
 		pushNotificationServer,
 		permissionServer,
+		scpServer,
 		templateServer,
 	)
 

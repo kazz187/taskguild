@@ -1,23 +1,178 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { InteractionType, InteractionStatus } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import type { Interaction } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
-import { Shield, MessageSquare, Bell, CheckCircle, X } from 'lucide-react'
+import { Shield, MessageSquare, Bell, CheckCircle, X, Check, XCircle } from 'lucide-react'
 import { formatTime } from './InputBar.tsx'
 import { MarkdownDescription } from './MarkdownDescription.tsx'
-import { Button, Input } from '../atoms/index.ts'
+import { Button, Input, Checkbox } from '../atoms/index.ts'
 
-function getPermissionShortcutLabel(value: string): string | null {
+// --- Bash Permission Metadata Types ---
+
+interface CommandCheckResult {
+  command: string
+  matched: boolean
+  matched_pattern?: string
+  suggested_pattern?: string
+}
+
+interface RedirectCheckResult {
+  operator: string
+  path: string
+  matched: boolean
+  matched_pattern?: string
+  suggested_pattern?: string
+}
+
+interface BashPermissionMetadata {
+  parsed_commands: CommandCheckResult[]
+  redirects: RedirectCheckResult[]
+}
+
+// --- Pattern row state for editable form ---
+
+interface PatternRow {
+  key: string
+  type: 'command' | 'redirect'
+  label: string
+  matched: boolean
+  pattern: string
+  checked: boolean
+}
+
+function parseBashMetadata(metadata: string): BashPermissionMetadata | null {
+  if (!metadata) return null
+  try {
+    const parsed = JSON.parse(metadata)
+    if (parsed && Array.isArray(parsed.parsed_commands)) {
+      return parsed as BashPermissionMetadata
+    }
+  } catch {
+    // not bash metadata
+  }
+  return null
+}
+
+function buildPatternRows(meta: BashPermissionMetadata): PatternRow[] {
+  const rows: PatternRow[] = []
+
+  for (let i = 0; i < meta.parsed_commands.length; i++) {
+    const cmd = meta.parsed_commands[i]
+    rows.push({
+      key: `cmd-${i}`,
+      type: 'command',
+      label: cmd.command,
+      matched: cmd.matched,
+      pattern: cmd.matched ? (cmd.matched_pattern ?? cmd.command) : (cmd.suggested_pattern ?? cmd.command),
+      checked: true,
+    })
+  }
+
+  for (let i = 0; i < (meta.redirects?.length ?? 0); i++) {
+    const redir = meta.redirects[i]
+    rows.push({
+      key: `redir-${i}`,
+      type: 'redirect',
+      label: `${redir.operator} ${redir.path}`,
+      matched: redir.matched,
+      pattern: redir.matched ? (redir.matched_pattern ?? redir.path) : (redir.suggested_pattern ?? redir.path),
+      checked: true,
+    })
+  }
+
+  return rows
+}
+
+function getPermissionShortcutLabel(value: string, isBash: boolean): string | null {
   switch (value) {
     case 'allow':
       return 'y'
     case 'always_allow':
-      return 'Y'
+      return isBash ? null : null // hide for both bash and non-bash
+    case 'always_allow_command':
+      return 'a'
     case 'deny':
       return 'n'
     default:
       return null
   }
 }
+
+// Build the JSON response for "always_allow_command"
+function buildAlwaysAllowCommandResponse(rows: PatternRow[]): string {
+  const rules = rows
+    .filter((r) => r.checked)
+    .map((r) => ({
+      pattern: r.pattern,
+      type: r.type === 'command' ? 'command' : 'redirect',
+      label: r.label,
+    }))
+
+  return JSON.stringify({
+    action: 'always_allow_command',
+    rules,
+  })
+}
+
+// --- Bash Command Pattern Editor ---
+
+function BashPatternEditor({
+  rows,
+  onUpdatePattern,
+  onToggleCheck,
+}: {
+  rows: PatternRow[]
+  onUpdatePattern: (key: string, pattern: string) => void
+  onToggleCheck: (key: string) => void
+}) {
+  return (
+    <div className="mt-2 ml-6 space-y-1.5">
+      <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1">
+        Command Patterns
+      </div>
+      {rows.map((row) => (
+        <div
+          key={row.key}
+          className="flex items-center gap-2 group"
+        >
+          {/* Match status icon */}
+          <span className="shrink-0 w-4 flex justify-center" title={row.matched ? 'Matched existing rule' : 'New pattern'}>
+            {row.matched ? (
+              <Check className="w-3.5 h-3.5 text-green-400" />
+            ) : (
+              <XCircle className="w-3.5 h-3.5 text-amber-400" />
+            )}
+          </span>
+
+          {/* Checkbox */}
+          <Checkbox
+            checked={row.checked}
+            onChange={() => onToggleCheck(row.key)}
+            color="cyan"
+            className="shrink-0"
+          />
+
+          {/* Command label */}
+          <span className="text-[11px] text-gray-400 shrink-0 min-w-0 max-w-[120px] truncate font-mono" title={row.label}>
+            {row.type === 'redirect' && <span className="text-amber-400 mr-1">redir</span>}
+            {row.label}
+          </span>
+
+          {/* Editable pattern */}
+          <input
+            type="text"
+            value={row.pattern}
+            onChange={(e) => onUpdatePattern(row.key, e.target.value)}
+            className="flex-1 min-w-0 px-2 py-0.5 text-[11px] font-mono bg-slate-900 border border-slate-600 rounded text-gray-200 focus:border-cyan-500 focus:outline-none transition-colors"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// --- Main Component ---
 
 export function RequestItem({
   interaction,
@@ -40,6 +195,75 @@ export function RequestItem({
   const itemRef = useRef<HTMLDivElement>(null)
   const isPending = interaction.status === InteractionStatus.PENDING
   const isResponded = interaction.status === InteractionStatus.RESPONDED
+
+  // Parse bash metadata
+  const bashMeta = useMemo(() => parseBashMetadata(interaction.metadata), [interaction.metadata])
+  const isBash = bashMeta !== null
+
+  // Pattern rows state for editable form
+  const [patternRows, setPatternRows] = useState<PatternRow[]>(() =>
+    bashMeta ? buildPatternRows(bashMeta) : [],
+  )
+
+  // Re-initialize pattern rows when metadata changes
+  useEffect(() => {
+    if (bashMeta) {
+      setPatternRows(buildPatternRows(bashMeta))
+    }
+  }, [bashMeta])
+
+  const handleUpdatePattern = useCallback((key: string, pattern: string) => {
+    setPatternRows((prev) =>
+      prev.map((r) => (r.key === key ? { ...r, pattern } : r)),
+    )
+  }, [])
+
+  const handleToggleCheck = useCallback((key: string) => {
+    setPatternRows((prev) =>
+      prev.map((r) => (r.key === key ? { ...r, checked: !r.checked } : r)),
+    )
+  }, [])
+
+  // Build options list based on whether this is a Bash interaction
+  const displayOptions = useMemo(() => {
+    if (!isPending) return interaction.options
+
+    if (isBash) {
+      // Bash: Allow (y) / Always Allow Command (a) / Deny (n)
+      // Replace "always_allow" with "always_allow_command"
+      return interaction.options
+        .filter((opt) => opt.value !== 'always_allow')
+        .flatMap((opt) => {
+          if (opt.value === 'allow') {
+            return [
+              opt,
+              {
+                label: 'Always Allow Command',
+                value: 'always_allow_command',
+                description: 'Allow and save command patterns as rules',
+              },
+            ]
+          }
+          return [opt]
+        })
+    }
+
+    // Non-Bash: Allow (y) / Deny (n) — remove "Always Allow"
+    return interaction.options.filter((opt) => opt.value !== 'always_allow')
+  }, [interaction.options, isBash, isPending])
+
+  // Handle respond with special logic for always_allow_command
+  const handleRespond = useCallback(
+    (id: string, value: string) => {
+      if (value === 'always_allow_command') {
+        const jsonResponse = buildAlwaysAllowCommandResponse(patternRows)
+        onRespond(id, jsonResponse)
+      } else {
+        onRespond(id, value)
+      }
+    },
+    [onRespond, patternRows],
+  )
 
   // Auto-scroll into view when selected
   useEffect(() => {
@@ -101,8 +325,17 @@ export function RequestItem({
         </div>
       )}
 
+      {/* Bash command pattern editor */}
+      {isPending && isBash && patternRows.length > 0 && (
+        <BashPatternEditor
+          rows={patternRows}
+          onUpdatePattern={handleUpdatePattern}
+          onToggleCheck={handleToggleCheck}
+        />
+      )}
+
       {/* Action buttons for pending */}
-      {isPending && interaction.options.length > 0 && (
+      {isPending && displayOptions.length > 0 && (
         interaction.type === InteractionType.QUESTION ? (
           <div className="flex flex-col gap-1.5 mt-2 ml-6">
             {interaction.options.map((opt, idx) => (
@@ -126,14 +359,14 @@ export function RequestItem({
           </div>
         ) : (
           <div className="flex gap-2 flex-wrap mt-2 ml-6">
-            {interaction.options.map((opt) => {
-              const shortcut = showHints ? getPermissionShortcutLabel(opt.value) : null
+            {displayOptions.map((opt) => {
+              const shortcut = showHints ? getPermissionShortcutLabel(opt.value, isBash) : null
               return (
                 <Button
                   key={opt.value}
                   variant="secondary"
                   size="sm"
-                  onClick={(e) => { e.stopPropagation(); onRespond(interaction.id, opt.value) }}
+                  onClick={(e) => { e.stopPropagation(); handleRespond(interaction.id, opt.value) }}
                   disabled={isRespondPending}
                   title={opt.description}
                   className="bg-slate-700 border border-slate-600 text-gray-200 hover:border-cyan-500/50 hover:text-white"

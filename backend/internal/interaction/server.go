@@ -285,6 +285,7 @@ func ToProto(i *Interaction) *taskguildv1.Interaction {
 		Title:       i.Title,
 		Description: i.Description,
 		Response:    i.Response,
+		Metadata:    i.Metadata,
 		CreatedAt:   timestamppb.New(i.CreatedAt),
 	}
 	for _, opt := range i.Options {
