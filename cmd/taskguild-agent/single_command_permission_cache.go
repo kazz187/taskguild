@@ -22,7 +22,7 @@ func wildcardToRegex(pattern string) string {
 	for i, p := range parts {
 		parts[i] = regexp.QuoteMeta(p)
 	}
-	return "^" + strings.Join(parts, ".*") + "$"
+	return "(?s)^" + strings.Join(parts, ".*") + "$"
 }
 
 // compileWildcard converts a wildcard pattern string to a compiled *regexp.Regexp.
