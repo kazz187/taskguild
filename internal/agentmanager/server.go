@@ -1299,6 +1299,7 @@ func (s *Server) ReportScriptExecutionResult(ctx context.Context, req *connect.R
 
 	// Complete execution in the broker — this sends the completion event
 	// to all streaming subscribers and closes their channels.
+	slog.Info("[STREAM-TRACE] backend(agentmanager): received execution result from agent", "request_id", req.Msg.RequestId, "success", req.Msg.Success, "exit_code", req.Msg.ExitCode, "log_entry_count", len(req.Msg.LogEntries))
 	if s.scriptBroker != nil {
 		s.scriptBroker.CompleteExecution(
 			req.Msg.RequestId,
@@ -1341,10 +1342,12 @@ func (s *Server) ReportScriptOutputChunk(ctx context.Context, req *connect.Reque
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
 
-	slog.Debug("received script output chunk", "request_id", req.Msg.RequestId, "entry_count", len(req.Msg.Entries))
+	slog.Info("[STREAM-TRACE] backend(agentmanager): received output chunk from agent", "request_id", req.Msg.RequestId, "entry_count", len(req.Msg.Entries))
 
 	if s.scriptBroker != nil {
 		s.scriptBroker.PushOutput(req.Msg.RequestId, req.Msg.Entries)
+	} else {
+		slog.Warn("[STREAM-TRACE] backend(agentmanager): scriptBroker is nil, cannot push output", "request_id", req.Msg.RequestId)
 	}
 
 	return connect.NewResponse(&taskguildv1.ReportScriptOutputChunkResponse{}), nil

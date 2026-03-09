@@ -146,15 +146,18 @@ func (b *ScriptExecutionBroker) PushOutput(requestID string, entries []*taskguil
 	es.mu.Lock()
 	defer es.mu.Unlock()
 	if es.completed {
+		slog.Warn("[STREAM-TRACE] broker: PushOutput called on completed execution, ignoring", "request_id", requestID)
 		return
 	}
 	es.buffer = append(es.buffer, event)
+	slog.Info("[STREAM-TRACE] broker: PushOutput buffered event", "request_id", requestID, "entry_count", len(entries), "buffer_size", len(es.buffer), "subscriber_count", len(es.subscribers))
 	for i, ch := range es.subscribers {
 		select {
 		case ch <- event:
+			slog.Info("[STREAM-TRACE] broker: PushOutput sent to subscriber", "request_id", requestID, "subscriber_index", i)
 		default:
 			// Drop if subscriber is full; they can catch up via buffer.
-			slog.Warn("PushOutput: subscriber channel full, dropping event", "request_id", requestID, "subscriber_index", i)
+			slog.Warn("[STREAM-TRACE] broker: subscriber channel full, dropping event", "request_id", requestID, "subscriber_index", i)
 		}
 	}
 }
@@ -170,7 +173,7 @@ func (b *ScriptExecutionBroker) CompleteExecution(requestID string, success bool
 			"request_id", requestID, "log_entry_count", len(logEntries))
 		return
 	}
-	slog.Debug("CompleteExecution: completing execution",
+	slog.Info("[STREAM-TRACE] broker: CompleteExecution called",
 		"request_id", requestID, "success", success, "log_entry_count", len(logEntries))
 
 	event := &taskguildv1.ScriptExecutionEvent{
@@ -196,10 +199,13 @@ func (b *ScriptExecutionBroker) CompleteExecution(requestID string, success bool
 	es.subscribers = nil
 	es.mu.Unlock()
 
-	for _, ch := range subs {
+	slog.Info("[STREAM-TRACE] broker: CompleteExecution sending to subscribers", "request_id", requestID, "subscriber_count", len(subs))
+	for i, ch := range subs {
 		select {
 		case ch <- event:
+			slog.Info("[STREAM-TRACE] broker: CompleteExecution sent to subscriber", "request_id", requestID, "subscriber_index", i)
 		default:
+			slog.Warn("[STREAM-TRACE] broker: CompleteExecution subscriber full, dropping", "request_id", requestID, "subscriber_index", i)
 		}
 		close(ch)
 	}

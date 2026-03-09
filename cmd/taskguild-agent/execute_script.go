@@ -62,6 +62,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 	slog.Info("executing script", "script_id", scriptID, "request_id", requestID, "filename", filename)
 
 	reportResult := func(success bool, exitCode int32, logEntries []*v1.ScriptLogEntry, errMsg string, stoppedByUser bool) {
+		slog.Info("[STREAM-TRACE] agent: reporting execution result to backend", "request_id", requestID, "success", success, "exit_code", exitCode, "log_entry_count", len(logEntries), "error_message", errMsg)
 		_, err := client.ReportScriptExecutionResult(context.Background(), connect.NewRequest(&v1.ReportScriptExecutionResultRequest{
 			RequestId:     requestID,
 			ProjectName:   cfg.ProjectName,
@@ -282,22 +283,36 @@ func streamOutput(
 		defer wg.Done()
 		scanner := bufio.NewScanner(stdoutPipe)
 		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+		lineCount := 0
 		for scanner.Scan() {
 			line := scanner.Text() + "\n"
+			lineCount++
+			slog.Info("[STREAM-TRACE] agent: read stdout line", "request_id", requestID, "line_num", lineCount, "len", len(line))
 			chunk.append(v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT, line)
 			fullLog.append(v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT, line)
 		}
+		if err := scanner.Err(); err != nil {
+			slog.Warn("[STREAM-TRACE] agent: stdout scanner error", "request_id", requestID, "error", err)
+		}
+		slog.Info("[STREAM-TRACE] agent: stdout pipe closed", "request_id", requestID, "total_lines", lineCount)
 	}()
 
 	go func() {
 		defer wg.Done()
 		scanner := bufio.NewScanner(stderrPipe)
 		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+		lineCount := 0
 		for scanner.Scan() {
 			line := scanner.Text() + "\n"
+			lineCount++
+			slog.Info("[STREAM-TRACE] agent: read stderr line", "request_id", requestID, "line_num", lineCount, "len", len(line))
 			chunk.append(v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDERR, line)
 			fullLog.append(v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDERR, line)
 		}
+		if err := scanner.Err(); err != nil {
+			slog.Warn("[STREAM-TRACE] agent: stderr scanner error", "request_id", requestID, "error", err)
+		}
+		slog.Info("[STREAM-TRACE] agent: stderr pipe closed", "request_id", requestID, "total_lines", lineCount)
 	}()
 
 	// Flush buffered output every 200ms until both pipes close.
@@ -346,8 +361,8 @@ func flushLogEntries(
 		Entries:     entries,
 	}))
 	if err != nil {
-		slog.Error("failed to send output chunk", "request_id", requestID, "error", err)
+		slog.Error("[STREAM-TRACE] agent: failed to send output chunk to backend", "request_id", requestID, "error", err)
 	} else {
-		slog.Debug("sent output chunk", "request_id", requestID, "entry_count", len(entries))
+		slog.Info("[STREAM-TRACE] agent: sent output chunk to backend", "request_id", requestID, "entry_count", len(entries))
 	}
 }

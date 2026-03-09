@@ -299,13 +299,20 @@ func (s *Server) StreamScriptExecution(ctx context.Context, req *connect.Request
 		case event, ok := <-ch:
 			if !ok {
 				// Channel closed — execution completed and all events sent.
-				slog.Info("script execution stream ended: execution completed", "request_id", req.Msg.RequestId)
+				slog.Info("[STREAM-TRACE] server->frontend: stream ended (channel closed)", "request_id", req.Msg.RequestId)
 				return nil
 			}
+			switch e := event.Event.(type) {
+			case *taskguildv1.ScriptExecutionEvent_Output:
+				slog.Info("[STREAM-TRACE] server->frontend: sending output event", "request_id", req.Msg.RequestId, "entry_count", len(e.Output.Entries))
+			case *taskguildv1.ScriptExecutionEvent_Complete:
+				slog.Info("[STREAM-TRACE] server->frontend: sending complete event", "request_id", req.Msg.RequestId, "success", e.Complete.Success, "exit_code", e.Complete.ExitCode)
+			}
 			if err := stream.Send(event); err != nil {
-				slog.Warn("script execution stream: send error", "request_id", req.Msg.RequestId, "error", err)
+				slog.Warn("[STREAM-TRACE] server->frontend: send error", "request_id", req.Msg.RequestId, "error", err)
 				return err
 			}
+			slog.Info("[STREAM-TRACE] server->frontend: event sent successfully", "request_id", req.Msg.RequestId)
 		}
 	}
 }
