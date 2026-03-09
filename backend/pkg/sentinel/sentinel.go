@@ -44,6 +44,7 @@ const (
 // Sentinel manages the lifecycle of a child process with the "run" subcommand.
 type Sentinel struct {
 	binaryPath string
+	childArgs  []string // extra arguments appended after "run"
 	lastHash   [sha256.Size]byte
 	backoff    time.Duration
 	stopCh     chan struct{} // closed when sentinel should exit
@@ -52,8 +53,9 @@ type Sentinel struct {
 // Run starts the sentinel supervisor loop. It resolves the current executable
 // path, starts a child process with the "run" subcommand, watches the binary
 // for changes, and restarts the child on crash with exponential backoff.
+// Any extra arguments are appended to the child's "run" command (e.g. "--prof").
 // This function blocks until SIGINT/SIGTERM is received.
-func Run() {
+func Run(extraArgs ...string) {
 	// Prevent sentinel from being terminated by SIGUSR1. The sentinel sends
 	// SIGUSR1 to the child process for graceful hot-reload. Without this,
 	// if SIGUSR1 somehow reaches the sentinel (e.g. process group signal),
@@ -108,6 +110,7 @@ func Run() {
 
 	s := &Sentinel{
 		binaryPath: binaryPath,
+		childArgs:  extraArgs,
 		backoff:    InitialBackoff,
 		stopCh:     make(chan struct{}),
 	}
@@ -225,7 +228,8 @@ func (s *Sentinel) mainLoop(sigCh <-chan os.Signal, updateCh <-chan struct{}) {
 
 // startChild launches a new child process with the "run" subcommand.
 func (s *Sentinel) startChild() (*exec.Cmd, error) {
-	cmd := exec.Command(s.binaryPath, "run")
+	args := append([]string{"run"}, s.childArgs...)
+	cmd := exec.Command(s.binaryPath, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	// Child inherits environment (env vars like TASKGUILD_*).
