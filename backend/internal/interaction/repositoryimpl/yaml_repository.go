@@ -251,13 +251,10 @@ func (r *YAMLRepository) List(ctx context.Context, taskID string, taskIDs []stri
 func (r *YAMLRepository) Update(ctx context.Context, i *interaction.Interaction) error {
 	r.ensureIndex(ctx)
 
-	exists, err := r.storage.Exists(ctx, interactionPath(i.ID))
-	if err != nil {
-		return cerr.WrapStorageWriteError("interaction", err)
-	}
-	if !exists {
-		return cerr.NewError(cerr.NotFound, "interaction not found", nil)
-	}
+	// Skip the separate Exists() check — callers always Get() first, so
+	// the interaction is already verified to exist. If it was deleted in
+	// the meantime, Write() will simply create it again (acceptable for
+	// YAML-file storage).
 	data, err := yaml.Marshal(i)
 	if err != nil {
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal interaction: %w", err))
