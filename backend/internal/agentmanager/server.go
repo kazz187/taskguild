@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"sync"
 	"time"
 
@@ -122,6 +123,12 @@ func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1
 		slog.Info("agent-manager disconnected", "agent_manager_id", agentManagerID)
 	}()
 
+	// Send existing PENDING tasks to this agent so it can pick them up
+	// immediately. This covers tasks that were pending before this agent
+	// connected and tasks released during reconnection whose broadcast
+	// was sent before the agent was registered.
+	s.sendPendingTasksToStream(ctx, projectName, stream)
+
 	// Server-side keepalive: send a PingCommand every 30 seconds to keep the
 	// HTTP/2 stream active and detect dead connections faster. This prevents
 	// intermediaries (proxies, load balancers) and OS-level TCP timeouts from
@@ -233,23 +240,7 @@ func (s *Server) handleReleasedTask(ctx context.Context, agentManagerID string, 
 		slog.Error("failed to get workflow for released task", "task_id", t.ID, "error", err)
 		return
 	}
-	var agentConfigID string
-	// Try new approach: status-level agent_id.
-	for _, st := range wf.Statuses {
-		if st.ID == t.StatusID && st.AgentID != "" {
-			agentConfigID = st.AgentID
-			break
-		}
-	}
-	// Fall back to legacy AgentConfig list.
-	if agentConfigID == "" {
-		for _, cfg := range wf.AgentConfigs {
-			if cfg.WorkflowStatusID == t.StatusID {
-				agentConfigID = cfg.ID
-				break
-			}
-		}
-	}
+	agentConfigID := wf.FindAgentIDForStatus(t.StatusID)
 
 	// Resolve project name for filtered broadcast.
 	var projectName string
@@ -281,6 +272,76 @@ func (s *Server) handleReleasedTask(ctx context.Context, agentManagerID string, 
 	)
 }
 
+// sendPendingTasksToStream scans for PENDING tasks in the given project and
+// sends TaskAvailableCommand for each directly on the agent's stream. This
+// ensures that tasks pending before an agent connects (or tasks released
+// during reconnection before the agent was registered) are picked up.
+func (s *Server) sendPendingTasksToStream(ctx context.Context, projectName string, stream *connect.ServerStream[taskguildv1.AgentCommand]) {
+	if projectName == "" {
+		return
+	}
+
+	p, err := s.projectRepo.FindByName(ctx, projectName)
+	if err != nil {
+		slog.Error("sendPendingTasks: failed to find project", "project_name", projectName, "error", err)
+		return
+	}
+
+	tasks, _, err := s.taskRepo.List(ctx, p.ID, "", "", 0, 0)
+	if err != nil {
+		slog.Error("sendPendingTasks: failed to list tasks", "project_id", p.ID, "error", err)
+		return
+	}
+
+	// Cache workflows to avoid repeated lookups.
+	wfCache := make(map[string]*workflow.Workflow)
+	sentCount := 0
+
+	for _, t := range tasks {
+		if t.AssignmentStatus != task.AssignmentStatusPending {
+			continue
+		}
+
+		wf, ok := wfCache[t.WorkflowID]
+		if !ok {
+			wf, err = s.workflowRepo.Get(ctx, t.WorkflowID)
+			if err != nil {
+				slog.Error("sendPendingTasks: failed to get workflow",
+					"workflow_id", t.WorkflowID, "error", err)
+				continue
+			}
+			wfCache[t.WorkflowID] = wf
+		}
+
+		agentConfigID := wf.FindAgentIDForStatus(t.StatusID)
+		if agentConfigID == "" {
+			continue // no agent configured for this status
+		}
+
+		cmd := &taskguildv1.AgentCommand{
+			Command: &taskguildv1.AgentCommand_TaskAvailable{
+				TaskAvailable: &taskguildv1.TaskAvailableCommand{
+					TaskId:        t.ID,
+					AgentConfigId: agentConfigID,
+					Title:         t.Title,
+					Metadata:      t.Metadata,
+				},
+			},
+		}
+		if err := stream.Send(cmd); err != nil {
+			slog.Error("sendPendingTasks: failed to send command",
+				"task_id", t.ID, "error", err)
+			return // stream broken, abort
+		}
+		sentCount++
+	}
+
+	if sentCount > 0 {
+		slog.Info("sent existing pending tasks to agent",
+			"count", sentCount, "project_name", projectName)
+	}
+}
+
 func (s *Server) Heartbeat(ctx context.Context, req *connect.Request[taskguildv1.HeartbeatRequest]) (*connect.Response[taskguildv1.HeartbeatResponse], error) {
 	if req.Msg.AgentManagerId == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "agent_manager_id is required", nil).ConnectError()
@@ -291,26 +352,89 @@ func (s *Server) Heartbeat(ctx context.Context, req *connect.Request[taskguildv1
 	return connect.NewResponse(&taskguildv1.HeartbeatResponse{}), nil
 }
 
+// Retry constants for failed task auto-retry.
+const (
+	retryMetadataKey = "_retry_count"
+	maxRetries       = 5
+	retryBaseDelay   = 30 * time.Second
+)
+
 func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[taskguildv1.ReportTaskResultRequest]) (*connect.Response[taskguildv1.ReportTaskResultResponse], error) {
 	t, err := s.taskRepo.Get(ctx, req.Msg.TaskId)
 	if err != nil {
 		return nil, err
 	}
 
-	// Clear assigned agent and reset assignment status.
+	// Clear assigned agent.
 	t.AssignedAgentID = ""
-	t.AssignmentStatus = task.AssignmentStatusUnassigned
 	t.UpdatedAt = time.Now()
 
-	// Store result summary in metadata.
 	if t.Metadata == nil {
 		t.Metadata = make(map[string]string)
 	}
+
+	// Store result summary/error in metadata.
 	if req.Msg.Summary != "" {
 		t.Metadata["result_summary"] = req.Msg.Summary
 	}
 	if req.Msg.ErrorMessage != "" {
 		t.Metadata["result_error"] = req.Msg.ErrorMessage
+	}
+
+	eventMeta := map[string]string{
+		"project_id":  t.ProjectID,
+		"workflow_id": t.WorkflowID,
+	}
+
+	if req.Msg.ErrorMessage != "" {
+		// Task failed — check if we should retry.
+		retryCount := 0
+		if rc, ok := t.Metadata[retryMetadataKey]; ok {
+			retryCount, _ = strconv.Atoi(rc)
+		}
+
+		if retryCount < maxRetries {
+			retryCount++
+			t.Metadata[retryMetadataKey] = strconv.Itoa(retryCount)
+			t.AssignmentStatus = task.AssignmentStatusPending
+
+			if err := s.taskRepo.Update(ctx, t); err != nil {
+				return nil, err
+			}
+
+			// Calculate exponential backoff: 30s, 1m, 2m, 4m, 8m
+			delay := retryBaseDelay * time.Duration(1<<uint(retryCount-1))
+
+			slog.Info("scheduling task retry",
+				"task_id", t.ID,
+				"retry_count", retryCount,
+				"max_retries", maxRetries,
+				"delay", delay,
+			)
+
+			// Schedule delayed re-broadcast in a goroutine.
+			go s.delayedRebroadcast(t.ID, t.ProjectID, t.WorkflowID, delay)
+
+			eventMeta["reason"] = "retry_scheduled"
+			eventMeta["retry_count"] = strconv.Itoa(retryCount)
+			s.eventBus.PublishNew(
+				taskguildv1.EventType_EVENT_TYPE_TASK_UPDATED,
+				t.ID, "", eventMeta,
+			)
+
+			return connect.NewResponse(&taskguildv1.ReportTaskResultResponse{}), nil
+		}
+
+		// Max retries reached — leave as UNASSIGNED.
+		slog.Warn("max retries reached for task",
+			"task_id", t.ID,
+			"retry_count", retryCount,
+		)
+		t.AssignmentStatus = task.AssignmentStatusUnassigned
+	} else {
+		// Task succeeded — reset retry count and set UNASSIGNED.
+		delete(t.Metadata, retryMetadataKey)
+		t.AssignmentStatus = task.AssignmentStatusUnassigned
 	}
 
 	if err := s.taskRepo.Update(ctx, t); err != nil {
@@ -319,15 +443,77 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_TASK_UPDATED,
-		t.ID,
-		"",
-		map[string]string{
-			"project_id":  t.ProjectID,
-			"workflow_id": t.WorkflowID,
-		},
+		t.ID, "", eventMeta,
 	)
 
 	return connect.NewResponse(&taskguildv1.ReportTaskResultResponse{}), nil
+}
+
+// delayedRebroadcast waits for the specified delay, then re-checks the task
+// state. If the task is still PENDING, it broadcasts a TaskAvailableCommand
+// so agents can pick it up for retry. The re-check guards against manual
+// user intervention during the delay window.
+func (s *Server) delayedRebroadcast(taskID, projectID, workflowID string, delay time.Duration) {
+	time.Sleep(delay)
+
+	ctx := context.Background()
+
+	// Re-read task to check current state.
+	t, err := s.taskRepo.Get(ctx, taskID)
+	if err != nil {
+		slog.Error("retry rebroadcast: failed to get task",
+			"task_id", taskID, "error", err)
+		return
+	}
+
+	// Only broadcast if still PENDING (user might have manually changed it).
+	if t.AssignmentStatus != task.AssignmentStatusPending {
+		slog.Info("retry rebroadcast: task no longer pending, skipping",
+			"task_id", taskID,
+			"assignment_status", string(t.AssignmentStatus),
+		)
+		return
+	}
+
+	// Look up workflow to find agent config.
+	wf, err := s.workflowRepo.Get(ctx, workflowID)
+	if err != nil {
+		slog.Error("retry rebroadcast: failed to get workflow",
+			"workflow_id", workflowID, "error", err)
+		return
+	}
+
+	agentConfigID := wf.FindAgentIDForStatus(t.StatusID)
+	if agentConfigID == "" {
+		slog.Info("retry rebroadcast: no agent config for status, skipping",
+			"task_id", taskID, "status_id", t.StatusID)
+		return
+	}
+
+	// Resolve project name for filtered broadcast.
+	var projectName string
+	if p, pErr := s.projectRepo.Get(ctx, projectID); pErr == nil {
+		projectName = p.Name
+	}
+
+	cmd := &taskguildv1.AgentCommand{
+		Command: &taskguildv1.AgentCommand_TaskAvailable{
+			TaskAvailable: &taskguildv1.TaskAvailableCommand{
+				TaskId:        t.ID,
+				AgentConfigId: agentConfigID,
+				Title:         t.Title,
+				Metadata:      t.Metadata,
+			},
+		},
+	}
+	s.registry.BroadcastCommandToProject(projectName, cmd)
+
+	slog.Info("retry rebroadcast: task available broadcast sent",
+		"task_id", taskID,
+		"retry_count", t.Metadata[retryMetadataKey],
+		"agent_config_id", agentConfigID,
+		"project_name", projectName,
+	)
 }
 
 func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1.ClaimTaskRequest]) (*connect.Response[taskguildv1.ClaimTaskResponse], error) {
