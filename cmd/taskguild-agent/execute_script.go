@@ -139,30 +139,63 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 		return nil
 	}
 
-	stdoutPipe, err := execCmd.StdoutPipe()
+	// Use manual os.Pipe() instead of StdoutPipe/StderrPipe so that
+	// Wait() does not close the read ends. This lets us run Wait()
+	// concurrently with streamOutput and force-close the pipes after
+	// the process exits, preventing a deadlock when background processes
+	// inherit the file descriptors and keep them open.
+	stdoutR, stdoutW, err := os.Pipe()
 	if err != nil {
 		reportResult(false, -1, nil, fmt.Sprintf("failed to create stdout pipe: %v", err), false)
 		return
 	}
-	stderrPipe, err := execCmd.StderrPipe()
+	stderrR, stderrW, err := os.Pipe()
 	if err != nil {
+		stdoutR.Close()
+		stdoutW.Close()
 		reportResult(false, -1, nil, fmt.Sprintf("failed to create stderr pipe: %v", err), false)
 		return
 	}
+	execCmd.Stdout = stdoutW
+	execCmd.Stderr = stderrW
 
 	if err := execCmd.Start(); err != nil {
+		stdoutR.Close()
+		stdoutW.Close()
+		stderrR.Close()
+		stderrW.Close()
 		reportResult(false, -1, nil, fmt.Sprintf("failed to start script: %v", err), false)
 		return
 	}
+	// Close write ends in the parent so the read ends get EOF when the
+	// child (and any processes that did NOT inherit these fds) exits.
+	stdoutW.Close()
+	stderrW.Close()
 
 	slog.Info("script process started", "request_id", requestID, "pid", execCmd.Process.Pid, "filename", filename)
 
+	// Run Wait() concurrently. When the main process exits, give scanners
+	// a short window to drain buffered pipe data, then force-close the
+	// read ends. This prevents indefinite blocking when scripts spawn
+	// background processes that inherit stdout/stderr.
+	waitCh := make(chan error, 1)
+	go func() {
+		waitErr := execCmd.Wait()
+		// Allow scanners up to 500ms to drain any data still in the
+		// kernel pipe buffer after the main process exits.
+		time.Sleep(500 * time.Millisecond)
+		stdoutR.Close()
+		stderrR.Close()
+		waitCh <- waitErr
+	}()
+
 	// Stream output in real-time.
 	var fullLog logEntryBuffer
-	streamOutput(ctx, client, cfg, requestID, stdoutPipe, stderrPipe, &fullLog)
+	streamOutput(ctx, client, cfg, requestID, stdoutR, stderrR, &fullLog)
 
-	// Wait for the command to finish.
-	cmdErr := execCmd.Wait()
+	// Collect the Wait result (available immediately or shortly after
+	// streamOutput returns).
+	cmdErr := <-waitCh
 
 	// Check if this was a user-initiated stop.
 	stoppedByUser := execCtx.Err() == context.Canceled
