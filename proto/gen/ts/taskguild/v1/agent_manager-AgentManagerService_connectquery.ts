@@ -169,6 +169,34 @@ export const getScriptComparison = AgentManagerService.method.getScriptCompariso
 export const resolveScriptConflict = AgentManagerService.method.resolveScriptConflict;
 
 /**
+ * RequestAgentComparison triggers an agent comparison on connected agent-managers (called by frontend).
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.RequestAgentComparison
+ */
+export const requestAgentComparison = AgentManagerService.method.requestAgentComparison;
+
+/**
+ * ReportAgentComparison reports agent diffs from the agent-manager after comparison.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.ReportAgentComparison
+ */
+export const reportAgentComparison = AgentManagerService.method.reportAgentComparison;
+
+/**
+ * GetAgentComparison returns the cached agent comparison result for a project.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.GetAgentComparison
+ */
+export const getAgentComparison = AgentManagerService.method.getAgentComparison;
+
+/**
+ * ResolveAgentConflict resolves a single agent conflict between server and agent versions.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.ResolveAgentConflict
+ */
+export const resolveAgentConflict = AgentManagerService.method.resolveAgentConflict;
+
+/**
  * ListSingleCommandPermissions returns all regex-based single-command permission
  * rules for a project (used by agents to populate their cache).
  *

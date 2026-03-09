@@ -208,13 +208,18 @@ func runAgent() {
 	)
 	subscribeBackoff := subscribeInitialBackoff
 
+	// On the very first sync, honour the --override-agent-md flag.
+	firstSync := true
+
 	for {
 		if ctx.Err() != nil {
 			break
 		}
 
 		// Re-sync agents, permissions, and scripts on each reconnection so local files stay up-to-date.
-		syncAgents(ctx, client, cfg)
+		forceAll := firstSync && overrideAgentMDFlag != nil && *overrideAgentMDFlag
+		syncAgents(ctx, client, cfg, nil, forceAll)
+		firstSync = false
 		syncPermissions(ctx, client, cfg, permCache)
 		syncScripts(ctx, client, cfg, nil) // nil = don't force-overwrite any existing files
 
@@ -382,8 +387,13 @@ func runSubscribeLoop(
 			go handleGitPullMain(ctx, client, cfg, pullCmd.GetRequestId())
 
 		case *v1.AgentCommand_SyncAgents:
-			slog.Info("received sync agents command, re-syncing")
-			syncAgents(ctx, client, cfg)
+			syncCmd := c.SyncAgents
+			forceNames := make(map[string]bool, len(syncCmd.GetForceOverwriteAgentNames()))
+			for _, n := range syncCmd.GetForceOverwriteAgentNames() {
+				forceNames[n] = true
+			}
+			slog.Info("received sync agents command, re-syncing", "force_overwrite_count", len(forceNames))
+			syncAgents(ctx, client, cfg, forceNames, false)
 
 		case *v1.AgentCommand_SyncPermissions:
 			slog.Info("received sync permissions command, re-syncing")
@@ -417,6 +427,11 @@ func runSubscribeLoop(
 			stopCmd := c.StopScript
 			slog.Info("received stop script command", "request_id", stopCmd.GetRequestId())
 			handleStopScript(stopCmd)
+
+		case *v1.AgentCommand_CompareAgents:
+			compareCmd := c.CompareAgents
+			slog.Info("received compare agents command", "request_id", compareCmd.GetRequestId())
+			go handleCompareAgents(ctx, client, cfg, compareCmd)
 
 		case *v1.AgentCommand_CancelTask:
 			cancelCmd := c.CancelTask

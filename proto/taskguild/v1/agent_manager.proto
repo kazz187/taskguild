@@ -64,6 +64,14 @@ service AgentManagerService {
   rpc GetScriptComparison(GetScriptComparisonRequest) returns (GetScriptComparisonResponse);
   // ResolveScriptConflict resolves a per-script conflict between server and agent versions.
   rpc ResolveScriptConflict(ResolveScriptConflictRequest) returns (ResolveScriptConflictResponse);
+  // RequestAgentComparison triggers an agent comparison on connected agent-managers (called by frontend).
+  rpc RequestAgentComparison(RequestAgentComparisonRequest) returns (RequestAgentComparisonResponse);
+  // ReportAgentComparison reports agent diffs from the agent-manager after comparison.
+  rpc ReportAgentComparison(ReportAgentComparisonRequest) returns (ReportAgentComparisonResponse);
+  // GetAgentComparison returns the cached agent comparison result for a project.
+  rpc GetAgentComparison(GetAgentComparisonRequest) returns (GetAgentComparisonResponse);
+  // ResolveAgentConflict resolves a single agent conflict between server and agent versions.
+  rpc ResolveAgentConflict(ResolveAgentConflictRequest) returns (ResolveAgentConflictResponse);
   // ListSingleCommandPermissions returns all regex-based single-command permission
   // rules for a project (used by agents to populate their cache).
   rpc ListSingleCommandPermissions(ListSingleCommandPermissionsAgentRequest) returns (ListSingleCommandPermissionsAgentResponse);
@@ -106,6 +114,9 @@ message AgentCommand {
     CompareScriptsCommand compare_scripts = 13;
     // StopScriptCommand tells the agent to stop a running script execution.
     StopScriptCommand stop_script = 14;
+    // CompareAgentsCommand tells the agent to compare its local .claude/agents/*.md
+    // files with server-side versions and report any differences.
+    CompareAgentsCommand compare_agents = 15;
   }
 }
 
@@ -140,7 +151,11 @@ message InteractionResponseCommand {
 }
 
 // SyncAgentsCommand tells the agent to re-sync its local .claude/agents/*.md files.
-message SyncAgentsCommand {}
+// When force_overwrite_agent_names is non-empty, those agents should be overwritten
+// on the agent even if the local file already exists.
+message SyncAgentsCommand {
+  repeated string force_overwrite_agent_names = 1;
+}
 
 // SyncPermissionsCommand tells the agent to re-sync its local
 // .claude/settings.json permissions section.
@@ -454,6 +469,74 @@ message ResolveScriptConflictRequest {
 }
 message ResolveScriptConflictResponse {
   ScriptDefinition script = 1;   // the resulting script after resolution
+}
+
+// --- Agent comparison & conflict resolution ---
+
+// CompareAgentsCommand tells the agent to compare its local .claude/agents/*.md
+// files with server-side versions and report any differences.
+message CompareAgentsCommand {
+  string request_id = 1;
+  repeated AgentDefinition agents = 2;  // all server-side agents for comparison
+}
+
+enum AgentDiffType {
+  AGENT_DIFF_TYPE_UNSPECIFIED = 0;
+  AGENT_DIFF_TYPE_MODIFIED = 1;      // both exist but content differs
+  AGENT_DIFF_TYPE_AGENT_ONLY = 2;    // exists on agent but not on server
+  AGENT_DIFF_TYPE_SERVER_ONLY = 3;   // exists on server but not on agent
+}
+
+message AgentDiff {
+  string agent_id = 1;         // empty if agent-only
+  string agent_name = 2;
+  string filename = 3;
+  string server_content = 4;
+  string agent_content = 5;
+  AgentDiffType diff_type = 6;
+}
+
+enum AgentResolutionChoice {
+  AGENT_RESOLUTION_CHOICE_UNSPECIFIED = 0;
+  AGENT_RESOLUTION_CHOICE_SERVER = 1;   // overwrite local with server version
+  AGENT_RESOLUTION_CHOICE_AGENT = 2;    // keep local and update server
+}
+
+// RequestAgentComparison triggers a comparison on connected agents (called by frontend).
+message RequestAgentComparisonRequest {
+  string project_id = 1;
+}
+message RequestAgentComparisonResponse {
+  string request_id = 1;
+}
+
+// ReportAgentComparison is sent by the agent after comparing local agents with server versions.
+message ReportAgentComparisonRequest {
+  string request_id = 1;
+  string project_name = 2;
+  repeated AgentDiff diffs = 3;
+}
+message ReportAgentComparisonResponse {}
+
+// GetAgentComparison returns the cached comparison result for a project.
+message GetAgentComparisonRequest {
+  string project_id = 1;
+}
+message GetAgentComparisonResponse {
+  repeated AgentDiff diffs = 1;
+}
+
+// ResolveAgentConflict resolves a single agent conflict between server and agent.
+message ResolveAgentConflictRequest {
+  string project_id = 1;
+  string agent_id = 2;            // empty if agent-only (will create new)
+  string agent_name = 3;
+  string filename = 4;
+  AgentResolutionChoice choice = 5;
+  string agent_content = 6;       // only needed when choice = AGENT
+}
+message ResolveAgentConflictResponse {
+  AgentDefinition agent = 1;      // the resulting agent after resolution
 }
 
 // --- Single Command Permissions ---
