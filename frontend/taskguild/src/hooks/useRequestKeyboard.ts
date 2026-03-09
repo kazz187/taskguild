@@ -27,12 +27,33 @@ function isInputFocused(): boolean {
   )
 }
 
-function getPermissionShortcutValue(key: string): string | null {
+function hasBashMetadata(interaction: Interaction): boolean {
+  if (!interaction.metadata) return false
+  try {
+    const parsed = JSON.parse(interaction.metadata)
+    return parsed && Array.isArray(parsed.parsed_commands)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Returns the response value for a keyboard shortcut key.
+ *
+ * For Bash permission requests:
+ *   y = allow, a = always_allow_command, n = deny
+ *
+ * For non-Bash permission requests:
+ *   y = allow, n = deny
+ *
+ * The old Y (shift+y) = always_allow shortcut is removed.
+ */
+function getPermissionShortcutValue(key: string, isBash: boolean): string | null {
   switch (key) {
     case 'y':
       return 'allow'
-    case 'Y':
-      return 'always_allow'
+    case 'a':
+      return isBash ? 'always_allow_command' : null
     case 'n':
       return 'deny'
     default:
@@ -190,15 +211,25 @@ export function useRequestKeyboard({
           break
         }
         case 'y':
-        case 'Y':
+        case 'a':
         case 'n': {
           if (!selectedId) return
           const selected = pendingRequests.find((r) => r.id === selectedId)
           if (!selected || selected.type !== InteractionType.PERMISSION_REQUEST) return
-          const value = getPermissionShortcutValue(e.key)
+
+          const isBash = hasBashMetadata(selected)
+          const value = getPermissionShortcutValue(e.key, isBash)
           if (!value) return
-          // Verify the option actually exists in the interaction
-          if (!selected.options.some((opt) => opt.value === value)) return
+
+          // For 'y' and 'n', verify the option exists in the interaction
+          // For 'a' (always_allow_command), it's a synthetic option not in the original list
+          if (value !== 'always_allow_command') {
+            if (!selected.options.some((opt) => opt.value === value)) return
+          } else {
+            // always_allow_command is only available for bash
+            if (!isBash) return
+          }
+
           e.preventDefault()
           guardedRespond(selectedId, value)
           break
