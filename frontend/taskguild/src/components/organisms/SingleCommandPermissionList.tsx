@@ -44,8 +44,8 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
     return null
   }
 
-  const checkDuplicate = (pattern: string, excludeId?: string): boolean => {
-    return permissions.some(p => p.pattern === pattern && p.id !== excludeId)
+  const checkDuplicate = (pattern: string, type: PermissionType, excludeId?: string): boolean => {
+    return permissions.some(p => p.pattern === pattern && p.type === type && p.id !== excludeId)
   }
 
   const handleCreate = (e: React.FormEvent) => {
@@ -55,8 +55,8 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
       setValidationError(error)
       return
     }
-    if (checkDuplicate(form.pattern)) {
-      setValidationError('A rule with this pattern already exists')
+    if (checkDuplicate(form.pattern, form.type)) {
+      setValidationError('A rule with this pattern and type already exists')
       return
     }
     setValidationError(null)
@@ -90,8 +90,8 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
       setValidationError(error)
       return
     }
-    if (checkDuplicate(editForm.pattern, id)) {
-      setValidationError('A rule with this pattern already exists')
+    if (checkDuplicate(editForm.pattern, editForm.type, id)) {
+      setValidationError('A rule with this pattern and type already exists')
       return
     }
     setValidationError(null)

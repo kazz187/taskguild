@@ -99,6 +99,41 @@ func (r *YAMLRepository) List(ctx context.Context, projectID string) ([]*singlec
 	return result, nil
 }
 
+// FindByPatternAndType returns all permission rules matching the given
+// projectID, pattern, and type. Results are sorted by CreatedAt ascending
+// (oldest first) so that callers can keep the oldest entry when deduplicating.
+func (r *YAMLRepository) FindByPatternAndType(ctx context.Context, projectID, pattern, permType string) ([]*singlecommandpermission.SingleCommandPermission, error) {
+	keys, err := r.storage.List(ctx, prefixPath())
+	if err != nil {
+		return nil, cerr.WrapStorageReadError("single_command_permission", err)
+	}
+
+	var result []*singlecommandpermission.SingleCommandPermission
+	for _, key := range keys {
+		if !strings.HasSuffix(key, ".yaml") {
+			continue
+		}
+		data, err := r.storage.Read(ctx, key)
+		if err != nil {
+			return nil, cerr.WrapStorageReadError("single_command_permission", err)
+		}
+		var p singlecommandpermission.SingleCommandPermission
+		if err := yaml.Unmarshal(data, &p); err != nil {
+			continue // skip malformed entries
+		}
+		if p.ProjectID == projectID && p.Pattern == pattern && p.Type == permType {
+			result = append(result, &p)
+		}
+	}
+
+	// Sort by creation time ascending (oldest first).
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].CreatedAt.Before(result[j].CreatedAt)
+	})
+
+	return result, nil
+}
+
 // Update replaces an existing permission rule.
 func (r *YAMLRepository) Update(ctx context.Context, p *singlecommandpermission.SingleCommandPermission) error {
 	exists, err := r.storage.Exists(ctx, path(p.ID))
