@@ -3,6 +3,7 @@ package script
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -281,8 +282,11 @@ func (s *Server) ListActiveExecutions(ctx context.Context, req *connect.Request[
 
 // StreamScriptExecution streams real-time output from a script execution.
 func (s *Server) StreamScriptExecution(ctx context.Context, req *connect.Request[taskguildv1.StreamScriptExecutionRequest], stream *connect.ServerStream[taskguildv1.ScriptExecutionEvent]) error {
+	slog.Info("frontend subscribed to script execution stream", "request_id", req.Msg.RequestId)
+
 	ch, unsubscribe := s.broker.Subscribe(req.Msg.RequestId)
 	if ch == nil {
+		slog.Warn("script execution stream: unknown request_id", "request_id", req.Msg.RequestId)
 		return connect.NewError(connect.CodeNotFound, fmt.Errorf("unknown execution request_id: %s", req.Msg.RequestId))
 	}
 	defer unsubscribe()
@@ -290,13 +294,16 @@ func (s *Server) StreamScriptExecution(ctx context.Context, req *connect.Request
 	for {
 		select {
 		case <-ctx.Done():
+			slog.Info("script execution stream ended: client disconnected", "request_id", req.Msg.RequestId)
 			return nil
 		case event, ok := <-ch:
 			if !ok {
 				// Channel closed — execution completed and all events sent.
+				slog.Info("script execution stream ended: execution completed", "request_id", req.Msg.RequestId)
 				return nil
 			}
 			if err := stream.Send(event); err != nil {
+				slog.Warn("script execution stream: send error", "request_id", req.Msg.RequestId, "error", err)
 				return err
 			}
 		}

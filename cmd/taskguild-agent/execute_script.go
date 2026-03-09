@@ -62,7 +62,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 	slog.Info("executing script", "script_id", scriptID, "request_id", requestID, "filename", filename)
 
 	reportResult := func(success bool, exitCode int32, logEntries []*v1.ScriptLogEntry, errMsg string, stoppedByUser bool) {
-		_, err := client.ReportScriptExecutionResult(ctx, connect.NewRequest(&v1.ReportScriptExecutionResultRequest{
+		_, err := client.ReportScriptExecutionResult(context.Background(), connect.NewRequest(&v1.ReportScriptExecutionResultRequest{
 			RequestId:     requestID,
 			ProjectName:   cfg.ProjectName,
 			ScriptId:      scriptID,
@@ -154,6 +154,8 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 		reportResult(false, -1, nil, fmt.Sprintf("failed to start script: %v", err), false)
 		return
 	}
+
+	slog.Info("script process started", "request_id", requestID, "pid", execCmd.Process.Pid, "filename", filename)
 
 	// Stream output in real-time.
 	var fullLog logEntryBuffer
@@ -282,8 +284,10 @@ func streamOutput(
 		case <-doneCh:
 			// Pipes closed — flush any remaining data.
 			flushLogEntries(ctx, client, cfg, requestID, &chunk)
+			slog.Info("script output streaming finished", "request_id", requestID)
 			return
 		case <-ctx.Done():
+			slog.Warn("script output streaming cancelled by context", "request_id", requestID, "error", ctx.Err())
 			return
 		}
 	}
@@ -310,5 +314,7 @@ func flushLogEntries(
 	}))
 	if err != nil {
 		slog.Error("failed to send output chunk", "request_id", requestID, "error", err)
+	} else {
+		slog.Debug("sent output chunk", "request_id", requestID, "entry_count", len(entries))
 	}
 }

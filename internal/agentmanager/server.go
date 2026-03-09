@@ -1341,6 +1341,8 @@ func (s *Server) ReportScriptOutputChunk(ctx context.Context, req *connect.Reque
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
 
+	slog.Debug("received script output chunk", "request_id", req.Msg.RequestId, "entry_count", len(req.Msg.Entries))
+
 	if s.scriptBroker != nil {
 		s.scriptBroker.PushOutput(req.Msg.RequestId, req.Msg.Entries)
 	}
