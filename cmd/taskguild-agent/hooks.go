@@ -1,0 +1,258 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
+	"time"
+
+	"connectrpc.com/connect"
+	claudeagent "github.com/kazz187/claude-agent-sdk-go"
+	v1 "github.com/kazz187/taskguild/gen/proto/taskguild/v1"
+	"github.com/kazz187/taskguild/gen/proto/taskguild/v1/taskguildv1connect"
+	"github.com/kazz187/taskguild/pkg/clog"
+)
+
+// hookEntry represents a resolved hook from metadata.
+type hookEntry struct {
+	ID      string `json:"id"`
+	SkillID string `json:"skill_id"`
+	Trigger string `json:"trigger"`
+	Order   int32  `json:"order"`
+	Name    string `json:"name"`
+	Content string `json:"content"`
+}
+
+// executeHooks parses _hooks from metadata, filters by trigger, and runs each
+// hook sequentially via claudeagent.RunQuerySync. Failures are logged but do
+// not block the main task.
+// If taskClient is provided, hook results containing TASK_METADATA directives
+// will be used to update the task's metadata.
+func executeHooks(ctx context.Context, taskID string, trigger string, metadata map[string]string, workDir string, taskClient taskguildv1connect.TaskServiceClient, tl *taskLogger) {
+	logger := clog.LoggerFromContext(ctx)
+
+	hooksJSON := metadata["_hooks"]
+	if hooksJSON == "" {
+		return
+	}
+
+	var hooks []hookEntry
+	if err := json.Unmarshal([]byte(hooksJSON), &hooks); err != nil {
+		logger.Error("failed to parse _hooks metadata", "error", err)
+		return
+	}
+
+	// Filter by trigger and sort by order.
+	var filtered []hookEntry
+	for _, h := range hooks {
+		if h.Trigger == trigger {
+			filtered = append(filtered, h)
+		}
+	}
+	sort.Slice(filtered, func(i, j int) bool {
+		return filtered[i].Order < filtered[j].Order
+	})
+
+	if len(filtered) == 0 {
+		return
+	}
+
+	logger.Info("executing hooks", "count", len(filtered), "trigger", trigger)
+
+	for _, h := range filtered {
+		logger.Info("running hook", "name", h.Name, "hook_id", h.ID, "skill_id", h.SkillID)
+		if tl != nil {
+			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_HOOK, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+				fmt.Sprintf("Executing hook: %s (%s)", h.Name, trigger), nil)
+		}
+
+		hookCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+		maxTurns := 20
+		opts := &claudeagent.ClaudeAgentOptions{
+			SystemPrompt:   "You are executing a hook. Follow the instructions precisely.",
+			Cwd:            workDir,
+			PermissionMode: claudeagent.PermissionModeBypassPermissions,
+			MaxTurns:       &maxTurns,
+		}
+
+		result, err := claudeagent.RunQuerySync(hookCtx, h.Content, opts)
+		cancel()
+
+		if err != nil {
+			logger.Error("hook failed", "name", h.Name, "error", err)
+			continue
+		}
+		if result.Result != nil && result.Result.IsError {
+			logger.Error("hook returned error", "name", h.Name, "result", result.Result.Result)
+			continue
+		}
+
+		logger.Info("hook completed successfully", "name", h.Name)
+
+		// Parse TASK_METADATA directives from hook output and update the task.
+		if taskClient != nil && result.Result != nil {
+			applyHookMetadata(ctx, taskID, result.Result.Result, taskClient)
+		}
+	}
+}
+
+// taskMetadataRegex matches "TASK_METADATA: key=value" lines in hook output.
+var taskMetadataRegex = regexp.MustCompile(`(?m)^TASK_METADATA:\s*(\S+?)=(.+)$`)
+
+// applyHookMetadata extracts TASK_METADATA directives from hook output and
+// updates the task's metadata via the TaskService API.
+func applyHookMetadata(ctx context.Context, taskID string, output string, taskClient taskguildv1connect.TaskServiceClient) {
+	logger := clog.LoggerFromContext(ctx)
+
+	matches := taskMetadataRegex.FindAllStringSubmatch(output, -1)
+	if len(matches) == 0 {
+		return
+	}
+
+	meta := make(map[string]string)
+	for _, m := range matches {
+		key := strings.TrimSpace(m[1])
+		value := strings.TrimSpace(m[2])
+		meta[key] = value
+		logger.Debug("hook metadata", "key", key, "value", value)
+	}
+
+	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
+		Id:       taskID,
+		Metadata: meta,
+	}))
+	if err != nil {
+		logger.Error("failed to update task metadata from hook", "error", err)
+	}
+}
+
+// listLocalWorktrees returns directory names under {workDir}/.claude/worktrees/.
+func listLocalWorktrees(workDir string) []string {
+	dir := filepath.Join(workDir, ".claude", "worktrees")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	var names []string
+	for _, e := range entries {
+		if e.IsDir() {
+			names = append(names, e.Name())
+		}
+	}
+	return names
+}
+
+var slugMultiHyphen = regexp.MustCompile(`-{2,}`)
+
+// slugifyASCII extracts ASCII alphanumeric characters from a string, lowercased,
+// with non-ASCII/non-alnum replaced by hyphens (collapsed).
+func slugifyASCII(s string) string {
+	var sb strings.Builder
+	prevHyphen := false
+	for _, r := range strings.ToLower(s) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			sb.WriteRune(r)
+			prevHyphen = false
+		} else if !prevHyphen {
+			sb.WriteRune('-')
+			prevHyphen = true
+		}
+	}
+	slug := strings.Trim(sb.String(), "-")
+	return slugMultiHyphen.ReplaceAllString(slug, "-")
+}
+
+// ensureWorktree creates a git worktree if the directory does not already exist.
+// It uses "git worktree add" with a new branch based on HEAD.
+func ensureWorktree(ctx context.Context, workDir, worktreeName, taskID string) (string, error) {
+	logger := clog.LoggerFromContext(ctx)
+
+	wtDir := filepath.Join(workDir, ".claude", "worktrees", worktreeName)
+	if info, err := os.Stat(wtDir); err == nil && info.IsDir() {
+		return wtDir, nil
+	}
+
+	if err := os.MkdirAll(filepath.Join(workDir, ".claude", "worktrees"), 0o755); err != nil {
+		return "", fmt.Errorf("mkdir: %w", err)
+	}
+
+	branchName := "worktree-" + worktreeName
+	cmd := exec.CommandContext(ctx, "git", "worktree", "add", "-b", branchName, wtDir)
+	cmd.Dir = workDir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		// Branch may already exist from a previous run; try without -b.
+		cmd2 := exec.CommandContext(ctx, "git", "worktree", "add", wtDir, branchName)
+		cmd2.Dir = workDir
+		if out2, err2 := cmd2.CombinedOutput(); err2 != nil {
+			return "", fmt.Errorf("git worktree add: %w: %s / %s", err2, out, out2)
+		}
+	}
+	logger.Info("created worktree", "worktree_dir", wtDir, "branch", branchName)
+	return wtDir, nil
+}
+
+// generateWorktreeName creates a git-safe worktree/branch name from the task ID and title.
+// If the title is mostly non-ASCII (e.g. Japanese), it uses a lightweight Claude call
+// to generate an English slug. Format: {taskID first 6 chars}_{slug} (max 50 chars).
+func generateWorktreeName(ctx context.Context, taskID, title, workDir string) string {
+	id := strings.ToLower(taskID)
+	prefix := id
+	if len(id) > 6 {
+		prefix = id[len(id)-6:]
+	}
+
+	slug := slugifyASCII(title)
+
+	// If the ASCII slug is too short (title was mostly non-ASCII), ask Claude to translate.
+	if len(slug) < 4 && title != "" {
+		if englishSlug := translateToEnglishSlug(ctx, title, workDir); englishSlug != "" {
+			slug = englishSlug
+		}
+	}
+
+	if slug == "" {
+		return prefix
+	}
+
+	name := prefix + "_" + slug
+	if len(name) > 50 {
+		name = name[:50]
+		name = strings.TrimRight(name, "-_")
+	}
+	return name
+}
+
+// translateToEnglishSlug uses a lightweight Claude call to convert a non-English
+// title into a short English slug suitable for a git branch name.
+func translateToEnglishSlug(ctx context.Context, title, workDir string) string {
+	prompt := fmt.Sprintf(
+		"Translate the following title into a short English slug for a git branch name. "+
+			"Output ONLY the slug (lowercase, hyphens, no spaces, max 30 chars). No explanation.\n\nTitle: %s",
+		title,
+	)
+	maxTurns := 1
+	opts := &claudeagent.ClaudeAgentOptions{
+		SystemPrompt: "You are a translation assistant. Output only the requested slug, nothing else.",
+		Cwd:          workDir,
+		MaxTurns:     &maxTurns,
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	result, err := claudeagent.RunQuerySync(timeoutCtx, prompt, opts)
+	if err != nil || result.Result == nil {
+		slog.Warn("translateToEnglishSlug failed", "error", err)
+		return ""
+	}
+
+	raw := strings.TrimSpace(result.Result.Result)
+	return slugifyASCII(raw)
+}
