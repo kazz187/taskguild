@@ -114,11 +114,11 @@ func (d *Dispatcher) handleInteractionCreated(ctx context.Context, event *taskgu
 func (d *Dispatcher) buildActions(inter *interaction.Interaction) []NotificationAction {
 	switch inter.Type {
 	case interaction.TypePermissionRequest:
-		// Permission requests always have Allow / Always Allow / Deny.
-		// Chrome Android supports up to 3 action buttons.
+		// Permission requests: Allow / Deny.
+		// "Always Allow Command" requires pattern metadata that push notifications
+		// cannot carry, so we only offer the simple allow/deny actions here.
 		return []NotificationAction{
 			{Action: "allow", Title: "Allow"},
-			{Action: "always_allow", Title: "Always Allow"},
 			{Action: "deny", Title: "Deny"},
 		}
 
