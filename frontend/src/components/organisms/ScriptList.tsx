@@ -90,19 +90,40 @@ function diffTypeLabel(dt: ScriptDiffType): string {
   }
 }
 
-/** Renders interleaved log entries with stderr in red */
+/**
+ * Groups consecutive log entries with the same stream type into single spans.
+ * This dramatically reduces DOM element count (e.g. 30,000 entries → ~100 spans).
+ */
+function groupLogEntries(entries: LogEntry[]): { stream: 'stdout' | 'stderr'; text: string }[] {
+  if (entries.length === 0) return []
+  const groups: { stream: 'stdout' | 'stderr'; text: string }[] = []
+  let current = { stream: entries[0].stream, text: entries[0].text }
+  for (let i = 1; i < entries.length; i++) {
+    if (entries[i].stream === current.stream) {
+      current.text += entries[i].text
+    } else {
+      groups.push(current)
+      current = { stream: entries[i].stream, text: entries[i].text }
+    }
+  }
+  groups.push(current)
+  return groups
+}
+
+/** Renders interleaved log entries with stderr in red, grouped for performance */
 function LogOutput({ entries, className }: { entries: LogEntry[]; className: string }) {
+  const groups = useMemo(() => groupLogEntries(entries), [entries])
   return (
     <AutoScrollPre
       scrollKey={entries.length}
       className={className}
     >
-      {entries.map((entry, i) => (
+      {groups.map((group, i) => (
         <span
           key={i}
-          className={entry.stream === 'stderr' ? 'text-red-400' : 'text-gray-300'}
+          className={group.stream === 'stderr' ? 'text-red-400' : 'text-gray-300'}
         >
-          {entry.text}
+          {group.text}
         </span>
       ))}
     </AutoScrollPre>
@@ -129,6 +150,12 @@ export function ScriptList({ projectId }: { projectId: string }) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<ScriptFormData>(emptyForm)
   const [executionResults, setExecutionResults] = useState<Map<string, ExecutionResult>>(new Map())
+
+  // Mutable log buffers keyed by scriptId. Logs are appended here without
+  // triggering React state updates, then a render counter is bumped to
+  // re-render at a throttled rate.
+  const logBuffersRef = useRef<Map<string, LogEntry[]>>(new Map())
+  const renderTimerRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   // Template dialog state
   const [saveTemplateDialog, setSaveTemplateDialog] = useState<{ scriptId: string; name: string; description: string } | null>(null)
@@ -166,10 +193,11 @@ export function ScriptList({ projectId }: { projectId: string }) {
   }, [refetchComparison, refetch])
   useEventSubscription(comparisonEventTypes, projectId, onComparisonEvent)
 
-  // Cleanup active streams on unmount.
+  // Cleanup active streams and render timers on unmount.
   useEffect(() => {
     return () => {
       streamAbortRef.current.forEach((controller) => controller.abort())
+      renderTimerRef.current.forEach((timer) => clearTimeout(timer))
     }
   }, [])
 
@@ -283,10 +311,36 @@ export function ScriptList({ projectId }: { projectId: string }) {
     })
   }
 
+  // Schedule a throttled re-render for log output updates. Multiple output
+  // events within the interval are batched into a single React re-render.
+  const scheduleLogRender = useCallback((scriptId: string) => {
+    if (renderTimerRef.current.has(scriptId)) return // already scheduled
+    renderTimerRef.current.set(scriptId, setTimeout(() => {
+      renderTimerRef.current.delete(scriptId)
+      // Snapshot the current log buffer into state so React re-renders.
+      const entries = logBuffersRef.current.get(scriptId)
+      if (entries) {
+        setExecutionResults(prev => {
+          const next = new Map(prev)
+          const existing = next.get(scriptId)
+          if (!existing) return next
+          // Only update logEntries reference (shallow copy of the array).
+          next.set(scriptId, { ...existing, logEntries: entries.slice() })
+          return next
+        })
+      }
+    }, 200))
+  }, [])
+
   const startStream = useCallback(async (scriptId: string, requestId: string) => {
     const client = createClient(ScriptService, transport)
     const controller = new AbortController()
     streamAbortRef.current.set(scriptId, controller)
+
+    // Initialize log buffer for this script.
+    if (!logBuffersRef.current.has(scriptId)) {
+      logBuffersRef.current.set(scriptId, [])
+    }
 
     try {
       const req = create(StreamScriptExecutionRequestSchema, { requestId })
@@ -296,37 +350,35 @@ export function ScriptList({ projectId }: { projectId: string }) {
         if (event.event.case === 'output') {
           const chunk = event.event.value
           const newEntries = protoLogToLocal(chunk.entries)
-          console.debug('[ScriptStream] output event', { scriptId, requestId, entryCount: newEntries.length })
-          setExecutionResults(prev => {
-            const next = new Map(prev)
-            const existing = next.get(scriptId)
-            if (!existing) return next
-            next.set(scriptId, {
-              ...existing,
-              logEntries: [...existing.logEntries, ...newEntries],
-            })
-            return next
-          })
+          // Append to mutable buffer (no React state update per chunk).
+          const buf = logBuffersRef.current.get(scriptId)
+          if (buf) {
+            buf.push(...newEntries)
+          }
+          // Schedule a throttled re-render.
+          scheduleLogRender(scriptId)
         } else if (event.event.case === 'complete') {
           const result = event.event.value
-          console.debug('[ScriptStream] complete event', {
-            scriptId, requestId,
-            success: result.success,
-            logEntryCount: result.logEntries.length,
-          })
+          // Cancel any pending render timer — we'll do a final render now.
+          const timer = renderTimerRef.current.get(scriptId)
+          if (timer) {
+            clearTimeout(timer)
+            renderTimerRef.current.delete(scriptId)
+          }
           const completeEntries = result.logEntries.length > 0
             ? protoLogToLocal(result.logEntries)
             : undefined
+          // Use complete entries or current buffer for final state.
+          const finalEntries = completeEntries ?? logBuffersRef.current.get(scriptId)?.slice() ?? []
           setExecutionResults(prev => {
             const next = new Map(prev)
-            const existing = next.get(scriptId)
             next.set(scriptId, {
               scriptId,
               requestId,
               completed: true,
               success: result.success,
               exitCode: result.exitCode,
-              logEntries: completeEntries ?? existing?.logEntries ?? [],
+              logEntries: finalEntries,
               errorMessage: result.errorMessage,
               stoppedByUser: result.stoppedByUser,
             })
@@ -339,12 +391,19 @@ export function ScriptList({ projectId }: { projectId: string }) {
     } catch (e) {
       if (controller.signal.aborted) return
       console.error('Stream error:', e)
+      // Cancel any pending render timer.
+      const timer = renderTimerRef.current.get(scriptId)
+      if (timer) {
+        clearTimeout(timer)
+        renderTimerRef.current.delete(scriptId)
+      }
       setExecutionResults(prev => {
         const next = new Map(prev)
         const existing = next.get(scriptId)
         if (existing && !existing.completed) {
           next.set(scriptId, {
             ...existing,
+            logEntries: logBuffersRef.current.get(scriptId)?.slice() ?? existing.logEntries,
             completed: true,
             success: false,
             errorMessage: e instanceof Error ? e.message : 'Stream connection lost',
@@ -355,9 +414,12 @@ export function ScriptList({ projectId }: { projectId: string }) {
     } finally {
       streamAbortRef.current.delete(scriptId)
     }
-  }, [])
+  }, [scheduleLogRender])
 
   const doExecute = (script: ScriptDefinition) => {
+    // Reset log buffer for this script.
+    logBuffersRef.current.set(script.id, [])
+
     // Set pending state.
     setExecutionResults(prev => {
       const next = new Map(prev)
@@ -456,6 +518,13 @@ export function ScriptList({ projectId }: { projectId: string }) {
     if (controller) {
       controller.abort()
       streamAbortRef.current.delete(scriptId)
+    }
+    // Clean up log buffer and render timer.
+    logBuffersRef.current.delete(scriptId)
+    const timer = renderTimerRef.current.get(scriptId)
+    if (timer) {
+      clearTimeout(timer)
+      renderTimerRef.current.delete(scriptId)
     }
     setExecutionResults(prev => {
       const next = new Map(prev)
