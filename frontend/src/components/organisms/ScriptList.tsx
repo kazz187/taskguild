@@ -344,12 +344,14 @@ export function ScriptList({ projectId }: { projectId: string }) {
 
     try {
       const req = create(StreamScriptExecutionRequestSchema, { requestId })
+      console.log('[ScriptStream] connecting', { scriptId, requestId })
       for await (const event of client.streamScriptExecution(req, {
         signal: controller.signal,
       })) {
         if (event.event.case === 'output') {
           const chunk = event.event.value
           const newEntries = protoLogToLocal(chunk.entries)
+          console.debug('[ScriptStream] received output chunk', { scriptId, entries: newEntries.length })
           // Append to mutable buffer (no React state update per chunk).
           const buf = logBuffersRef.current.get(scriptId)
           if (buf) {

@@ -149,11 +149,12 @@ func (b *ScriptExecutionBroker) PushOutput(requestID string, entries []*taskguil
 		return
 	}
 	es.buffer = append(es.buffer, event)
-	for _, ch := range es.subscribers {
+	for i, ch := range es.subscribers {
 		select {
 		case ch <- event:
 		default:
 			// Drop if subscriber is full; they can catch up via buffer.
+			slog.Warn("PushOutput: subscriber channel full, dropping event", "request_id", requestID, "subscriber_index", i)
 		}
 	}
 }
@@ -238,6 +239,8 @@ func (b *ScriptExecutionBroker) Subscribe(requestID string) (<-chan *taskguildv1
 	// started its read loop).
 	chanSize := len(es.buffer) + 128
 	ch := make(chan *taskguildv1.ScriptExecutionEvent, chanSize)
+
+	slog.Info("script execution stream subscriber connected", "request_id", requestID, "buffered_events", len(es.buffer), "completed", es.completed)
 
 	// Replay buffered events (guaranteed not to block).
 	for _, evt := range es.buffer {
