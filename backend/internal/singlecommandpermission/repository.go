@@ -14,6 +14,11 @@ type Repository interface {
 	// List returns all permission rules for a project.
 	List(ctx context.Context, projectID string) ([]*SingleCommandPermission, error)
 
+	// FindByPatternAndType returns all permission rules that match the given
+	// projectID, pattern, and type combination. Returns an empty slice if none
+	// found. Results are sorted by CreatedAt ascending (oldest first).
+	FindByPatternAndType(ctx context.Context, projectID, pattern, permType string) ([]*SingleCommandPermission, error)
+
 	// Update replaces an existing permission rule.
 	Update(ctx context.Context, p *SingleCommandPermission) error
 
