@@ -31,6 +31,8 @@ interface StatusDraft {
   transitionsTo: string[] // keys
   agentId: string // reference to AgentDefinition
   hooks: HookDraft[]
+  enableAgentMdHarness: boolean // default true: review AGENT.md on status exit
+  agentMdHarnessExplicitlyDisabled: boolean // tracks explicit user choice
 }
 
 interface AgentConfigDraft {
@@ -61,6 +63,8 @@ function workflowToDrafts(wf: Workflow) {
       isTerminal: s.isTerminal,
       transitionsTo: [], // fill below
       agentId: s.agentId ?? '',
+      enableAgentMdHarness: s.agentMdHarnessExplicitlyDisabled ? s.enableAgentMdHarness : true,
+      agentMdHarnessExplicitlyDisabled: s.agentMdHarnessExplicitlyDisabled,
       hooks: (s.hooks ?? []).map((h) => ({
         key: genKey(),
         id: h.id,
@@ -123,11 +127,11 @@ export function WorkflowForm({
         const kClosed = genKey()
         return {
           statusDrafts: [
-            { key: kDraft, id: '', name: 'Draft', order: 0, isInitial: true, isTerminal: false, transitionsTo: [kDevelop], agentId: '', hooks: [] },
-            { key: kDevelop, id: '', name: 'Develop', order: 1, isInitial: false, isTerminal: false, transitionsTo: [kReview, kDraft], agentId: '', hooks: [] },
-            { key: kReview, id: '', name: 'Review', order: 2, isInitial: false, isTerminal: false, transitionsTo: [kTest], agentId: '', hooks: [] },
-            { key: kTest, id: '', name: 'Test', order: 3, isInitial: false, isTerminal: false, transitionsTo: [kClosed], agentId: '', hooks: [] },
-            { key: kClosed, id: '', name: 'Closed', order: 4, isInitial: false, isTerminal: true, transitionsTo: [], agentId: '', hooks: [] },
+            { key: kDraft, id: '', name: 'Draft', order: 0, isInitial: true, isTerminal: false, transitionsTo: [kDevelop], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false },
+            { key: kDevelop, id: '', name: 'Develop', order: 1, isInitial: false, isTerminal: false, transitionsTo: [kReview, kDraft], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false },
+            { key: kReview, id: '', name: 'Review', order: 2, isInitial: false, isTerminal: false, transitionsTo: [kTest], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false },
+            { key: kTest, id: '', name: 'Test', order: 3, isInitial: false, isTerminal: false, transitionsTo: [kClosed], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false },
+            { key: kClosed, id: '', name: 'Closed', order: 4, isInitial: false, isTerminal: true, transitionsTo: [], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false },
           ],
           agentDrafts: [],
         }
@@ -220,7 +224,7 @@ export function WorkflowForm({
   const addStatus = () => {
     setStatuses((prev) => [
       ...prev,
-      { key: genKey(), id: '', name: '', order: prev.length, isInitial: false, isTerminal: false, transitionsTo: [], agentId: '', hooks: [] },
+      { key: genKey(), id: '', name: '', order: prev.length, isInitial: false, isTerminal: false, transitionsTo: [], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false },
     ])
   }
 
@@ -286,6 +290,8 @@ export function WorkflowForm({
       isTerminal: s.isTerminal,
       transitionsTo: s.transitionsTo.map((k) => keyToId.get(k)!).filter(Boolean),
       agentId: s.agentId,
+      enableAgentMdHarness: s.enableAgentMdHarness,
+      agentMdHarnessExplicitlyDisabled: s.agentMdHarnessExplicitlyDisabled,
       hooks: s.hooks
         .filter((h) => h.actionId)
         .map((h) => ({
@@ -620,6 +626,23 @@ export function WorkflowForm({
                         </p>
                       )}
                     </Card>
+                  )}
+
+                  {/* AGENT.md Harness Toggle */}
+                  {!s.isTerminal && (
+                    <div className="mt-2 px-1">
+                      <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+                        <Checkbox
+                          checked={s.enableAgentMdHarness}
+                          onChange={(e) => updateStatus(s.key, {
+                            enableAgentMdHarness: e.target.checked,
+                            agentMdHarnessExplicitlyDisabled: !e.target.checked,
+                          })}
+                        />
+                        <span>AGENT.md Harness</span>
+                        <span className="text-[10px] text-gray-600">(review &amp; update AGENT.md on status exit)</span>
+                      </label>
+                    </div>
                   )}
 
                   {/* Hooks */}

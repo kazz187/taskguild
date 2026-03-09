@@ -56,6 +56,11 @@ type Status struct {
 	TransitionsTo []string     `yaml:"transitions_to"`
 	AgentID       string       `yaml:"agent_id,omitempty"`
 	Hooks         []StatusHook `yaml:"hooks,omitempty"`
+
+	// EnableAgentMDHarness controls whether a background AGENT.md review
+	// harness runs when a task exits this status. Default is true (enabled).
+	EnableAgentMDHarness              bool `yaml:"enable_agent_md_harness"`
+	AgentMDHarnessExplicitlyDisabled  bool `yaml:"agent_md_harness_explicitly_disabled,omitempty"`
 }
 
 // FindAgentIDForStatus returns the agent ID configured for the given status.
