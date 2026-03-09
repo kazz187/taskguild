@@ -7,7 +7,7 @@ import {
   deleteSingleCommandPermission,
 } from '@taskguild/proto/taskguild/v1/single_command_permission-SingleCommandPermissionService_connectquery.ts'
 import type { SingleCommandPermission } from '@taskguild/proto/taskguild/v1/single_command_permission_pb.ts'
-import { Terminal, Plus, Trash2, Edit2, X, Save, Check } from 'lucide-react'
+import { Terminal, Plus, Trash2, Edit2, X, Check } from 'lucide-react'
 import { Button, Input, Select, Badge } from '../atoms/index.ts'
 import { Card, FormField } from '../molecules/index.ts'
 
