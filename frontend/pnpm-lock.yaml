@@ -51,8 +51,8 @@ importers:
         specifier: ^1.132.0
         version: 1.162.2(@tanstack/react-router@1.162.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(vite@7.3.1(@types/node@22.19.11)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0))
       '@taskguild/proto':
-        specifier: file:../../proto/gen/ts
-        version: file:../../proto/gen/ts
+        specifier: file:../proto/gen/ts
+        version: file:../proto/gen/ts
       lucide-react:
         specifier: ^0.545.0
         version: 0.545.0(react@19.2.4)
@@ -1125,8 +1125,8 @@ packages:
     resolution: {integrity: sha512-42WoRePf8v690qG8yGRe/YOh+oHni9vUaUUfoqlS91U2scd3a5rkLtVsc6b7z60w3RogH0I00vdrC5AaeiZ18w==}
     engines: {node: '>=20.19'}
 
-  '@taskguild/proto@file:../../proto/gen/ts':
-    resolution: {directory: ../../proto/gen/ts, type: directory}
+  '@taskguild/proto@file:../proto/gen/ts':
+    resolution: {directory: ../proto/gen/ts, type: directory}
 
   '@testing-library/dom@10.4.1':
     resolution: {integrity: sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg==}
@@ -2904,7 +2904,7 @@ snapshots:
 
   '@tanstack/virtual-file-routes@1.161.4': {}
 
-  '@taskguild/proto@file:../../proto/gen/ts':
+  '@taskguild/proto@file:../proto/gen/ts':
     dependencies:
       '@bufbuild/protobuf': 2.11.0
       '@connectrpc/connect': 2.1.1(@bufbuild/protobuf@2.11.0)
