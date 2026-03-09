@@ -2,8 +2,8 @@
 // @generated from file taskguild/v1/script.proto (package taskguild.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { PaginationRequest, PaginationResponse } from "./common_pb.ts";
@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file taskguild/v1/script.proto.
  */
 export const file_taskguild_v1_script: GenFile = /*@__PURE__*/
-  fileDesc("Chl0YXNrZ3VpbGQvdjEvc2NyaXB0LnByb3RvEgx0YXNrZ3VpbGQudjEi6wEKEFNjcmlwdERlZmluaXRpb24SCgoCaWQYASABKAkSEgoKcHJvamVjdF9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEhAKCGZpbGVuYW1lGAUgASgJEg8KB2NvbnRlbnQYBiABKAkSEQoJaXNfc3luY2VkGAcgASgIEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIm8KE0NyZWF0ZVNjcmlwdFJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEhAKCGZpbGVuYW1lGAQgASgJEg8KB2NvbnRlbnQYBSABKAkiRgoUQ3JlYXRlU2NyaXB0UmVzcG9uc2USLgoGc2NyaXB0GAEgASgLMh4udGFza2d1aWxkLnYxLlNjcmlwdERlZmluaXRpb24iHgoQR2V0U2NyaXB0UmVxdWVzdBIKCgJpZBgBIAEoCSJDChFHZXRTY3JpcHRSZXNwb25zZRIuCgZzY3JpcHQYASABKAsyHi50YXNrZ3VpbGQudjEuU2NyaXB0RGVmaW5pdGlvbiJdChJMaXN0U2NyaXB0c1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIzCgpwYWdpbmF0aW9uGAIgASgLMh8udGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXF1ZXN0InwKE0xpc3RTY3JpcHRzUmVzcG9uc2USLwoHc2NyaXB0cxgBIAMoCzIeLnRhc2tndWlsZC52MS5TY3JpcHREZWZpbml0aW9uEjQKCnBhZ2luYXRpb24YAiABKAsyIC50YXNrZ3VpbGQudjEuUGFnaW5hdGlvblJlc3BvbnNlImcKE1VwZGF0ZVNjcmlwdFJlcXVlc3QSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIQCghmaWxlbmFtZRgEIAEoCRIPCgdjb250ZW50GAUgASgJIkYKFFVwZGF0ZVNjcmlwdFJlc3BvbnNlEi4KBnNjcmlwdBgBIAEoCzIeLnRhc2tndWlsZC52MS5TY3JpcHREZWZpbml0aW9uIiEKE0RlbGV0ZVNjcmlwdFJlcXVlc3QSCgoCaWQYASABKAkiFgoURGVsZXRlU2NyaXB0UmVzcG9uc2UiQgoZU3luY1NjcmlwdHNGcm9tRGlyUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhEKCWRpcmVjdG9yeRgCIAEoCSJvChpTeW5jU2NyaXB0c0Zyb21EaXJSZXNwb25zZRIvCgdzY3JpcHRzGAEgAygLMh4udGFza2d1aWxkLnYxLlNjcmlwdERlZmluaXRpb24SDwoHY3JlYXRlZBgCIAEoBRIPCgd1cGRhdGVkGAMgASgFIj0KFEV4ZWN1dGVTY3JpcHRSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSEQoJc2NyaXB0X2lkGAIgASgJIisKFUV4ZWN1dGVTY3JpcHRSZXNwb25zZRISCgpyZXF1ZXN0X2lkGAEgASgJIjIKHFN0cmVhbVNjcmlwdEV4ZWN1dGlvblJlcXVlc3QSEgoKcmVxdWVzdF9pZBgBIAEoCSKNAQoUU2NyaXB0RXhlY3V0aW9uRXZlbnQSMQoGb3V0cHV0GAEgASgLMh8udGFza2d1aWxkLnYxLlNjcmlwdE91dHB1dENodW5rSAASOQoIY29tcGxldGUYAiABKAsyJS50YXNrZ3VpbGQudjEuU2NyaXB0RXhlY3V0aW9uQ29tcGxldGVIAEIHCgVldmVudCIzChFTY3JpcHRPdXRwdXRDaHVuaxIOCgZzdGRvdXQYASABKAkSDgoGc3RkZXJyGAIgASgJInQKF1NjcmlwdEV4ZWN1dGlvbkNvbXBsZXRlEg8KB3N1Y2Nlc3MYASABKAgSEQoJZXhpdF9jb2RlGAIgASgFEg4KBnN0ZG91dBgDIAEoCRIOCgZzdGRlcnIYBCABKAkSFQoNZXJyb3JfbWVzc2FnZRgFIAEoCTLkBQoNU2NyaXB0U2VydmljZRJVCgxDcmVhdGVTY3JpcHQSIS50YXNrZ3VpbGQudjEuQ3JlYXRlU2NyaXB0UmVxdWVzdBoiLnRhc2tndWlsZC52MS5DcmVhdGVTY3JpcHRSZXNwb25zZRJMCglHZXRTY3JpcHQSHi50YXNrZ3VpbGQudjEuR2V0U2NyaXB0UmVxdWVzdBofLnRhc2tndWlsZC52MS5HZXRTY3JpcHRSZXNwb25zZRJSCgtMaXN0U2NyaXB0cxIgLnRhc2tndWlsZC52MS5MaXN0U2NyaXB0c1JlcXVlc3QaIS50YXNrZ3VpbGQudjEuTGlzdFNjcmlwdHNSZXNwb25zZRJVCgxVcGRhdGVTY3JpcHQSIS50YXNrZ3VpbGQudjEuVXBkYXRlU2NyaXB0UmVxdWVzdBoiLnRhc2tndWlsZC52MS5VcGRhdGVTY3JpcHRSZXNwb25zZRJVCgxEZWxldGVTY3JpcHQSIS50YXNrZ3VpbGQudjEuRGVsZXRlU2NyaXB0UmVxdWVzdBoiLnRhc2tndWlsZC52MS5EZWxldGVTY3JpcHRSZXNwb25zZRJnChJTeW5jU2NyaXB0c0Zyb21EaXISJy50YXNrZ3VpbGQudjEuU3luY1NjcmlwdHNGcm9tRGlyUmVxdWVzdBooLnRhc2tndWlsZC52MS5TeW5jU2NyaXB0c0Zyb21EaXJSZXNwb25zZRJYCg1FeGVjdXRlU2NyaXB0EiIudGFza2d1aWxkLnYxLkV4ZWN1dGVTY3JpcHRSZXF1ZXN0GiMudGFza2d1aWxkLnYxLkV4ZWN1dGVTY3JpcHRSZXNwb25zZRJpChVTdHJlYW1TY3JpcHRFeGVjdXRpb24SKi50YXNrZ3VpbGQudjEuU3RyZWFtU2NyaXB0RXhlY3V0aW9uUmVxdWVzdBoiLnRhc2tndWlsZC52MS5TY3JpcHRFeGVjdXRpb25FdmVudDABQrEBChBjb20udGFza2d1aWxkLnYxQgtTY3JpcHRQcm90b1ABWj9naXRodWIuY29tL2thenoxODcvdGFza2d1aWxkL2dlbi9wcm90by90YXNrZ3VpbGQvdjE7dGFza2d1aWxkdjGiAgNUWFiqAgxUYXNrZ3VpbGQuVjHKAgxUYXNrZ3VpbGRcVjHiAhhUYXNrZ3VpbGRcVjFcR1BCTWV0YWRhdGHqAg1UYXNrZ3VpbGQ6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_taskguild_v1_common]);
+  fileDesc("Chl0YXNrZ3VpbGQvdjEvc2NyaXB0LnByb3RvEgx0YXNrZ3VpbGQudjEi6wEKEFNjcmlwdERlZmluaXRpb24SCgoCaWQYASABKAkSEgoKcHJvamVjdF9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEhAKCGZpbGVuYW1lGAUgASgJEg8KB2NvbnRlbnQYBiABKAkSEQoJaXNfc3luY2VkGAcgASgIEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIm8KE0NyZWF0ZVNjcmlwdFJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEhAKCGZpbGVuYW1lGAQgASgJEg8KB2NvbnRlbnQYBSABKAkiRgoUQ3JlYXRlU2NyaXB0UmVzcG9uc2USLgoGc2NyaXB0GAEgASgLMh4udGFza2d1aWxkLnYxLlNjcmlwdERlZmluaXRpb24iHgoQR2V0U2NyaXB0UmVxdWVzdBIKCgJpZBgBIAEoCSJDChFHZXRTY3JpcHRSZXNwb25zZRIuCgZzY3JpcHQYASABKAsyHi50YXNrZ3VpbGQudjEuU2NyaXB0RGVmaW5pdGlvbiJdChJMaXN0U2NyaXB0c1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIzCgpwYWdpbmF0aW9uGAIgASgLMh8udGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXF1ZXN0InwKE0xpc3RTY3JpcHRzUmVzcG9uc2USLwoHc2NyaXB0cxgBIAMoCzIeLnRhc2tndWlsZC52MS5TY3JpcHREZWZpbml0aW9uEjQKCnBhZ2luYXRpb24YAiABKAsyIC50YXNrZ3VpbGQudjEuUGFnaW5hdGlvblJlc3BvbnNlImcKE1VwZGF0ZVNjcmlwdFJlcXVlc3QSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIQCghmaWxlbmFtZRgEIAEoCRIPCgdjb250ZW50GAUgASgJIkYKFFVwZGF0ZVNjcmlwdFJlc3BvbnNlEi4KBnNjcmlwdBgBIAEoCzIeLnRhc2tndWlsZC52MS5TY3JpcHREZWZpbml0aW9uIiEKE0RlbGV0ZVNjcmlwdFJlcXVlc3QSCgoCaWQYASABKAkiFgoURGVsZXRlU2NyaXB0UmVzcG9uc2UiQgoZU3luY1NjcmlwdHNGcm9tRGlyUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhEKCWRpcmVjdG9yeRgCIAEoCSJvChpTeW5jU2NyaXB0c0Zyb21EaXJSZXNwb25zZRIvCgdzY3JpcHRzGAEgAygLMh4udGFza2d1aWxkLnYxLlNjcmlwdERlZmluaXRpb24SDwoHY3JlYXRlZBgCIAEoBRIPCgd1cGRhdGVkGAMgASgFIj0KFEV4ZWN1dGVTY3JpcHRSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSEQoJc2NyaXB0X2lkGAIgASgJIisKFUV4ZWN1dGVTY3JpcHRSZXNwb25zZRISCgpyZXF1ZXN0X2lkGAEgASgJIjAKGlN0b3BTY3JpcHRFeGVjdXRpb25SZXF1ZXN0EhIKCnJlcXVlc3RfaWQYASABKAkiHQobU3RvcFNjcmlwdEV4ZWN1dGlvblJlc3BvbnNlIjIKHFN0cmVhbVNjcmlwdEV4ZWN1dGlvblJlcXVlc3QSEgoKcmVxdWVzdF9pZBgBIAEoCSKNAQoUU2NyaXB0RXhlY3V0aW9uRXZlbnQSMQoGb3V0cHV0GAEgASgLMh8udGFza2d1aWxkLnYxLlNjcmlwdE91dHB1dENodW5rSAASOQoIY29tcGxldGUYAiABKAsyJS50YXNrZ3VpbGQudjEuU2NyaXB0RXhlY3V0aW9uQ29tcGxldGVIAEIHCgVldmVudCJNCg5TY3JpcHRMb2dFbnRyeRItCgZzdHJlYW0YASABKA4yHS50YXNrZ3VpbGQudjEuU2NyaXB0TG9nU3RyZWFtEgwKBHRleHQYAiABKAkiXgoRU2NyaXB0T3V0cHV0Q2h1bmsSLQoHZW50cmllcxgDIAMoCzIcLnRhc2tndWlsZC52MS5TY3JpcHRMb2dFbnRyeUoECAEQAkoECAIQA1IGc3Rkb3V0UgZzdGRlcnIivAEKF1NjcmlwdEV4ZWN1dGlvbkNvbXBsZXRlEg8KB3N1Y2Nlc3MYASABKAgSEQoJZXhpdF9jb2RlGAIgASgFEhUKDWVycm9yX21lc3NhZ2UYBSABKAkSMQoLbG9nX2VudHJpZXMYBiADKAsyHC50YXNrZ3VpbGQudjEuU2NyaXB0TG9nRW50cnkSFwoPc3RvcHBlZF9ieV91c2VyGAcgASgISgQIAxAESgQIBBAFUgZzdGRvdXRSBnN0ZGVyciIxChtMaXN0QWN0aXZlRXhlY3V0aW9uc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCSJVChxMaXN0QWN0aXZlRXhlY3V0aW9uc1Jlc3BvbnNlEjUKCmV4ZWN1dGlvbnMYASADKAsyIS50YXNrZ3VpbGQudjEuU2NyaXB0RXhlY3V0aW9uSW5mbyKKAQoTU2NyaXB0RXhlY3V0aW9uSW5mbxISCgpyZXF1ZXN0X2lkGAEgASgJEhEKCXNjcmlwdF9pZBgCIAEoCRIRCgljb21wbGV0ZWQYAyABKAgSDwoHc3VjY2VzcxgEIAEoCBIRCglleGl0X2NvZGUYBSABKAUSFQoNZXJyb3JfbWVzc2FnZRgGIAEoCSpNCg9TY3JpcHRMb2dTdHJlYW0SHAoYU0NSSVBUX0xPR19TVFJFQU1fU1RET1VUEAASHAoYU0NSSVBUX0xPR19TVFJFQU1fU1RERVJSEAEyvwcKDVNjcmlwdFNlcnZpY2USVQoMQ3JlYXRlU2NyaXB0EiEudGFza2d1aWxkLnYxLkNyZWF0ZVNjcmlwdFJlcXVlc3QaIi50YXNrZ3VpbGQudjEuQ3JlYXRlU2NyaXB0UmVzcG9uc2USTAoJR2V0U2NyaXB0Eh4udGFza2d1aWxkLnYxLkdldFNjcmlwdFJlcXVlc3QaHy50YXNrZ3VpbGQudjEuR2V0U2NyaXB0UmVzcG9uc2USUgoLTGlzdFNjcmlwdHMSIC50YXNrZ3VpbGQudjEuTGlzdFNjcmlwdHNSZXF1ZXN0GiEudGFza2d1aWxkLnYxLkxpc3RTY3JpcHRzUmVzcG9uc2USVQoMVXBkYXRlU2NyaXB0EiEudGFza2d1aWxkLnYxLlVwZGF0ZVNjcmlwdFJlcXVlc3QaIi50YXNrZ3VpbGQudjEuVXBkYXRlU2NyaXB0UmVzcG9uc2USVQoMRGVsZXRlU2NyaXB0EiEudGFza2d1aWxkLnYxLkRlbGV0ZVNjcmlwdFJlcXVlc3QaIi50YXNrZ3VpbGQudjEuRGVsZXRlU2NyaXB0UmVzcG9uc2USZwoSU3luY1NjcmlwdHNGcm9tRGlyEicudGFza2d1aWxkLnYxLlN5bmNTY3JpcHRzRnJvbURpclJlcXVlc3QaKC50YXNrZ3VpbGQudjEuU3luY1NjcmlwdHNGcm9tRGlyUmVzcG9uc2USWAoNRXhlY3V0ZVNjcmlwdBIiLnRhc2tndWlsZC52MS5FeGVjdXRlU2NyaXB0UmVxdWVzdBojLnRhc2tndWlsZC52MS5FeGVjdXRlU2NyaXB0UmVzcG9uc2USagoTU3RvcFNjcmlwdEV4ZWN1dGlvbhIoLnRhc2tndWlsZC52MS5TdG9wU2NyaXB0RXhlY3V0aW9uUmVxdWVzdBopLnRhc2tndWlsZC52MS5TdG9wU2NyaXB0RXhlY3V0aW9uUmVzcG9uc2USaQoVU3RyZWFtU2NyaXB0RXhlY3V0aW9uEioudGFza2d1aWxkLnYxLlN0cmVhbVNjcmlwdEV4ZWN1dGlvblJlcXVlc3QaIi50YXNrZ3VpbGQudjEuU2NyaXB0RXhlY3V0aW9uRXZlbnQwARJtChRMaXN0QWN0aXZlRXhlY3V0aW9ucxIpLnRhc2tndWlsZC52MS5MaXN0QWN0aXZlRXhlY3V0aW9uc1JlcXVlc3QaKi50YXNrZ3VpbGQudjEuTGlzdEFjdGl2ZUV4ZWN1dGlvbnNSZXNwb25zZUKxAQoQY29tLnRhc2tndWlsZC52MUILU2NyaXB0UHJvdG9QAVo/Z2l0aHViLmNvbS9rYXp6MTg3L3Rhc2tndWlsZC9nZW4vcHJvdG8vdGFza2d1aWxkL3YxO3Rhc2tndWlsZHYxogIDVFhYqgIMVGFza2d1aWxkLlYxygIMVGFza2d1aWxkXFYx4gIYVGFza2d1aWxkXFYxXEdQQk1ldGFkYXRh6gINVGFza2d1aWxkOjpWMWIGcHJvdG8z", [file_google_protobuf_timestamp, file_taskguild_v1_common]);
 
 /**
  * ScriptDefinition defines a shell script that can be executed on the agent-manager.
@@ -404,6 +404,38 @@ export const ExecuteScriptResponseSchema: GenMessage<ExecuteScriptResponse> = /*
   messageDesc(file_taskguild_v1_script, 14);
 
 /**
+ * StopScriptExecution stops a running script execution.
+ *
+ * @generated from message taskguild.v1.StopScriptExecutionRequest
+ */
+export type StopScriptExecutionRequest = Message<"taskguild.v1.StopScriptExecutionRequest"> & {
+  /**
+   * @generated from field: string request_id = 1;
+   */
+  requestId: string;
+};
+
+/**
+ * Describes the message taskguild.v1.StopScriptExecutionRequest.
+ * Use `create(StopScriptExecutionRequestSchema)` to create a new message.
+ */
+export const StopScriptExecutionRequestSchema: GenMessage<StopScriptExecutionRequest> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_script, 15);
+
+/**
+ * @generated from message taskguild.v1.StopScriptExecutionResponse
+ */
+export type StopScriptExecutionResponse = Message<"taskguild.v1.StopScriptExecutionResponse"> & {
+};
+
+/**
+ * Describes the message taskguild.v1.StopScriptExecutionResponse.
+ * Use `create(StopScriptExecutionResponseSchema)` to create a new message.
+ */
+export const StopScriptExecutionResponseSchema: GenMessage<StopScriptExecutionResponse> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_script, 16);
+
+/**
  * StreamScriptExecution streams real-time output from a script execution.
  *
  * @generated from message taskguild.v1.StreamScriptExecutionRequest
@@ -420,7 +452,7 @@ export type StreamScriptExecutionRequest = Message<"taskguild.v1.StreamScriptExe
  * Use `create(StreamScriptExecutionRequestSchema)` to create a new message.
  */
 export const StreamScriptExecutionRequestSchema: GenMessage<StreamScriptExecutionRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_script, 15);
+  messageDesc(file_taskguild_v1_script, 17);
 
 /**
  * @generated from message taskguild.v1.ScriptExecutionEvent
@@ -449,25 +481,42 @@ export type ScriptExecutionEvent = Message<"taskguild.v1.ScriptExecutionEvent"> 
  * Use `create(ScriptExecutionEventSchema)` to create a new message.
  */
 export const ScriptExecutionEventSchema: GenMessage<ScriptExecutionEvent> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_script, 16);
+  messageDesc(file_taskguild_v1_script, 18);
+
+/**
+ * ScriptLogEntry represents a single log entry from script execution.
+ *
+ * @generated from message taskguild.v1.ScriptLogEntry
+ */
+export type ScriptLogEntry = Message<"taskguild.v1.ScriptLogEntry"> & {
+  /**
+   * @generated from field: taskguild.v1.ScriptLogStream stream = 1;
+   */
+  stream: ScriptLogStream;
+
+  /**
+   * @generated from field: string text = 2;
+   */
+  text: string;
+};
+
+/**
+ * Describes the message taskguild.v1.ScriptLogEntry.
+ * Use `create(ScriptLogEntrySchema)` to create a new message.
+ */
+export const ScriptLogEntrySchema: GenMessage<ScriptLogEntry> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_script, 19);
 
 /**
  * @generated from message taskguild.v1.ScriptOutputChunk
  */
 export type ScriptOutputChunk = Message<"taskguild.v1.ScriptOutputChunk"> & {
   /**
-   * incremental stdout chunk
+   * interleaved log entries
    *
-   * @generated from field: string stdout = 1;
+   * @generated from field: repeated taskguild.v1.ScriptLogEntry entries = 3;
    */
-  stdout: string;
-
-  /**
-   * incremental stderr chunk
-   *
-   * @generated from field: string stderr = 2;
-   */
-  stderr: string;
+  entries: ScriptLogEntry[];
 };
 
 /**
@@ -475,7 +524,7 @@ export type ScriptOutputChunk = Message<"taskguild.v1.ScriptOutputChunk"> & {
  * Use `create(ScriptOutputChunkSchema)` to create a new message.
  */
 export const ScriptOutputChunkSchema: GenMessage<ScriptOutputChunk> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_script, 17);
+  messageDesc(file_taskguild_v1_script, 20);
 
 /**
  * @generated from message taskguild.v1.ScriptExecutionComplete
@@ -492,23 +541,23 @@ export type ScriptExecutionComplete = Message<"taskguild.v1.ScriptExecutionCompl
   exitCode: number;
 
   /**
-   * full stdout (for late joiners)
-   *
-   * @generated from field: string stdout = 3;
-   */
-  stdout: string;
-
-  /**
-   * full stderr
-   *
-   * @generated from field: string stderr = 4;
-   */
-  stderr: string;
-
-  /**
    * @generated from field: string error_message = 5;
    */
   errorMessage: string;
+
+  /**
+   * full log (for late joiners)
+   *
+   * @generated from field: repeated taskguild.v1.ScriptLogEntry log_entries = 6;
+   */
+  logEntries: ScriptLogEntry[];
+
+  /**
+   * true if stopped via StopScriptExecution
+   *
+   * @generated from field: bool stopped_by_user = 7;
+   */
+  stoppedByUser: boolean;
 };
 
 /**
@@ -516,7 +565,108 @@ export type ScriptExecutionComplete = Message<"taskguild.v1.ScriptExecutionCompl
  * Use `create(ScriptExecutionCompleteSchema)` to create a new message.
  */
 export const ScriptExecutionCompleteSchema: GenMessage<ScriptExecutionComplete> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_script, 18);
+  messageDesc(file_taskguild_v1_script, 21);
+
+/**
+ * ListActiveExecutions lists currently running and recently completed script executions.
+ *
+ * @generated from message taskguild.v1.ListActiveExecutionsRequest
+ */
+export type ListActiveExecutionsRequest = Message<"taskguild.v1.ListActiveExecutionsRequest"> & {
+  /**
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+};
+
+/**
+ * Describes the message taskguild.v1.ListActiveExecutionsRequest.
+ * Use `create(ListActiveExecutionsRequestSchema)` to create a new message.
+ */
+export const ListActiveExecutionsRequestSchema: GenMessage<ListActiveExecutionsRequest> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_script, 22);
+
+/**
+ * @generated from message taskguild.v1.ListActiveExecutionsResponse
+ */
+export type ListActiveExecutionsResponse = Message<"taskguild.v1.ListActiveExecutionsResponse"> & {
+  /**
+   * @generated from field: repeated taskguild.v1.ScriptExecutionInfo executions = 1;
+   */
+  executions: ScriptExecutionInfo[];
+};
+
+/**
+ * Describes the message taskguild.v1.ListActiveExecutionsResponse.
+ * Use `create(ListActiveExecutionsResponseSchema)` to create a new message.
+ */
+export const ListActiveExecutionsResponseSchema: GenMessage<ListActiveExecutionsResponse> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_script, 23);
+
+/**
+ * @generated from message taskguild.v1.ScriptExecutionInfo
+ */
+export type ScriptExecutionInfo = Message<"taskguild.v1.ScriptExecutionInfo"> & {
+  /**
+   * @generated from field: string request_id = 1;
+   */
+  requestId: string;
+
+  /**
+   * @generated from field: string script_id = 2;
+   */
+  scriptId: string;
+
+  /**
+   * @generated from field: bool completed = 3;
+   */
+  completed: boolean;
+
+  /**
+   * @generated from field: bool success = 4;
+   */
+  success: boolean;
+
+  /**
+   * @generated from field: int32 exit_code = 5;
+   */
+  exitCode: number;
+
+  /**
+   * @generated from field: string error_message = 6;
+   */
+  errorMessage: string;
+};
+
+/**
+ * Describes the message taskguild.v1.ScriptExecutionInfo.
+ * Use `create(ScriptExecutionInfoSchema)` to create a new message.
+ */
+export const ScriptExecutionInfoSchema: GenMessage<ScriptExecutionInfo> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_script, 24);
+
+/**
+ * ScriptLogStream identifies the output stream for a log entry.
+ *
+ * @generated from enum taskguild.v1.ScriptLogStream
+ */
+export enum ScriptLogStream {
+  /**
+   * @generated from enum value: SCRIPT_LOG_STREAM_STDOUT = 0;
+   */
+  STDOUT = 0,
+
+  /**
+   * @generated from enum value: SCRIPT_LOG_STREAM_STDERR = 1;
+   */
+  STDERR = 1,
+}
+
+/**
+ * Describes the enum taskguild.v1.ScriptLogStream.
+ */
+export const ScriptLogStreamSchema: GenEnum<ScriptLogStream> = /*@__PURE__*/
+  enumDesc(file_taskguild_v1_script, 0);
 
 /**
  * @generated from service taskguild.v1.ScriptService
@@ -584,6 +734,16 @@ export const ScriptService: GenService<{
     output: typeof ExecuteScriptResponseSchema;
   },
   /**
+   * StopScriptExecution stops a running script execution.
+   *
+   * @generated from rpc taskguild.v1.ScriptService.StopScriptExecution
+   */
+  stopScriptExecution: {
+    methodKind: "unary";
+    input: typeof StopScriptExecutionRequestSchema;
+    output: typeof StopScriptExecutionResponseSchema;
+  },
+  /**
    * StreamScriptExecution streams real-time output from a script execution.
    *
    * @generated from rpc taskguild.v1.ScriptService.StreamScriptExecution
@@ -592,6 +752,16 @@ export const ScriptService: GenService<{
     methodKind: "server_streaming";
     input: typeof StreamScriptExecutionRequestSchema;
     output: typeof ScriptExecutionEventSchema;
+  },
+  /**
+   * ListActiveExecutions lists currently running and recently completed script executions.
+   *
+   * @generated from rpc taskguild.v1.ScriptService.ListActiveExecutions
+   */
+  listActiveExecutions: {
+    methodKind: "unary";
+    input: typeof ListActiveExecutionsRequestSchema;
+    output: typeof ListActiveExecutionsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_taskguild_v1_script, 0);

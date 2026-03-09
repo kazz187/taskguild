@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -11,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	"connectrpc.com/connect"
@@ -23,6 +23,34 @@ const (
 	outputFlushInterval    = 200 * time.Millisecond
 )
 
+// runningScripts tracks cancel functions for running script executions
+// so they can be stopped via StopScriptCommand.
+var runningScripts struct {
+	mu      sync.Mutex
+	cancels map[string]context.CancelFunc // requestID → cancel
+}
+
+func init() {
+	runningScripts.cancels = make(map[string]context.CancelFunc)
+}
+
+// handleStopScript cancels a running script execution by its requestID.
+func handleStopScript(cmd *v1.StopScriptCommand) {
+	requestID := cmd.GetRequestId()
+	slog.Info("received stop script command", "request_id", requestID)
+
+	runningScripts.mu.Lock()
+	cancel, ok := runningScripts.cancels[requestID]
+	runningScripts.mu.Unlock()
+
+	if ok {
+		cancel()
+		slog.Info("script execution cancelled", "request_id", requestID)
+	} else {
+		slog.Warn("script execution not found for stop", "request_id", requestID)
+	}
+}
+
 // handleExecuteScript executes a script on the agent-manager machine and reports the result.
 // Output is streamed to the server in real-time via ReportScriptOutputChunk RPCs.
 func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, cfg *config, cmd *v1.ExecuteScriptCommand) {
@@ -33,16 +61,16 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 
 	slog.Info("executing script", "script_id", scriptID, "request_id", requestID, "filename", filename)
 
-	reportResult := func(success bool, exitCode int32, stdout, stderr, errMsg string) {
+	reportResult := func(success bool, exitCode int32, logEntries []*v1.ScriptLogEntry, errMsg string, stoppedByUser bool) {
 		_, err := client.ReportScriptExecutionResult(ctx, connect.NewRequest(&v1.ReportScriptExecutionResultRequest{
-			RequestId:    requestID,
-			ProjectName:  cfg.ProjectName,
-			ScriptId:     scriptID,
-			Success:      success,
-			ExitCode:     exitCode,
-			Stdout:       stdout,
-			Stderr:       stderr,
-			ErrorMessage: errMsg,
+			RequestId:     requestID,
+			ProjectName:   cfg.ProjectName,
+			ScriptId:      scriptID,
+			Success:       success,
+			ExitCode:      exitCode,
+			LogEntries:    logEntries,
+			ErrorMessage:  errMsg,
+			StoppedByUser: stoppedByUser,
 		}))
 		if err != nil {
 			slog.Error("failed to report script execution result", "request_id", requestID, "error", err)
@@ -51,14 +79,11 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 
 	// Register this script execution with the tracker so the SIGUSR1
 	// (hot-reload) handler waits for it to complete before shutting down.
-	// The mutex ensures atomicity between the reject check and wg.Add,
-	// preventing a race where SIGUSR1 handler calls wg.Wait() between
-	// our check and Add.
 	scriptTracker.mu.Lock()
 	if scriptTracker.reject {
 		scriptTracker.mu.Unlock()
 		slog.Warn("script rejected: agent is shutting down for hot reload", "filename", filename, "request_id", requestID)
-		reportResult(false, -1, "", "", "script execution rejected: agent is shutting down for hot reload")
+		reportResult(false, -1, nil, "script execution rejected: agent is shutting down for hot reload", false)
 		return
 	}
 	scriptTracker.wg.Add(1)
@@ -68,13 +93,13 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 	// Write script to temporary file.
 	tmpDir := filepath.Join(cfg.WorkDir, ".claude", "scripts", ".tmp")
 	if err := os.MkdirAll(tmpDir, 0755); err != nil {
-		reportResult(false, -1, "", "", fmt.Sprintf("failed to create temp directory: %v", err))
+		reportResult(false, -1, nil, fmt.Sprintf("failed to create temp directory: %v", err), false)
 		return
 	}
 
 	tmpFile := filepath.Join(tmpDir, fmt.Sprintf("exec_%s_%s", requestID, filename))
 	if err := os.WriteFile(tmpFile, []byte(content), 0755); err != nil {
-		reportResult(false, -1, "", "", fmt.Sprintf("failed to write temp script: %v", err))
+		reportResult(false, -1, nil, fmt.Sprintf("failed to write temp script: %v", err), false)
 		return
 	}
 	defer os.Remove(tmpFile)
@@ -82,6 +107,16 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 	// Execute the script with piped stdout/stderr for streaming.
 	execCtx, cancel := context.WithTimeout(ctx, scriptExecutionTimeout)
 	defer cancel()
+
+	// Register the cancel function so StopScriptCommand can cancel this execution.
+	runningScripts.mu.Lock()
+	runningScripts.cancels[requestID] = cancel
+	runningScripts.mu.Unlock()
+	defer func() {
+		runningScripts.mu.Lock()
+		delete(runningScripts.cancels, requestID)
+		runningScripts.mu.Unlock()
+	}()
 
 	execCmd := exec.CommandContext(execCtx, "/bin/sh", tmpFile)
 	execCmd.Dir = cfg.WorkDir
@@ -91,45 +126,104 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 		"TASKGUILD_SCRIPT_FILENAME="+filename,
 		"TASKGUILD_WORK_DIR="+cfg.WorkDir,
 	)
+	// Set process group so we can kill the entire tree on stop.
+	execCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
+	// Override the default kill behavior of CommandContext to kill the
+	// entire process group instead of just the main process.
+	execCmd.Cancel = func() error {
+		if execCmd.Process != nil {
+			// Kill the entire process group (negative PID).
+			return syscall.Kill(-execCmd.Process.Pid, syscall.SIGKILL)
+		}
+		return nil
+	}
 
 	stdoutPipe, err := execCmd.StdoutPipe()
 	if err != nil {
-		reportResult(false, -1, "", "", fmt.Sprintf("failed to create stdout pipe: %v", err))
+		reportResult(false, -1, nil, fmt.Sprintf("failed to create stdout pipe: %v", err), false)
 		return
 	}
 	stderrPipe, err := execCmd.StderrPipe()
 	if err != nil {
-		reportResult(false, -1, "", "", fmt.Sprintf("failed to create stderr pipe: %v", err))
+		reportResult(false, -1, nil, fmt.Sprintf("failed to create stderr pipe: %v", err), false)
 		return
 	}
 
 	if err := execCmd.Start(); err != nil {
-		reportResult(false, -1, "", "", fmt.Sprintf("failed to start script: %v", err))
+		reportResult(false, -1, nil, fmt.Sprintf("failed to start script: %v", err), false)
 		return
 	}
 
 	// Stream output in real-time.
-	var fullStdout, fullStderr bytes.Buffer
-	streamOutput(ctx, client, cfg, requestID, stdoutPipe, stderrPipe, &fullStdout, &fullStderr)
+	var fullLog logEntryBuffer
+	streamOutput(ctx, client, cfg, requestID, stdoutPipe, stderrPipe, &fullLog)
 
 	// Wait for the command to finish.
 	cmdErr := execCmd.Wait()
 
-	stdout := fullStdout.String()
-	stderr := fullStderr.String()
+	// Check if this was a user-initiated stop.
+	stoppedByUser := execCtx.Err() == context.Canceled
+
+	logEntries := fullLog.entries()
 
 	if cmdErr != nil {
 		exitCode := int32(-1)
 		if exitErr, ok := cmdErr.(*exec.ExitError); ok {
 			exitCode = int32(exitErr.ExitCode())
 		}
-		slog.Error("script failed", "filename", filename, "exit_code", exitCode, "request_id", requestID)
-		reportResult(false, exitCode, stdout, stderr, "")
+		if stoppedByUser {
+			slog.Info("script stopped by user", "filename", filename, "request_id", requestID)
+			reportResult(false, exitCode, logEntries, "Stopped by user", true)
+		} else {
+			slog.Error("script failed", "filename", filename, "exit_code", exitCode, "request_id", requestID)
+			reportResult(false, exitCode, logEntries, "", false)
+		}
 		return
 	}
 
 	slog.Info("script succeeded", "filename", filename, "request_id", requestID)
-	reportResult(true, 0, stdout, stderr, "")
+	reportResult(true, 0, logEntries, "", false)
+}
+
+// logEntryBuffer accumulates log entries in order for the final report.
+type logEntryBuffer struct {
+	mu      sync.Mutex
+	buf     []*v1.ScriptLogEntry
+}
+
+func (b *logEntryBuffer) append(stream v1.ScriptLogStream, text string) {
+	b.mu.Lock()
+	b.buf = append(b.buf, &v1.ScriptLogEntry{Stream: stream, Text: text})
+	b.mu.Unlock()
+}
+
+func (b *logEntryBuffer) entries() []*v1.ScriptLogEntry {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	result := make([]*v1.ScriptLogEntry, len(b.buf))
+	copy(result, b.buf)
+	return result
+}
+
+// chunkBuffer accumulates log entries for the next flush interval.
+type chunkBuffer struct {
+	mu  sync.Mutex
+	buf []*v1.ScriptLogEntry
+}
+
+func (c *chunkBuffer) append(stream v1.ScriptLogStream, text string) {
+	c.mu.Lock()
+	c.buf = append(c.buf, &v1.ScriptLogEntry{Stream: stream, Text: text})
+	c.mu.Unlock()
+}
+
+func (c *chunkBuffer) drain() []*v1.ScriptLogEntry {
+	c.mu.Lock()
+	entries := c.buf
+	c.buf = nil
+	c.mu.Unlock()
+	return entries
 }
 
 // streamOutput reads from stdout and stderr pipes concurrently, buffers the
@@ -141,10 +235,9 @@ func streamOutput(
 	cfg *config,
 	requestID string,
 	stdoutPipe, stderrPipe io.ReadCloser,
-	fullStdout, fullStderr *bytes.Buffer,
+	fullLog *logEntryBuffer,
 ) {
-	var mu sync.Mutex
-	var stdoutBuf, stderrBuf bytes.Buffer
+	var chunk chunkBuffer
 
 	// Read pipes into buffers concurrently.
 	var wg sync.WaitGroup
@@ -156,10 +249,8 @@ func streamOutput(
 		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 		for scanner.Scan() {
 			line := scanner.Text() + "\n"
-			mu.Lock()
-			stdoutBuf.WriteString(line)
-			fullStdout.WriteString(line)
-			mu.Unlock()
+			chunk.append(v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT, line)
+			fullLog.append(v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT, line)
 		}
 	}()
 
@@ -169,10 +260,8 @@ func streamOutput(
 		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 		for scanner.Scan() {
 			line := scanner.Text() + "\n"
-			mu.Lock()
-			stderrBuf.WriteString(line)
-			fullStderr.WriteString(line)
-			mu.Unlock()
+			chunk.append(v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDERR, line)
+			fullLog.append(v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDERR, line)
 		}
 	}()
 
@@ -189,10 +278,10 @@ func streamOutput(
 	for {
 		select {
 		case <-ticker.C:
-			flushOutputChunk(ctx, client, cfg, requestID, &mu, &stdoutBuf, &stderrBuf)
+			flushLogEntries(ctx, client, cfg, requestID, &chunk)
 		case <-doneCh:
 			// Pipes closed — flush any remaining data.
-			flushOutputChunk(ctx, client, cfg, requestID, &mu, &stdoutBuf, &stderrBuf)
+			flushLogEntries(ctx, client, cfg, requestID, &chunk)
 			return
 		case <-ctx.Done():
 			return
@@ -200,32 +289,24 @@ func streamOutput(
 	}
 }
 
-// flushOutputChunk sends accumulated stdout/stderr data to the server and
-// resets the buffers. It is a no-op when both buffers are empty.
-func flushOutputChunk(
+// flushLogEntries sends accumulated log entries to the server and
+// clears the buffer. It is a no-op when the buffer is empty.
+func flushLogEntries(
 	ctx context.Context,
 	client taskguildv1connect.AgentManagerServiceClient,
 	cfg *config,
 	requestID string,
-	mu *sync.Mutex,
-	stdoutBuf, stderrBuf *bytes.Buffer,
+	chunk *chunkBuffer,
 ) {
-	mu.Lock()
-	stdoutChunk := stdoutBuf.String()
-	stderrChunk := stderrBuf.String()
-	stdoutBuf.Reset()
-	stderrBuf.Reset()
-	mu.Unlock()
-
-	if stdoutChunk == "" && stderrChunk == "" {
+	entries := chunk.drain()
+	if len(entries) == 0 {
 		return
 	}
 
 	_, err := client.ReportScriptOutputChunk(ctx, connect.NewRequest(&v1.ReportScriptOutputChunkRequest{
 		RequestId:   requestID,
 		ProjectName: cfg.ProjectName,
-		StdoutChunk: stdoutChunk,
-		StderrChunk: stderrChunk,
+		Entries:     entries,
 	}))
 	if err != nil {
 		slog.Error("failed to send output chunk", "request_id", requestID, "error", err)

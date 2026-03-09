@@ -23,6 +23,9 @@ type ExecutionRequester interface {
 	// RequestScriptExecution sends an execute command to a connected agent-manager
 	// and returns a request_id for tracking the result.
 	RequestScriptExecution(projectID string, script *Script) (string, error)
+	// RequestScriptStop sends a stop command to connected agent-managers
+	// for the given project to cancel a running script execution.
+	RequestScriptStop(projectID string, requestID string) error
 }
 
 type Server struct {
@@ -237,10 +240,37 @@ func (s *Server) ExecuteScript(ctx context.Context, req *connect.Request[taskgui
 	}
 
 	// Register execution in the broker so subscribers can stream output.
-	s.broker.RegisterExecution(requestID)
+	s.broker.RegisterExecution(requestID, sc.ID, sc.ProjectID)
 
 	return connect.NewResponse(&taskguildv1.ExecuteScriptResponse{
 		RequestId: requestID,
+	}), nil
+}
+
+// StopScriptExecution stops a running script execution by sending a stop command to the agent.
+func (s *Server) StopScriptExecution(ctx context.Context, req *connect.Request[taskguildv1.StopScriptExecutionRequest]) (*connect.Response[taskguildv1.StopScriptExecutionResponse], error) {
+	requestID := req.Msg.RequestId
+	if requestID == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("request_id is required"))
+	}
+
+	projectID := s.broker.GetProjectID(requestID)
+	if projectID == "" {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("unknown execution request_id: %s", requestID))
+	}
+
+	if err := s.execReq.RequestScriptStop(projectID, requestID); err != nil {
+		return nil, fmt.Errorf("failed to request script stop: %w", err)
+	}
+
+	return connect.NewResponse(&taskguildv1.StopScriptExecutionResponse{}), nil
+}
+
+// ListActiveExecutions returns currently running and recently completed executions.
+func (s *Server) ListActiveExecutions(ctx context.Context, req *connect.Request[taskguildv1.ListActiveExecutionsRequest]) (*connect.Response[taskguildv1.ListActiveExecutionsResponse], error) {
+	executions := s.broker.ListExecutions(req.Msg.ProjectId)
+	return connect.NewResponse(&taskguildv1.ListActiveExecutionsResponse{
+		Executions: executions,
 	}), nil
 }
 

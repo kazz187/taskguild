@@ -104,6 +104,8 @@ message AgentCommand {
     // idle stream timeouts from HTTP/2 intermediaries or OS-level TCP settings.
     PingCommand ping = 12;
     CompareScriptsCommand compare_scripts = 13;
+    // StopScriptCommand tells the agent to stop a running script execution.
+    StopScriptCommand stop_script = 14;
   }
 }
 
@@ -370,9 +372,11 @@ message ReportScriptExecutionResultRequest {
   string script_id = 3;
   bool success = 4;           // true if exit code == 0
   int32 exit_code = 5;
-  string stdout = 6;
-  string stderr = 7;
+  reserved 6, 7;
+  reserved "stdout", "stderr";
   string error_message = 8;   // error description if execution failed to start
+  repeated ScriptLogEntry log_entries = 9;  // full interleaved log
+  bool stopped_by_user = 10;  // true if stopped by user request
 }
 message ReportScriptExecutionResultResponse {}
 
@@ -380,10 +384,16 @@ message ReportScriptExecutionResultResponse {}
 message ReportScriptOutputChunkRequest {
   string request_id = 1;
   string project_name = 2;
-  string stdout_chunk = 3;  // incremental stdout since last chunk
-  string stderr_chunk = 4;  // incremental stderr since last chunk
+  reserved 3, 4;
+  reserved "stdout_chunk", "stderr_chunk";
+  repeated ScriptLogEntry entries = 5;  // interleaved log entries
 }
 message ReportScriptOutputChunkResponse {}
+
+// StopScriptCommand tells the agent to stop a running script execution.
+message StopScriptCommand {
+  string request_id = 1;
+}
 
 // --- Script comparison & conflict resolution ---
 

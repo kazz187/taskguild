@@ -166,7 +166,8 @@ func runServer() {
 	// Setup agent-manager registry
 	agentManagerRegistry := agentmanager.NewRegistry()
 
-	// Setup script execution broker for real-time streaming
+	// Setup script execution broker for real-time streaming.
+	// StartCleanup is called later after the context is created.
 	scriptBroker := script.NewScriptExecutionBroker()
 
 	// Setup servers
@@ -230,6 +231,9 @@ func runServer() {
 	// Graceful shutdown context: responds to SIGTERM and SIGINT.
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
+
+	// Start broker cleanup goroutine for expired executions (TTL-based).
+	scriptBroker.StartCleanup(ctx)
 
 	// Handle SIGUSR1 for graceful hot-reload.
 	// When the sentinel detects a binary update it sends SIGUSR1 instead of

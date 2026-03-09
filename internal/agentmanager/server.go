@@ -1285,9 +1285,9 @@ func (s *Server) ReportScriptExecutionResult(ctx context.Context, req *connect.R
 			req.Msg.RequestId,
 			req.Msg.Success,
 			req.Msg.ExitCode,
-			req.Msg.Stdout,
-			req.Msg.Stderr,
+			req.Msg.LogEntries,
 			req.Msg.ErrorMessage,
+			req.Msg.StoppedByUser,
 		)
 	}
 
@@ -1323,7 +1323,7 @@ func (s *Server) ReportScriptOutputChunk(ctx context.Context, req *connect.Reque
 	}
 
 	if s.scriptBroker != nil {
-		s.scriptBroker.PushOutput(req.Msg.RequestId, req.Msg.StdoutChunk, req.Msg.StderrChunk)
+		s.scriptBroker.PushOutput(req.Msg.RequestId, req.Msg.Entries)
 	}
 
 	return connect.NewResponse(&taskguildv1.ReportScriptOutputChunkResponse{}), nil
@@ -1358,6 +1358,31 @@ func (s *Server) RequestScriptExecution(projectID string, sc *script.Script) (st
 	)
 
 	return requestID, nil
+}
+
+// RequestScriptStop sends a StopScriptCommand to connected agent-managers
+// for the project to cancel a running script execution.
+func (s *Server) RequestScriptStop(projectID string, requestID string) error {
+	proj, err := s.projectRepo.Get(context.Background(), projectID)
+	if err != nil {
+		return fmt.Errorf("failed to look up project: %w", err)
+	}
+
+	s.registry.BroadcastCommandToProject(proj.Name, &taskguildv1.AgentCommand{
+		Command: &taskguildv1.AgentCommand_StopScript{
+			StopScript: &taskguildv1.StopScriptCommand{
+				RequestId: requestID,
+			},
+		},
+	})
+
+	slog.Info("script stop requested",
+		"project_id", projectID,
+		"project_name", proj.Name,
+		"request_id", requestID,
+	)
+
+	return nil
 }
 
 func scriptToProto(s *script.Script) *taskguildv1.ScriptDefinition {
