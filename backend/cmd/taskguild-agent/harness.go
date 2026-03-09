@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	v1 "github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1"
+	"github.com/kazz187/taskguild/backend/gen/proto/taskguild/v1/taskguildv1connect"
 	"github.com/kazz187/taskguild/backend/pkg/clog"
+	"github.com/pmezard/go-difflib/difflib"
 )
 
 const (
@@ -37,6 +40,8 @@ Rules:
 
 // maybeRunAgentMDHarness checks the metadata flag and launches the AGENT.md
 // harness in a background goroutine if enabled.
+// It creates a dedicated taskLogger for the harness goroutine so that it is
+// independent of the caller's taskLogger lifecycle.
 func maybeRunAgentMDHarness(
 	ctx context.Context,
 	metadata map[string]string,
@@ -44,18 +49,33 @@ func maybeRunAgentMDHarness(
 	taskSummary string,
 	workDir string,
 	tl *taskLogger,
+	client taskguildv1connect.AgentManagerServiceClient,
 ) {
 	if metadata["_enable_agent_md_harness"] != "true" {
 		return
 	}
+
+	// Log the start using the caller's taskLogger (still alive at this point).
+	if tl != nil {
+		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+			"AGENT.md harness started in background", nil)
+	}
+
 	taskTitle := metadata["_task_title"]
 	taskDescription := metadata["_task_description"]
-	go runAgentMDHarness(ctx, taskID, taskTitle, taskDescription, taskSummary, workDir, tl)
+
+	// Create a dedicated taskLogger for the harness goroutine.
+	// This uses context.Background() so it is not tied to the parent context
+	// and will remain valid for the full lifetime of the harness execution.
+	harnessTL := newTaskLogger(context.Background(), client, taskID)
+
+	go runAgentMDHarness(ctx, taskID, taskTitle, taskDescription, taskSummary, workDir, harnessTL)
 }
 
 // runAgentMDHarness runs the AGENT.md review harness in a background goroutine.
 // It reviews the task summary, identifies failures, and updates AGENT.md
 // with lessons learned to prevent the same failures in future tasks.
+// The provided taskLogger is owned by this goroutine and will be closed on exit.
 func runAgentMDHarness(
 	ctx context.Context,
 	taskID string,
@@ -65,13 +85,15 @@ func runAgentMDHarness(
 	workDir string,
 	tl *taskLogger,
 ) {
+	defer tl.Close()
+
 	logger := clog.LoggerFromContext(ctx)
 	logger.Info("starting AGENT.md harness in background", "task_id", taskID)
 
-	if tl != nil {
-		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-			"AGENT.md harness started in background", nil)
-	}
+	agentMDPath := filepath.Join(workDir, agentMDFilename)
+
+	// Capture AGENT.md content before the harness runs.
+	beforeContent := readFileOrEmpty(agentMDPath)
 
 	// Build the user prompt with task context.
 	userPrompt := buildHarnessUserPrompt(taskID, taskTitle, taskDescription, taskSummary, workDir)
@@ -90,26 +112,30 @@ func runAgentMDHarness(
 	result, err := claudeagent.RunQuerySync(harnessCtx, userPrompt, opts)
 	if err != nil {
 		logger.Error("AGENT.md harness failed", "task_id", taskID, "error", err)
-		if tl != nil {
-			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
-				fmt.Sprintf("AGENT.md harness failed: %v", err), nil)
-		}
+		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
+			fmt.Sprintf("AGENT.md harness failed: %v", err), nil)
 		return
 	}
 
 	if result.Result != nil && result.Result.IsError {
 		logger.Error("AGENT.md harness returned error", "task_id", taskID, "result", result.Result.Result)
-		if tl != nil {
-			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
-				fmt.Sprintf("AGENT.md harness error: %s", result.Result.Result), nil)
-		}
+		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
+			fmt.Sprintf("AGENT.md harness error: %s", result.Result.Result), nil)
 		return
 	}
 
-	logger.Info("AGENT.md harness completed successfully", "task_id", taskID)
-	if tl != nil {
+	// Capture AGENT.md content after the harness runs and compute diff.
+	afterContent := readFileOrEmpty(agentMDPath)
+	diff := computeUnifiedDiff(agentMDFilename, beforeContent, afterContent)
+
+	if diff == "" {
+		logger.Info("AGENT.md harness completed, no changes", "task_id", taskID)
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-			"AGENT.md harness completed", nil)
+			"AGENT.md harness completed: No changes to AGENT.md", nil)
+	} else {
+		logger.Info("AGENT.md harness completed with changes", "task_id", taskID)
+		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+			fmt.Sprintf("AGENT.md harness completed\n\n%s", diff), nil)
 	}
 }
 
@@ -147,4 +173,30 @@ func buildHarnessUserPrompt(taskID, title, description, summary, workDir string)
 	}
 
 	return prompt
+}
+
+// readFileOrEmpty reads a file and returns its content as a string.
+// If the file does not exist or cannot be read, it returns an empty string.
+func readFileOrEmpty(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
+// computeUnifiedDiff computes a unified diff between two strings.
+// Returns an empty string if there are no differences.
+func computeUnifiedDiff(filename, before, after string) string {
+	diff, err := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
+		A:        difflib.SplitLines(before),
+		B:        difflib.SplitLines(after),
+		FromFile: "a/" + filename,
+		ToFile:   "b/" + filename,
+		Context:  3,
+	})
+	if err != nil {
+		return fmt.Sprintf("(failed to compute diff: %v)", err)
+	}
+	return strings.TrimRight(diff, "\n")
 }
