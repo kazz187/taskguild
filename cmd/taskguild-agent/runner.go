@@ -136,7 +136,7 @@ func runTask(
 	statusTransitionRetries := 0
 
 	for turn := 0; ; turn++ {
-		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, worktreeName, client, ctx, taskID, agentManagerID, waiter, permCache, scpCache, tl)
+		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, worktreeName, client, taskClient, ctx, taskID, agentManagerID, waiter, permCache, scpCache, tl)
 		// Override StderrCallback to also send to task logger.
 		opts.StderrCallback = func(line string) {
 			logger.Debug("claude-stderr", "line", line)
@@ -459,6 +459,7 @@ func buildClaudeOptions(
 	sessionID string,
 	worktreeName string,
 	client taskguildv1connect.AgentManagerServiceClient,
+	taskClient taskguildv1connect.TaskServiceClient,
 	ctx context.Context,
 	taskID string,
 	agentManagerID string,
@@ -505,7 +506,7 @@ func buildClaudeOptions(
 		StderrCallback: func(line string) {
 			logger.Debug("claude-stderr", "line", line)
 		},
-		Hooks: buildToolUseHooks(tl, taskID),
+		Hooks: buildToolUseHooks(tl, taskID, taskClient),
 	}
 
 	// Use --agent flag when a named agent is assigned; otherwise fall back to --system-prompt.
