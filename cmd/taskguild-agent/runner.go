@@ -157,7 +157,7 @@ func runTask(
 			logger.Debug("resuming session", "session_id", sessionID)
 		}
 
-		result, err := claudeagent.RunQuerySync(ctx, prompt, opts)
+		result, err := runQuerySyncWithLog(ctx, prompt, opts, workDir, taskID, fmt.Sprintf("task_turn%d", turn))
 
 		logger.Debug("Claude SDK output", "turn", turn)
 		if err != nil {
