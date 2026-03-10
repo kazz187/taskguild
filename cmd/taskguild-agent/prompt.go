@@ -118,3 +118,69 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 
 	return sb.String()
 }
+
+// buildWorkflowContext builds a concise workflow context block for the system prompt.
+// Returns "" if no workflow context is available.
+func buildWorkflowContext(metadata map[string]string) string {
+	if metadata["_workflow_id"] == "" {
+		return ""
+	}
+
+	var sb strings.Builder
+	sb.WriteString("## TaskGuild Workflow Context\n")
+	sb.WriteString("You are an agent in a TaskGuild workflow. Complete your work for the current status, then transition the task forward.\n")
+
+	// List all workflow statuses, marking the current one.
+	if statusesJSON := metadata["_workflow_statuses"]; statusesJSON != "" {
+		type statusEntry struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		}
+		var statuses []statusEntry
+		if err := json.Unmarshal([]byte(statusesJSON), &statuses); err == nil && len(statuses) > 0 {
+			currentID := metadata["_current_status_id"]
+			sb.WriteString("\n### Workflow Statuses\n")
+			for _, s := range statuses {
+				sb.WriteString(fmt.Sprintf("- %s: %s", s.ID, s.Name))
+				if s.ID == currentID {
+					sb.WriteString("  <-- current")
+				}
+				sb.WriteString("\n")
+			}
+		}
+	}
+
+	// List available transitions.
+	if transitionsJSON := metadata["_available_transitions"]; transitionsJSON != "" {
+		type transitionEntry struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		}
+		var transitions []transitionEntry
+		if err := json.Unmarshal([]byte(transitionsJSON), &transitions); err == nil && len(transitions) > 0 {
+			sb.WriteString("\n### Available Transitions\n")
+			for _, t := range transitions {
+				sb.WriteString(fmt.Sprintf("- %s: %s\n", t.ID, t.Name))
+			}
+		}
+	}
+
+	// List hooks only if configured.
+	if hooksJSON := metadata["_hooks"]; hooksJSON != "" {
+		type hookEntry struct {
+			Name       string `json:"name"`
+			ActionType string `json:"action_type"`
+			Trigger    string `json:"trigger"`
+		}
+		var hooks []hookEntry
+		if err := json.Unmarshal([]byte(hooksJSON), &hooks); err == nil && len(hooks) > 0 {
+			sb.WriteString("\n### Hooks\n")
+			sb.WriteString("Hooks run automatically for this status:\n")
+			for _, h := range hooks {
+				sb.WriteString(fmt.Sprintf("- %q (%s) — %s\n", h.Name, h.ActionType, h.Trigger))
+			}
+		}
+	}
+
+	return sb.String()
+}
