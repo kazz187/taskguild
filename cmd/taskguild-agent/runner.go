@@ -487,6 +487,15 @@ func buildClaudeOptions(
 		}
 	}
 
+	// Append workflow context to instructions for the system prompt.
+	if wfCtx := buildWorkflowContext(metadata); wfCtx != "" {
+		if instructions != "" {
+			instructions = instructions + "\n\n" + wfCtx
+		} else {
+			instructions = wfCtx
+		}
+	}
+
 	opts := &claudeagent.ClaudeAgentOptions{
 		Cwd:            cwd,
 		PermissionMode: permMode,
