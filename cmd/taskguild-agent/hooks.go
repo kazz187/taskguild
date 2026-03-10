@@ -31,7 +31,7 @@ type hookEntry struct {
 }
 
 // executeHooks parses _hooks from metadata, filters by trigger, and runs each
-// hook sequentially via claudeagent.RunQuerySync. Failures are logged but do
+// hook sequentially via runQuerySyncWithLog. Failures are logged but do
 // not block the main task.
 // If taskClient is provided, hook results containing TASK_METADATA directives
 // will be used to update the task's metadata.
@@ -82,7 +82,7 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 			MaxTurns:       &maxTurns,
 		}
 
-		result, err := claudeagent.RunQuerySync(hookCtx, h.Content, opts)
+		result, err := runQuerySyncWithLog(hookCtx, h.Content, opts, workDir, taskID, fmt.Sprintf("hook_%s", h.Name))
 		cancel()
 
 		if err != nil {
@@ -247,7 +247,7 @@ func translateToEnglishSlug(ctx context.Context, title, workDir string) string {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	result, err := claudeagent.RunQuerySync(timeoutCtx, prompt, opts)
+	result, err := runQuerySyncWithLog(timeoutCtx, prompt, opts, workDir, "", "translate_slug")
 	if err != nil || result.Result == nil {
 		slog.Warn("translateToEnglishSlug failed", "error", err)
 		return ""

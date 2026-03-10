@@ -129,7 +129,7 @@ func runAgentMDHarness(
 		MaxTurns:       &maxTurns,
 	}
 
-	result, err := claudeagent.RunQuerySync(harnessCtx, userPrompt, opts)
+	result, err := runQuerySyncWithLog(harnessCtx, userPrompt, opts, workDir, taskID, "harness")
 	if err != nil {
 		logger.Error("agent MD harness failed", "task_id", taskID, "error", err)
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
