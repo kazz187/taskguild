@@ -53,11 +53,11 @@ func handleStopScript(cmd *v1.StopScriptCommand) {
 
 // handleExecuteScript executes a script on the agent-manager machine and reports the result.
 // Output is streamed to the server in real-time via ReportScriptOutputChunk RPCs.
+// The script is read from the local .claude/scripts/{filename} file.
 func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, cfg *config, cmd *v1.ExecuteScriptCommand) {
 	requestID := cmd.GetRequestId()
 	scriptID := cmd.GetScriptId()
 	filename := cmd.GetFilename()
-	content := cmd.GetContent()
 
 	slog.Info("executing script", "script_id", scriptID, "request_id", requestID, "filename", filename)
 
@@ -91,19 +91,12 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 	scriptTracker.mu.Unlock()
 	defer scriptTracker.wg.Done()
 
-	// Write script to temporary file.
-	tmpDir := filepath.Join(cfg.WorkDir, ".claude", "scripts", ".tmp")
-	if err := os.MkdirAll(tmpDir, 0755); err != nil {
-		reportResult(false, -1, nil, fmt.Sprintf("failed to create temp directory: %v", err), false)
+	// Resolve the script file path from the local .claude/scripts/ directory.
+	scriptPath, err := resolveScriptPath(cfg.WorkDir, filename)
+	if err != nil {
+		reportResult(false, -1, nil, err.Error(), false)
 		return
 	}
-
-	tmpFile := filepath.Join(tmpDir, fmt.Sprintf("exec_%s_%s", requestID, filename))
-	if err := os.WriteFile(tmpFile, []byte(content), 0755); err != nil {
-		reportResult(false, -1, nil, fmt.Sprintf("failed to write temp script: %v", err), false)
-		return
-	}
-	defer os.Remove(tmpFile)
 
 	// Execute the script with piped stdout/stderr for streaming.
 	execCtx, cancel := context.WithTimeout(ctx, scriptExecutionTimeout)
@@ -119,7 +112,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 		runningScripts.mu.Unlock()
 	}()
 
-	execCmd := exec.CommandContext(execCtx, "/bin/sh", tmpFile)
+	execCmd := exec.CommandContext(execCtx, "/bin/sh", scriptPath)
 	execCmd.Dir = cfg.WorkDir
 	execCmd.Env = append(os.Environ(),
 		"TASKGUILD_PROJECT_NAME="+cfg.ProjectName,
@@ -220,6 +213,25 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 
 	slog.Info("script succeeded", "filename", filename, "request_id", requestID)
 	reportResult(true, 0, logEntries, "", false)
+}
+
+// resolveScriptPath returns the path to the script file to execute.
+// It looks up .claude/scripts/{filename} under workDir. If the file does not
+// exist, it returns an error instructing the user to run sync first.
+func resolveScriptPath(workDir, filename string) (string, error) {
+	localPath := filepath.Join(workDir, ".claude", "scripts", filename)
+	info, err := os.Stat(localPath)
+	if err != nil || info.IsDir() {
+		return "", fmt.Errorf("script file not found locally: %s; run sync first", filename)
+	}
+	// Ensure the local file is executable.
+	if info.Mode()&0111 == 0 {
+		if chmodErr := os.Chmod(localPath, 0755); chmodErr != nil {
+			slog.Warn("failed to set execute permission on script", "path", localPath, "error", chmodErr)
+		}
+	}
+	slog.Info("using local script file", "path", localPath)
+	return localPath, nil
 }
 
 // logEntryBuffer accumulates log entries in order for the final report.

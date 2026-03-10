@@ -51,6 +51,11 @@ type Server struct {
 	// populated by ReportAgentComparison and read by GetAgentComparison.
 	agentDiffMu    sync.RWMutex
 	agentDiffCache map[string][]*taskguildv1.AgentDiff // project_id -> diffs
+
+	// skillDiffCache stores the latest skill comparison per project_id,
+	// populated by ReportSkillComparison and read by GetSkillComparison.
+	skillDiffMu    sync.RWMutex
+	skillDiffCache map[string][]*taskguildv1.SkillDiff // project_id -> diffs
 }
 
 func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, projectRepo project.Repository, skillRepo skill.Repository, scriptRepo script.Repository, taskLogRepo tasklog.Repository, permissionRepo permission.Repository, scpRepo scp.Repository, eventBus *eventbus.Bus, scriptBroker *script.ScriptExecutionBroker) *Server {
@@ -71,5 +76,6 @@ func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workfl
 		worktreeCache:   make(map[string][]*taskguildv1.WorktreeInfo),
 		scriptDiffCache: make(map[string][]*taskguildv1.ScriptDiff),
 		agentDiffCache:  make(map[string][]*taskguildv1.AgentDiff),
+		skillDiffCache:  make(map[string][]*taskguildv1.SkillDiff),
 	}
 }

@@ -43,6 +43,7 @@ const (
 	EventType_EVENT_TYPE_TASK_UNARCHIVED         EventType = 15
 	EventType_EVENT_TYPE_SCRIPT_COMPARISON       EventType = 16
 	EventType_EVENT_TYPE_AGENT_COMPARISON        EventType = 17
+	EventType_EVENT_TYPE_SKILL_COMPARISON        EventType = 18
 )
 
 // Enum value maps for EventType.
@@ -66,6 +67,7 @@ var (
 		15: "EVENT_TYPE_TASK_UNARCHIVED",
 		16: "EVENT_TYPE_SCRIPT_COMPARISON",
 		17: "EVENT_TYPE_AGENT_COMPARISON",
+		18: "EVENT_TYPE_SKILL_COMPARISON",
 	}
 	EventType_value = map[string]int32{
 		"EVENT_TYPE_UNSPECIFIED":             0,
@@ -86,6 +88,7 @@ var (
 		"EVENT_TYPE_TASK_UNARCHIVED":         15,
 		"EVENT_TYPE_SCRIPT_COMPARISON":       16,
 		"EVENT_TYPE_AGENT_COMPARISON":        17,
+		"EVENT_TYPE_SKILL_COMPARISON":        18,
 	}
 )
 
@@ -273,7 +276,7 @@ const file_taskguild_v1_event_proto_rawDesc = "" +
 	"\vevent_types\x18\x01 \x03(\x0e2\x17.taskguild.v1.EventTypeR\n" +
 	"eventTypes\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x02 \x01(\tR\tprojectId*\xd6\x04\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId*\xf7\x04\n" +
 	"\tEventType\x12\x1a\n" +
 	"\x16EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17EVENT_TYPE_TASK_CREATED\x10\x01\x12\x1b\n" +
@@ -293,7 +296,8 @@ const file_taskguild_v1_event_proto_rawDesc = "" +
 	"\x18EVENT_TYPE_TASK_ARCHIVED\x10\x0e\x12\x1e\n" +
 	"\x1aEVENT_TYPE_TASK_UNARCHIVED\x10\x0f\x12 \n" +
 	"\x1cEVENT_TYPE_SCRIPT_COMPARISON\x10\x10\x12\x1f\n" +
-	"\x1bEVENT_TYPE_AGENT_COMPARISON\x10\x112^\n" +
+	"\x1bEVENT_TYPE_AGENT_COMPARISON\x10\x11\x12\x1f\n" +
+	"\x1bEVENT_TYPE_SKILL_COMPARISON\x10\x122^\n" +
 	"\fEventService\x12N\n" +
 	"\x0fSubscribeEvents\x12$.taskguild.v1.SubscribeEventsRequest\x1a\x13.taskguild.v1.Event0\x01B\xb0\x01\n" +
 	"\x10com.taskguild.v1B\n" +

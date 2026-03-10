@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -284,6 +285,67 @@ func TestStreamOutput_ContextCancelled(t *testing.T) {
 	stderrR.Close()
 }
 
+// --- resolveScriptPath ---
+
+func TestResolveScriptPath_LocalFile(t *testing.T) {
+	workDir := t.TempDir()
+	scriptsDir := filepath.Join(workDir, ".claude", "scripts")
+	os.MkdirAll(scriptsDir, 0755)
+	os.WriteFile(filepath.Join(scriptsDir, "test.sh"), []byte("#!/bin/sh\necho ok"), 0755)
+
+	path, err := resolveScriptPath(workDir, "test.sh")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if path != filepath.Join(scriptsDir, "test.sh") {
+		t.Errorf("expected local path, got %q", path)
+	}
+}
+
+func TestResolveScriptPath_LocalFileWithoutExecPermission(t *testing.T) {
+	workDir := t.TempDir()
+	scriptsDir := filepath.Join(workDir, ".claude", "scripts")
+	os.MkdirAll(scriptsDir, 0755)
+	os.WriteFile(filepath.Join(scriptsDir, "test.sh"), []byte("#!/bin/sh\necho ok"), 0644)
+
+	path, err := resolveScriptPath(workDir, "test.sh")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Verify execute permission was added
+	info, _ := os.Stat(path)
+	if info.Mode()&0111 == 0 {
+		t.Error("expected execute permission to be set")
+	}
+	_ = path
+}
+
+func TestResolveScriptPath_FileNotFound(t *testing.T) {
+	workDir := t.TempDir()
+
+	_, err := resolveScriptPath(workDir, "missing.sh")
+	if err == nil {
+		t.Fatal("expected error for missing file")
+	}
+	if !strings.Contains(err.Error(), "not found locally") {
+		t.Errorf("expected 'not found locally' in error, got: %q", err.Error())
+	}
+}
+
+// --- writeTestScript helper ---
+
+// writeTestScript creates a script file at .claude/scripts/{filename} and returns the scripts dir.
+func writeTestScript(t *testing.T, workDir, filename, content string) {
+	t.Helper()
+	scriptsDir := filepath.Join(workDir, ".claude", "scripts")
+	if err := os.MkdirAll(scriptsDir, 0755); err != nil {
+		t.Fatalf("failed to create scripts dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(scriptsDir, filename), []byte(content), 0755); err != nil {
+		t.Fatalf("failed to write script: %v", err)
+	}
+}
+
 // --- handleExecuteScript (end-to-end) ---
 
 func TestHandleExecuteScript_Success(t *testing.T) {
@@ -294,11 +356,12 @@ func TestHandleExecuteScript_Success(t *testing.T) {
 		WorkDir:     workDir,
 	}
 
+	writeTestScript(t, workDir, "hello.sh", "#!/bin/sh\necho hello\necho world")
+
 	cmd := &v1.ExecuteScriptCommand{
 		RequestId: "req-test-1",
 		ScriptId:  "sc-1",
 		Filename:  "hello.sh",
-		Content:   "#!/bin/sh\necho hello\necho world",
 	}
 
 	handleExecuteScript(context.Background(), mock, cfg, cmd)
@@ -343,11 +406,10 @@ func TestHandleExecuteScript_Success(t *testing.T) {
 		t.Errorf("expected result log to contain 'hello' and 'world', got: %q", resultText)
 	}
 
-	// Verify temp file was cleaned up
-	tmpDir := workDir + "/.claude/scripts/.tmp"
-	entries, err := os.ReadDir(tmpDir)
-	if err == nil && len(entries) > 0 {
-		t.Errorf("expected temp file to be cleaned up, but found %d files", len(entries))
+	// Verify the local script file was NOT deleted
+	scriptPath := filepath.Join(workDir, ".claude", "scripts", "hello.sh")
+	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
+		t.Error("local script file should not be deleted after execution")
 	}
 }
 
@@ -359,11 +421,12 @@ func TestHandleExecuteScript_ScriptFails(t *testing.T) {
 		WorkDir:     workDir,
 	}
 
+	writeTestScript(t, workDir, "fail.sh", "#!/bin/sh\necho failing >&2\nexit 42")
+
 	cmd := &v1.ExecuteScriptCommand{
 		RequestId: "req-fail",
 		ScriptId:  "sc-2",
 		Filename:  "fail.sh",
-		Content:   "#!/bin/sh\necho failing >&2\nexit 42",
 	}
 
 	handleExecuteScript(context.Background(), mock, cfg, cmd)
@@ -402,11 +465,12 @@ func TestHandleExecuteScript_StdoutAndStderrInterleaved(t *testing.T) {
 		WorkDir:     workDir,
 	}
 
+	writeTestScript(t, workDir, "mixed.sh", "#!/bin/sh\necho out1\necho err1 >&2\necho out2\necho err2 >&2")
+
 	cmd := &v1.ExecuteScriptCommand{
 		RequestId: "req-interleave",
 		ScriptId:  "sc-3",
 		Filename:  "mixed.sh",
-		Content:   "#!/bin/sh\necho out1\necho err1 >&2\necho out2\necho err2 >&2",
 	}
 
 	handleExecuteScript(context.Background(), mock, cfg, cmd)
@@ -445,11 +509,12 @@ func TestHandleExecuteScript_Stopped(t *testing.T) {
 		WorkDir:     workDir,
 	}
 
+	writeTestScript(t, workDir, "long.sh", "#!/bin/sh\nsleep 60")
+
 	cmd := &v1.ExecuteScriptCommand{
 		RequestId: "req-stop",
 		ScriptId:  "sc-4",
 		Filename:  "long.sh",
-		Content:   "#!/bin/sh\nsleep 60",
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -491,11 +556,12 @@ func TestHandleExecuteScript_RunningScriptsTracked(t *testing.T) {
 		WorkDir:     workDir,
 	}
 
+	writeTestScript(t, workDir, "slow.sh", "#!/bin/sh\nsleep 60")
+
 	cmd := &v1.ExecuteScriptCommand{
 		RequestId: "req-track",
 		ScriptId:  "sc-5",
 		Filename:  "slow.sh",
-		Content:   "#!/bin/sh\nsleep 60",
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -558,11 +624,12 @@ func TestHandleExecuteScript_RejectDuringHotReload(t *testing.T) {
 		scriptTracker.mu.Unlock()
 	}()
 
+	writeTestScript(t, workDir, "rejected.sh", "#!/bin/sh\necho should not run")
+
 	cmd := &v1.ExecuteScriptCommand{
 		RequestId: "req-reject",
 		ScriptId:  "sc-6",
 		Filename:  "rejected.sh",
-		Content:   "#!/bin/sh\necho should not run",
 	}
 
 	handleExecuteScript(context.Background(), mock, cfg, cmd)
@@ -581,6 +648,34 @@ func TestHandleExecuteScript_RejectDuringHotReload(t *testing.T) {
 	// No chunks should have been sent (script never ran)
 	if len(mock.getChunks()) != 0 {
 		t.Error("expected no output chunks for rejected script")
+	}
+}
+
+func TestHandleExecuteScript_LocalFileNotFound(t *testing.T) {
+	mock := &scriptMockClient{}
+	workDir := t.TempDir()
+	cfg := &config{
+		ProjectName: "test-proj",
+		WorkDir:     workDir,
+	}
+
+	cmd := &v1.ExecuteScriptCommand{
+		RequestId: "req-missing",
+		ScriptId:  "sc-7",
+		Filename:  "missing.sh",
+	}
+
+	handleExecuteScript(context.Background(), mock, cfg, cmd)
+
+	result := mock.getResult()
+	if result == nil {
+		t.Fatal("expected result to be reported")
+	}
+	if result.Success {
+		t.Error("expected success=false for missing script")
+	}
+	if !strings.Contains(result.ErrorMessage, "not found locally") {
+		t.Errorf("expected error about script not found, got: %q", result.ErrorMessage)
 	}
 }
 

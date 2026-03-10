@@ -123,6 +123,21 @@ const (
 	// AgentManagerServiceAddSingleCommandPermissionProcedure is the fully-qualified name of the
 	// AgentManagerService's AddSingleCommandPermission RPC.
 	AgentManagerServiceAddSingleCommandPermissionProcedure = "/taskguild.v1.AgentManagerService/AddSingleCommandPermission"
+	// AgentManagerServiceSyncSkillsProcedure is the fully-qualified name of the AgentManagerService's
+	// SyncSkills RPC.
+	AgentManagerServiceSyncSkillsProcedure = "/taskguild.v1.AgentManagerService/SyncSkills"
+	// AgentManagerServiceRequestSkillComparisonProcedure is the fully-qualified name of the
+	// AgentManagerService's RequestSkillComparison RPC.
+	AgentManagerServiceRequestSkillComparisonProcedure = "/taskguild.v1.AgentManagerService/RequestSkillComparison"
+	// AgentManagerServiceReportSkillComparisonProcedure is the fully-qualified name of the
+	// AgentManagerService's ReportSkillComparison RPC.
+	AgentManagerServiceReportSkillComparisonProcedure = "/taskguild.v1.AgentManagerService/ReportSkillComparison"
+	// AgentManagerServiceGetSkillComparisonProcedure is the fully-qualified name of the
+	// AgentManagerService's GetSkillComparison RPC.
+	AgentManagerServiceGetSkillComparisonProcedure = "/taskguild.v1.AgentManagerService/GetSkillComparison"
+	// AgentManagerServiceResolveSkillConflictProcedure is the fully-qualified name of the
+	// AgentManagerService's ResolveSkillConflict RPC.
+	AgentManagerServiceResolveSkillConflictProcedure = "/taskguild.v1.AgentManagerService/ResolveSkillConflict"
 )
 
 // AgentManagerServiceClient is a client for the taskguild.v1.AgentManagerService service.
@@ -191,6 +206,17 @@ type AgentManagerServiceClient interface {
 	ListSingleCommandPermissions(context.Context, *connect.Request[v1.ListSingleCommandPermissionsAgentRequest]) (*connect.Response[v1.ListSingleCommandPermissionsAgentResponse], error)
 	// AddSingleCommandPermission adds a new regex permission rule from an agent.
 	AddSingleCommandPermission(context.Context, *connect.Request[v1.AddSingleCommandPermissionRequest]) (*connect.Response[v1.AddSingleCommandPermissionResponse], error)
+	// SyncSkills returns all skill definitions for a project so the agent can
+	// write them as .claude/skills/{name}/SKILL.md files locally.
+	SyncSkills(context.Context, *connect.Request[v1.SyncSkillsRequest]) (*connect.Response[v1.SyncSkillsResponse], error)
+	// RequestSkillComparison triggers a skill comparison on connected agent-managers (called by frontend).
+	RequestSkillComparison(context.Context, *connect.Request[v1.RequestSkillComparisonRequest]) (*connect.Response[v1.RequestSkillComparisonResponse], error)
+	// ReportSkillComparison reports skill diffs from the agent-manager after comparison.
+	ReportSkillComparison(context.Context, *connect.Request[v1.ReportSkillComparisonRequest]) (*connect.Response[v1.ReportSkillComparisonResponse], error)
+	// GetSkillComparison returns the cached skill comparison result for a project.
+	GetSkillComparison(context.Context, *connect.Request[v1.GetSkillComparisonRequest]) (*connect.Response[v1.GetSkillComparisonResponse], error)
+	// ResolveSkillConflict resolves a single skill conflict between server and agent versions.
+	ResolveSkillConflict(context.Context, *connect.Request[v1.ResolveSkillConflictRequest]) (*connect.Response[v1.ResolveSkillConflictResponse], error)
 }
 
 // NewAgentManagerServiceClient constructs a client for the taskguild.v1.AgentManagerService
@@ -384,6 +410,36 @@ func NewAgentManagerServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(agentManagerServiceMethods.ByName("AddSingleCommandPermission")),
 			connect.WithClientOptions(opts...),
 		),
+		syncSkills: connect.NewClient[v1.SyncSkillsRequest, v1.SyncSkillsResponse](
+			httpClient,
+			baseURL+AgentManagerServiceSyncSkillsProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("SyncSkills")),
+			connect.WithClientOptions(opts...),
+		),
+		requestSkillComparison: connect.NewClient[v1.RequestSkillComparisonRequest, v1.RequestSkillComparisonResponse](
+			httpClient,
+			baseURL+AgentManagerServiceRequestSkillComparisonProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("RequestSkillComparison")),
+			connect.WithClientOptions(opts...),
+		),
+		reportSkillComparison: connect.NewClient[v1.ReportSkillComparisonRequest, v1.ReportSkillComparisonResponse](
+			httpClient,
+			baseURL+AgentManagerServiceReportSkillComparisonProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("ReportSkillComparison")),
+			connect.WithClientOptions(opts...),
+		),
+		getSkillComparison: connect.NewClient[v1.GetSkillComparisonRequest, v1.GetSkillComparisonResponse](
+			httpClient,
+			baseURL+AgentManagerServiceGetSkillComparisonProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("GetSkillComparison")),
+			connect.WithClientOptions(opts...),
+		),
+		resolveSkillConflict: connect.NewClient[v1.ResolveSkillConflictRequest, v1.ResolveSkillConflictResponse](
+			httpClient,
+			baseURL+AgentManagerServiceResolveSkillConflictProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("ResolveSkillConflict")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -419,6 +475,11 @@ type agentManagerServiceClient struct {
 	resolveAgentConflict         *connect.Client[v1.ResolveAgentConflictRequest, v1.ResolveAgentConflictResponse]
 	listSingleCommandPermissions *connect.Client[v1.ListSingleCommandPermissionsAgentRequest, v1.ListSingleCommandPermissionsAgentResponse]
 	addSingleCommandPermission   *connect.Client[v1.AddSingleCommandPermissionRequest, v1.AddSingleCommandPermissionResponse]
+	syncSkills                   *connect.Client[v1.SyncSkillsRequest, v1.SyncSkillsResponse]
+	requestSkillComparison       *connect.Client[v1.RequestSkillComparisonRequest, v1.RequestSkillComparisonResponse]
+	reportSkillComparison        *connect.Client[v1.ReportSkillComparisonRequest, v1.ReportSkillComparisonResponse]
+	getSkillComparison           *connect.Client[v1.GetSkillComparisonRequest, v1.GetSkillComparisonResponse]
+	resolveSkillConflict         *connect.Client[v1.ResolveSkillConflictRequest, v1.ResolveSkillConflictResponse]
 }
 
 // Subscribe calls taskguild.v1.AgentManagerService.Subscribe.
@@ -571,6 +632,31 @@ func (c *agentManagerServiceClient) AddSingleCommandPermission(ctx context.Conte
 	return c.addSingleCommandPermission.CallUnary(ctx, req)
 }
 
+// SyncSkills calls taskguild.v1.AgentManagerService.SyncSkills.
+func (c *agentManagerServiceClient) SyncSkills(ctx context.Context, req *connect.Request[v1.SyncSkillsRequest]) (*connect.Response[v1.SyncSkillsResponse], error) {
+	return c.syncSkills.CallUnary(ctx, req)
+}
+
+// RequestSkillComparison calls taskguild.v1.AgentManagerService.RequestSkillComparison.
+func (c *agentManagerServiceClient) RequestSkillComparison(ctx context.Context, req *connect.Request[v1.RequestSkillComparisonRequest]) (*connect.Response[v1.RequestSkillComparisonResponse], error) {
+	return c.requestSkillComparison.CallUnary(ctx, req)
+}
+
+// ReportSkillComparison calls taskguild.v1.AgentManagerService.ReportSkillComparison.
+func (c *agentManagerServiceClient) ReportSkillComparison(ctx context.Context, req *connect.Request[v1.ReportSkillComparisonRequest]) (*connect.Response[v1.ReportSkillComparisonResponse], error) {
+	return c.reportSkillComparison.CallUnary(ctx, req)
+}
+
+// GetSkillComparison calls taskguild.v1.AgentManagerService.GetSkillComparison.
+func (c *agentManagerServiceClient) GetSkillComparison(ctx context.Context, req *connect.Request[v1.GetSkillComparisonRequest]) (*connect.Response[v1.GetSkillComparisonResponse], error) {
+	return c.getSkillComparison.CallUnary(ctx, req)
+}
+
+// ResolveSkillConflict calls taskguild.v1.AgentManagerService.ResolveSkillConflict.
+func (c *agentManagerServiceClient) ResolveSkillConflict(ctx context.Context, req *connect.Request[v1.ResolveSkillConflictRequest]) (*connect.Response[v1.ResolveSkillConflictResponse], error) {
+	return c.resolveSkillConflict.CallUnary(ctx, req)
+}
+
 // AgentManagerServiceHandler is an implementation of the taskguild.v1.AgentManagerService service.
 type AgentManagerServiceHandler interface {
 	// Subscribe opens a server-stream for receiving commands from the backend.
@@ -637,6 +723,17 @@ type AgentManagerServiceHandler interface {
 	ListSingleCommandPermissions(context.Context, *connect.Request[v1.ListSingleCommandPermissionsAgentRequest]) (*connect.Response[v1.ListSingleCommandPermissionsAgentResponse], error)
 	// AddSingleCommandPermission adds a new regex permission rule from an agent.
 	AddSingleCommandPermission(context.Context, *connect.Request[v1.AddSingleCommandPermissionRequest]) (*connect.Response[v1.AddSingleCommandPermissionResponse], error)
+	// SyncSkills returns all skill definitions for a project so the agent can
+	// write them as .claude/skills/{name}/SKILL.md files locally.
+	SyncSkills(context.Context, *connect.Request[v1.SyncSkillsRequest]) (*connect.Response[v1.SyncSkillsResponse], error)
+	// RequestSkillComparison triggers a skill comparison on connected agent-managers (called by frontend).
+	RequestSkillComparison(context.Context, *connect.Request[v1.RequestSkillComparisonRequest]) (*connect.Response[v1.RequestSkillComparisonResponse], error)
+	// ReportSkillComparison reports skill diffs from the agent-manager after comparison.
+	ReportSkillComparison(context.Context, *connect.Request[v1.ReportSkillComparisonRequest]) (*connect.Response[v1.ReportSkillComparisonResponse], error)
+	// GetSkillComparison returns the cached skill comparison result for a project.
+	GetSkillComparison(context.Context, *connect.Request[v1.GetSkillComparisonRequest]) (*connect.Response[v1.GetSkillComparisonResponse], error)
+	// ResolveSkillConflict resolves a single skill conflict between server and agent versions.
+	ResolveSkillConflict(context.Context, *connect.Request[v1.ResolveSkillConflictRequest]) (*connect.Response[v1.ResolveSkillConflictResponse], error)
 }
 
 // NewAgentManagerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -826,6 +923,36 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 		connect.WithSchema(agentManagerServiceMethods.ByName("AddSingleCommandPermission")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentManagerServiceSyncSkillsHandler := connect.NewUnaryHandler(
+		AgentManagerServiceSyncSkillsProcedure,
+		svc.SyncSkills,
+		connect.WithSchema(agentManagerServiceMethods.ByName("SyncSkills")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentManagerServiceRequestSkillComparisonHandler := connect.NewUnaryHandler(
+		AgentManagerServiceRequestSkillComparisonProcedure,
+		svc.RequestSkillComparison,
+		connect.WithSchema(agentManagerServiceMethods.ByName("RequestSkillComparison")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentManagerServiceReportSkillComparisonHandler := connect.NewUnaryHandler(
+		AgentManagerServiceReportSkillComparisonProcedure,
+		svc.ReportSkillComparison,
+		connect.WithSchema(agentManagerServiceMethods.ByName("ReportSkillComparison")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentManagerServiceGetSkillComparisonHandler := connect.NewUnaryHandler(
+		AgentManagerServiceGetSkillComparisonProcedure,
+		svc.GetSkillComparison,
+		connect.WithSchema(agentManagerServiceMethods.ByName("GetSkillComparison")),
+		connect.WithHandlerOptions(opts...),
+	)
+	agentManagerServiceResolveSkillConflictHandler := connect.NewUnaryHandler(
+		AgentManagerServiceResolveSkillConflictProcedure,
+		svc.ResolveSkillConflict,
+		connect.WithSchema(agentManagerServiceMethods.ByName("ResolveSkillConflict")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/taskguild.v1.AgentManagerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AgentManagerServiceSubscribeProcedure:
@@ -888,6 +1015,16 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 			agentManagerServiceListSingleCommandPermissionsHandler.ServeHTTP(w, r)
 		case AgentManagerServiceAddSingleCommandPermissionProcedure:
 			agentManagerServiceAddSingleCommandPermissionHandler.ServeHTTP(w, r)
+		case AgentManagerServiceSyncSkillsProcedure:
+			agentManagerServiceSyncSkillsHandler.ServeHTTP(w, r)
+		case AgentManagerServiceRequestSkillComparisonProcedure:
+			agentManagerServiceRequestSkillComparisonHandler.ServeHTTP(w, r)
+		case AgentManagerServiceReportSkillComparisonProcedure:
+			agentManagerServiceReportSkillComparisonHandler.ServeHTTP(w, r)
+		case AgentManagerServiceGetSkillComparisonProcedure:
+			agentManagerServiceGetSkillComparisonHandler.ServeHTTP(w, r)
+		case AgentManagerServiceResolveSkillConflictProcedure:
+			agentManagerServiceResolveSkillConflictHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1015,4 +1152,24 @@ func (UnimplementedAgentManagerServiceHandler) ListSingleCommandPermissions(cont
 
 func (UnimplementedAgentManagerServiceHandler) AddSingleCommandPermission(context.Context, *connect.Request[v1.AddSingleCommandPermissionRequest]) (*connect.Response[v1.AddSingleCommandPermissionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.AddSingleCommandPermission is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) SyncSkills(context.Context, *connect.Request[v1.SyncSkillsRequest]) (*connect.Response[v1.SyncSkillsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.SyncSkills is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) RequestSkillComparison(context.Context, *connect.Request[v1.RequestSkillComparisonRequest]) (*connect.Response[v1.RequestSkillComparisonResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.RequestSkillComparison is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) ReportSkillComparison(context.Context, *connect.Request[v1.ReportSkillComparisonRequest]) (*connect.Response[v1.ReportSkillComparisonResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportSkillComparison is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) GetSkillComparison(context.Context, *connect.Request[v1.GetSkillComparisonRequest]) (*connect.Response[v1.GetSkillComparisonResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.GetSkillComparison is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) ResolveSkillConflict(context.Context, *connect.Request[v1.ResolveSkillConflictRequest]) (*connect.Response[v1.ResolveSkillConflictResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ResolveSkillConflict is not implemented"))
 }
