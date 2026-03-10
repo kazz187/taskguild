@@ -709,7 +709,7 @@ export function WorkflowForm({
                                 updateHook(s.key, h.key, { trigger: Number(e.target.value) as HookTrigger })
                               }
                               selectSize="xs"
-                              className="w-auto rounded text-[11px]"
+                              className="flex-[2] min-w-0 rounded text-[11px]"
                             >
                               <option value={HookTrigger.BEFORE_TASK_EXECUTION}>Before Task</option>
                               <option value={HookTrigger.AFTER_TASK_EXECUTION}>After Task</option>
@@ -727,7 +727,7 @@ export function WorkflowForm({
                                 })
                               }}
                               selectSize="xs"
-                              className="w-auto rounded text-[11px]"
+                              className="flex-[1] min-w-0 rounded text-[11px]"
                             >
                               <option value={HookActionType.SKILL}>Skill</option>
                               <option value={HookActionType.SCRIPT}>Script</option>
@@ -744,7 +744,7 @@ export function WorkflowForm({
                                   })
                                 }}
                                 selectSize="xs"
-                                className="flex-1 min-w-0 rounded text-[11px]"
+                                className="flex-[3] min-w-0 rounded text-[11px]"
                               >
                                 <option value="">Select script...</option>
                                 {scripts.map((sc) => (
@@ -765,7 +765,7 @@ export function WorkflowForm({
                                   })
                                 }}
                                 selectSize="xs"
-                                className="flex-1 min-w-0 rounded text-[11px]"
+                                className="flex-[3] min-w-0 rounded text-[11px]"
                               >
                                 <option value="">Select skill...</option>
                                 {skills.map((sk) => (
