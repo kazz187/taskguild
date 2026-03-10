@@ -26,12 +26,14 @@ const (
 // runningScripts tracks cancel functions for running script executions
 // so they can be stopped via StopScriptCommand.
 var runningScripts struct {
-	mu      sync.Mutex
-	cancels map[string]context.CancelFunc // requestID → cancel
+	mu          sync.Mutex
+	cancels     map[string]context.CancelFunc // requestID → cancel
+	userStopped map[string]bool               // requestID → true if stopped by user (not hot-reload)
 }
 
 func init() {
 	runningScripts.cancels = make(map[string]context.CancelFunc)
+	runningScripts.userStopped = make(map[string]bool)
 }
 
 // handleStopScript cancels a running script execution by its requestID.
@@ -41,6 +43,9 @@ func handleStopScript(cmd *v1.StopScriptCommand) {
 
 	runningScripts.mu.Lock()
 	cancel, ok := runningScripts.cancels[requestID]
+	if ok {
+		runningScripts.userStopped[requestID] = true
+	}
 	runningScripts.mu.Unlock()
 
 	if ok {
@@ -109,6 +114,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 	defer func() {
 		runningScripts.mu.Lock()
 		delete(runningScripts.cancels, requestID)
+		delete(runningScripts.userStopped, requestID)
 		runningScripts.mu.Unlock()
 	}()
 
@@ -191,8 +197,13 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 	// streamOutput returns).
 	cmdErr := <-waitCh
 
-	// Check if this was a user-initiated stop.
-	stoppedByUser := execCtx.Err() == context.Canceled
+	// Check if this was a user-initiated stop (via StopScriptCommand).
+	// Do not rely on execCtx.Err() == context.Canceled because the context
+	// can also be canceled by SIGUSR1 (hot-reload) or SIGINT/SIGTERM,
+	// which are not user-initiated stops.
+	runningScripts.mu.Lock()
+	stoppedByUser := runningScripts.userStopped[requestID]
+	runningScripts.mu.Unlock()
 
 	logEntries := fullLog.entries()
 

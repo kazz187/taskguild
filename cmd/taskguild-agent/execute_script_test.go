@@ -501,7 +501,7 @@ func TestHandleExecuteScript_StdoutAndStderrInterleaved(t *testing.T) {
 	}
 }
 
-func TestHandleExecuteScript_Stopped(t *testing.T) {
+func TestHandleExecuteScript_ParentContextCancelled(t *testing.T) {
 	mock := &scriptMockClient{}
 	workDir := t.TempDir()
 	cfg := &config{
@@ -512,7 +512,7 @@ func TestHandleExecuteScript_Stopped(t *testing.T) {
 	writeTestScript(t, workDir, "long.sh", "#!/bin/sh\nsleep 60")
 
 	cmd := &v1.ExecuteScriptCommand{
-		RequestId: "req-stop",
+		RequestId: "req-parent-cancel",
 		ScriptId:  "sc-4",
 		Filename:  "long.sh",
 	}
@@ -525,7 +525,8 @@ func TestHandleExecuteScript_Stopped(t *testing.T) {
 		close(done)
 	}()
 
-	// Wait a moment for the script to start, then cancel
+	// Wait a moment for the script to start, then cancel the parent context
+	// (simulating SIGINT/SIGTERM or hot-reload — NOT a user-initiated stop).
 	time.Sleep(200 * time.Millisecond)
 	cancel()
 
@@ -541,10 +542,111 @@ func TestHandleExecuteScript_Stopped(t *testing.T) {
 		t.Fatal("expected result to be reported")
 	}
 	if result.Success {
+		t.Error("expected success=false for cancelled script")
+	}
+	if result.StoppedByUser {
+		t.Error("expected stoppedByUser=false for parent context cancellation (not user-initiated)")
+	}
+}
+
+func TestHandleExecuteScript_StoppedByUser(t *testing.T) {
+	mock := &scriptMockClient{}
+	workDir := t.TempDir()
+	cfg := &config{
+		ProjectName: "test-proj",
+		WorkDir:     workDir,
+	}
+
+	writeTestScript(t, workDir, "long.sh", "#!/bin/sh\nsleep 60")
+
+	cmd := &v1.ExecuteScriptCommand{
+		RequestId: "req-user-stop",
+		ScriptId:  "sc-4b",
+		Filename:  "long.sh",
+	}
+
+	done := make(chan struct{})
+	go func() {
+		handleExecuteScript(context.Background(), mock, cfg, cmd)
+		close(done)
+	}()
+
+	// Wait for the script to register in runningScripts
+	time.Sleep(200 * time.Millisecond)
+
+	// Stop via handleStopScript (user-initiated stop)
+	handleStopScript(&v1.StopScriptCommand{RequestId: "req-user-stop"})
+
+	select {
+	case <-done:
+		// OK
+	case <-time.After(5 * time.Second):
+		t.Fatal("handleExecuteScript did not return after user stop")
+	}
+
+	result := mock.getResult()
+	if result == nil {
+		t.Fatal("expected result to be reported")
+	}
+	if result.Success {
 		t.Error("expected success=false for stopped script")
 	}
-	if result.StoppedByUser != true {
-		t.Error("expected stoppedByUser=true")
+	if !result.StoppedByUser {
+		t.Error("expected stoppedByUser=true for user-initiated stop")
+	}
+}
+
+func TestHandleExecuteScript_HotReloadDoesNotSetStoppedByUser(t *testing.T) {
+	mock := &scriptMockClient{}
+	workDir := t.TempDir()
+	cfg := &config{
+		ProjectName: "test-proj",
+		WorkDir:     workDir,
+	}
+
+	writeTestScript(t, workDir, "long.sh", "#!/bin/sh\nsleep 60")
+
+	cmd := &v1.ExecuteScriptCommand{
+		RequestId: "req-hotreload",
+		ScriptId:  "sc-4c",
+		Filename:  "long.sh",
+	}
+
+	done := make(chan struct{})
+	go func() {
+		handleExecuteScript(context.Background(), mock, cfg, cmd)
+		close(done)
+	}()
+
+	// Wait for the script to register in runningScripts
+	time.Sleep(200 * time.Millisecond)
+
+	// Cancel via runningScripts.cancels directly (mimicking SIGUSR1 handler
+	// which iterates cancels without setting userStopped)
+	runningScripts.mu.Lock()
+	cancelFn, ok := runningScripts.cancels["req-hotreload"]
+	runningScripts.mu.Unlock()
+	if !ok {
+		t.Fatal("expected script to be tracked in runningScripts")
+	}
+	cancelFn()
+
+	select {
+	case <-done:
+		// OK
+	case <-time.After(5 * time.Second):
+		t.Fatal("handleExecuteScript did not return after hot-reload cancellation")
+	}
+
+	result := mock.getResult()
+	if result == nil {
+		t.Fatal("expected result to be reported")
+	}
+	if result.Success {
+		t.Error("expected success=false for cancelled script")
+	}
+	if result.StoppedByUser {
+		t.Error("expected stoppedByUser=false for hot-reload cancellation")
 	}
 }
 
