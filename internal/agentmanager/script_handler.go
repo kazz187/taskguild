@@ -122,7 +122,8 @@ func (s *Server) RequestScriptExecution(requestID string, projectID string, sc *
 				RequestId: requestID,
 				ScriptId:  sc.ID,
 				Filename:  sc.Filename,
-				Content:   sc.Content,
+				// Content is no longer sent; the agent reads from the local
+				// .claude/scripts/{filename} file directly.
 			},
 		},
 	})

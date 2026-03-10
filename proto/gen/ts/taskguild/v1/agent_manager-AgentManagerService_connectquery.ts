@@ -210,3 +210,39 @@ export const listSingleCommandPermissions = AgentManagerService.method.listSingl
  * @generated from rpc taskguild.v1.AgentManagerService.AddSingleCommandPermission
  */
 export const addSingleCommandPermission = AgentManagerService.method.addSingleCommandPermission;
+
+/**
+ * SyncSkills returns all skill definitions for a project so the agent can
+ * write them as .claude/skills/{name}/SKILL.md files locally.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.SyncSkills
+ */
+export const syncSkills = AgentManagerService.method.syncSkills;
+
+/**
+ * RequestSkillComparison triggers a skill comparison on connected agent-managers (called by frontend).
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.RequestSkillComparison
+ */
+export const requestSkillComparison = AgentManagerService.method.requestSkillComparison;
+
+/**
+ * ReportSkillComparison reports skill diffs from the agent-manager after comparison.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.ReportSkillComparison
+ */
+export const reportSkillComparison = AgentManagerService.method.reportSkillComparison;
+
+/**
+ * GetSkillComparison returns the cached skill comparison result for a project.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.GetSkillComparison
+ */
+export const getSkillComparison = AgentManagerService.method.getSkillComparison;
+
+/**
+ * ResolveSkillConflict resolves a single skill conflict between server and agent versions.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.ResolveSkillConflict
+ */
+export const resolveSkillConflict = AgentManagerService.method.resolveSkillConflict;

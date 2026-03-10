@@ -8,6 +8,7 @@ import "taskguild/v1/interaction.proto";
 import "taskguild/v1/permission.proto";
 import "taskguild/v1/script.proto";
 import "taskguild/v1/single_command_permission.proto";
+import "taskguild/v1/skill.proto";
 import "taskguild/v1/task_log.proto";
 
 // AgentManagerService is the bidirectional communication channel between
@@ -77,6 +78,17 @@ service AgentManagerService {
   rpc ListSingleCommandPermissions(ListSingleCommandPermissionsAgentRequest) returns (ListSingleCommandPermissionsAgentResponse);
   // AddSingleCommandPermission adds a new regex permission rule from an agent.
   rpc AddSingleCommandPermission(AddSingleCommandPermissionRequest) returns (AddSingleCommandPermissionResponse);
+  // SyncSkills returns all skill definitions for a project so the agent can
+  // write them as .claude/skills/{name}/SKILL.md files locally.
+  rpc SyncSkills(SyncSkillsRequest) returns (SyncSkillsResponse);
+  // RequestSkillComparison triggers a skill comparison on connected agent-managers (called by frontend).
+  rpc RequestSkillComparison(RequestSkillComparisonRequest) returns (RequestSkillComparisonResponse);
+  // ReportSkillComparison reports skill diffs from the agent-manager after comparison.
+  rpc ReportSkillComparison(ReportSkillComparisonRequest) returns (ReportSkillComparisonResponse);
+  // GetSkillComparison returns the cached skill comparison result for a project.
+  rpc GetSkillComparison(GetSkillComparisonRequest) returns (GetSkillComparisonResponse);
+  // ResolveSkillConflict resolves a single skill conflict between server and agent versions.
+  rpc ResolveSkillConflict(ResolveSkillConflictRequest) returns (ResolveSkillConflictResponse);
 }
 
 // --- Subscribe stream ---
@@ -117,6 +129,11 @@ message AgentCommand {
     // CompareAgentsCommand tells the agent to compare its local .claude/agents/*.md
     // files with server-side versions and report any differences.
     CompareAgentsCommand compare_agents = 15;
+    // SyncSkillsCommand tells the agent to re-sync its local .claude/skills/ files.
+    SyncSkillsCommand sync_skills = 16;
+    // CompareSkillsCommand tells the agent to compare its local .claude/skills/
+    // files with server-side versions and report any differences.
+    CompareSkillsCommand compare_skills = 17;
   }
 }
 
@@ -367,11 +384,12 @@ message CompareScriptsCommand {
 }
 
 // ExecuteScriptCommand tells the agent to execute a specific script.
+// The agent reads the script from the local .claude/scripts/{filename} file.
 message ExecuteScriptCommand {
   string request_id = 1;
   string script_id = 2;
   string filename = 3;    // script filename (e.g. deploy.sh)
-  string content = 4;     // script content to execute
+  string content = 4;     // deprecated: no longer sent; kept for backward compatibility
 }
 
 message SyncScriptsRequest {
@@ -537,6 +555,88 @@ message ResolveAgentConflictRequest {
 }
 message ResolveAgentConflictResponse {
   AgentDefinition agent = 1;      // the resulting agent after resolution
+}
+
+// --- Skill sync & comparison ---
+
+// SyncSkillsCommand tells the agent to re-sync its local .claude/skills/ files.
+// When force_overwrite_skill_ids is non-empty, those skills should be overwritten
+// on the agent even if the local file already exists.
+message SyncSkillsCommand {
+  repeated string force_overwrite_skill_ids = 1;
+}
+
+// CompareSkillsCommand tells the agent to compare its local .claude/skills/
+// files with server-side versions and report any differences.
+message CompareSkillsCommand {
+  string request_id = 1;
+  repeated SkillDefinition skills = 2;  // all server-side skills for comparison
+}
+
+message SyncSkillsRequest {
+  string project_name = 1;
+}
+message SyncSkillsResponse {
+  repeated SkillDefinition skills = 1;
+}
+
+enum SkillDiffType {
+  SKILL_DIFF_TYPE_UNSPECIFIED = 0;
+  SKILL_DIFF_TYPE_MODIFIED = 1;      // both exist but content differs
+  SKILL_DIFF_TYPE_AGENT_ONLY = 2;    // exists on agent but not on server
+  SKILL_DIFF_TYPE_SERVER_ONLY = 3;   // exists on server but not on agent
+}
+
+message SkillDiff {
+  string skill_id = 1;         // empty if agent-only skill
+  string skill_name = 2;
+  string filename = 3;         // relative path (e.g. "my-skill/SKILL.md")
+  string server_content = 4;
+  string agent_content = 5;
+  SkillDiffType diff_type = 6;
+}
+
+enum SkillResolutionChoice {
+  SKILL_RESOLUTION_CHOICE_UNSPECIFIED = 0;
+  SKILL_RESOLUTION_CHOICE_SERVER = 1;   // overwrite local with server version
+  SKILL_RESOLUTION_CHOICE_AGENT = 2;    // keep local and update server
+}
+
+// RequestSkillComparison triggers a comparison on connected agents (called by frontend).
+message RequestSkillComparisonRequest {
+  string project_id = 1;
+}
+message RequestSkillComparisonResponse {
+  string request_id = 1;
+}
+
+// ReportSkillComparison is sent by the agent after comparing local skills with server versions.
+message ReportSkillComparisonRequest {
+  string request_id = 1;
+  string project_name = 2;
+  repeated SkillDiff diffs = 3;
+}
+message ReportSkillComparisonResponse {}
+
+// GetSkillComparison returns the cached comparison result for a project.
+message GetSkillComparisonRequest {
+  string project_id = 1;
+}
+message GetSkillComparisonResponse {
+  repeated SkillDiff diffs = 1;
+}
+
+// ResolveSkillConflict resolves a single skill conflict between server and agent.
+message ResolveSkillConflictRequest {
+  string project_id = 1;
+  string skill_id = 2;          // empty if agent-only (will create new)
+  string skill_name = 3;
+  string filename = 4;
+  SkillResolutionChoice choice = 5;
+  string agent_content = 6;      // only needed when choice = AGENT
+}
+message ResolveSkillConflictResponse {
+  SkillDefinition skill = 1;   // the resulting skill after resolution
 }
 
 // --- Single Command Permissions ---

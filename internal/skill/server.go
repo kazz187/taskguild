@@ -19,12 +19,29 @@ import (
 
 var _ taskguildv1connect.SkillServiceHandler = (*Server)(nil)
 
-type Server struct {
-	repo Repository
+// ChangeNotifier is called after skill CRUD operations to notify connected
+// agents that they should re-sync their local skill definitions.
+type ChangeNotifier interface {
+	NotifySkillChange(projectID string)
 }
 
-func NewServer(repo Repository) *Server {
-	return &Server{repo: repo}
+type Server struct {
+	repo     Repository
+	notifier ChangeNotifier
+}
+
+func NewServer(repo Repository, notifier ...ChangeNotifier) *Server {
+	s := &Server{repo: repo}
+	if len(notifier) > 0 {
+		s.notifier = notifier[0]
+	}
+	return s
+}
+
+func (s *Server) notifyChange(projectID string) {
+	if s.notifier != nil {
+		s.notifier.NotifySkillChange(projectID)
+	}
 }
 
 func (s *Server) CreateSkill(ctx context.Context, req *connect.Request[taskguildv1.CreateSkillRequest]) (*connect.Response[taskguildv1.CreateSkillResponse], error) {
@@ -49,6 +66,7 @@ func (s *Server) CreateSkill(ctx context.Context, req *connect.Request[taskguild
 	if err := s.repo.Create(ctx, sk); err != nil {
 		return nil, err
 	}
+	s.notifyChange(sk.ProjectID)
 	return connect.NewResponse(&taskguildv1.CreateSkillResponse{
 		Skill: toProto(sk),
 	}), nil
@@ -126,18 +144,21 @@ func (s *Server) UpdateSkill(ctx context.Context, req *connect.Request[taskguild
 	if err := s.repo.Update(ctx, sk); err != nil {
 		return nil, err
 	}
+	s.notifyChange(sk.ProjectID)
 	return connect.NewResponse(&taskguildv1.UpdateSkillResponse{
 		Skill: toProto(sk),
 	}), nil
 }
 
 func (s *Server) DeleteSkill(ctx context.Context, req *connect.Request[taskguildv1.DeleteSkillRequest]) (*connect.Response[taskguildv1.DeleteSkillResponse], error) {
-	if _, err := s.repo.Get(ctx, req.Msg.Id); err != nil {
+	sk, err := s.repo.Get(ctx, req.Msg.Id)
+	if err != nil {
 		return nil, err
 	}
 	if err := s.repo.Delete(ctx, req.Msg.Id); err != nil {
 		return nil, err
 	}
+	s.notifyChange(sk.ProjectID)
 	return connect.NewResponse(&taskguildv1.DeleteSkillResponse{}), nil
 }
 

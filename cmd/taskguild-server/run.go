@@ -110,6 +110,26 @@ func (n *scpChangeNotifier) NotifySingleCommandPermissionChange(projectID string
 	})
 }
 
+// skillChangeNotifier implements skill.ChangeNotifier by broadcasting
+// a SyncSkillsCommand to connected agents in the same project.
+type skillChangeNotifier struct {
+	registry    *agentmanager.Registry
+	projectRepo project.Repository
+}
+
+func (n *skillChangeNotifier) NotifySkillChange(projectID string) {
+	p, err := n.projectRepo.Get(context.Background(), projectID)
+	if err != nil {
+		slog.Error("failed to look up project for skill change notification", "project_id", projectID, "error", err)
+		return
+	}
+	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
+		Command: &taskguildv1.AgentCommand_SyncSkills{
+			SyncSkills: &taskguildv1.SyncSkillsCommand{},
+		},
+	})
+}
+
 func runServer() {
 	env, err := config.LoadEnv()
 	if err != nil {
@@ -181,7 +201,11 @@ func runServer() {
 		projectRepo: projectRepo,
 	}
 	agentServer := agent.NewServer(agentRepo, agentChangeNotifier)
-	skillServer := skill.NewServer(skillRepo)
+	skillChangeNotifier := &skillChangeNotifier{
+		registry:    agentManagerRegistry,
+		projectRepo: projectRepo,
+	}
+	skillServer := skill.NewServer(skillRepo, skillChangeNotifier)
 	scriptServer := script.NewServer(scriptRepo, agentManagerServer, scriptBroker)
 	taskLogServer := tasklog.NewServer(taskLogRepo, taskRepo)
 	eventServer := event.NewServer(bus)

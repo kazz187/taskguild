@@ -231,6 +231,7 @@ func runAgent() {
 		firstSync = false
 		syncPermissions(ctx, client, cfg, permCache)
 		syncScripts(ctx, client, cfg, nil) // nil = don't force-overwrite any existing files
+		syncSkills(ctx, client, cfg, nil)
 
 		err := runSubscribeLoop(ctx, client, taskClient, interClient, cfg, &mu, activeTasks, &wg, sem, permCache, scpCache)
 		if ctx.Err() != nil {
@@ -441,6 +442,20 @@ func runSubscribeLoop(
 			compareCmd := c.CompareAgents
 			slog.Info("received compare agents command", "request_id", compareCmd.GetRequestId())
 			go handleCompareAgents(ctx, client, cfg, compareCmd)
+
+		case *v1.AgentCommand_SyncSkills:
+			syncCmd := c.SyncSkills
+			forceIDs := make(map[string]bool, len(syncCmd.GetForceOverwriteSkillIds()))
+			for _, id := range syncCmd.GetForceOverwriteSkillIds() {
+				forceIDs[id] = true
+			}
+			slog.Info("received sync skills command, re-syncing", "force_overwrite_count", len(forceIDs))
+			syncSkills(ctx, client, cfg, forceIDs)
+
+		case *v1.AgentCommand_CompareSkills:
+			compareCmd := c.CompareSkills
+			slog.Info("received compare skills command", "request_id", compareCmd.GetRequestId())
+			go handleCompareSkills(ctx, client, cfg, compareCmd)
 
 		case *v1.AgentCommand_CancelTask:
 			cancelCmd := c.CancelTask
