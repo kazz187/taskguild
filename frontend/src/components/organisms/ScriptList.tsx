@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import {
   listScripts,
@@ -6,9 +6,6 @@ import {
   updateScript,
   deleteScript,
   syncScriptsFromDir,
-  executeScript,
-  stopScriptExecution,
-  listActiveExecutions,
 } from '@taskguild/proto/taskguild/v1/script-ScriptService_connectquery.ts'
 import { saveAsTemplate, listTemplates } from '@taskguild/proto/taskguild/v1/template-TemplateService_connectquery.ts'
 import {
@@ -16,119 +13,19 @@ import {
   getScriptComparison,
   resolveScriptConflict,
 } from '@taskguild/proto/taskguild/v1/agent_manager-AgentManagerService_connectquery.ts'
-import {
-  ScriptService,
-  StreamScriptExecutionRequestSchema,
-  ScriptLogStream,
-} from '@taskguild/proto/taskguild/v1/script_pb.ts'
-import type { ScriptDefinition, ScriptLogEntry } from '@taskguild/proto/taskguild/v1/script_pb.ts'
+import type { ScriptDefinition } from '@taskguild/proto/taskguild/v1/script_pb.ts'
 import type { ScriptDiff } from '@taskguild/proto/taskguild/v1/agent_manager_pb.ts'
 import { ScriptDiffType, ScriptResolutionChoice } from '@taskguild/proto/taskguild/v1/agent_manager_pb.ts'
 import type { Template } from '@taskguild/proto/taskguild/v1/template_pb.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { Terminal, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud, Play, Square, CheckCircle, XCircle, StopCircle, Loader2, Layers, Copy, AlertTriangle, Server, Monitor } from 'lucide-react'
-import { createClient } from '@connectrpc/connect'
-import { create } from '@bufbuild/protobuf'
-import { transport } from '@/lib/transport'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
-import { AutoScrollPre } from './AutoScrollPre'
 import { Button, Input, Textarea, Badge } from '../atoms/index.ts'
 import { Card, FormField, Modal } from '../molecules/index.ts'
-
-interface ScriptFormData {
-  name: string
-  description: string
-  filename: string
-  content: string
-}
-
-const emptyForm: ScriptFormData = {
-  name: '',
-  description: '',
-  filename: '',
-  content: '',
-}
-
-function scriptToForm(s: ScriptDefinition): ScriptFormData {
-  return {
-    name: s.name,
-    description: s.description,
-    filename: s.filename,
-    content: s.content,
-  }
-}
-
-interface LogEntry {
-  stream: 'stdout' | 'stderr'
-  text: string
-}
-
-interface ExecutionResult {
-  scriptId: string
-  requestId: string
-  completed: boolean
-  success?: boolean
-  exitCode?: number
-  logEntries: LogEntry[]
-  errorMessage?: string
-  stoppedByUser?: boolean
-}
-
-function protoLogToLocal(entries: ScriptLogEntry[]): LogEntry[] {
-  return entries.map(e => ({
-    stream: e.stream === ScriptLogStream.STDERR ? 'stderr' : 'stdout',
-    text: e.text,
-  }))
-}
-
-function diffTypeLabel(dt: ScriptDiffType): string {
-  switch (dt) {
-    case ScriptDiffType.MODIFIED: return 'Modified'
-    case ScriptDiffType.AGENT_ONLY: return 'Agent only'
-    case ScriptDiffType.SERVER_ONLY: return 'Server only'
-    default: return 'Unknown'
-  }
-}
-
-/**
- * Groups consecutive log entries with the same stream type into single spans.
- * This dramatically reduces DOM element count (e.g. 30,000 entries → ~100 spans).
- */
-function groupLogEntries(entries: LogEntry[]): { stream: 'stdout' | 'stderr'; text: string }[] {
-  if (entries.length === 0) return []
-  const groups: { stream: 'stdout' | 'stderr'; text: string }[] = []
-  let current = { stream: entries[0].stream, text: entries[0].text }
-  for (let i = 1; i < entries.length; i++) {
-    if (entries[i].stream === current.stream) {
-      current.text += entries[i].text
-    } else {
-      groups.push(current)
-      current = { stream: entries[i].stream, text: entries[i].text }
-    }
-  }
-  groups.push(current)
-  return groups
-}
-
-/** Renders interleaved log entries with stderr in red, grouped for performance */
-function LogOutput({ entries, className }: { entries: LogEntry[]; className: string }) {
-  const groups = useMemo(() => groupLogEntries(entries), [entries])
-  return (
-    <AutoScrollPre
-      scrollKey={entries.length}
-      className={className}
-    >
-      {groups.map((group, i) => (
-        <span
-          key={i}
-          className={group.stream === 'stderr' ? 'text-red-400' : 'text-gray-300'}
-        >
-          {group.text}
-        </span>
-      ))}
-    </AutoScrollPre>
-  )
-}
+import { emptyForm, scriptToForm, diffTypeLabel } from './ScriptListUtils'
+import type { ScriptFormData } from './ScriptListUtils'
+import { LogOutput } from './LogOutput'
+import { useScriptExecution } from './useScriptExecution'
 
 export function ScriptList({ projectId }: { projectId: string }) {
   const { data, refetch, isLoading } = useQuery(listScripts, { projectId })
@@ -136,8 +33,6 @@ export function ScriptList({ projectId }: { projectId: string }) {
   const updateMut = useMutation(updateScript)
   const deleteMut = useMutation(deleteScript)
   const syncMut = useMutation(syncScriptsFromDir)
-  const executeMut = useMutation(executeScript)
-  const stopMut = useMutation(stopScriptExecution)
   const saveTemplateMut = useMutation(saveAsTemplate)
   const { data: templatesData, refetch: refetchTemplates } = useQuery(listTemplates, { entityType: 'script' })
 
@@ -149,13 +44,6 @@ export function ScriptList({ projectId }: { projectId: string }) {
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<ScriptFormData>(emptyForm)
-  const [executionResults, setExecutionResults] = useState<Map<string, ExecutionResult>>(new Map())
-
-  // Mutable log buffers keyed by scriptId. Logs are appended here without
-  // triggering React state updates, then a render counter is bumped to
-  // re-render at a throttled rate.
-  const logBuffersRef = useRef<Map<string, LogEntry[]>>(new Map())
-  const renderTimerRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   // Template dialog state
   const [saveTemplateDialog, setSaveTemplateDialog] = useState<{ scriptId: string; name: string; description: string } | null>(null)
@@ -166,11 +54,8 @@ export function ScriptList({ projectId }: { projectId: string }) {
   // When resolving from a Run click, store the script to execute after resolution
   const [pendingExecuteScript, setPendingExecuteScript] = useState<ScriptDefinition | null>(null)
 
-  // Track AbortControllers for active streams.
-  const streamAbortRef = useRef<Map<string, AbortController>>(new Map())
-
-  // Track whether we've already reconnected to active executions on mount.
-  const reconnectedRef = useRef(false)
+  // Script execution hook
+  const { executionResults, doExecute, handleStop, clearResult, stopMut } = useScriptExecution(projectId)
 
   const scripts = data?.scripts ?? []
   const scriptTemplates = templatesData?.templates ?? []
@@ -192,47 +77,6 @@ export function ScriptList({ projectId }: { projectId: string }) {
     refetch()
   }, [refetchComparison, refetch])
   useEventSubscription(comparisonEventTypes, projectId, onComparisonEvent)
-
-  // Cleanup active streams and render timers on unmount.
-  useEffect(() => {
-    return () => {
-      streamAbortRef.current.forEach((controller) => controller.abort())
-      renderTimerRef.current.forEach((timer) => clearTimeout(timer))
-    }
-  }, [])
-
-  // Reconnect to active/recent executions on mount (page reload support).
-  useEffect(() => {
-    if (reconnectedRef.current) return
-    reconnectedRef.current = true
-
-    const client = createClient(ScriptService, transport)
-    // Use the listActiveExecutions query descriptor to build a manual call
-    const fetchActiveExecutions = async () => {
-      try {
-        const resp = await client.listActiveExecutions({ projectId })
-        for (const exec of resp.executions) {
-          // Set initial state
-          setExecutionResults(prev => {
-            const next = new Map(prev)
-            if (next.has(exec.scriptId)) return next // already tracked
-            next.set(exec.scriptId, {
-              scriptId: exec.scriptId,
-              requestId: exec.requestId,
-              completed: false,
-              logEntries: [],
-            })
-            return next
-          })
-          // Reconnect to stream (late-joiner will get buffered events)
-          startStream(exec.scriptId, exec.requestId)
-        }
-      } catch (e) {
-        console.error('Failed to fetch active executions:', e)
-      }
-    }
-    fetchActiveExecutions()
-  }, [projectId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const openCreate = () => {
     setFormMode('create')
@@ -311,166 +155,6 @@ export function ScriptList({ projectId }: { projectId: string }) {
     })
   }
 
-  // Schedule a throttled re-render for log output updates. Multiple output
-  // events within the interval are batched into a single React re-render.
-  const scheduleLogRender = useCallback((scriptId: string) => {
-    if (renderTimerRef.current.has(scriptId)) return // already scheduled
-    renderTimerRef.current.set(scriptId, setTimeout(() => {
-      renderTimerRef.current.delete(scriptId)
-      // Snapshot the current log buffer into state so React re-renders.
-      const entries = logBuffersRef.current.get(scriptId)
-      if (entries) {
-        setExecutionResults(prev => {
-          const next = new Map(prev)
-          const existing = next.get(scriptId)
-          if (!existing) return next
-          // Only update logEntries reference (shallow copy of the array).
-          next.set(scriptId, { ...existing, logEntries: entries.slice() })
-          return next
-        })
-      }
-    }, 200))
-  }, [])
-
-  const startStream = useCallback(async (scriptId: string, requestId: string) => {
-    const client = createClient(ScriptService, transport)
-    const controller = new AbortController()
-    streamAbortRef.current.set(scriptId, controller)
-
-    // Initialize log buffer for this script.
-    if (!logBuffersRef.current.has(scriptId)) {
-      logBuffersRef.current.set(scriptId, [])
-    }
-
-    try {
-      const req = create(StreamScriptExecutionRequestSchema, { requestId })
-      console.log('[ScriptStream] connecting', { scriptId, requestId })
-      for await (const event of client.streamScriptExecution(req, {
-        signal: controller.signal,
-      })) {
-        if (event.event.case === 'output') {
-          const chunk = event.event.value
-          const newEntries = protoLogToLocal(chunk.entries)
-          console.debug('[ScriptStream] received output chunk', { scriptId, entries: newEntries.length })
-          // Append to mutable buffer (no React state update per chunk).
-          const buf = logBuffersRef.current.get(scriptId)
-          if (buf) {
-            buf.push(...newEntries)
-          }
-          // Schedule a throttled re-render.
-          scheduleLogRender(scriptId)
-        } else if (event.event.case === 'complete') {
-          const result = event.event.value
-          // Cancel any pending render timer — we'll do a final render now.
-          const timer = renderTimerRef.current.get(scriptId)
-          if (timer) {
-            clearTimeout(timer)
-            renderTimerRef.current.delete(scriptId)
-          }
-          const completeEntries = result.logEntries.length > 0
-            ? protoLogToLocal(result.logEntries)
-            : undefined
-          // Use complete entries or current buffer for final state.
-          const finalEntries = completeEntries ?? logBuffersRef.current.get(scriptId)?.slice() ?? []
-          setExecutionResults(prev => {
-            const next = new Map(prev)
-            next.set(scriptId, {
-              scriptId,
-              requestId,
-              completed: true,
-              success: result.success,
-              exitCode: result.exitCode,
-              logEntries: finalEntries,
-              errorMessage: result.errorMessage,
-              stoppedByUser: result.stoppedByUser,
-            })
-            return next
-          })
-        } else {
-          console.warn('[ScriptStream] unknown event case', event.event.case)
-        }
-      }
-    } catch (e) {
-      if (controller.signal.aborted) return
-      console.error('Stream error:', e)
-      // Cancel any pending render timer.
-      const timer = renderTimerRef.current.get(scriptId)
-      if (timer) {
-        clearTimeout(timer)
-        renderTimerRef.current.delete(scriptId)
-      }
-      setExecutionResults(prev => {
-        const next = new Map(prev)
-        const existing = next.get(scriptId)
-        if (existing && !existing.completed) {
-          next.set(scriptId, {
-            ...existing,
-            logEntries: logBuffersRef.current.get(scriptId)?.slice() ?? existing.logEntries,
-            completed: true,
-            success: false,
-            errorMessage: e instanceof Error ? e.message : 'Stream connection lost',
-          })
-        }
-        return next
-      })
-    } finally {
-      streamAbortRef.current.delete(scriptId)
-    }
-  }, [scheduleLogRender])
-
-  const doExecute = (script: ScriptDefinition) => {
-    // Reset log buffer for this script.
-    logBuffersRef.current.set(script.id, [])
-
-    // Set pending state.
-    setExecutionResults(prev => {
-      const next = new Map(prev)
-      next.set(script.id, {
-        scriptId: script.id,
-        requestId: '',
-        completed: false,
-        logEntries: [],
-      })
-      return next
-    })
-
-    executeMut.mutate(
-      { projectId, scriptId: script.id },
-      {
-        onSuccess: (resp) => {
-          const requestId = resp.requestId
-          setExecutionResults(prev => {
-            const next = new Map(prev)
-            next.set(script.id, {
-              scriptId: script.id,
-              requestId,
-              completed: false,
-              logEntries: [],
-            })
-            return next
-          })
-
-          // Start server stream for real-time output.
-          startStream(script.id, requestId)
-        },
-        onError: (err) => {
-          setExecutionResults(prev => {
-            const next = new Map(prev)
-            next.set(script.id, {
-              scriptId: script.id,
-              requestId: '',
-              completed: true,
-              success: false,
-              logEntries: [],
-              errorMessage: err.message,
-            })
-            return next
-          })
-        },
-      },
-    )
-  }
-
   const handleExecute = (script: ScriptDefinition) => {
     // Check if this script has an unresolved diff.
     const diff = diffByScriptId.get(script.id)
@@ -481,10 +165,6 @@ export function ScriptList({ projectId }: { projectId: string }) {
       return
     }
     doExecute(script)
-  }
-
-  const handleStop = (requestId: string) => {
-    stopMut.mutate({ requestId })
   }
 
   const handleResolveConflict = (diff: ScriptDiff, choice: ScriptResolutionChoice) => {
@@ -512,27 +192,6 @@ export function ScriptList({ projectId }: { projectId: string }) {
         },
       },
     )
-  }
-
-  const clearResult = (scriptId: string) => {
-    // Abort any active stream.
-    const controller = streamAbortRef.current.get(scriptId)
-    if (controller) {
-      controller.abort()
-      streamAbortRef.current.delete(scriptId)
-    }
-    // Clean up log buffer and render timer.
-    logBuffersRef.current.delete(scriptId)
-    const timer = renderTimerRef.current.get(scriptId)
-    if (timer) {
-      clearTimeout(timer)
-      renderTimerRef.current.delete(scriptId)
-    }
-    setExecutionResults(prev => {
-      const next = new Map(prev)
-      next.delete(scriptId)
-      return next
-    })
   }
 
   const mutation = formMode === 'create' ? createMut : updateMut
