@@ -20,16 +20,32 @@ import (
 // It buffers responses that arrive before a waiter registers (race condition between
 // CreateInteraction and Register).
 type interactionWaiter struct {
-	mu      sync.Mutex
-	waiters map[string]chan *v1.Interaction // interaction_id -> ch
-	pending map[string]*v1.Interaction      // arrived before Register()
+	mu        sync.Mutex
+	waiters   map[string]chan *v1.Interaction // interaction_id -> ch
+	pending   map[string]*v1.Interaction      // arrived before Register()
+	userMsgCh chan *v1.Interaction             // task-level channel for user-initiated messages
 }
 
 func newInteractionWaiter() *interactionWaiter {
 	return &interactionWaiter{
-		waiters: make(map[string]chan *v1.Interaction),
-		pending: make(map[string]*v1.Interaction),
+		waiters:   make(map[string]chan *v1.Interaction),
+		pending:   make(map[string]*v1.Interaction),
+		userMsgCh: make(chan *v1.Interaction, 16),
 	}
+}
+
+// DeliverUserMessage sends a user-initiated message to the task-level channel.
+// Non-blocking: if the channel is full the message is dropped (logged by caller).
+func (w *interactionWaiter) DeliverUserMessage(inter *v1.Interaction) {
+	select {
+	case w.userMsgCh <- inter:
+	default:
+	}
+}
+
+// UserMessages returns the receive-only channel for user-initiated messages.
+func (w *interactionWaiter) UserMessages() <-chan *v1.Interaction {
+	return w.userMsgCh
 }
 
 // Register returns a channel that will receive the responded interaction.
@@ -142,6 +158,15 @@ func deliverInteraction(taskID string, inter *v1.Interaction, waiter *interactio
 		return
 	}
 	logger := slog.Default().With("task_id", taskID)
+
+	// User-initiated messages (sent via "Send a message") are routed to
+	// the task-level channel instead of the ID-based waiter.
+	if inter.GetType() == v1.InteractionType_INTERACTION_TYPE_USER_MESSAGE {
+		logger.Debug("user message received", "interaction_id", inter.GetId(), "source", source)
+		waiter.DeliverUserMessage(inter)
+		return
+	}
+
 	switch inter.GetStatus() {
 	case v1.InteractionStatus_INTERACTION_STATUS_RESPONDED:
 		logger.Debug("interaction responded", "interaction_id", inter.GetId(), "source", source)
@@ -206,6 +231,16 @@ func waitForUserResponse(
 		}
 		logger.Info("user responded to interaction", "interaction_id", interactionID)
 		return inter.GetResponse(), nil
+	case msg := <-waiter.UserMessages():
+		// User sent a free-form message via "Send a message" — use it as
+		// the response and expire the pending QUESTION interaction.
+		logger.Info("user sent message while waiting for input", "interaction_id", interactionID, "message_id", msg.GetId())
+		if _, expErr := interClient.ExpireInteraction(ctx, connect.NewRequest(&v1.ExpireInteractionRequest{
+			Id: interactionID,
+		})); expErr != nil {
+			logger.Error("failed to expire interaction", "interaction_id", interactionID, "error", expErr)
+		}
+		return msg.GetTitle(), nil
 	}
 }
 
