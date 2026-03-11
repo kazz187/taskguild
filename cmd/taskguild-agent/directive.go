@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -19,11 +20,11 @@ var errInvalidTransition = errors.New("invalid status transition")
 
 // createTaskDirective holds parsed CREATE_TASK directive fields.
 type createTaskDirective struct {
-	Title          string
-	Description    string
-	StatusID       string // could be status name, resolved from _workflow_statuses
-	UseWorktree    *bool
-	Worktree       string
+	Title       string
+	Description string
+	StatusID    string // could be status name, resolved from _workflow_statuses
+	UseWorktree *bool
+	Worktree    string
 }
 
 // parseCreateTasks extracts all CREATE_TASK_START...CREATE_TASK_END blocks from the result text.
@@ -152,12 +153,12 @@ func createTaskFromDirective(
 	}
 
 	req := &v1.CreateTaskRequest{
-		ProjectId:      projectID,
-		WorkflowId:     workflowID,
-		Title:          directive.Title,
-		Description:    directive.Description,
-		UseWorktree:    useWorktree,
-		Metadata:       taskMeta,
+		ProjectId:   projectID,
+		WorkflowId:  workflowID,
+		Title:       directive.Title,
+		Description: directive.Description,
+		UseWorktree: useWorktree,
+		Metadata:    taskMeta,
 	}
 	if statusID != "" {
 		req.StatusId = &statusID
@@ -334,11 +335,11 @@ func validateAndResolveTransition(nextStatusID string, metadata map[string]strin
 	return "", fmt.Errorf("%w: %q (available: %s)", errInvalidTransition, nextStatusID, formatTransitionList(transitions))
 }
 
-// formatTransitionList formats a list of transitions as "ID (Name), ..." for error messages.
+// formatTransitionList formats a list of transitions as "Name, ..." for error messages.
 func formatTransitionList(transitions []transitionEntry) string {
 	parts := make([]string, len(transitions))
 	for i, t := range transitions {
-		parts[i] = fmt.Sprintf("%s (%s)", t.ID, t.Name)
+		parts[i] = t.Name
 	}
 	return strings.Join(parts, ", ")
 }
@@ -353,13 +354,13 @@ func buildTransitionRetryPrompt(failedStatusID string, metadata map[string]strin
 	if err == nil && len(transitions) > 0 {
 		sb.WriteString("Valid transitions are:\n")
 		for _, t := range transitions {
-			sb.WriteString(fmt.Sprintf("- %s: %s\n", t.ID, t.Name))
+			sb.WriteString(fmt.Sprintf("- %s\n", t.Name))
 		}
 	}
 
 	sb.WriteString("\nPlease output the correct status on the LAST LINE of your response in the format:\n")
-	sb.WriteString("NEXT_STATUS: <status_id>\n\n")
-	sb.WriteString("Use ONLY one of the status IDs listed above.")
+	sb.WriteString("NEXT_STATUS: <status>\n\n")
+	sb.WriteString("Use ONLY one of the statuses listed above.")
 	return sb.String()
 }
 
@@ -450,5 +451,23 @@ func saveTaskDescription(ctx context.Context, taskClient taskguildv1connect.Task
 		logger.Error("failed to save task description", "error", err)
 	} else {
 		logger.Info("task description updated", "description_length", len(description))
+	}
+}
+
+func savePlanResult(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, planFilePath string) {
+	logger := clog.LoggerFromContext(ctx)
+	content, err := os.ReadFile(planFilePath)
+	if err != nil {
+		logger.Error("failed to read plan file", "path", planFilePath, "error", err)
+		return
+	}
+	_, err = taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
+		Id:       taskID,
+		Metadata: map[string]string{"plan_result": string(content)},
+	}))
+	if err != nil {
+		logger.Error("failed to save plan_result", "error", err)
+	} else {
+		logger.Info("plan_result saved", "path", planFilePath, "content_length", len(content))
 	}
 }

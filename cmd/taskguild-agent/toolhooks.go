@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -8,11 +9,17 @@ import (
 
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
+	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
 
 // buildToolUseHooks creates PostToolUse and PostToolUseFail hook matchers
 // that log tool invocations (with input and output) to the task timeline.
-func buildToolUseHooks(tl *taskLogger, taskID string) map[claudeagent.HookEvent][]*claudeagent.HookMatcher {
+// When a taskClient is provided, it also tracks plan file writes and saves
+// the plan content to task metadata when ExitPlanMode is called.
+func buildToolUseHooks(tl *taskLogger, taskID string, taskClient taskguildv1connect.TaskServiceClient) map[claudeagent.HookEvent][]*claudeagent.HookMatcher {
+	// Track the most recently written plan file path across hook invocations.
+	var planFilePath string
+
 	return map[claudeagent.HookEvent][]*claudeagent.HookMatcher{
 		claudeagent.HookEventPostToolUse: {
 			{
@@ -20,6 +27,21 @@ func buildToolUseHooks(tl *taskLogger, taskID string) map[claudeagent.HookEvent]
 				Hooks: []claudeagent.HookCallback{
 					func(input claudeagent.HookInput, toolUseID string, ctx claudeagent.HookContext) (claudeagent.HookOutput, error) {
 						logToolUse(tl, taskID, input, false)
+
+						// Track plan file writes.
+						if input.ToolName == "Write" || input.ToolName == "Edit" {
+							if fp, ok := input.ToolInput["file_path"].(string); ok {
+								if strings.Contains(fp, ".claude/plans/") {
+									planFilePath = fp
+								}
+							}
+						}
+
+						// Save plan result when ExitPlanMode is called.
+						if input.ToolName == "ExitPlanMode" && planFilePath != "" && taskClient != nil {
+							savePlanResult(context.Background(), taskClient, taskID, planFilePath)
+						}
+
 						return claudeagent.HookOutput{}, nil
 					},
 				},
