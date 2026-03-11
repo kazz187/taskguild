@@ -353,7 +353,7 @@ func buildTransitionRetryPrompt(failedStatusID string, metadata map[string]strin
 	if err == nil && len(transitions) > 0 {
 		sb.WriteString("Valid transitions are:\n")
 		for _, t := range transitions {
-			sb.WriteString(fmt.Sprintf("- %s\n", t.Name))
+			sb.WriteString(fmt.Sprintf("- %s (%s)\n", t.Name, t.ID))
 		}
 	}
 
