@@ -27,21 +27,21 @@ func TestBuildWorkflowContext(t *testing.T) {
 			name: "full metadata with hooks",
 			metadata: map[string]string{
 				"_workflow_id":           "wf1",
-				"_current_status_id":    "s2",
-				"_current_status_name":  "In Progress",
-				"_workflow_statuses":    `[{"id":"s1","name":"Backlog"},{"id":"s2","name":"In Progress"},{"id":"s3","name":"Review"},{"id":"s4","name":"Done"}]`,
+				"_current_status_id":     "s2",
+				"_current_status_name":   "In Progress",
+				"_workflow_statuses":     `[{"id":"s1","name":"Backlog"},{"id":"s2","name":"In Progress"},{"id":"s3","name":"Review"},{"id":"s4","name":"Done"}]`,
 				"_available_transitions": `[{"id":"s3","name":"Review"}]`,
-				"_hooks":                `[{"name":"Run linter","action_type":"skill","trigger":"before_task_execution"},{"name":"Deploy check","action_type":"script","trigger":"after_task_execution"}]`,
+				"_hooks":                 `[{"name":"Run linter","action_type":"skill","trigger":"before_task_execution"},{"name":"Deploy check","action_type":"script","trigger":"after_task_execution"}]`,
 			},
 			contains: []string{
 				"## TaskGuild Workflow Context",
 				"### Workflow Statuses",
-				"- s1: Backlog\n",
-				"- s2: In Progress  <-- current\n",
-				"- s3: Review\n",
-				"- s4: Done\n",
+				"- Backlog\n",
+				"- In Progress  <-- current\n",
+				"- Review\n",
+				"- Done\n",
 				"### Available Transitions",
-				"- s3: Review\n",
+				"- Review\n",
 				"### Hooks",
 				`"Run linter" (skill)`,
 				"before_task_execution",
@@ -53,15 +53,15 @@ func TestBuildWorkflowContext(t *testing.T) {
 			name: "full metadata without hooks",
 			metadata: map[string]string{
 				"_workflow_id":           "wf1",
-				"_current_status_id":    "s1",
-				"_current_status_name":  "Backlog",
-				"_workflow_statuses":    `[{"id":"s1","name":"Backlog"},{"id":"s2","name":"In Progress"}]`,
+				"_current_status_id":     "s1",
+				"_current_status_name":   "Backlog",
+				"_workflow_statuses":     `[{"id":"s1","name":"Backlog"},{"id":"s2","name":"In Progress"}]`,
 				"_available_transitions": `[{"id":"s2","name":"In Progress"}]`,
 			},
 			contains: []string{
 				"### Workflow Statuses",
-				"- s1: Backlog  <-- current\n",
-				"- s2: In Progress\n",
+				"- Backlog  <-- current\n",
+				"- In Progress\n",
 				"### Available Transitions",
 			},
 			excludes: []string{
@@ -72,9 +72,9 @@ func TestBuildWorkflowContext(t *testing.T) {
 			name: "malformed JSON graceful handling",
 			metadata: map[string]string{
 				"_workflow_id":           "wf1",
-				"_workflow_statuses":    `invalid json`,
+				"_workflow_statuses":     `invalid json`,
 				"_available_transitions": `also invalid`,
-				"_hooks":                `not json`,
+				"_hooks":                 `not json`,
 			},
 			contains: []string{
 				"## TaskGuild Workflow Context",
@@ -88,7 +88,7 @@ func TestBuildWorkflowContext(t *testing.T) {
 		{
 			name: "empty hooks array omits section",
 			metadata: map[string]string{
-				"_workflow_id":        "wf1",
+				"_workflow_id":       "wf1",
 				"_workflow_statuses": `[{"id":"s1","name":"Draft"}]`,
 				"_hooks":             `[]`,
 			},
@@ -99,14 +99,14 @@ func TestBuildWorkflowContext(t *testing.T) {
 		{
 			name: "current status marker on correct status",
 			metadata: map[string]string{
-				"_workflow_id":        "wf1",
+				"_workflow_id":       "wf1",
 				"_current_status_id": "s3",
 				"_workflow_statuses": `[{"id":"s1","name":"A"},{"id":"s2","name":"B"},{"id":"s3","name":"C"}]`,
 			},
 			contains: []string{
-				"- s1: A\n",
-				"- s2: B\n",
-				"- s3: C  <-- current\n",
+				"- A\n",
+				"- B\n",
+				"- C  <-- current\n",
 			},
 		},
 	}

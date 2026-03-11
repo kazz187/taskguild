@@ -41,9 +41,9 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 			}
 			sb.WriteString("Available next statuses:\n")
 			for _, t := range transitions {
-				sb.WriteString(fmt.Sprintf("- %s: %s\n", t.ID, t.Name))
+				sb.WriteString(fmt.Sprintf("- %s\n", t.Name))
 			}
-			sb.WriteString("\nAfter completing the task, output your chosen next status on the last line:\nNEXT_STATUS: <status_id>\n")
+			sb.WriteString("\nAfter completing the task, output your chosen next status on the last line:\nNEXT_STATUS: <status>\n")
 		}
 	}
 
@@ -62,7 +62,7 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 	sb.WriteString("```\n")
 	sb.WriteString("CREATE_TASK_START\n")
 	sb.WriteString("title: Task title (required)\n")
-	sb.WriteString("status: Status ID or status name (optional)\n")
+	sb.WriteString("status: Status name (optional)\n")
 	sb.WriteString("use_worktree: true or false (optional, inherits current task setting)\n")
 	sb.WriteString("worktree: existing-worktree-name (optional)\n")
 	sb.WriteString("\n")
@@ -82,7 +82,7 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 		if err := json.Unmarshal([]byte(statusesJSON), &statuses); err == nil && len(statuses) > 0 {
 			sb.WriteString("\nAvailable statuses for new tasks:\n")
 			for _, s := range statuses {
-				sb.WriteString(fmt.Sprintf("- %s: %s\n", s.ID, s.Name))
+				sb.WriteString(fmt.Sprintf("- %s\n", s.Name))
 			}
 		}
 	}
@@ -141,7 +141,7 @@ func buildWorkflowContext(metadata map[string]string) string {
 			currentID := metadata["_current_status_id"]
 			sb.WriteString("\n### Workflow Statuses\n")
 			for _, s := range statuses {
-				sb.WriteString(fmt.Sprintf("- %s: %s", s.ID, s.Name))
+				sb.WriteString(fmt.Sprintf("- %s", s.Name))
 				if s.ID == currentID {
 					sb.WriteString("  <-- current")
 				}
@@ -160,7 +160,7 @@ func buildWorkflowContext(metadata map[string]string) string {
 		if err := json.Unmarshal([]byte(transitionsJSON), &transitions); err == nil && len(transitions) > 0 {
 			sb.WriteString("\n### Available Transitions\n")
 			for _, t := range transitions {
-				sb.WriteString(fmt.Sprintf("- %s: %s\n", t.ID, t.Name))
+				sb.WriteString(fmt.Sprintf("- %s\n", t.Name))
 			}
 		}
 	}

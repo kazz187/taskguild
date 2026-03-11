@@ -13,6 +13,7 @@ import (
 
 	"connectrpc.com/connect"
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
+
 	v1 "github.com/kazz187/taskguild/gen/proto/taskguild/v1"
 	"github.com/kazz187/taskguild/gen/proto/taskguild/v1/taskguildv1connect"
 	"github.com/kazz187/taskguild/pkg/clog"
@@ -412,6 +413,27 @@ func runTask(
 			return
 		}
 
+		// No NEXT_STATUS output but transitions exist — try auto-transition
+		// if exactly one transition is available.
+		if transitions, err := parseAvailableTransitions(metadata); err == nil && len(transitions) == 1 {
+			autoID := transitions[0].ID
+			autoName := transitions[0].Name
+			logger.Info("no NEXT_STATUS output, auto-transitioning (single transition available)",
+				"next_status_id", autoID, "next_status_name", autoName, "turn", turn)
+			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+				fmt.Sprintf("No NEXT_STATUS output; auto-transitioning to %s (%s)", autoID, autoName), nil)
+			reportTaskResult(ctx, client, taskID, summary, "")
+			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (auto-transition)")
+			afterHooks()
+			maybeRunAgentMDHarness(ctx, metadata, taskID, summary, workDir, tl, client)
+			if err := handleStatusTransition(ctx, taskClient, taskID, autoID, metadata, tl); err != nil {
+				logger.Error("auto status transition failed", "error", err)
+				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
+					fmt.Sprintf("Auto status transition to %q failed: %v", autoID, err), nil)
+			}
+			return
+		}
+
 		// Claude hasn't completed — wait for user input.
 		logger.Info("waiting for user input", "turn", turn)
 		reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "waiting for user input")
@@ -425,6 +447,14 @@ func runTask(
 					"Max user response retries reached, force-completing task", nil)
 				reportTaskResult(ctx, client, taskID, summary, "")
 				reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task force-completed (no NEXT_STATUS after retries)")
+				// Attempt auto-transition on force-complete so the task
+				// does not remain stuck at the current status.
+				afterHooks()
+				if err := handleStatusTransition(ctx, taskClient, taskID, "", metadata, tl); err != nil {
+					logger.Warn("auto-transition on force-complete failed", "error", err)
+					tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
+						fmt.Sprintf("Auto-transition on force-complete failed: %v", err), nil)
+				}
 				return
 			}
 			logger.Warn("user response timeout, prompting for NEXT_STATUS", "retry", userResponseRetries, "max_retries", maxUserResponseRetries)
@@ -433,7 +463,7 @@ func runTask(
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "retrying: requesting NEXT_STATUS")
 			prompt = "You appear to have completed your work but did not output a NEXT_STATUS directive. " +
 				"Please review the available status transitions and output your chosen next status on the LAST LINE of your response in the format:\n" +
-				"NEXT_STATUS: <status_id>\n\n" +
+				"NEXT_STATUS: <status>\n\n" +
 				"If you still need user input, clearly state what you need."
 			continue
 		}
@@ -441,6 +471,11 @@ func runTask(
 			logger.Error("user response error, completing task", "error", err)
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (no user response)")
+			// Attempt auto-transition so the task does not remain stuck.
+			afterHooks()
+			if transErr := handleStatusTransition(ctx, taskClient, taskID, "", metadata, tl); transErr != nil {
+				logger.Warn("auto-transition on user response error failed", "error", transErr)
+			}
 			return
 		}
 
