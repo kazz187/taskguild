@@ -3,7 +3,7 @@ import { useDraggable } from '@dnd-kit/core'
 import { useNavigate } from '@tanstack/react-router'
 import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { TaskAssignmentStatus } from '@taskguild/proto/taskguild/v1/task_pb.ts'
-import { Bot, Clock, GitBranch, Loader, Pencil, ArrowRight, AlertTriangle, CopyPlus, ArrowUpRight, Layers } from 'lucide-react'
+import { Bot, Clock, GitBranch, Loader, Pencil, ArrowRight, AlertTriangle, CopyPlus, ArrowUpRight, Layers, Square, Play } from 'lucide-react'
 import { shortId } from '@/lib/id'
 import { Badge } from '../atoms/index.ts'
 import { DropdownMenu } from '../molecules/index.ts'
@@ -27,9 +27,15 @@ interface TaskCardProps {
   childCount?: number
   /** Parent task title (when this task is a child) */
   parentTaskTitle?: string
+  /** Callback to stop a running task */
+  onStop?: (taskId: string) => void
+  /** Callback to resume a stopped task */
+  onResume?: (taskId: string) => void
+  /** Whether the current status has an agent configured (for resume button) */
+  statusHasAgent?: boolean
 }
 
-export function TaskCard({ task, onEdit, onCreateChild, isDragOverlay, transitionTargets, onTransition, childCount, parentTaskTitle }: TaskCardProps) {
+export function TaskCard({ task, onEdit, onCreateChild, isDragOverlay, transitionTargets, onTransition, childCount, parentTaskTitle, onStop, onResume, statusHasAgent }: TaskCardProps) {
   const navigate = useNavigate()
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: task.id,
@@ -65,6 +71,34 @@ export function TaskCard({ task, onEdit, onCreateChild, isDragOverlay, transitio
           {task.title}
         </h4>
         <div className="flex items-center gap-1 shrink-0">
+          {/* Stop button (visible when task is running) */}
+          {isAgentRunning && onStop && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onStop(task.id)
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="opacity-100 md:opacity-0 md:group-hover:opacity-100 shrink-0 p-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-all"
+              title="Stop task"
+            >
+              <Square className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {/* Resume button (visible when task is stopped and status has agent) */}
+          {!isAgentRunning && task.assignmentStatus === TaskAssignmentStatus.UNASSIGNED && statusHasAgent && onResume && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onResume(task.id)
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="opacity-100 md:opacity-0 md:group-hover:opacity-100 shrink-0 p-1 text-green-400 hover:text-green-300 hover:bg-green-500/10 rounded transition-all"
+              title="Resume task"
+            >
+              <Play className="w-3.5 h-3.5" />
+            </button>
+          )}
           {/* Transition button (visible on mobile when transitions available) */}
           {hasTransitions && onTransition && (
             <>

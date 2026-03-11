@@ -20,6 +20,10 @@ service TaskService {
   rpc DeleteTask(DeleteTaskRequest) returns (DeleteTaskResponse);
   rpc UpdateTaskStatus(UpdateTaskStatusRequest) returns (UpdateTaskStatusResponse);
 
+  // Task lifecycle control
+  rpc StopTask(StopTaskRequest) returns (StopTaskResponse);
+  rpc ResumeTask(ResumeTaskRequest) returns (ResumeTaskResponse);
+
   // Archive operations
   rpc ArchiveTask(ArchiveTaskRequest) returns (ArchiveTaskResponse);
   rpc ArchiveTerminalTasks(ArchiveTerminalTasksRequest) returns (ArchiveTerminalTasksResponse);
@@ -129,6 +133,22 @@ message UpdateTaskStatusRequest {
   bool force = 3;
 }
 message UpdateTaskStatusResponse {
+  Task task = 1;
+}
+
+// Task lifecycle control
+
+message StopTaskRequest {
+  string id = 1;
+}
+message StopTaskResponse {
+  Task task = 1;
+}
+
+message ResumeTaskRequest {
+  string id = 1;
+}
+message ResumeTaskResponse {
   Task task = 1;
 }
 

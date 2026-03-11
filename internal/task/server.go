@@ -25,18 +25,32 @@ type CascadeDeleter interface {
 	DeleteByTaskID(ctx context.Context, taskID string) (int, error)
 }
 
-type Server struct {
-	repo             Repository
-	workflowRepo     workflow.Repository
-	eventBus         *eventbus.Bus
-	cascadeDeleters  []CascadeDeleter
+// TaskStopper sends a cancel command to the agent running a task.
+type TaskStopper interface {
+	RequestTaskStop(taskID string, assignedAgentID string) error
 }
 
-func NewServer(repo Repository, workflowRepo workflow.Repository, eventBus *eventbus.Bus, cascadeDeleters ...CascadeDeleter) *Server {
+// TaskResumer re-triggers orchestration for a stopped task.
+type TaskResumer interface {
+	RequestTaskResume(ctx context.Context, t *Task) error
+}
+
+type Server struct {
+	repo            Repository
+	workflowRepo    workflow.Repository
+	eventBus        *eventbus.Bus
+	cascadeDeleters []CascadeDeleter
+	stopper         TaskStopper
+	resumer         TaskResumer
+}
+
+func NewServer(repo Repository, workflowRepo workflow.Repository, eventBus *eventbus.Bus, stopper TaskStopper, resumer TaskResumer, cascadeDeleters ...CascadeDeleter) *Server {
 	return &Server{
 		repo:            repo,
 		workflowRepo:    workflowRepo,
 		eventBus:        eventBus,
+		stopper:         stopper,
+		resumer:         resumer,
 		cascadeDeleters: cascadeDeleters,
 	}
 }
@@ -310,6 +324,115 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *connect.Request[task
 	)
 
 	return connect.NewResponse(&taskguildv1.UpdateTaskStatusResponse{
+		Task: toProto(t),
+	}), nil
+}
+
+func (s *Server) StopTask(ctx context.Context, req *connect.Request[taskguildv1.StopTaskRequest]) (*connect.Response[taskguildv1.StopTaskResponse], error) {
+	t, err := s.repo.Get(ctx, req.Msg.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	if t.AssignmentStatus != AssignmentStatusAssigned || t.AssignedAgentID == "" {
+		return nil, cerr.NewError(
+			cerr.FailedPrecondition,
+			"task is not currently running (not assigned to an agent)",
+			nil,
+		).ConnectError()
+	}
+
+	// Mark the task so ReportTaskResult skips auto-retry.
+	if t.Metadata == nil {
+		t.Metadata = make(map[string]string)
+	}
+	t.Metadata["_stopped_by_user"] = "true"
+	t.UpdatedAt = time.Now()
+	if err := s.repo.Update(ctx, t); err != nil {
+		return nil, err
+	}
+
+	// Send cancel command to the agent.
+	if err := s.stopper.RequestTaskStop(t.ID, t.AssignedAgentID); err != nil {
+		slog.Warn("failed to send stop command to agent",
+			"task_id", t.ID,
+			"agent_id", t.AssignedAgentID,
+			"error", err,
+		)
+	}
+
+	s.eventBus.PublishNew(
+		taskguildv1.EventType_EVENT_TYPE_TASK_UPDATED,
+		t.ID,
+		"",
+		map[string]string{
+			"project_id":  t.ProjectID,
+			"workflow_id": t.WorkflowID,
+			"reason":      "stopped_by_user",
+		},
+	)
+
+	return connect.NewResponse(&taskguildv1.StopTaskResponse{
+		Task: toProto(t),
+	}), nil
+}
+
+func (s *Server) ResumeTask(ctx context.Context, req *connect.Request[taskguildv1.ResumeTaskRequest]) (*connect.Response[taskguildv1.ResumeTaskResponse], error) {
+	t, err := s.repo.Get(ctx, req.Msg.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	if t.AssignmentStatus != AssignmentStatusUnassigned {
+		return nil, cerr.NewError(
+			cerr.FailedPrecondition,
+			fmt.Sprintf("task cannot be resumed (assignment status: %s)", t.AssignmentStatus),
+			nil,
+		).ConnectError()
+	}
+
+	// Verify the current status has an agent configured.
+	wf, err := s.workflowRepo.Get(ctx, t.WorkflowID)
+	if err != nil {
+		return nil, err
+	}
+	if !statusHasAgent(wf, t.StatusID) {
+		return nil, cerr.NewError(
+			cerr.FailedPrecondition,
+			"current status has no agent configured; cannot resume",
+			nil,
+		).ConnectError()
+	}
+
+	// Clear stop/retry metadata for a fresh start.
+	if t.Metadata != nil {
+		delete(t.Metadata, "_stopped_by_user")
+		delete(t.Metadata, "_retry_count")
+		delete(t.Metadata, "result_error")
+	}
+
+	if err := s.resumer.RequestTaskResume(ctx, t); err != nil {
+		return nil, cerr.NewError(cerr.Internal, fmt.Sprintf("failed to resume task: %v", err), nil).ConnectError()
+	}
+
+	// Re-read the task after resume (it updates assignment status).
+	t, err = s.repo.Get(ctx, req.Msg.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	s.eventBus.PublishNew(
+		taskguildv1.EventType_EVENT_TYPE_TASK_UPDATED,
+		t.ID,
+		"",
+		map[string]string{
+			"project_id":  t.ProjectID,
+			"workflow_id": t.WorkflowID,
+			"reason":      "resumed_by_user",
+		},
+	)
+
+	return connect.NewResponse(&taskguildv1.ResumeTaskResponse{
 		Task: toProto(t),
 	}), nil
 }

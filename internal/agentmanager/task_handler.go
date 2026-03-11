@@ -3,6 +3,7 @@ package agentmanager
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"time"
@@ -324,6 +325,28 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 	}
 
 	if req.Msg.ErrorMessage != "" {
+		// If stopped by user, skip retry and go straight to UNASSIGNED.
+		if t.Metadata["_stopped_by_user"] == "true" {
+			slog.Info("task stopped by user, skipping retry",
+				"task_id", t.ID,
+			)
+			delete(t.Metadata, "_stopped_by_user")
+			delete(t.Metadata, retryMetadataKey)
+			t.AssignmentStatus = task.AssignmentStatusUnassigned
+
+			if err := s.taskRepo.Update(ctx, t); err != nil {
+				return nil, err
+			}
+
+			eventMeta["reason"] = "stopped_by_user"
+			s.eventBus.PublishNew(
+				taskguildv1.EventType_EVENT_TYPE_TASK_UPDATED,
+				t.ID, "", eventMeta,
+			)
+
+			return connect.NewResponse(&taskguildv1.ReportTaskResultResponse{}), nil
+		}
+
 		// Task failed — check if we should retry.
 		retryCount := 0
 		if rc, ok := t.Metadata[retryMetadataKey]; ok {
@@ -751,4 +774,66 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		AgentConfigId: agentConfigID,
 		Metadata:      enrichedMetadata,
 	}), nil
+}
+
+// RequestTaskStop sends a CancelTaskCommand to the agent running the given task.
+func (s *Server) RequestTaskStop(taskID string, assignedAgentID string) error {
+	sent := s.registry.SendCommand(assignedAgentID, &taskguildv1.AgentCommand{
+		Command: &taskguildv1.AgentCommand_CancelTask{
+			CancelTask: &taskguildv1.CancelTaskCommand{
+				TaskId: taskID,
+				Reason: "stopped by user",
+			},
+		},
+	})
+	if !sent {
+		return fmt.Errorf("agent %s not connected", assignedAgentID)
+	}
+	slog.Info("task stop command sent",
+		"task_id", taskID,
+		"agent_id", assignedAgentID,
+	)
+	return nil
+}
+
+// RequestTaskResume re-triggers orchestration for a stopped task by setting it
+// to PENDING and broadcasting a TaskAvailableCommand.
+func (s *Server) RequestTaskResume(ctx context.Context, t *task.Task) error {
+	t.AssignmentStatus = task.AssignmentStatusPending
+	t.UpdatedAt = time.Now()
+	if err := s.taskRepo.Update(ctx, t); err != nil {
+		return err
+	}
+
+	wf, err := s.workflowRepo.Get(ctx, t.WorkflowID)
+	if err != nil {
+		return err
+	}
+	agentConfigID := wf.FindAgentIDForStatus(t.StatusID)
+	if agentConfigID == "" {
+		return fmt.Errorf("no agent configured for status %s", t.StatusID)
+	}
+
+	var projectName string
+	if p, pErr := s.projectRepo.Get(ctx, t.ProjectID); pErr == nil {
+		projectName = p.Name
+	}
+
+	s.registry.BroadcastCommandToProject(projectName, &taskguildv1.AgentCommand{
+		Command: &taskguildv1.AgentCommand_TaskAvailable{
+			TaskAvailable: &taskguildv1.TaskAvailableCommand{
+				TaskId:        t.ID,
+				AgentConfigId: agentConfigID,
+				Title:         t.Title,
+				Metadata:      t.Metadata,
+			},
+		},
+	})
+
+	slog.Info("task resume broadcast sent",
+		"task_id", t.ID,
+		"agent_config_id", agentConfigID,
+		"project_name", projectName,
+	)
+	return nil
 }
