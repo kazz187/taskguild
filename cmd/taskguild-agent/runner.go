@@ -70,6 +70,7 @@ func runTask(
 	logger := slog.Default().With("task_id", taskID)
 	ctx = clog.ContextWithLogger(ctx, logger)
 
+	logger.Info("runTask started", "agent_name", metadata["_agent_name"], "use_worktree", metadata["_use_worktree"])
 	reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "starting task")
 
 	// Initialize task logger for structured log streaming.
@@ -80,7 +81,9 @@ func runTask(
 	// Resolve worktree name: reuse persisted name or generate a new one.
 	worktreeName := metadata["worktree"]
 	if worktreeName == "" && metadata["_use_worktree"] == "true" {
+		logger.Info("generating worktree name")
 		worktreeName = generateWorktreeName(ctx, taskID, metadata["_task_title"], workDir)
+		logger.Info("worktree name generated", "worktree_name", worktreeName)
 		saveWorktreeName(ctx, taskClient, taskID, worktreeName)
 		metadata["worktree"] = worktreeName // keep local metadata in sync for buildUserPrompt
 	}
@@ -88,6 +91,7 @@ func runTask(
 	// Ensure the worktree directory exists before launching Claude so that
 	// Cwd is set to the worktree from the very first turn.
 	if metadata["_use_worktree"] == "true" && worktreeName != "" {
+		logger.Info("ensuring worktree directory", "worktree_name", worktreeName)
 		if _, err := ensureWorktree(ctx, workDir, worktreeName, taskID); err != nil {
 			logger.Warn("failed to ensure worktree", "error", err)
 		}
@@ -117,7 +121,9 @@ func runTask(
 	defer afterHooks()
 
 	// Execute before_task_execution hooks.
+	logger.Info("executing before_task_execution hooks")
 	executeHooks(ctx, taskID, "before_task_execution", metadata, workDir, taskClient, tl)
+	logger.Info("before_task_execution hooks completed")
 
 	// Start interaction stream listener for this task.
 	waiter := newInteractionWaiter()
@@ -126,6 +132,7 @@ func runTask(
 	sessionID := metadata["session_id"]
 	prompt := buildUserPrompt(metadata, workDir)
 	hasTransitions := metadata["_available_transitions"] != ""
+	logger.Info("task setup complete, entering turn loop", "has_session", sessionID != "", "has_transitions", hasTransitions)
 
 	const maxResumeRetries = 2 // after this many consecutive resume failures, start fresh
 
@@ -146,6 +153,7 @@ func runTask(
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_START, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 			fmt.Sprintf("Turn %d started", turn),
 			map[string]string{"turn": fmt.Sprintf("%d", turn)})
+		logger.Info("starting Claude CLI", "turn", turn, "session_id", sessionID)
 		logger.Debug("Claude SDK input", "turn", turn)
 		if turn == 0 {
 			logger.Debug("system prompt", "prompt", instructions)
@@ -159,7 +167,7 @@ func runTask(
 
 		result, err := runQuerySyncWithLog(ctx, prompt, opts, workDir, taskID, fmt.Sprintf("task_turn%d", turn))
 
-		logger.Debug("Claude SDK output", "turn", turn)
+		logger.Info("Claude CLI finished", "turn", turn, "has_error", err != nil)
 		if err != nil {
 			logger.Error("Claude SDK error", "turn", turn, "error", err)
 		} else if result.Result != nil {
