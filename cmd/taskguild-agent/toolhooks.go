@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
@@ -38,8 +39,24 @@ func buildToolUseHooks(tl *taskLogger, taskID string, taskClient taskguildv1conn
 						}
 
 						// Save plan result when ExitPlanMode is called.
-						if input.ToolName == "ExitPlanMode" && planFilePath != "" && taskClient != nil {
-							savePlanResult(context.Background(), taskClient, taskID, planFilePath)
+						if input.ToolName == "ExitPlanMode" && taskClient != nil {
+							var planContent string
+							if input.ToolResponse != nil {
+								if s, ok := input.ToolResponse.(string); ok {
+									planContent = s
+								} else if b, err := json.Marshal(input.ToolResponse); err == nil {
+									planContent = string(b)
+								}
+							}
+							if planContent == "" && planFilePath != "" {
+								// Fallback: read from plan file if no tool response.
+								if content, err := os.ReadFile(planFilePath); err == nil {
+									planContent = string(content)
+								}
+							}
+							if planContent != "" {
+								savePlanResult(context.Background(), taskClient, taskID, planContent)
+							}
 						}
 
 						return claudeagent.HookOutput{}, nil

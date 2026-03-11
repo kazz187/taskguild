@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -454,20 +453,15 @@ func saveTaskDescription(ctx context.Context, taskClient taskguildv1connect.Task
 	}
 }
 
-func savePlanResult(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, planFilePath string) {
+func savePlanResult(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, content string) {
 	logger := clog.LoggerFromContext(ctx)
-	content, err := os.ReadFile(planFilePath)
-	if err != nil {
-		logger.Error("failed to read plan file", "path", planFilePath, "error", err)
-		return
-	}
-	_, err = taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
+	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
 		Id:       taskID,
-		Metadata: map[string]string{"plan_result": string(content)},
+		Metadata: map[string]string{"plan_result": content},
 	}))
 	if err != nil {
 		logger.Error("failed to save plan_result", "error", err)
 	} else {
-		logger.Info("plan_result saved", "path", planFilePath, "content_length", len(content))
+		logger.Info("plan_result saved", "content_length", len(content))
 	}
 }

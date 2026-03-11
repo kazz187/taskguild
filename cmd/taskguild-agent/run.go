@@ -333,16 +333,29 @@ func runSubscribeLoop(
 				mu.Unlock()
 			}
 
+			// Try to acquire semaphore slot BEFORE claiming to avoid
+			// blocking the subscribe loop when at max capacity.
+			// If all slots are full, skip this task so another agent
+			// (or a later retry) can pick it up.
+			select {
+			case sem <- struct{}{}:
+			default:
+				slog.Info("at max capacity, skipping task", "task_id", taskID)
+				continue
+			}
+
 			// Try to claim the task
 			claimResp, err := client.ClaimTask(ctx, connect.NewRequest(&v1.ClaimTaskRequest{
 				TaskId:         taskID,
 				AgentManagerId: cfg.AgentManagerID,
 			}))
 			if err != nil {
+				<-sem // release slot on claim failure
 				slog.Error("failed to claim task", "task_id", taskID, "error", err)
 				continue
 			}
 			if !claimResp.Msg.GetSuccess() {
+				<-sem // release slot on claim failure
 				slog.Info("task already claimed by another agent", "task_id", taskID)
 				continue
 			}
@@ -350,13 +363,6 @@ func runSubscribeLoop(
 			slog.Info("claimed task", "task_id", taskID)
 			instructions := claimResp.Msg.GetInstructions()
 			metadata := claimResp.Msg.GetMetadata()
-
-			// Acquire semaphore slot
-			select {
-			case sem <- struct{}{}:
-			case <-ctx.Done():
-				return ctx.Err()
-			}
 
 			taskCtx, taskCancel := context.WithCancel(ctx)
 			mu.Lock()
@@ -373,8 +379,15 @@ func runSubscribeLoop(
 					mu.Unlock()
 					taskCancel()
 				}()
+				defer func() {
+					if r := recover(); r != nil {
+						slog.Error("runTask panicked", "task_id", tID, "panic", fmt.Sprintf("%v", r))
+					}
+				}()
 
+				slog.Info("launching runTask goroutine", "task_id", tID)
 				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache, scpCache)
+				slog.Info("runTask goroutine finished", "task_id", tID)
 			}(taskID)
 
 		case *v1.AgentCommand_ListWorktrees:
@@ -487,10 +500,12 @@ func runSubscribeLoop(
 			instructions := assignCmd.GetInstructions()
 			metadata := assignCmd.GetMetadata()
 
+			// Non-blocking semaphore check to avoid blocking the subscribe loop.
 			select {
 			case sem <- struct{}{}:
-			case <-ctx.Done():
-				return ctx.Err()
+			default:
+				slog.Warn("at max capacity, cannot run assigned task", "task_id", taskID)
+				continue
 			}
 
 			taskCtx, taskCancel := context.WithCancel(ctx)
@@ -508,8 +523,15 @@ func runSubscribeLoop(
 					mu.Unlock()
 					taskCancel()
 				}()
+				defer func() {
+					if r := recover(); r != nil {
+						slog.Error("runTask panicked", "task_id", tID, "panic", fmt.Sprintf("%v", r))
+					}
+				}()
 
+				slog.Info("launching runTask goroutine (assigned)", "task_id", tID)
 				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache, scpCache)
+				slog.Info("runTask goroutine finished (assigned)", "task_id", tID)
 			}(taskID)
 
 		case *v1.AgentCommand_InteractionResponse:
