@@ -249,7 +249,8 @@ function TaskDetailPage() {
 
   const metadata = task.metadata ?? {}
   const resultSummary = metadata['result_summary'] ?? ''
-  const metadataEntries = Object.entries(metadata).filter(([key, v]) => v && key !== 'result_summary' && key !== 'result_status' && key !== 'result_error')
+  const planResult = metadata['plan_result'] ?? ''
+  const metadataEntries = Object.entries(metadata).filter(([key, v]) => v && key !== 'result_summary' && key !== 'result_status' && key !== 'result_error' && key !== 'plan_result')
 
   return (
     <div className="flex flex-col h-full">
@@ -366,6 +367,14 @@ function TaskDetailPage() {
             <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Description</p>
               <p className="text-sm text-gray-300 whitespace-pre-wrap">{task.description}</p>
+            </div>
+          )}
+
+          {/* Plan Result */}
+          {planResult && (
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Plan Result</p>
+              <MarkdownDescription content={planResult} className="text-sm text-gray-300" />
             </div>
           )}
 
