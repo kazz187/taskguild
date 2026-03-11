@@ -9,7 +9,7 @@ import (
 	"github.com/oklog/ulid/v2"
 
 	"github.com/kazz187/taskguild/pkg/cerr"
-	taskguildv1 "github.com/kazz187/taskguild/gen/proto/taskguild/v1"
+	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 )
 
 // --- Git pull main RPCs ---

@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 
 	"connectrpc.com/connect"
-	v1 "github.com/kazz187/taskguild/gen/proto/taskguild/v1"
-	"github.com/kazz187/taskguild/gen/proto/taskguild/v1/taskguildv1connect"
+	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
+	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
 
 // handleCompareSkills compares local .claude/skills/*/SKILL.md files with server-side

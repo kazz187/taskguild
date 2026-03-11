@@ -10,7 +10,7 @@ import (
 	"github.com/oklog/ulid/v2"
 
 	"github.com/kazz187/taskguild/internal/interaction"
-	taskguildv1 "github.com/kazz187/taskguild/gen/proto/taskguild/v1"
+	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 )
 
 func (s *Server) CreateInteraction(ctx context.Context, req *connect.Request[taskguildv1.CreateInteractionRequest]) (*connect.Response[taskguildv1.CreateInteractionResponse], error) {

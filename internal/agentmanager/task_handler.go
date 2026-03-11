@@ -13,7 +13,7 @@ import (
 	"github.com/kazz187/taskguild/internal/version"
 	"github.com/kazz187/taskguild/internal/workflow"
 	"github.com/kazz187/taskguild/pkg/cerr"
-	taskguildv1 "github.com/kazz187/taskguild/gen/proto/taskguild/v1"
+	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 )
 
 func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1.AgentManagerSubscribeRequest], stream *connect.ServerStream[taskguildv1.AgentCommand]) error {

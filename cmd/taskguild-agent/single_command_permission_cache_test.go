@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	v1 "github.com/kazz187/taskguild/gen/proto/taskguild/v1"
+	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/pkg/shellparse"
 )
 

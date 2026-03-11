@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	taskguildv1 "github.com/kazz187/taskguild/gen/proto/taskguild/v1"
+	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 )
 
 // helpers

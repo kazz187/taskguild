@@ -9,7 +9,7 @@ import (
 
 	"github.com/kazz187/taskguild/internal/tasklog"
 	"github.com/kazz187/taskguild/pkg/cerr"
-	taskguildv1 "github.com/kazz187/taskguild/gen/proto/taskguild/v1"
+	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 )
 
 func (s *Server) ReportTaskLog(ctx context.Context, req *connect.Request[taskguildv1.ReportTaskLogRequest]) (*connect.Response[taskguildv1.ReportTaskLogResponse], error) {
