@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	v1 "github.com/kazz187/taskguild/gen/proto/taskguild/v1"
-	"github.com/kazz187/taskguild/gen/proto/taskguild/v1/taskguildv1connect"
+	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
+	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
 
 // --- mock client ---

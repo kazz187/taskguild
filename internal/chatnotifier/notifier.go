@@ -12,7 +12,7 @@ import (
 	"github.com/kazz187/taskguild/internal/interaction"
 	"github.com/kazz187/taskguild/internal/task"
 	"github.com/kazz187/taskguild/internal/workflow"
-	taskguildv1 "github.com/kazz187/taskguild/gen/proto/taskguild/v1"
+	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 )
 
 // Notifier subscribes to task lifecycle events and creates notification

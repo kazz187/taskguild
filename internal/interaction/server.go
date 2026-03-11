@@ -12,8 +12,8 @@ import (
 	"github.com/kazz187/taskguild/internal/eventbus"
 	"github.com/kazz187/taskguild/internal/task"
 	"github.com/kazz187/taskguild/pkg/cerr"
-	taskguildv1 "github.com/kazz187/taskguild/gen/proto/taskguild/v1"
-	"github.com/kazz187/taskguild/gen/proto/taskguild/v1/taskguildv1connect"
+	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
+	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
 
 var _ taskguildv1connect.InteractionServiceHandler = (*Server)(nil)

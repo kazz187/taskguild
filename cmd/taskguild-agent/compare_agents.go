@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-	v1 "github.com/kazz187/taskguild/gen/proto/taskguild/v1"
-	"github.com/kazz187/taskguild/gen/proto/taskguild/v1/taskguildv1connect"
+	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
+	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
 
 // handleCompareAgents compares local .claude/agents/*.md files with server-side

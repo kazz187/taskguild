@@ -2,13 +2,13 @@
 
 generate:
 	buf generate
-	cd ../backend && go mod tidy
+	cd .. && go mod tidy
 
 lint:
 	buf lint
 
 tidy:
-	cd ../backend && go mod tidy
+	cd .. && go mod tidy
 
 clean:
-	rm -rf ../backend/gen/proto/taskguild ../backend/gen/proto/buf gen/ts
+	rm -rf gen/go gen/ts

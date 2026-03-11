@@ -31,7 +31,7 @@ import (
 	"github.com/kazz187/taskguild/internal/config"
 	"github.com/kazz187/taskguild/pkg/cerr"
 	"github.com/kazz187/taskguild/pkg/clog"
-	"github.com/kazz187/taskguild/gen/proto/taskguild/v1/taskguildv1connect"
+	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
 
 type Server struct {

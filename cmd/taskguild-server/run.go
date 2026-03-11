@@ -44,7 +44,7 @@ import (
 	"github.com/kazz187/taskguild/pkg/clog"
 	"github.com/kazz187/taskguild/pkg/storage"
 
-	taskguildv1 "github.com/kazz187/taskguild/gen/proto/taskguild/v1"
+	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 
 	server "github.com/kazz187/taskguild/internal"
 )
