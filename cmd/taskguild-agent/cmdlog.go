@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -64,6 +65,47 @@ func logCommandArgs(workDir, taskID, label string, args []string) {
 
 	if err := os.WriteFile(logPath, []byte(sb.String()), 0o644); err != nil {
 		slog.Warn("failed to write cmd-log", "path", logPath, "error", err)
+	}
+}
+
+// logStdinMessage writes the stdin JSON control protocol message to a
+// timestamped log file under {workDir}/.claude/cmd-logs/{taskID}/.
+// Errors are non-fatal and logged as warnings.
+func logStdinMessage(workDir, taskID, label string, jsonData []byte) {
+	if workDir == "" {
+		return
+	}
+
+	dir := taskID
+	if dir == "" {
+		dir = "_system"
+	}
+
+	logDir := filepath.Join(workDir, ".claude", "cmd-logs", dir)
+	if err := os.MkdirAll(logDir, 0o755); err != nil {
+		slog.Warn("failed to create cmd-log directory", "dir", logDir, "error", err)
+		return
+	}
+
+	ts := time.Now().UTC().Format(time.RFC3339Nano)
+	filename := fmt.Sprintf("%s_%s_stdin.log", ts, label)
+	logPath := filepath.Join(logDir, filename)
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("# Stdin message: %s\n", ts))
+	sb.WriteString(fmt.Sprintf("# Task: %s\n", taskID))
+	sb.WriteString(fmt.Sprintf("# Label: %s\n\n", label))
+
+	var prettyJSON bytes.Buffer
+	if err := json.Indent(&prettyJSON, jsonData, "", "  "); err == nil {
+		sb.WriteString(prettyJSON.String())
+	} else {
+		sb.Write(jsonData)
+	}
+	sb.WriteString("\n")
+
+	if err := os.WriteFile(logPath, []byte(sb.String()), 0o644); err != nil {
+		slog.Warn("failed to write stdin-log", "path", logPath, "error", err)
 	}
 }
 
@@ -143,6 +185,7 @@ func runQuerySyncWithLog(
 	if err := transport.Write(ctx, string(data)+"\n"); err != nil {
 		return nil, err
 	}
+	logStdinMessage(workDir, taskID, label, data)
 
 	// Handle stdin closure.
 	hasHooks := len(opts.Hooks) > 0
