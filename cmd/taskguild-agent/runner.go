@@ -271,6 +271,7 @@ func runTask(
 		// Success — reset error tracking.
 		consecutiveErrors = 0
 		backoff = initialBackoff
+		logger.Info("processing successful result", "turn", turn, "result_len", len(result.Result.Result))
 
 		// Extract and persist task description updates from agent output.
 		if result.Result != nil {
@@ -343,6 +344,7 @@ func runTask(
 
 		// Check completion: NEXT_STATUS present means task is done.
 		nextStatusID := parseNextStatus(summary)
+		logger.Info("parsed directives", "turn", turn, "next_status", nextStatusID, "summary_len", len(summary))
 		if nextStatusID != "" {
 			// Log the NEXT_STATUS directive to timeline.
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_DIRECTIVE, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
@@ -392,18 +394,25 @@ func runTask(
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Task completed with status transition (turn %d)", turn),
 				map[string]string{"next_status": nextStatusID})
+			logger.Info("reporting task result")
 			reportTaskResult(ctx, client, taskID, displaySummary, "")
+			logger.Info("reporting agent status IDLE")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed")
 			// Run after hooks before transitioning status so that hooks
 			// still observe the current status and the transition happens
 			// only after all hooks complete.
+			logger.Info("running after hooks")
 			afterHooks()
+			logger.Info("after hooks completed")
 			// Launch AGENT.md harness in background goroutine if enabled.
 			maybeRunAgentMDHarness(ctx, metadata, taskID, displaySummary, workDir, tl, client)
+			logger.Info("calling handleStatusTransition", "next_status", nextStatusID)
 			if err := handleStatusTransition(ctx, taskClient, taskID, nextStatusID, metadata, tl); err != nil {
 				logger.Error("status transition failed", "error", err)
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 					fmt.Sprintf("Status transition to %q failed: %v", nextStatusID, err), nil)
+			} else {
+				logger.Info("status transition succeeded", "next_status", nextStatusID)
 			}
 			return
 		}
