@@ -130,6 +130,10 @@ func buildWorkflowContext(metadata map[string]string) string {
 	sb.WriteString("## TaskGuild Workflow Context\n")
 	sb.WriteString("You are an agent in a TaskGuild workflow. Complete your work for the current status, then transition the task forward.\n")
 
+	if agentName := metadata["_agent_name"]; agentName != "" {
+		sb.WriteString(fmt.Sprintf("@%s.\n", agentName))
+	}
+
 	// List all workflow statuses, marking the current one.
 	if statusesJSON := metadata["_workflow_statuses"]; statusesJSON != "" {
 		type statusEntry struct {
