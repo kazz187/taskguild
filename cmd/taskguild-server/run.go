@@ -193,9 +193,9 @@ func runServer() {
 	// Setup servers
 	projectServer := project.NewServer(projectRepo)
 	workflowServer := workflow.NewServer(workflowRepo)
-	taskServer := task.NewServer(taskRepo, workflowRepo, bus, taskLogRepo, interactionRepo)
-	interactionServer := interaction.NewServer(interactionRepo, taskRepo, bus)
 	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, projectRepo, skillRepo, scriptRepo, taskLogRepo, permissionRepo, scpRepo, bus, scriptBroker)
+	taskServer := task.NewServer(taskRepo, workflowRepo, bus, agentManagerServer, agentManagerServer, taskLogRepo, interactionRepo)
+	interactionServer := interaction.NewServer(interactionRepo, taskRepo, bus)
 	agentChangeNotifier := &agentChangeNotifier{
 		registry:    agentManagerRegistry,
 		projectRepo: projectRepo,

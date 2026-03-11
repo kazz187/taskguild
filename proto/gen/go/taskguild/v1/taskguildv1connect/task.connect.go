@@ -46,6 +46,10 @@ const (
 	// TaskServiceUpdateTaskStatusProcedure is the fully-qualified name of the TaskService's
 	// UpdateTaskStatus RPC.
 	TaskServiceUpdateTaskStatusProcedure = "/taskguild.v1.TaskService/UpdateTaskStatus"
+	// TaskServiceStopTaskProcedure is the fully-qualified name of the TaskService's StopTask RPC.
+	TaskServiceStopTaskProcedure = "/taskguild.v1.TaskService/StopTask"
+	// TaskServiceResumeTaskProcedure is the fully-qualified name of the TaskService's ResumeTask RPC.
+	TaskServiceResumeTaskProcedure = "/taskguild.v1.TaskService/ResumeTask"
 	// TaskServiceArchiveTaskProcedure is the fully-qualified name of the TaskService's ArchiveTask RPC.
 	TaskServiceArchiveTaskProcedure = "/taskguild.v1.TaskService/ArchiveTask"
 	// TaskServiceArchiveTerminalTasksProcedure is the fully-qualified name of the TaskService's
@@ -67,6 +71,9 @@ type TaskServiceClient interface {
 	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.UpdateTaskResponse], error)
 	DeleteTask(context.Context, *connect.Request[v1.DeleteTaskRequest]) (*connect.Response[v1.DeleteTaskResponse], error)
 	UpdateTaskStatus(context.Context, *connect.Request[v1.UpdateTaskStatusRequest]) (*connect.Response[v1.UpdateTaskStatusResponse], error)
+	// Task lifecycle control
+	StopTask(context.Context, *connect.Request[v1.StopTaskRequest]) (*connect.Response[v1.StopTaskResponse], error)
+	ResumeTask(context.Context, *connect.Request[v1.ResumeTaskRequest]) (*connect.Response[v1.ResumeTaskResponse], error)
 	// Archive operations
 	ArchiveTask(context.Context, *connect.Request[v1.ArchiveTaskRequest]) (*connect.Response[v1.ArchiveTaskResponse], error)
 	ArchiveTerminalTasks(context.Context, *connect.Request[v1.ArchiveTerminalTasksRequest]) (*connect.Response[v1.ArchiveTerminalTasksResponse], error)
@@ -121,6 +128,18 @@ func NewTaskServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(taskServiceMethods.ByName("UpdateTaskStatus")),
 			connect.WithClientOptions(opts...),
 		),
+		stopTask: connect.NewClient[v1.StopTaskRequest, v1.StopTaskResponse](
+			httpClient,
+			baseURL+TaskServiceStopTaskProcedure,
+			connect.WithSchema(taskServiceMethods.ByName("StopTask")),
+			connect.WithClientOptions(opts...),
+		),
+		resumeTask: connect.NewClient[v1.ResumeTaskRequest, v1.ResumeTaskResponse](
+			httpClient,
+			baseURL+TaskServiceResumeTaskProcedure,
+			connect.WithSchema(taskServiceMethods.ByName("ResumeTask")),
+			connect.WithClientOptions(opts...),
+		),
 		archiveTask: connect.NewClient[v1.ArchiveTaskRequest, v1.ArchiveTaskResponse](
 			httpClient,
 			baseURL+TaskServiceArchiveTaskProcedure,
@@ -156,6 +175,8 @@ type taskServiceClient struct {
 	updateTask           *connect.Client[v1.UpdateTaskRequest, v1.UpdateTaskResponse]
 	deleteTask           *connect.Client[v1.DeleteTaskRequest, v1.DeleteTaskResponse]
 	updateTaskStatus     *connect.Client[v1.UpdateTaskStatusRequest, v1.UpdateTaskStatusResponse]
+	stopTask             *connect.Client[v1.StopTaskRequest, v1.StopTaskResponse]
+	resumeTask           *connect.Client[v1.ResumeTaskRequest, v1.ResumeTaskResponse]
 	archiveTask          *connect.Client[v1.ArchiveTaskRequest, v1.ArchiveTaskResponse]
 	archiveTerminalTasks *connect.Client[v1.ArchiveTerminalTasksRequest, v1.ArchiveTerminalTasksResponse]
 	unarchiveTask        *connect.Client[v1.UnarchiveTaskRequest, v1.UnarchiveTaskResponse]
@@ -192,6 +213,16 @@ func (c *taskServiceClient) UpdateTaskStatus(ctx context.Context, req *connect.R
 	return c.updateTaskStatus.CallUnary(ctx, req)
 }
 
+// StopTask calls taskguild.v1.TaskService.StopTask.
+func (c *taskServiceClient) StopTask(ctx context.Context, req *connect.Request[v1.StopTaskRequest]) (*connect.Response[v1.StopTaskResponse], error) {
+	return c.stopTask.CallUnary(ctx, req)
+}
+
+// ResumeTask calls taskguild.v1.TaskService.ResumeTask.
+func (c *taskServiceClient) ResumeTask(ctx context.Context, req *connect.Request[v1.ResumeTaskRequest]) (*connect.Response[v1.ResumeTaskResponse], error) {
+	return c.resumeTask.CallUnary(ctx, req)
+}
+
 // ArchiveTask calls taskguild.v1.TaskService.ArchiveTask.
 func (c *taskServiceClient) ArchiveTask(ctx context.Context, req *connect.Request[v1.ArchiveTaskRequest]) (*connect.Response[v1.ArchiveTaskResponse], error) {
 	return c.archiveTask.CallUnary(ctx, req)
@@ -220,6 +251,9 @@ type TaskServiceHandler interface {
 	UpdateTask(context.Context, *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.UpdateTaskResponse], error)
 	DeleteTask(context.Context, *connect.Request[v1.DeleteTaskRequest]) (*connect.Response[v1.DeleteTaskResponse], error)
 	UpdateTaskStatus(context.Context, *connect.Request[v1.UpdateTaskStatusRequest]) (*connect.Response[v1.UpdateTaskStatusResponse], error)
+	// Task lifecycle control
+	StopTask(context.Context, *connect.Request[v1.StopTaskRequest]) (*connect.Response[v1.StopTaskResponse], error)
+	ResumeTask(context.Context, *connect.Request[v1.ResumeTaskRequest]) (*connect.Response[v1.ResumeTaskResponse], error)
 	// Archive operations
 	ArchiveTask(context.Context, *connect.Request[v1.ArchiveTaskRequest]) (*connect.Response[v1.ArchiveTaskResponse], error)
 	ArchiveTerminalTasks(context.Context, *connect.Request[v1.ArchiveTerminalTasksRequest]) (*connect.Response[v1.ArchiveTerminalTasksResponse], error)
@@ -270,6 +304,18 @@ func NewTaskServiceHandler(svc TaskServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(taskServiceMethods.ByName("UpdateTaskStatus")),
 		connect.WithHandlerOptions(opts...),
 	)
+	taskServiceStopTaskHandler := connect.NewUnaryHandler(
+		TaskServiceStopTaskProcedure,
+		svc.StopTask,
+		connect.WithSchema(taskServiceMethods.ByName("StopTask")),
+		connect.WithHandlerOptions(opts...),
+	)
+	taskServiceResumeTaskHandler := connect.NewUnaryHandler(
+		TaskServiceResumeTaskProcedure,
+		svc.ResumeTask,
+		connect.WithSchema(taskServiceMethods.ByName("ResumeTask")),
+		connect.WithHandlerOptions(opts...),
+	)
 	taskServiceArchiveTaskHandler := connect.NewUnaryHandler(
 		TaskServiceArchiveTaskProcedure,
 		svc.ArchiveTask,
@@ -308,6 +354,10 @@ func NewTaskServiceHandler(svc TaskServiceHandler, opts ...connect.HandlerOption
 			taskServiceDeleteTaskHandler.ServeHTTP(w, r)
 		case TaskServiceUpdateTaskStatusProcedure:
 			taskServiceUpdateTaskStatusHandler.ServeHTTP(w, r)
+		case TaskServiceStopTaskProcedure:
+			taskServiceStopTaskHandler.ServeHTTP(w, r)
+		case TaskServiceResumeTaskProcedure:
+			taskServiceResumeTaskHandler.ServeHTTP(w, r)
 		case TaskServiceArchiveTaskProcedure:
 			taskServiceArchiveTaskHandler.ServeHTTP(w, r)
 		case TaskServiceArchiveTerminalTasksProcedure:
@@ -347,6 +397,14 @@ func (UnimplementedTaskServiceHandler) DeleteTask(context.Context, *connect.Requ
 
 func (UnimplementedTaskServiceHandler) UpdateTaskStatus(context.Context, *connect.Request[v1.UpdateTaskStatusRequest]) (*connect.Response[v1.UpdateTaskStatusResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.UpdateTaskStatus is not implemented"))
+}
+
+func (UnimplementedTaskServiceHandler) StopTask(context.Context, *connect.Request[v1.StopTaskRequest]) (*connect.Response[v1.StopTaskResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.StopTask is not implemented"))
+}
+
+func (UnimplementedTaskServiceHandler) ResumeTask(context.Context, *connect.Request[v1.ResumeTaskRequest]) (*connect.Response[v1.ResumeTaskResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.ResumeTask is not implemented"))
 }
 
 func (UnimplementedTaskServiceHandler) ArchiveTask(context.Context, *connect.Request[v1.ArchiveTaskRequest]) (*connect.Response[v1.ArchiveTaskResponse], error) {

@@ -35,6 +35,18 @@ export const deleteTask = TaskService.method.deleteTask;
 export const updateTaskStatus = TaskService.method.updateTaskStatus;
 
 /**
+ * Task lifecycle control
+ *
+ * @generated from rpc taskguild.v1.TaskService.StopTask
+ */
+export const stopTask = TaskService.method.stopTask;
+
+/**
+ * @generated from rpc taskguild.v1.TaskService.ResumeTask
+ */
+export const resumeTask = TaskService.method.resumeTask;
+
+/**
  * Archive operations
  *
  * @generated from rpc taskguild.v1.TaskService.ArchiveTask

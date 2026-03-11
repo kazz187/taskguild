@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
-import { getTask, listTasks, updateTaskStatus } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
+import { getTask, listTasks, updateTaskStatus, stopTask, resumeTask } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import { getProject } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
 import { listWorkflows } from '@taskguild/proto/taskguild/v1/workflow-WorkflowService_connectquery.ts'
 import { listInteractions, respondToInteraction, expireInteraction, sendMessage } from '@taskguild/proto/taskguild/v1/interaction-InteractionService_connectquery.ts'
@@ -34,6 +34,8 @@ import {
   Layers,
   Loader,
   Pencil,
+  Play,
+  Square,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/projects/$projectId/tasks/$taskId')({
@@ -57,6 +59,8 @@ function TaskDetailPage() {
   const respondMut = useMutation(respondToInteraction)
   const expireMut = useMutation(expireInteraction)
   const sendMut = useMutation(sendMessage)
+  const stopMut = useMutation(stopTask)
+  const resumeMut = useMutation(resumeTask)
 
   const task = taskData?.task
   const project = projectData?.project
@@ -106,6 +110,9 @@ function TaskDetailPage() {
   // Force-move is only blocked when agent is actively running (assigned).
   // Pending tasks (agent not yet started) are allowed to be force-moved.
   const isForceMoveBlocked = task?.assignmentStatus === TaskAssignmentStatus.ASSIGNED
+
+  // Check if current status has an agent configured (for resume button visibility).
+  const currentStatusHasAgent = !!(currentStatus?.agentId)
 
   // Force-transition confirmation dialog state
   const [forceTransitionTarget, setForceTransitionTarget] = useState<{ id: string; name: string } | null>(null)
@@ -232,6 +239,16 @@ function TaskDetailPage() {
     )
   }, [expireMut, refetchInteractions])
 
+  const handleStopTask = () => {
+    if (!task) return
+    stopMut.mutate({ id: task.id }, { onSuccess: () => refetchTask() })
+  }
+
+  const handleResumeTask = () => {
+    if (!task) return
+    resumeMut.mutate({ id: task.id }, { onSuccess: () => refetchTask() })
+  }
+
   const handleSendMessage = (message: string) => {
     sendMut.mutate(
       { taskId, message },
@@ -296,6 +313,27 @@ function TaskDetailPage() {
                 <Clock className="w-3 h-3" />
                 Unassigned
               </span>
+            )}
+
+            {task.assignmentStatus === TaskAssignmentStatus.ASSIGNED && (
+              <button
+                onClick={handleStopTask}
+                disabled={stopMut.isPending}
+                className="flex items-center gap-1 px-3 py-1 text-xs bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 hover:bg-red-500/20 hover:border-red-500/50 hover:text-red-300 transition-colors disabled:opacity-50"
+              >
+                <Square className="w-3 h-3" />
+                Stop
+              </button>
+            )}
+            {task.assignmentStatus === TaskAssignmentStatus.UNASSIGNED && currentStatusHasAgent && (
+              <button
+                onClick={handleResumeTask}
+                disabled={resumeMut.isPending}
+                className="flex items-center gap-1 px-3 py-1 text-xs bg-green-500/10 border border-green-500/30 rounded-lg text-green-400 hover:bg-green-500/20 hover:border-green-500/50 hover:text-green-300 transition-colors disabled:opacity-50"
+              >
+                <Play className="w-3 h-3" />
+                Resume
+              </button>
             )}
 
             {allowedTransitions.map((toId) => {

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
-import { listTasks, updateTaskStatus } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
+import { listTasks, updateTaskStatus, stopTask, resumeTask } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import { listAgents } from '@taskguild/proto/taskguild/v1/agent-AgentService_connectquery.ts'
 import type { Workflow, WorkflowStatus } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
@@ -75,6 +75,8 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
   const [showCleanDialog, setShowCleanDialog] = useState(false)
 
   const statusMut = useMutation(updateTaskStatus)
+  const stopMut = useMutation(stopTask)
+  const resumeMut = useMutation(resumeTask)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -373,6 +375,20 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
     [tasks],
   )
 
+  const handleStopTask = useCallback(
+    (taskId: string) => {
+      stopMut.mutate({ id: taskId }, { onSuccess: () => refetch() })
+    },
+    [stopMut, refetch],
+  )
+
+  const handleResumeTask = useCallback(
+    (taskId: string) => {
+      resumeMut.mutate({ id: taskId }, { onSuccess: () => refetch() })
+    },
+    [resumeMut, refetch],
+  )
+
   /** Navigate to a related task (open its detail modal) */
   const handleNavigateTask = useCallback((taskId: string) => {
     setEditingTaskId(taskId)
@@ -425,6 +441,8 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
                 defaultUseWorktree={workflow.defaultUseWorktree}
                 childTasksByParentId={childTasksByParentId}
                 parentTaskById={parentTaskById}
+                onStop={handleStopTask}
+                onResume={handleResumeTask}
               />
             ))}
           </div>
@@ -516,6 +534,8 @@ function StatusColumn({
   defaultUseWorktree,
   childTasksByParentId,
   parentTaskById,
+  onStop,
+  onResume,
 }: {
   projectId: string
   workflowId: string
@@ -533,6 +553,8 @@ function StatusColumn({
   defaultUseWorktree?: boolean
   childTasksByParentId: Map<string, { id: string; title: string; statusId: string }[]>
   parentTaskById: Map<string, { id: string; title: string }>
+  onStop: (taskId: string) => void
+  onResume: (taskId: string) => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.id })
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -604,6 +626,9 @@ function StatusColumn({
               onTransition={onTransition}
               childCount={childTasksByParentId.get(task.id)?.length}
               parentTaskTitle={parentTaskById.get(task.id)?.title}
+              onStop={onStop}
+              onResume={onResume}
+              statusHasAgent={!!status.agentId}
             />
           ))}
           {tasks.length === 0 && (
