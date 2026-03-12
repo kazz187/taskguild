@@ -343,10 +343,16 @@ func runQuerySyncWithLog(
 					transport.EndInput()
 					stdinClosed = true
 				}
-				// Cancel the transport context so the subprocess is terminated
-				// promptly. Without this, the deferred transport.Close() may
-				// block indefinitely waiting for the process to exit on its own.
+				// Cancel the transport context and close the transport to
+				// terminate the subprocess and close its stdout pipe.
+				// Without this, the deferred query.Close() deadlocks:
+				// it waits for readMessages goroutine which is blocked on
+				// scanner.Scan() reading from the still-open stdout pipe.
+				// exec.CommandContext kills the process on cancel but does
+				// NOT close the pipe, so we must call transport.Close()
+				// explicitly to unblock the scanner.
 				transportCancel()
+				transport.Close()
 				tl.LogResult(result.Result, nil)
 				return result, nil
 			}

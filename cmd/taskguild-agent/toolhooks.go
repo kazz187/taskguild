@@ -44,8 +44,10 @@ func buildToolUseHooks(tl *taskLogger, taskID string, taskClient taskguildv1conn
 							if input.ToolResponse != nil {
 								if s, ok := input.ToolResponse.(string); ok {
 									planContent = s
-								} else if b, err := json.Marshal(input.ToolResponse); err == nil {
-									planContent = string(b)
+								} else if m, ok := input.ToolResponse.(map[string]interface{}); ok {
+									if plan, ok := m["plan"].(string); ok {
+										planContent = plan
+									}
 								}
 							}
 							if planContent == "" && planFilePath != "" {
