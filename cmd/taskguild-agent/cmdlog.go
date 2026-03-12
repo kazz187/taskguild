@@ -219,9 +219,14 @@ func runQuerySyncWithLog(
 		opts.PermissionPromptToolName = "stdio"
 	}
 
+	// Create a cancellable context for the subprocess so we can terminate
+	// it promptly once the ResultMessage has been received.
+	transportCtx, transportCancel := context.WithCancel(ctx)
+	defer transportCancel()
+
 	// Create and connect the subprocess transport.
 	transport := claudeagent.NewSubprocessTransport("", opts)
-	if err := transport.Connect(ctx); err != nil {
+	if err := transport.Connect(transportCtx); err != nil {
 		return nil, err
 	}
 	defer transport.Close()
@@ -338,6 +343,10 @@ func runQuerySyncWithLog(
 					transport.EndInput()
 					stdinClosed = true
 				}
+				// Cancel the transport context so the subprocess is terminated
+				// promptly. Without this, the deferred transport.Close() may
+				// block indefinitely waiting for the process to exit on its own.
+				transportCancel()
 				tl.LogResult(result.Result, nil)
 				return result, nil
 			}
