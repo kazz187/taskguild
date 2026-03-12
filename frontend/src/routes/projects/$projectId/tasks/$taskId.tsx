@@ -266,7 +266,20 @@ function TaskDetailPage() {
 
   const metadata = task.metadata ?? {}
   const resultSummary = metadata['result_summary'] ?? ''
-  const planResult = metadata['plan_result'] ?? ''
+  const rawPlanResult = metadata['plan_result'] ?? ''
+  // Handle legacy plan_result that may be stored as JSON with a "plan" field
+  const planResult = (() => {
+    if (!rawPlanResult) return ''
+    try {
+      const parsed = JSON.parse(rawPlanResult)
+      if (typeof parsed === 'object' && parsed !== null && typeof parsed.plan === 'string') {
+        return parsed.plan
+      }
+    } catch {
+      // Not JSON, use as-is (already markdown)
+    }
+    return rawPlanResult
+  })()
   const metadataEntries = Object.entries(metadata).filter(([key, v]) => v && key !== 'result_summary' && key !== 'result_status' && key !== 'result_error' && key !== 'plan_result')
 
   return (
