@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -148,14 +149,21 @@ func runAgent() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Handle OS signals
+	// Handle OS signals (including SIGABRT for diagnostics).
 	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGABRT)
 	var sigWg conc.WaitGroup
 	sigWg.Go(func() {
 		select {
 		case sig := <-sigCh:
-			slog.Info("received signal, shutting down", "signal", sig)
+			if sig == syscall.SIGABRT {
+				slog.Error("received SIGABRT, initiating shutdown",
+					"signal", sig,
+					"num_goroutines", runtime.NumGoroutine(),
+				)
+			} else {
+				slog.Info("received signal, shutting down", "signal", sig)
+			}
 			cancel()
 		case <-ctx.Done():
 		}

@@ -236,7 +236,22 @@ func (s *Sentinel) startChild() (*exec.Cmd, error) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	// Child inherits environment (env vars like TASKGUILD_*).
-	cmd.Env = os.Environ()
+	// Ensure GOTRACEBACK=all so crash dumps include all goroutines for diagnostics.
+	env := os.Environ()
+	hasGotraceback := false
+	for _, e := range env {
+		if strings.HasPrefix(e, "GOTRACEBACK=") {
+			hasGotraceback = true
+			break
+		}
+	}
+	if !hasGotraceback {
+		env = append(env, "GOTRACEBACK=all")
+	}
+	cmd.Env = env
+	// Start child in its own process group so stray signals sent to the
+	// sentinel's group don't accidentally reach the child.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("exec %s run: %w", s.binaryPath, err)
