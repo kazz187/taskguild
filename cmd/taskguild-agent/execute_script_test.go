@@ -13,6 +13,7 @@ import (
 	"connectrpc.com/connect"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
+	"github.com/sourcegraph/conc"
 )
 
 // --- mock client ---
@@ -230,12 +231,13 @@ func TestStreamOutput_LargeOutput(t *testing.T) {
 	stderrR, stderrW, _ := os.Pipe()
 
 	// Write many lines
-	go func() {
+	var writerWg conc.WaitGroup
+	writerWg.Go(func() {
 		for i := 0; i < 100; i++ {
 			stdoutW.WriteString("line of output\n")
 		}
 		stdoutW.Close()
-	}()
+	})
 	stderrW.Close()
 
 	streamOutput(context.Background(), mock, cfg, "req-1", stdoutR, stderrR, &fullLog)
@@ -263,10 +265,11 @@ func TestStreamOutput_ContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	done := make(chan struct{})
-	go func() {
+	var streamWg conc.WaitGroup
+	streamWg.Go(func() {
 		streamOutput(ctx, mock, cfg, "req-1", stdoutR, stderrR, &fullLog)
 		close(done)
-	}()
+	})
 
 	// Cancel context while pipes are still open
 	cancel()
@@ -520,10 +523,11 @@ func TestHandleExecuteScript_ParentContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	done := make(chan struct{})
-	go func() {
+	var execWg conc.WaitGroup
+	execWg.Go(func() {
 		handleExecuteScript(ctx, mock, cfg, cmd)
 		close(done)
-	}()
+	})
 
 	// Wait a moment for the script to start, then cancel the parent context
 	// (simulating SIGINT/SIGTERM or hot-reload — NOT a user-initiated stop).
@@ -566,10 +570,11 @@ func TestHandleExecuteScript_StoppedByUser(t *testing.T) {
 	}
 
 	done := make(chan struct{})
-	go func() {
+	var execWg conc.WaitGroup
+	execWg.Go(func() {
 		handleExecuteScript(context.Background(), mock, cfg, cmd)
 		close(done)
-	}()
+	})
 
 	// Wait for the script to register in runningScripts
 	time.Sleep(200 * time.Millisecond)
@@ -613,10 +618,11 @@ func TestHandleExecuteScript_HotReloadDoesNotSetStoppedByUser(t *testing.T) {
 	}
 
 	done := make(chan struct{})
-	go func() {
+	var execWg conc.WaitGroup
+	execWg.Go(func() {
 		handleExecuteScript(context.Background(), mock, cfg, cmd)
 		close(done)
-	}()
+	})
 
 	// Wait for the script to register in runningScripts
 	time.Sleep(200 * time.Millisecond)
@@ -671,12 +677,13 @@ func TestHandleExecuteScript_RunningScriptsTracked(t *testing.T) {
 
 	started := make(chan struct{})
 	done := make(chan struct{})
-	go func() {
+	var execWg conc.WaitGroup
+	execWg.Go(func() {
 		// Signal when goroutine has entered handleExecuteScript
 		close(started)
 		handleExecuteScript(ctx, mock, cfg, cmd)
 		close(done)
-	}()
+	})
 	<-started
 	// Give it a moment to register in runningScripts
 	time.Sleep(200 * time.Millisecond)
@@ -793,10 +800,11 @@ func TestStreamOutput_PeriodicFlush(t *testing.T) {
 	stderrW.Close()
 
 	done := make(chan struct{})
-	go func() {
+	var streamWg conc.WaitGroup
+	streamWg.Go(func() {
 		streamOutput(context.Background(), mock, cfg, "req-1", stdoutR, stderrR, &fullLog)
 		close(done)
-	}()
+	})
 
 	// Write a line, wait for flush interval, then write another
 	io.WriteString(stdoutW, "first\n")

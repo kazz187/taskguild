@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/sourcegraph/conc"
 )
 
 const (
@@ -129,7 +130,8 @@ func Run(extraArgs ...string) {
 
 	// Start fsnotify watcher in a goroutine.
 	updateCh := make(chan struct{}, 1)
-	go s.watchBinary(updateCh)
+	var watchWg conc.WaitGroup
+	watchWg.Go(func() { s.watchBinary(updateCh) })
 
 	// Run the main supervision loop.
 	s.mainLoop(sigCh, updateCh)
@@ -159,9 +161,10 @@ func (s *Sentinel) mainLoop(sigCh <-chan os.Signal, updateCh <-chan struct{}) {
 
 		// Wait for child exit in a goroutine.
 		childDone := make(chan error, 1)
-		go func() {
+		var childWg conc.WaitGroup
+		childWg.Go(func() {
 			childDone <- child.Wait()
-		}()
+		})
 
 		// Wait for one of: child exit, binary update, or OS signal.
 		select {
@@ -259,7 +262,8 @@ func (s *Sentinel) stopChild(cmd *exec.Cmd) {
 	}
 
 	// Schedule a SIGKILL after the grace period.
-	go func() {
+	var killWg conc.WaitGroup
+	killWg.Go(func() {
 		time.Sleep(GracePeriod)
 		// Check if process is still alive by trying to signal it.
 		if err := cmd.Process.Signal(syscall.Signal(0)); err == nil {
@@ -268,7 +272,7 @@ func (s *Sentinel) stopChild(cmd *exec.Cmd) {
 				slog.Error("failed to send SIGKILL", "pid", pid, "error", err)
 			}
 		}
-	}()
+	})
 }
 
 // requestGracefulRestart sends SIGUSR1 to the child process to request a

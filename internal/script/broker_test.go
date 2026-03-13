@@ -6,6 +6,7 @@ import (
 	"time"
 
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
+	"github.com/sourcegraph/conc"
 )
 
 // helpers
@@ -370,9 +371,10 @@ func TestDrain_WaitsForCompletion(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	go func() {
+	var drainWg conc.WaitGroup
+	drainWg.Go(func() {
 		done <- b.Drain(ctx)
-	}()
+	})
 
 	// Drain should be blocking
 	select {
