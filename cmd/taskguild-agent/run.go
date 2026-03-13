@@ -221,7 +221,6 @@ func runAgent() {
 		mu          sync.Mutex
 		activeTasks = make(map[string]context.CancelFunc)
 		wg          conc.WaitGroup
-		sem         = make(chan struct{}, cfg.MaxConcurrentTasks)
 	)
 
 	// Start heartbeat goroutine
@@ -253,7 +252,7 @@ func runAgent() {
 		syncScripts(ctx, client, cfg, nil) // nil = don't force-overwrite any existing files
 		syncSkills(ctx, client, cfg, nil)
 
-		err := runSubscribeLoop(ctx, client, taskClient, interClient, cfg, &mu, activeTasks, &wg, sem, permCache, scpCache, subscribeReceiveTimeout)
+		err := runSubscribeLoop(ctx, client, taskClient, interClient, cfg, &mu, activeTasks, &wg, permCache, scpCache, subscribeReceiveTimeout)
 		if ctx.Err() != nil {
 			break
 		}
@@ -297,7 +296,6 @@ func runSubscribeLoop(
 	mu *sync.Mutex,
 	activeTasks map[string]context.CancelFunc,
 	wg *conc.WaitGroup,
-	sem chan struct{},
 	permCache *permissionCache,
 	scpCache *singleCommandPermissionCache,
 	receiveTimeout time.Duration,
@@ -378,7 +376,7 @@ func runSubscribeLoop(
 			taskID := taskAvail.GetTaskId()
 			slog.Info("task available", "task_id", taskID, "title", taskAvail.GetTitle())
 
-			// Skip if this task is already running (prevents semaphore deadlock on re-assignment).
+			// Skip if this task is already running.
 			mu.Lock()
 			if prevCancel, ok := activeTasks[taskID]; ok {
 				mu.Unlock()
@@ -388,16 +386,14 @@ func runSubscribeLoop(
 				mu.Unlock()
 			}
 
-			// Try to acquire semaphore slot BEFORE claiming to avoid
-			// blocking the subscribe loop when at max capacity.
-			// If all slots are full, skip this task so another agent
-			// (or a later retry) can pick it up.
-			select {
-			case sem <- struct{}{}:
-			default:
+			// Check capacity using the activeTasks map.
+			mu.Lock()
+			if len(activeTasks) >= cfg.MaxConcurrentTasks {
+				mu.Unlock()
 				slog.Info("at max capacity, skipping task", "task_id", taskID)
 				continue
 			}
+			mu.Unlock()
 
 			// Try to claim the task
 			claimResp, err := client.ClaimTask(ctx, connect.NewRequest(&v1.ClaimTaskRequest{
@@ -405,12 +401,10 @@ func runSubscribeLoop(
 				AgentManagerId: cfg.AgentManagerID,
 			}))
 			if err != nil {
-				<-sem // release slot on claim failure
 				slog.Error("failed to claim task", "task_id", taskID, "error", err)
 				continue
 			}
 			if !claimResp.Msg.GetSuccess() {
-				<-sem // release slot on claim failure
 				slog.Info("task already claimed by another agent", "task_id", taskID)
 				continue
 			}
@@ -426,7 +420,6 @@ func runSubscribeLoop(
 
 			wg.Go(func() {
 				tID := taskID
-				defer func() { <-sem }()
 				defer func() {
 					mu.Lock()
 					delete(activeTasks, tID)
@@ -554,13 +547,14 @@ func runSubscribeLoop(
 			instructions := assignCmd.GetInstructions()
 			metadata := assignCmd.GetMetadata()
 
-			// Non-blocking semaphore check to avoid blocking the subscribe loop.
-			select {
-			case sem <- struct{}{}:
-			default:
+			// Check capacity using the activeTasks map.
+			mu.Lock()
+			if len(activeTasks) >= cfg.MaxConcurrentTasks {
+				mu.Unlock()
 				slog.Warn("at max capacity, cannot run assigned task", "task_id", taskID)
 				continue
 			}
+			mu.Unlock()
 
 			taskCtx, taskCancel := context.WithCancel(ctx)
 			mu.Lock()
@@ -569,7 +563,6 @@ func runSubscribeLoop(
 
 			wg.Go(func() {
 				tID := taskID
-				defer func() { <-sem }()
 				defer func() {
 					mu.Lock()
 					delete(activeTasks, tID)
