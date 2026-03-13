@@ -130,7 +130,7 @@ func createTaskFromDirective(
 		return
 	}
 
-	// Resolve status name to ID if needed.
+	// Resolve status name if needed.
 	statusID := directive.StatusID
 	if statusID != "" {
 		statusID = resolveStatusID(statusID, metadata["_workflow_statuses"])
@@ -177,30 +177,23 @@ func createTaskFromDirective(
 	}
 }
 
-// resolveStatusID attempts to resolve a status name to its ID using the workflow_statuses JSON.
-// If the value already looks like an ID (found directly), it is returned as-is.
+// resolveStatusID attempts to resolve a status name using the workflow_statuses JSON.
+// It performs a case-insensitive match on Name and returns the matched Name.
 func resolveStatusID(statusIDOrName string, workflowStatusesJSON string) string {
 	if workflowStatusesJSON == "" {
 		return statusIDOrName
 	}
 	type statusEntry struct {
-		ID   string `json:"id"`
 		Name string `json:"name"`
 	}
 	var statuses []statusEntry
 	if err := json.Unmarshal([]byte(workflowStatusesJSON), &statuses); err != nil {
 		return statusIDOrName
 	}
-	// Check if it matches an ID directly.
-	for _, s := range statuses {
-		if s.ID == statusIDOrName {
-			return statusIDOrName
-		}
-	}
 	// Try matching by name (case-insensitive).
 	for _, s := range statuses {
 		if strings.EqualFold(s.Name, statusIDOrName) {
-			return s.ID
+			return s.Name
 		}
 	}
 	return statusIDOrName
@@ -287,7 +280,6 @@ func stripTaskDescription(resultText string) string {
 
 // transitionEntry represents one available status transition.
 type transitionEntry struct {
-	ID   string `json:"id"`
 	Name string `json:"name"`
 }
 
@@ -308,26 +300,18 @@ func parseAvailableTransitions(metadata map[string]string) ([]transitionEntry, e
 }
 
 // validateAndResolveTransition checks whether nextStatusID matches one of the
-// available transitions in metadata. It first tries an exact ID match, then
-// falls back to case-insensitive name matching. Returns the resolved status ID
-// on success, or errInvalidTransition if no match is found.
+// available transitions in metadata. It performs a case-insensitive name match.
+// Returns the resolved status name on success, or errInvalidTransition if no match is found.
 func validateAndResolveTransition(nextStatusID string, metadata map[string]string) (string, error) {
 	transitions, err := parseAvailableTransitions(metadata)
 	if err != nil {
 		return "", err
 	}
 
-	// Exact ID match.
-	for _, t := range transitions {
-		if t.ID == nextStatusID {
-			return t.ID, nil
-		}
-	}
-
 	// Case-insensitive name match.
 	for _, t := range transitions {
 		if strings.EqualFold(t.Name, nextStatusID) {
-			return t.ID, nil
+			return t.Name, nil
 		}
 	}
 
@@ -386,20 +370,20 @@ func handleStatusTransition(
 	if nextStatusID == "" {
 		// Auto-transition if exactly one transition is available.
 		if len(transitions) == 1 {
-			nextStatusID = transitions[0].ID
-			logger.Info("no NEXT_STATUS found, auto-transitioning", "next_status_id", nextStatusID, "next_status_name", transitions[0].Name)
+			nextStatusID = transitions[0].Name
+			logger.Info("no NEXT_STATUS found, auto-transitioning", "next_status", nextStatusID)
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-				fmt.Sprintf("Auto-transitioning to %s (%s)", nextStatusID, transitions[0].Name), nil)
+				fmt.Sprintf("Auto-transitioning to %s", nextStatusID), nil)
 		} else {
 			return fmt.Errorf("no NEXT_STATUS found and %d transitions available (%s), cannot auto-transition", len(transitions), formatTransitionList(transitions))
 		}
 	} else {
 		// Validate and resolve the chosen status (supports name fallback).
-		resolvedID, err := validateAndResolveTransition(nextStatusID, metadata)
+		resolvedName, err := validateAndResolveTransition(nextStatusID, metadata)
 		if err != nil {
 			return err
 		}
-		nextStatusID = resolvedID
+		nextStatusID = resolvedName
 	}
 
 	_, err = taskClient.UpdateTaskStatus(ctx, connect.NewRequest(&v1.UpdateTaskStatusRequest{
@@ -410,7 +394,7 @@ func handleStatusTransition(
 		return fmt.Errorf("UpdateTaskStatus RPC failed for %s: %w", nextStatusID, err)
 	}
 
-	logger.Info("status transitioned", "next_status_id", nextStatusID)
+	logger.Info("status transitioned", "next_status", nextStatusID)
 	tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 		fmt.Sprintf("Status transitioned to %s", nextStatusID), nil)
 	return nil

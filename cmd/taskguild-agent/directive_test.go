@@ -129,70 +129,70 @@ func TestStripNextStatus(t *testing.T) {
 
 func TestValidateAndResolveTransition(t *testing.T) {
 	validMetadata := map[string]string{
-		"_available_transitions": `[{"id":"review","name":"Review"},{"id":"develop","name":"Develop"}]`,
+		"_available_transitions": `[{"name":"Review"},{"name":"Develop"}]`,
 	}
 
 	tests := []struct {
 		name         string
 		nextStatusID string
 		metadata     map[string]string
-		wantID       string
+		wantName     string
 		wantErr      error
 	}{
 		{
-			name:         "exact ID match",
-			nextStatusID: "review",
+			name:         "exact name match",
+			nextStatusID: "Review",
 			metadata:     validMetadata,
-			wantID:       "review",
+			wantName:     "Review",
 			wantErr:      nil,
 		},
 		{
 			name:         "case-insensitive name match",
 			nextStatusID: "review",
 			metadata:     validMetadata,
-			wantID:       "review",
+			wantName:     "Review",
 			wantErr:      nil,
 		},
 		{
 			name:         "name match with different case",
 			nextStatusID: "DEVELOP",
 			metadata:     validMetadata,
-			wantID:       "develop",
+			wantName:     "Develop",
 			wantErr:      nil,
 		},
 		{
 			name:         "name match mixed case",
 			nextStatusID: "Review",
 			metadata:     validMetadata,
-			wantID:       "review",
+			wantName:     "Review",
 			wantErr:      nil,
 		},
 		{
-			name:         "invalid status ID",
+			name:         "invalid status name",
 			nextStatusID: "nonexistent",
 			metadata:     validMetadata,
-			wantID:       "",
+			wantName:     "",
 			wantErr:      errInvalidTransition,
 		},
 		{
 			name:         "empty transitions metadata",
 			nextStatusID: "review",
 			metadata:     map[string]string{},
-			wantID:       "",
+			wantName:     "",
 			wantErr:      nil, // generic error, not errInvalidTransition
 		},
 		{
 			name:         "invalid JSON in transitions",
 			nextStatusID: "review",
 			metadata:     map[string]string{"_available_transitions": "invalid"},
-			wantID:       "",
+			wantName:     "",
 			wantErr:      nil, // generic error, not errInvalidTransition
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotID, err := validateAndResolveTransition(tt.nextStatusID, tt.metadata)
+			gotName, err := validateAndResolveTransition(tt.nextStatusID, tt.metadata)
 			if tt.wantErr != nil {
 				if err == nil {
 					t.Fatalf("expected error wrapping %v, got nil", tt.wantErr)
@@ -200,13 +200,13 @@ func TestValidateAndResolveTransition(t *testing.T) {
 				if !errors.Is(err, tt.wantErr) {
 					t.Errorf("expected error wrapping %v, got %v", tt.wantErr, err)
 				}
-			} else if tt.wantID != "" {
+			} else if tt.wantName != "" {
 				// Expect success.
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
-				if gotID != tt.wantID {
-					t.Errorf("got ID %q, want %q", gotID, tt.wantID)
+				if gotName != tt.wantName {
+					t.Errorf("got name %q, want %q", gotName, tt.wantName)
 				}
 			} else {
 				// Expect some generic error (not errInvalidTransition).
@@ -224,7 +224,7 @@ func TestValidateAndResolveTransition(t *testing.T) {
 func TestBuildTransitionRetryPrompt(t *testing.T) {
 	t.Run("with valid transitions", func(t *testing.T) {
 		metadata := map[string]string{
-			"_available_transitions": `[{"id":"review","name":"Review"},{"id":"closed","name":"Closed"}]`,
+			"_available_transitions": `[{"name":"Review"},{"name":"Closed"}]`,
 		}
 		prompt := buildTransitionRetryPrompt("invalid_status", metadata)
 

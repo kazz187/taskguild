@@ -30,7 +30,6 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 	// Add status transition instructions if transitions are available.
 	if transitionsJSON != "" {
 		type transitionEntry struct {
-			ID   string `json:"id"`
 			Name string `json:"name"`
 		}
 		var transitions []transitionEntry
@@ -75,7 +74,6 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 	// List available workflow statuses if present.
 	if statusesJSON := metadata["_workflow_statuses"]; statusesJSON != "" {
 		type statusEntry struct {
-			ID   string `json:"id"`
 			Name string `json:"name"`
 		}
 		var statuses []statusEntry
@@ -137,16 +135,15 @@ func buildWorkflowContext(metadata map[string]string) string {
 	// List all workflow statuses, marking the current one.
 	if statusesJSON := metadata["_workflow_statuses"]; statusesJSON != "" {
 		type statusEntry struct {
-			ID   string `json:"id"`
 			Name string `json:"name"`
 		}
 		var statuses []statusEntry
 		if err := json.Unmarshal([]byte(statusesJSON), &statuses); err == nil && len(statuses) > 0 {
-			currentID := metadata["_current_status_id"]
+			currentName := metadata["_current_status_name"]
 			sb.WriteString("\n### Workflow Statuses\n")
 			for _, s := range statuses {
 				sb.WriteString(fmt.Sprintf("- %s", s.Name))
-				if s.ID == currentID {
+				if s.Name == currentName {
 					sb.WriteString("  <-- current")
 				}
 				sb.WriteString("\n")
@@ -157,7 +154,6 @@ func buildWorkflowContext(metadata map[string]string) string {
 	// List available transitions.
 	if transitionsJSON := metadata["_available_transitions"]; transitionsJSON != "" {
 		type transitionEntry struct {
-			ID   string `json:"id"`
 			Name string `json:"name"`
 		}
 		var transitions []transitionEntry

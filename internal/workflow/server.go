@@ -161,7 +161,7 @@ func toProto(w *Workflow) *taskguildv1.Workflow {
 
 func statusToProto(s Status) *taskguildv1.WorkflowStatus {
 	pb := &taskguildv1.WorkflowStatus{
-		Id:            s.ID,
+		Id:            s.Name, // Deprecated: populated with Name for backward compat
 		Name:          s.Name,
 		Order:         s.Order,
 		IsInitial:     s.IsInitial,
@@ -217,28 +217,20 @@ func agentConfigToProto(a AgentConfig) *taskguildv1.AgentConfig {
 func validateStatuses(statuses []*taskguildv1.WorkflowStatus) error {
 	seen := make(map[string]bool)
 	for _, s := range statuses {
-		id := s.Id
-		if id == "" {
-			id = s.Name
+		name := s.Name
+		if !alphanumericRe.MatchString(name) {
+			return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("status name %q must be alphanumeric", name))
 		}
-		if !alphanumericRe.MatchString(id) {
-			return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("status ID %q must be alphanumeric", id))
+		if seen[name] {
+			return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("duplicate status name %q", name))
 		}
-		if seen[id] {
-			return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("duplicate status ID %q", id))
-		}
-		seen[id] = true
+		seen[name] = true
 	}
 	return nil
 }
 
 func statusFromProto(ps *taskguildv1.WorkflowStatus) Status {
-	id := ps.Id
-	if id == "" {
-		id = ps.Name
-	}
 	s := Status{
-		ID:            id,
 		Name:          ps.Name,
 		Order:         ps.Order,
 		IsInitial:     ps.IsInitial,

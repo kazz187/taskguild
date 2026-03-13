@@ -48,7 +48,6 @@ type StatusHook struct {
 }
 
 type Status struct {
-	ID            string       `yaml:"id"`
 	Name          string       `yaml:"name"`
 	Order         int32        `yaml:"order"`
 	IsInitial     bool         `yaml:"is_initial"`
@@ -69,14 +68,14 @@ type Status struct {
 // FindAgentIDForStatus returns the agent ID configured for the given status.
 // It first checks the status-level AgentID field, then falls back to the
 // legacy AgentConfig list on the workflow. Returns "" if no agent is configured.
-func (w *Workflow) FindAgentIDForStatus(statusID string) string {
+func (w *Workflow) FindAgentIDForStatus(statusName string) string {
 	for _, s := range w.Statuses {
-		if s.ID == statusID && s.AgentID != "" {
+		if s.Name == statusName && s.AgentID != "" {
 			return s.AgentID
 		}
 	}
 	for _, cfg := range w.AgentConfigs {
-		if cfg.WorkflowStatusID == statusID {
+		if cfg.WorkflowStatusID == statusName {
 			return cfg.ID
 		}
 	}
