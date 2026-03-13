@@ -527,7 +527,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	// Try new approach: status-level agent_id referencing Agent entity.
 	var currentAgentID string
 	for _, st := range wf.Statuses {
-		if st.ID == t.StatusID && st.AgentID != "" {
+		if st.Name == t.StatusID && st.AgentID != "" {
 			currentAgentID = st.AgentID
 			break
 		}
@@ -573,7 +573,6 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	}
 	enrichedMetadata["_task_title"] = t.Title
 	enrichedMetadata["_task_description"] = t.Description
-	enrichedMetadata["_current_status_id"] = t.StatusID
 	enrichedMetadata["_project_id"] = t.ProjectID
 	enrichedMetadata["_workflow_id"] = t.WorkflowID
 	if t.UseWorktree {
@@ -581,7 +580,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	}
 	// Resolve permission mode from workflow status, falling back to workflow default.
 	for _, st := range wf.Statuses {
-		if st.ID == t.StatusID && st.PermissionMode != "" {
+		if st.Name == t.StatusID && st.PermissionMode != "" {
 			enrichedMetadata["_permission_mode"] = st.PermissionMode
 			break
 		}
@@ -594,24 +593,16 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	}
 
 	// Resolve current status name and available transitions from workflow.
-	statusMap := make(map[string]string) // id -> name
 	for _, st := range wf.Statuses {
-		statusMap[st.ID] = st.Name
-	}
-	if name, ok := statusMap[t.StatusID]; ok {
-		enrichedMetadata["_current_status_name"] = name
-	}
-	for _, st := range wf.Statuses {
-		if st.ID == t.StatusID {
+		if st.Name == t.StatusID {
+			enrichedMetadata["_current_status_name"] = st.Name
 			type transitionEntry struct {
-				ID   string `json:"id"`
 				Name string `json:"name"`
 			}
 			var transitions []transitionEntry
-			for _, targetID := range st.TransitionsTo {
+			for _, targetName := range st.TransitionsTo {
 				transitions = append(transitions, transitionEntry{
-					ID:   targetID,
-					Name: statusMap[targetID],
+					Name: targetName,
 				})
 			}
 			if b, err := json.Marshal(transitions); err == nil {
@@ -624,12 +615,11 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	// Inject all workflow statuses so agents can create tasks with any status.
 	{
 		type statusInfo struct {
-			ID   string `json:"id"`
 			Name string `json:"name"`
 		}
 		var allStatuses []statusInfo
 		for _, st := range wf.Statuses {
-			allStatuses = append(allStatuses, statusInfo{ID: st.ID, Name: st.Name})
+			allStatuses = append(allStatuses, statusInfo{Name: st.Name})
 		}
 		if b, err := json.Marshal(allStatuses); err == nil {
 			enrichedMetadata["_workflow_statuses"] = string(b)
@@ -638,7 +628,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 
 	// Resolve hooks for the current status and inject into metadata.
 	for _, st := range wf.Statuses {
-		if st.ID == t.StatusID && len(st.Hooks) > 0 {
+		if st.Name == t.StatusID && len(st.Hooks) > 0 {
 			type hookEntry struct {
 				ID         string `json:"id"`
 				SkillID    string `json:"skill_id"`
@@ -704,7 +694,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	// Inject AGENT.md harness flag for the current status.
 	// Default is enabled (true) unless explicitly disabled.
 	for _, st := range wf.Statuses {
-		if st.ID == t.StatusID {
+		if st.Name == t.StatusID {
 			harnessEnabled := !st.AgentMDHarnessExplicitlyDisabled
 			if st.AgentMDHarnessExplicitlyDisabled {
 				harnessEnabled = st.EnableAgentMDHarness

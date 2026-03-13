@@ -74,7 +74,7 @@ func (n *Notifier) handleTaskStatusChanged(ctx context.Context, event *taskguild
 		slog.Warn("chat notifier: failed to get workflow, using status ID", "workflow_id", t.WorkflowID, "error", err)
 	} else {
 		for _, s := range wf.Statuses {
-			if s.ID == newStatusID {
+			if s.Name == newStatusID {
 				statusName = s.Name
 				break
 			}

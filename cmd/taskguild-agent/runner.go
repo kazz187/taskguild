@@ -436,20 +436,19 @@ func runTask(
 		// No NEXT_STATUS output but transitions exist — try auto-transition
 		// if exactly one transition is available.
 		if transitions, err := parseAvailableTransitions(metadata); err == nil && len(transitions) == 1 {
-			autoID := transitions[0].ID
 			autoName := transitions[0].Name
 			logger.Info("no NEXT_STATUS output, auto-transitioning (single transition available)",
-				"next_status_id", autoID, "next_status_name", autoName, "turn", turn)
+				"next_status_name", autoName, "turn", turn)
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-				fmt.Sprintf("No NEXT_STATUS output; auto-transitioning to %s (%s)", autoID, autoName), nil)
+				fmt.Sprintf("No NEXT_STATUS output; auto-transitioning to %s", autoName), nil)
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (auto-transition)")
 			afterHooks()
 			maybeRunAgentMDHarness(ctx, metadata, taskID, summary, workDir, tl, client)
-			if err := handleStatusTransition(ctx, taskClient, taskID, autoID, metadata, tl); err != nil {
+			if err := handleStatusTransition(ctx, taskClient, taskID, autoName, metadata, tl); err != nil {
 				logger.Error("auto status transition failed", "error", err)
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
-					fmt.Sprintf("Auto status transition to %q failed: %v", autoID, err), nil)
+					fmt.Sprintf("Auto status transition to %q failed: %v", autoName, err), nil)
 			}
 			return
 		}

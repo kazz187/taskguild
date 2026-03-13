@@ -67,7 +67,7 @@ func (s *Server) CreateTask(ctx context.Context, req *connect.Request[taskguildv
 		// Validate specified status exists in the workflow.
 		found := false
 		for _, st := range wf.Statuses {
-			if st.ID == *req.Msg.StatusId {
+			if st.Name == *req.Msg.StatusId {
 				found = true
 				break
 			}
@@ -81,7 +81,7 @@ func (s *Server) CreateTask(ctx context.Context, req *connect.Request[taskguildv
 		// Default: use the workflow's initial status.
 		for _, st := range wf.Statuses {
 			if st.IsInitial {
-				statusID = st.ID
+				statusID = st.Name
 				break
 			}
 		}
@@ -251,7 +251,7 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *connect.Request[task
 
 	var currentStatus *workflow.Status
 	for i := range wf.Statuses {
-		if wf.Statuses[i].ID == t.StatusID {
+		if wf.Statuses[i].Name == t.StatusID {
 			currentStatus = &wf.Statuses[i]
 			break
 		}
@@ -263,7 +263,7 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *connect.Request[task
 	// Validate target status exists in the workflow.
 	targetExists := false
 	for i := range wf.Statuses {
-		if wf.Statuses[i].ID == req.Msg.StatusId {
+		if wf.Statuses[i].Name == req.Msg.StatusId {
 			targetExists = true
 			break
 		}
@@ -470,7 +470,7 @@ func (s *Server) ArchiveTerminalTasks(ctx context.Context, req *connect.Request[
 	terminalStatusIDs := make(map[string]bool)
 	for _, st := range wf.Statuses {
 		if st.IsTerminal {
-			terminalStatusIDs[st.ID] = true
+			terminalStatusIDs[st.Name] = true
 		}
 	}
 
@@ -583,7 +583,7 @@ func toProto(t *Task) *taskguildv1.Task {
 // either via the status-level AgentID or via the legacy AgentConfig list.
 func statusHasAgent(wf *workflow.Workflow, statusID string) bool {
 	for _, st := range wf.Statuses {
-		if st.ID == statusID && st.AgentID != "" {
+		if st.Name == statusID && st.AgentID != "" {
 			return true
 		}
 	}
