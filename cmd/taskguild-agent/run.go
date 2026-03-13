@@ -9,9 +9,11 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -30,6 +32,19 @@ var scriptTracker struct {
 	mu      sync.Mutex
 	wg      sync.WaitGroup
 	reject  bool // true once SIGUSR1 is received; prevents new script starts
+}
+
+// safeGo launches f in a new goroutine with panic recovery.
+func safeGo(name string, f func()) {
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("goroutine panicked", "handler", name,
+					"panic", fmt.Sprintf("%v", r), "stack", string(debug.Stack()))
+			}
+		}()
+		f()
+	}()
 }
 
 type config struct {
@@ -212,8 +227,9 @@ func runAgent() {
 
 	// Subscribe loop with reconnection and exponential backoff.
 	const (
-		subscribeInitialBackoff = 5 * time.Second
-		subscribeMaxBackoff     = 5 * time.Minute
+		subscribeInitialBackoff  = 5 * time.Second
+		subscribeMaxBackoff      = 5 * time.Minute
+		subscribeReceiveTimeout  = 3 * time.Minute
 	)
 	subscribeBackoff := subscribeInitialBackoff
 
@@ -233,7 +249,7 @@ func runAgent() {
 		syncScripts(ctx, client, cfg, nil) // nil = don't force-overwrite any existing files
 		syncSkills(ctx, client, cfg, nil)
 
-		err := runSubscribeLoop(ctx, client, taskClient, interClient, cfg, &mu, activeTasks, &wg, sem, permCache, scpCache)
+		err := runSubscribeLoop(ctx, client, taskClient, interClient, cfg, &mu, activeTasks, &wg, sem, permCache, scpCache, subscribeReceiveTimeout)
 		if ctx.Err() != nil {
 			break
 		}
@@ -279,6 +295,7 @@ func runSubscribeLoop(
 	sem chan struct{},
 	permCache *permissionCache,
 	scpCache *singleCommandPermissionCache,
+	receiveTimeout time.Duration,
 ) error {
 	// Collect active task IDs so the server knows which tasks are still running
 	// and should NOT be released during reconnection.
@@ -293,7 +310,12 @@ func runSubscribeLoop(
 		slog.Info("reconnecting with active tasks", "count", len(activeTaskIDs), "task_ids", activeTaskIDs)
 	}
 
-	stream, err := client.Subscribe(ctx, connect.NewRequest(&v1.AgentManagerSubscribeRequest{
+	// Use a derived context so the watchdog can cancel the stream
+	// without tearing down the entire agent.
+	streamCtx, streamCancel := context.WithCancel(ctx)
+	defer streamCancel()
+
+	stream, err := client.Subscribe(streamCtx, connect.NewRequest(&v1.AgentManagerSubscribeRequest{
 		AgentManagerId:     cfg.AgentManagerID,
 		MaxConcurrentTasks: int32(cfg.MaxConcurrentTasks),
 		ProjectName:        cfg.ProjectName,
@@ -307,7 +329,33 @@ func runSubscribeLoop(
 
 	slog.Info("subscribe stream connected")
 
+	// Watchdog: force reconnect if no message received within timeout.
+	var lastReceive atomic.Int64
+	lastReceive.Store(time.Now().UnixNano())
+
+	watchdogDone := make(chan struct{})
+	defer close(watchdogDone)
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-watchdogDone:
+				return
+			case <-ticker.C:
+				elapsed := time.Since(time.Unix(0, lastReceive.Load()))
+				if elapsed > receiveTimeout {
+					slog.Warn("subscribe stream receive timeout, forcing reconnect",
+						"elapsed", elapsed, "timeout", receiveTimeout)
+					streamCancel()
+					return
+				}
+			}
+		}
+	}()
+
 	for stream.Receive() {
+		lastReceive.Store(time.Now().UnixNano())
 		cmd := stream.Msg()
 
 		// Skip empty commands (e.g. caused by proxy-injected frames or
@@ -393,7 +441,7 @@ func runSubscribeLoop(
 		case *v1.AgentCommand_ListWorktrees:
 			listCmd := c.ListWorktrees
 			slog.Info("received list worktrees command", "request_id", listCmd.GetRequestId())
-			go handleListWorktrees(ctx, client, cfg, listCmd.GetRequestId())
+			safeGo("handleListWorktrees", func() { handleListWorktrees(ctx, client, cfg, listCmd.GetRequestId()) })
 
 		case *v1.AgentCommand_DeleteWorktree:
 			deleteCmd := c.DeleteWorktree
@@ -402,12 +450,12 @@ func runSubscribeLoop(
 				"worktree_name", deleteCmd.GetWorktreeName(),
 				"force", deleteCmd.GetForce(),
 			)
-			go handleDeleteWorktree(ctx, client, cfg, deleteCmd)
+			safeGo("handleDeleteWorktree", func() { handleDeleteWorktree(ctx, client, cfg, deleteCmd) })
 
 		case *v1.AgentCommand_GitPullMain:
 			pullCmd := c.GitPullMain
 			slog.Info("received git pull main command", "request_id", pullCmd.GetRequestId())
-			go handleGitPullMain(ctx, client, cfg, pullCmd.GetRequestId())
+			safeGo("handleGitPullMain", func() { handleGitPullMain(ctx, client, cfg, pullCmd.GetRequestId()) })
 
 		case *v1.AgentCommand_SyncAgents:
 			syncCmd := c.SyncAgents
@@ -435,7 +483,7 @@ func runSubscribeLoop(
 		case *v1.AgentCommand_CompareScripts:
 			compareCmd := c.CompareScripts
 			slog.Info("received compare scripts command", "request_id", compareCmd.GetRequestId())
-			go handleCompareScripts(ctx, client, cfg, compareCmd)
+			safeGo("handleCompareScripts", func() { handleCompareScripts(ctx, client, cfg, compareCmd) })
 
 		case *v1.AgentCommand_ExecuteScript:
 			execCmd := c.ExecuteScript
@@ -444,7 +492,7 @@ func runSubscribeLoop(
 				"script_id", execCmd.GetScriptId(),
 				"filename", execCmd.GetFilename(),
 			)
-			go handleExecuteScript(ctx, client, cfg, execCmd)
+			safeGo("handleExecuteScript", func() { handleExecuteScript(ctx, client, cfg, execCmd) })
 
 		case *v1.AgentCommand_StopScript:
 			stopCmd := c.StopScript
@@ -454,7 +502,7 @@ func runSubscribeLoop(
 		case *v1.AgentCommand_CompareAgents:
 			compareCmd := c.CompareAgents
 			slog.Info("received compare agents command", "request_id", compareCmd.GetRequestId())
-			go handleCompareAgents(ctx, client, cfg, compareCmd)
+			safeGo("handleCompareAgents", func() { handleCompareAgents(ctx, client, cfg, compareCmd) })
 
 		case *v1.AgentCommand_SyncSkills:
 			syncCmd := c.SyncSkills
@@ -468,7 +516,7 @@ func runSubscribeLoop(
 		case *v1.AgentCommand_CompareSkills:
 			compareCmd := c.CompareSkills
 			slog.Info("received compare skills command", "request_id", compareCmd.GetRequestId())
-			go handleCompareSkills(ctx, client, cfg, compareCmd)
+			safeGo("handleCompareSkills", func() { handleCompareSkills(ctx, client, cfg, compareCmd) })
 
 		case *v1.AgentCommand_CancelTask:
 			cancelCmd := c.CancelTask
