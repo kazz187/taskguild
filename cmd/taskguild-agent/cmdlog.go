@@ -338,11 +338,13 @@ func runQuerySyncWithLog(
 
 			if rm, ok := parsed.(*claudeagent.ResultMessage); ok {
 				result.Result = rm
+				slog.Info("ResultMessage received, starting cleanup")
 				// Close stdin to signal CLI that no more input is coming.
 				if !stdinClosed {
 					transport.EndInput()
 					stdinClosed = true
 				}
+				slog.Info("EndInput completed, cancelling transport context")
 				// Cancel the transport context and close the transport to
 				// terminate the subprocess and close its stdout pipe.
 				// Without this, the deferred query.Close() deadlocks:
@@ -352,8 +354,11 @@ func runQuerySyncWithLog(
 				// NOT close the pipe, so we must call transport.Close()
 				// explicitly to unblock the scanner.
 				transportCancel()
+				slog.Info("transport context cancelled, closing transport")
 				transport.Close()
+				slog.Info("transport closed, logging result")
 				tl.LogResult(result.Result, nil)
+				slog.Info("result logged, returning")
 				return result, nil
 			}
 		}
