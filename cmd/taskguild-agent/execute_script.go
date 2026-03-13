@@ -17,6 +17,7 @@ import (
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 	"github.com/sourcegraph/conc"
+	"github.com/sourcegraph/conc/pool"
 )
 
 const (
@@ -179,16 +180,15 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 	// a short window to drain buffered pipe data, then force-close the
 	// read ends. This prevents indefinite blocking when scripts spawn
 	// background processes that inherit stdout/stderr.
-	waitCh := make(chan error, 1)
-	var waitWg conc.WaitGroup
-	waitWg.Go(func() {
+	waitPool := pool.NewWithResults[error]().WithMaxGoroutines(1)
+	waitPool.Go(func() error {
 		waitErr := execCmd.Wait()
 		// Allow scanners up to 500ms to drain any data still in the
 		// kernel pipe buffer after the main process exits.
 		time.Sleep(500 * time.Millisecond)
 		stdoutR.Close()
 		stderrR.Close()
-		waitCh <- waitErr
+		return waitErr
 	})
 
 	// Stream output in real-time.
@@ -197,8 +197,11 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 
 	// Collect the Wait result (available immediately or shortly after
 	// streamOutput returns).
-	cmdErr := <-waitCh
-	waitWg.Wait()
+	waitResults := waitPool.Wait()
+	var cmdErr error
+	if len(waitResults) > 0 {
+		cmdErr = waitResults[0]
+	}
 
 	// Check if this was a user-initiated stop (via StopScriptCommand).
 	// Do not rely on execCtx.Err() == context.Canceled because the context
@@ -338,30 +341,36 @@ func streamOutput(
 		slog.Info("[STREAM-TRACE] agent: stderr pipe closed", "request_id", requestID, "total_lines", lineCount)
 	})
 
-	// Flush buffered output every 200ms until both pipes close.
-	doneCh := make(chan struct{})
-	var doneWg conc.WaitGroup
-	doneWg.Go(func() {
-		pipeWg.Wait()
-		close(doneCh)
+	// Periodic flushing in background until pipes close.
+	flushDone := make(chan struct{})
+	var flushWg conc.WaitGroup
+	flushWg.Go(func() {
+		ticker := time.NewTicker(outputFlushInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				flushLogEntries(ctx, client, cfg, requestID, &chunk)
+			case <-flushDone:
+				return
+			case <-ctx.Done():
+				return
+			}
+		}
 	})
 
-	ticker := time.NewTicker(outputFlushInterval)
-	defer ticker.Stop()
+	// Wait for both pipe readers to finish, then stop the flusher.
+	pipeWg.Wait()
+	close(flushDone)
+	flushWg.Wait()
 
-	for {
-		select {
-		case <-ticker.C:
-			flushLogEntries(ctx, client, cfg, requestID, &chunk)
-		case <-doneCh:
-			// Pipes closed — flush any remaining data.
-			flushLogEntries(ctx, client, cfg, requestID, &chunk)
-			slog.Info("script output streaming finished", "request_id", requestID)
-			return
-		case <-ctx.Done():
-			slog.Warn("script output streaming cancelled by context", "request_id", requestID, "error", ctx.Err())
-			return
-		}
+	// Final flush for any remaining data.
+	flushLogEntries(ctx, client, cfg, requestID, &chunk)
+
+	if ctx.Err() != nil {
+		slog.Warn("script output streaming cancelled by context", "request_id", requestID, "error", ctx.Err())
+	} else {
+		slog.Info("script output streaming finished", "request_id", requestID)
 	}
 }
 

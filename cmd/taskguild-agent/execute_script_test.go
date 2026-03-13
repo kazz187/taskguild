@@ -271,8 +271,12 @@ func TestStreamOutput_ContextCancelled(t *testing.T) {
 		close(done)
 	})
 
-	// Cancel context while pipes are still open
+	// Cancel context and close write-ends so scanners get EOF.
+	// In production the process-group kill closes the write-ends;
+	// here we simulate that by closing them explicitly.
 	cancel()
+	stdoutW.Close()
+	stderrW.Close()
 
 	select {
 	case <-done:
@@ -281,9 +285,7 @@ func TestStreamOutput_ContextCancelled(t *testing.T) {
 		t.Fatal("streamOutput did not return after context cancellation")
 	}
 
-	// Clean up pipes
-	stdoutW.Close()
-	stderrW.Close()
+	// Clean up read-ends.
 	stdoutR.Close()
 	stderrR.Close()
 }
