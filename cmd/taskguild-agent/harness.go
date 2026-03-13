@@ -9,10 +9,11 @@ import (
 	"time"
 
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
+	"github.com/kazz187/taskguild/pkg/clog"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/kazz187/taskguild/pkg/clog"
 	"github.com/pmezard/go-difflib/difflib"
+	"github.com/sourcegraph/conc"
 )
 
 const (
@@ -73,7 +74,10 @@ func maybeRunAgentMDHarness(
 	// and will remain valid for the full lifetime of the harness execution.
 	harnessTL := newTaskLogger(context.Background(), client, taskID)
 
-	go runAgentMDHarness(ctx, taskID, taskTitle, taskDescription, taskSummary, workDir, agentName, harnessTL)
+	var harnessWg conc.WaitGroup
+	harnessWg.Go(func() {
+		runAgentMDHarness(ctx, taskID, taskTitle, taskDescription, taskSummary, workDir, agentName, harnessTL)
+	})
 }
 
 // runAgentMDHarness runs the agent MD review harness in a background goroutine.

@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/sourcegraph/conc"
 )
 
 func TestHashFile(t *testing.T) {
@@ -157,10 +159,11 @@ func TestSleepBackoffInterruptible(t *testing.T) {
 
 	start := time.Now()
 	// Close stopCh after a short delay to interrupt the sleep.
-	go func() {
+	var wg conc.WaitGroup
+	wg.Go(func() {
 		time.Sleep(50 * time.Millisecond)
 		close(s.stopCh)
-	}()
+	})
 
 	s.sleepBackoff()
 	elapsed := time.Since(start)
@@ -215,10 +218,11 @@ func TestMainLoopGracefulRestart_ChildExitsBeforeTimeout(t *testing.T) {
 	childDone := make(chan error, 1)
 
 	// Simulate child exit after a short delay (e.g. after scripts complete).
-	go func() {
+	var childWg conc.WaitGroup
+	childWg.Go(func() {
 		time.Sleep(50 * time.Millisecond)
 		childDone <- nil
-	}()
+	})
 
 	// Simulate the updateCh select branch inline:
 	// We can't easily call mainLoop here because it needs real processes,

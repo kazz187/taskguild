@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,10 +17,11 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/kazz187/taskguild/internal/version"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/kazz187/taskguild/internal/version"
 	"github.com/oklog/ulid/v2"
+	"github.com/sourcegraph/conc"
 )
 
 // scriptTracker tracks running script executions for graceful hot-reload.
@@ -34,16 +34,15 @@ var scriptTracker struct {
 	reject  bool // true once SIGUSR1 is received; prevents new script starts
 }
 
-// safeGo launches f in a new goroutine with panic recovery.
+// safeGo launches f in a new goroutine with panic recovery using conc.WaitGroup.
 func safeGo(name string, f func()) {
+	var wg conc.WaitGroup
+	wg.Go(f)
 	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Error("goroutine panicked", "handler", name,
-					"panic", fmt.Sprintf("%v", r), "stack", string(debug.Stack()))
-			}
-		}()
-		f()
+		if r := wg.WaitAndRecover(); r != nil {
+			slog.Error("goroutine panicked", "handler", name,
+				"panic", fmt.Sprintf("%v", r.Value), "stack", string(r.Stack))
+		}
 	}()
 }
 
@@ -152,11 +151,15 @@ func runAgent() {
 	// Handle OS signals
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		sig := <-sigCh
-		slog.Info("received signal, shutting down", "signal", sig)
-		cancel()
-	}()
+	var sigWg conc.WaitGroup
+	sigWg.Go(func() {
+		select {
+		case sig := <-sigCh:
+			slog.Info("received signal, shutting down", "signal", sig)
+			cancel()
+		case <-ctx.Done():
+		}
+	})
 
 	// Handle SIGUSR1 for graceful hot-reload.
 	// When the sentinel detects a binary update it sends SIGUSR1 instead of
@@ -164,25 +167,28 @@ func runAgent() {
 	// scripts to complete, and then triggers the normal shutdown flow.
 	usr1Ch := make(chan os.Signal, 1)
 	signal.Notify(usr1Ch, syscall.SIGUSR1)
-	go func() {
-		<-usr1Ch
-		slog.Info("received SIGUSR1 (hot reload), cancelling running scripts")
-		scriptTracker.mu.Lock()
-		scriptTracker.reject = true
-		scriptTracker.mu.Unlock()
+	sigWg.Go(func() {
+		select {
+		case <-usr1Ch:
+			slog.Info("received SIGUSR1 (hot reload), cancelling running scripts")
+			scriptTracker.mu.Lock()
+			scriptTracker.reject = true
+			scriptTracker.mu.Unlock()
 
-		// Cancel all running script executions so they terminate promptly.
-		runningScripts.mu.Lock()
-		for reqID, cancelFn := range runningScripts.cancels {
-			slog.Info("cancelling script for hot reload", "request_id", reqID)
-			cancelFn()
+			// Cancel all running script executions so they terminate promptly.
+			runningScripts.mu.Lock()
+			for reqID, cancelFn := range runningScripts.cancels {
+				slog.Info("cancelling script for hot reload", "request_id", reqID)
+				cancelFn()
+			}
+			runningScripts.mu.Unlock()
+
+			scriptTracker.wg.Wait()
+			slog.Info("all scripts completed, shutting down for hot reload restart")
+			cancel()
+		case <-ctx.Done():
 		}
-		runningScripts.mu.Unlock()
-
-		scriptTracker.wg.Wait()
-		slog.Info("all scripts completed, shutting down for hot reload restart")
-		cancel()
-	}()
+	})
 
 	// Create Connect RPC clients with API key interceptor
 	httpClient := http.DefaultClient
@@ -214,16 +220,14 @@ func runAgent() {
 	var (
 		mu          sync.Mutex
 		activeTasks = make(map[string]context.CancelFunc)
-		wg          sync.WaitGroup
+		wg          conc.WaitGroup
 		sem         = make(chan struct{}, cfg.MaxConcurrentTasks)
 	)
 
 	// Start heartbeat goroutine
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		heartbeat(ctx, client, cfg.AgentManagerID)
-	}()
+	})
 
 	// Subscribe loop with reconnection and exponential backoff.
 	const (
@@ -280,6 +284,7 @@ func runAgent() {
 	mu.Unlock()
 
 	wg.Wait()
+	sigWg.Wait()
 	slog.Info("agent-manager stopped")
 }
 
@@ -291,7 +296,7 @@ func runSubscribeLoop(
 	cfg *config,
 	mu *sync.Mutex,
 	activeTasks map[string]context.CancelFunc,
-	wg *sync.WaitGroup,
+	wg *conc.WaitGroup,
 	sem chan struct{},
 	permCache *permissionCache,
 	scpCache *singleCommandPermissionCache,
@@ -335,7 +340,8 @@ func runSubscribeLoop(
 
 	watchdogDone := make(chan struct{})
 	defer close(watchdogDone)
-	go func() {
+	var watchdogWg conc.WaitGroup
+	watchdogWg.Go(func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
 		for {
@@ -352,7 +358,8 @@ func runSubscribeLoop(
 				}
 			}
 		}
-	}()
+	})
+	defer watchdogWg.Wait()
 
 	for stream.Receive() {
 		lastReceive.Store(time.Now().UnixNano())
@@ -417,9 +424,8 @@ func runSubscribeLoop(
 			activeTasks[taskID] = taskCancel
 			mu.Unlock()
 
-			wg.Add(1)
-			go func(tID string) {
-				defer wg.Done()
+			wg.Go(func() {
+				tID := taskID
 				defer func() { <-sem }()
 				defer func() {
 					mu.Lock()
@@ -436,7 +442,7 @@ func runSubscribeLoop(
 				slog.Info("launching runTask goroutine", "task_id", tID)
 				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache, scpCache)
 				slog.Info("runTask goroutine finished", "task_id", tID)
-			}(taskID)
+			})
 
 		case *v1.AgentCommand_ListWorktrees:
 			listCmd := c.ListWorktrees
@@ -561,9 +567,8 @@ func runSubscribeLoop(
 			activeTasks[taskID] = taskCancel
 			mu.Unlock()
 
-			wg.Add(1)
-			go func(tID string) {
-				defer wg.Done()
+			wg.Go(func() {
+				tID := taskID
 				defer func() { <-sem }()
 				defer func() {
 					mu.Lock()
@@ -580,7 +585,7 @@ func runSubscribeLoop(
 				slog.Info("launching runTask goroutine (assigned)", "task_id", tID)
 				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache, scpCache)
 				slog.Info("runTask goroutine finished (assigned)", "task_id", tID)
-			}(taskID)
+			})
 
 		case *v1.AgentCommand_InteractionResponse:
 			// Interaction responses are handled per-task via SubscribeInteractions.

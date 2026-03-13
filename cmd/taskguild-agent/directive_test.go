@@ -232,12 +232,12 @@ func TestBuildTransitionRetryPrompt(t *testing.T) {
 		if !strings.Contains(prompt, "invalid_status") {
 			t.Error("prompt should contain the failed status ID")
 		}
-		// Should list valid transitions.
-		if !strings.Contains(prompt, "review") {
-			t.Error("prompt should contain valid transition ID 'review'")
+		// Should list valid transition names.
+		if !strings.Contains(prompt, "Review") {
+			t.Error("prompt should contain valid transition name 'Review'")
 		}
-		if !strings.Contains(prompt, "closed") {
-			t.Error("prompt should contain valid transition ID 'closed'")
+		if !strings.Contains(prompt, "Closed") {
+			t.Error("prompt should contain valid transition name 'Closed'")
 		}
 		// Should request NEXT_STATUS format.
 		if !strings.Contains(prompt, "NEXT_STATUS:") {

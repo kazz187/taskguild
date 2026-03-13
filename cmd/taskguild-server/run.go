@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sourcegraph/conc"
+
 	"github.com/kazz187/taskguild/internal/agent"
 	agentrepo "github.com/kazz187/taskguild/internal/agent/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/agentmanager"
@@ -265,43 +267,48 @@ func runServer() {
 	// for active ones to complete before triggering the normal shutdown flow.
 	usr1Ch := make(chan os.Signal, 1)
 	signal.Notify(usr1Ch, syscall.SIGUSR1)
-	go func() {
-		<-usr1Ch
-		slog.Info("received SIGUSR1 (hot reload), waiting for active script executions to complete...")
-		scriptBroker.SetDraining(true)
-		// Use a timeout shorter than the sentinel's ScriptWaitTimeout (6 min)
-		// so we shut down gracefully instead of being force-killed.
-		drainCtx, drainCancel := context.WithTimeout(context.Background(), 5*time.Minute+30*time.Second)
-		defer drainCancel()
-		if err := scriptBroker.Drain(drainCtx); err != nil {
-			slog.Warn("drain timed out, forcing shutdown", "active_executions", scriptBroker.ActiveCount())
-		} else {
-			slog.Info("all script executions completed, shutting down for hot reload")
+	var sigWg conc.WaitGroup
+	sigWg.Go(func() {
+		select {
+		case <-usr1Ch:
+			slog.Info("received SIGUSR1 (hot reload), waiting for active script executions to complete...")
+			scriptBroker.SetDraining(true)
+			// Use a timeout shorter than the sentinel's ScriptWaitTimeout (6 min)
+			// so we shut down gracefully instead of being force-killed.
+			drainCtx, drainCancel := context.WithTimeout(context.Background(), 5*time.Minute+30*time.Second)
+			defer drainCancel()
+			if err := scriptBroker.Drain(drainCtx); err != nil {
+				slog.Warn("drain timed out, forcing shutdown", "active_executions", scriptBroker.ActiveCount())
+			} else {
+				slog.Info("all script executions completed, shutting down for hot reload")
+			}
+			cancel()
+		case <-ctx.Done():
 		}
-		cancel()
-	}()
+	})
 
 	// Start pprof server on a separate port for profiling (only when --prof is set).
+	var svcWg conc.WaitGroup
 	if *runProf {
-		go func() {
+		svcWg.Go(func() {
 			pprofAddr := ":6060"
 			slog.Info("starting pprof server", "addr", pprofAddr)
 			if err := http.ListenAndServe(pprofAddr, nil); err != nil {
 				slog.Error("pprof server error", "error", err)
 			}
-		}()
+		})
 	}
 
-	go orch.Start(ctx)
-	go pushDispatcher.Start(ctx)
-	go chatNotifier.Start(ctx)
+	svcWg.Go(func() { orch.Start(ctx) })
+	svcWg.Go(func() { pushDispatcher.Start(ctx) })
+	svcWg.Go(func() { chatNotifier.Start(ctx) })
 
-	go func() {
+	svcWg.Go(func() {
 		if err := srv.ListenAndServe(ctx); err != nil && err != http.ErrServerClosed {
 			slog.Error("server error", "error", err)
 			cancel()
 		}
-	}()
+	})
 
 	<-ctx.Done()
 	slog.Info("shutting down server")
@@ -312,4 +319,6 @@ func runServer() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("shutdown error", "error", err)
 	}
+
+	sigWg.Wait()
 }

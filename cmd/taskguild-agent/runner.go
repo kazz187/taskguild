@@ -13,9 +13,10 @@ import (
 
 	"connectrpc.com/connect"
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
+	"github.com/kazz187/taskguild/pkg/clog"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/kazz187/taskguild/pkg/clog"
+	"github.com/sourcegraph/conc"
 )
 
 func init() {
@@ -127,7 +128,10 @@ func runTask(
 
 	// Start interaction stream listener for this task.
 	waiter := newInteractionWaiter()
-	go runInteractionListener(ctx, interClient, taskID, waiter)
+	var listenerWg conc.WaitGroup
+	listenerWg.Go(func() {
+		runInteractionListener(ctx, interClient, taskID, waiter)
+	})
 
 	sessionID := metadata["session_id"]
 	prompt := buildUserPrompt(metadata, workDir)

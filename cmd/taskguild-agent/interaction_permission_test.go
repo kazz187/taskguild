@@ -10,6 +10,7 @@ import (
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
+	"github.com/sourcegraph/conc"
 )
 
 // mockAgentManagerClient is a minimal mock for testing handlePermissionRequest.
@@ -150,7 +151,8 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 	// Run in goroutine since it blocks waiting for response.
 	resultCh := make(chan claudeagent.PermissionResult, 1)
 	errCh := make(chan error, 1)
-	go func() {
+	var wg conc.WaitGroup
+	wg.Go(func() {
 		result, err := handlePermissionRequest(
 			ctx, mock, "task-1", "agent-1",
 			"Bash", map[string]any{"command": "cd /home && npm test"},
@@ -160,7 +162,7 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 		)
 		resultCh <- result
 		errCh <- err
-	}()
+	})
 
 	time.Sleep(50 * time.Millisecond)
 
@@ -228,7 +230,8 @@ func TestHandlePermissionRequest_NonBashToolOptions(t *testing.T) {
 	defer cancel()
 	waiter := newInteractionWaiter()
 
-	go func() {
+	var wg conc.WaitGroup
+	wg.Go(func() {
 		handlePermissionRequest(
 			ctx, mock, "task-1", "agent-1",
 			"Write", map[string]any{"file_path": "/tmp/test.txt"},
@@ -236,7 +239,7 @@ func TestHandlePermissionRequest_NonBashToolOptions(t *testing.T) {
 			claudeagent.ToolPermissionContext{},
 			nil, nil,
 		)
-	}()
+	})
 
 	time.Sleep(50 * time.Millisecond)
 
@@ -275,7 +278,8 @@ func TestHandlePermissionRequest_AlwaysAllowCommand(t *testing.T) {
 
 	resultCh := make(chan claudeagent.PermissionResult, 1)
 	errCh := make(chan error, 1)
-	go func() {
+	var wg conc.WaitGroup
+	wg.Go(func() {
 		result, err := handlePermissionRequest(
 			ctx, mock, "task-1", "agent-1",
 			"Bash", map[string]any{"command": "cd /home && npm test"},
@@ -285,7 +289,7 @@ func TestHandlePermissionRequest_AlwaysAllowCommand(t *testing.T) {
 		)
 		resultCh <- result
 		errCh <- err
-	}()
+	})
 
 	time.Sleep(50 * time.Millisecond)
 
@@ -345,7 +349,8 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_InvalidJSON(t *testing.T) {
 
 	resultCh := make(chan claudeagent.PermissionResult, 1)
 	errCh := make(chan error, 1)
-	go func() {
+	var wg conc.WaitGroup
+	wg.Go(func() {
 		result, err := handlePermissionRequest(
 			ctx, mock, "task-1", "agent-1",
 			"Bash", map[string]any{"command": "echo hello"},
@@ -355,7 +360,7 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_InvalidJSON(t *testing.T) {
 		)
 		resultCh <- result
 		errCh <- err
-	}()
+	})
 
 	time.Sleep(50 * time.Millisecond)
 
@@ -392,7 +397,8 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_WithRedirects(t *testing.T) 
 
 	resultCh := make(chan claudeagent.PermissionResult, 1)
 	errCh := make(chan error, 1)
-	go func() {
+	var wg conc.WaitGroup
+	wg.Go(func() {
 		result, err := handlePermissionRequest(
 			ctx, mock, "task-1", "agent-1",
 			"Bash", map[string]any{"command": "echo hello > /dev/null"},
@@ -402,7 +408,7 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_WithRedirects(t *testing.T) 
 		)
 		resultCh <- result
 		errCh <- err
-	}()
+	})
 
 	time.Sleep(50 * time.Millisecond)
 

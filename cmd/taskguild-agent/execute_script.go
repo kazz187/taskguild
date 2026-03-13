@@ -16,6 +16,7 @@ import (
 	"connectrpc.com/connect"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
+	"github.com/sourcegraph/conc"
 )
 
 const (
@@ -179,7 +180,8 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 	// read ends. This prevents indefinite blocking when scripts spawn
 	// background processes that inherit stdout/stderr.
 	waitCh := make(chan error, 1)
-	go func() {
+	var waitWg conc.WaitGroup
+	waitWg.Go(func() {
 		waitErr := execCmd.Wait()
 		// Allow scanners up to 500ms to drain any data still in the
 		// kernel pipe buffer after the main process exits.
@@ -187,7 +189,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 		stdoutR.Close()
 		stderrR.Close()
 		waitCh <- waitErr
-	}()
+	})
 
 	// Stream output in real-time.
 	var fullLog logEntryBuffer
@@ -196,6 +198,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 	// Collect the Wait result (available immediately or shortly after
 	// streamOutput returns).
 	cmdErr := <-waitCh
+	waitWg.Wait()
 
 	// Check if this was a user-initiated stop (via StopScriptCommand).
 	// Do not rely on execCtx.Err() == context.Canceled because the context
@@ -299,11 +302,9 @@ func streamOutput(
 	var chunk chunkBuffer
 
 	// Read pipes into buffers concurrently.
-	var wg sync.WaitGroup
-	wg.Add(2)
+	var pipeWg conc.WaitGroup
 
-	go func() {
-		defer wg.Done()
+	pipeWg.Go(func() {
 		scanner := bufio.NewScanner(stdoutPipe)
 		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 		lineCount := 0
@@ -318,10 +319,9 @@ func streamOutput(
 			slog.Warn("[STREAM-TRACE] agent: stdout scanner error", "request_id", requestID, "error", err)
 		}
 		slog.Info("[STREAM-TRACE] agent: stdout pipe closed", "request_id", requestID, "total_lines", lineCount)
-	}()
+	})
 
-	go func() {
-		defer wg.Done()
+	pipeWg.Go(func() {
 		scanner := bufio.NewScanner(stderrPipe)
 		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 		lineCount := 0
@@ -336,14 +336,15 @@ func streamOutput(
 			slog.Warn("[STREAM-TRACE] agent: stderr scanner error", "request_id", requestID, "error", err)
 		}
 		slog.Info("[STREAM-TRACE] agent: stderr pipe closed", "request_id", requestID, "total_lines", lineCount)
-	}()
+	})
 
 	// Flush buffered output every 200ms until both pipes close.
 	doneCh := make(chan struct{})
-	go func() {
-		wg.Wait()
+	var doneWg conc.WaitGroup
+	doneWg.Go(func() {
+		pipeWg.Wait()
 		close(doneCh)
-	}()
+	})
 
 	ticker := time.NewTicker(outputFlushInterval)
 	defer ticker.Stop()

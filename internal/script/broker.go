@@ -7,6 +7,7 @@ import (
 	"time"
 
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
+	"github.com/sourcegraph/conc"
 )
 
 const (
@@ -51,7 +52,8 @@ func NewScriptExecutionBroker() *ScriptExecutionBroker {
 // StartCleanup starts a background goroutine that periodically removes
 // expired completed executions. It stops when the context is cancelled.
 func (b *ScriptExecutionBroker) StartCleanup(ctx context.Context) {
-	go func() {
+	var wg conc.WaitGroup
+	wg.Go(func() {
 		ticker := time.NewTicker(cleanupInterval)
 		defer ticker.Stop()
 		for {
@@ -62,7 +64,7 @@ func (b *ScriptExecutionBroker) StartCleanup(ctx context.Context) {
 				return
 			}
 		}
-	}()
+	})
 }
 
 // cleanupExpired removes completed executions older than executionTTL.
