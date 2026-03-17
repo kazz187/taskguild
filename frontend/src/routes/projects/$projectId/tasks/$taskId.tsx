@@ -23,6 +23,7 @@ import { PendingRequestsPanel } from '@/components/organisms/PendingRequestsPane
 import { ConnectionIndicator } from '@/components/organisms/ConnectionIndicator'
 import {
   AlertTriangle,
+  ArrowDown,
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
@@ -37,6 +38,7 @@ import {
   Play,
   Square,
 } from 'lucide-react'
+import { Button } from '@/components/atoms/index.ts'
 
 export const Route = createFileRoute('/projects/$projectId/tasks/$taskId')({
   component: TaskDetailPage,
@@ -48,7 +50,8 @@ function TaskDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showChildCreateModal, setShowChildCreateModal] = useState(false)
   const timelineScrollRef = useRef<HTMLDivElement>(null)
-  const prevTimelineCountRef = useRef(0)
+  const isAutoScrollEnabled = useRef(true)
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false)
 
   const { data: taskData, refetch: refetchTask } = useQuery(getTask, { id: taskId })
   const { data: projectData } = useQuery(getProject, { id: projectId })
@@ -165,13 +168,28 @@ function TaskDetailPage() {
 
   const { connectionStatus, reconnect } = useEventSubscription(eventTypes, projectId, onEvent)
 
-  // Auto-scroll timeline to bottom on new entries
+  // Auto-scroll timeline to bottom on new entries (only when user is at the bottom)
   useEffect(() => {
-    if (timelineScrollRef.current && timelineItems.length > prevTimelineCountRef.current) {
-      timelineScrollRef.current.scrollTop = timelineScrollRef.current.scrollHeight
-    }
-    prevTimelineCountRef.current = timelineItems.length
+    const el = timelineScrollRef.current
+    if (!el || !isAutoScrollEnabled.current) return
+    el.scrollTop = el.scrollHeight
   }, [timelineItems.length])
+
+  const handleTimelineScroll = useCallback(() => {
+    const el = timelineScrollRef.current
+    if (!el) return
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30
+    isAutoScrollEnabled.current = atBottom
+    setShowScrollToBottom(!atBottom)
+  }, [])
+
+  const scrollTimelineToBottom = useCallback(() => {
+    const el = timelineScrollRef.current
+    if (!el) return
+    el.scrollTop = el.scrollHeight
+    isAutoScrollEnabled.current = true
+    setShowScrollToBottom(false)
+  }, [])
 
   // Play notification sound when new pending requests arrive
   useNotificationSound(pendingRequests.length)
@@ -384,7 +402,7 @@ function TaskDetailPage() {
       </div>
 
       {/* Timeline area — full height */}
-      <div ref={timelineScrollRef} className="flex-1 overflow-y-auto">
+      <div ref={timelineScrollRef} onScroll={handleTimelineScroll} className="relative flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-4 py-4 md:px-6 md:py-6 space-y-4">
           {/* Parent task link */}
           {parentTask && (
@@ -503,6 +521,17 @@ function TaskDetailPage() {
             </div>
           )}
         </div>
+        {showScrollToBottom && (
+          <Button
+            variant="ghost"
+            size="xs"
+            icon={<ArrowDown className="w-3 h-3" />}
+            onClick={scrollTimelineToBottom}
+            className="sticky bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-gray-300 bg-slate-800/80 backdrop-blur-sm border border-slate-600/50 hover:bg-slate-700/90 hover:text-white shadow-lg z-10"
+          >
+            Latest
+          </Button>
+        )}
       </div>
 
       {/* Pending requests section — pinned above input bar */}
