@@ -43,7 +43,17 @@ func buildToolUseHooks(tl *taskLogger, taskID string, taskClient taskguildv1conn
 							var planContent string
 							if input.ToolResponse != nil {
 								if s, ok := input.ToolResponse.(string); ok {
-									planContent = s
+									// Try to parse as JSON and extract the "plan" field.
+									var obj map[string]interface{}
+									if json.Unmarshal([]byte(s), &obj) == nil {
+										if plan, ok := obj["plan"].(string); ok {
+											planContent = plan
+										} else {
+											planContent = s
+										}
+									} else {
+										planContent = s
+									}
 								} else if m, ok := input.ToolResponse.(map[string]interface{}); ok {
 									if plan, ok := m["plan"].(string); ok {
 										planContent = plan
