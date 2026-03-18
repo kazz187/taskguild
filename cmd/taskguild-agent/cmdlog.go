@@ -353,9 +353,9 @@ func runQuerySyncWithLog(
 				// the main process PID, leaving child processes (and their
 				// inherited pipe handles) alive. This races with Close()'s
 				// process-group kill and can cause cmd.Wait() to block.
-				slog.Info("closing transport")
-				transport.Close()
-				slog.Info("transport closed, logging result")
+				slog.Info("closing transport", "task_id", taskID, "label", label)
+				closeErr := transport.Close()
+				slog.Info("transport closed", "task_id", taskID, "label", label, "error", closeErr)
 				tl.LogResult(result.Result, nil)
 				return result, nil
 			}
