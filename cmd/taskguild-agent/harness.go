@@ -50,6 +50,7 @@ func maybeRunAgentMDHarness(
 	workDir string,
 	tl *taskLogger,
 	client taskguildv1connect.AgentManagerServiceClient,
+	qr QueryRunner,
 ) {
 	if metadata["_enable_agent_md_harness"] != "true" {
 		return
@@ -76,7 +77,7 @@ func maybeRunAgentMDHarness(
 
 	var harnessWg conc.WaitGroup
 	harnessWg.Go(func() {
-		runAgentMDHarness(ctx, taskID, taskTitle, taskDescription, taskSummary, workDir, agentName, harnessTL)
+		runAgentMDHarness(ctx, taskID, taskTitle, taskDescription, taskSummary, workDir, agentName, harnessTL, qr)
 	})
 }
 
@@ -93,6 +94,7 @@ func runAgentMDHarness(
 	workDir string,
 	agentName string,
 	tl *taskLogger,
+	qr QueryRunner,
 ) {
 	defer tl.Close()
 
@@ -133,7 +135,7 @@ func runAgentMDHarness(
 		MaxTurns:       &maxTurns,
 	}
 
-	result, err := runQuerySyncWithLog(harnessCtx, userPrompt, opts, workDir, taskID, "harness")
+	result, err := qr.RunQuerySync(harnessCtx, userPrompt, opts, workDir, taskID, "harness")
 	if err != nil {
 		logger.Error("agent MD harness failed", "task_id", taskID, "error", err)
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,

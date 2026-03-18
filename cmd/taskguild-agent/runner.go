@@ -66,6 +66,7 @@ func runTask(
 	workDir string,
 	permCache *permissionCache,
 	scpCache *singleCommandPermissionCache,
+	queryRunner QueryRunner,
 ) {
 	// Create task-scoped logger and embed in context.
 	logger := slog.Default().With("task_id", taskID)
@@ -83,7 +84,7 @@ func runTask(
 	worktreeName := metadata["worktree"]
 	if worktreeName == "" && metadata["_use_worktree"] == "true" {
 		logger.Info("generating worktree name")
-		worktreeName = generateWorktreeName(ctx, taskID, metadata["_task_title"], workDir)
+		worktreeName = generateWorktreeName(ctx, taskID, metadata["_task_title"], workDir, queryRunner)
 		logger.Info("worktree name generated", "worktree_name", worktreeName)
 		saveWorktreeName(ctx, taskClient, taskID, worktreeName)
 		metadata["worktree"] = worktreeName // keep local metadata in sync for buildUserPrompt
@@ -116,14 +117,14 @@ func runTask(
 	afterHooks := func() {
 		if !afterHooksExecuted {
 			afterHooksExecuted = true
-			executeHooks(ctx, taskID, "after_task_execution", metadata, resolveHookDir(), taskClient, tl)
+			executeHooks(ctx, taskID, "after_task_execution", metadata, resolveHookDir(), taskClient, tl, queryRunner)
 		}
 	}
 	defer afterHooks()
 
 	// Execute before_task_execution hooks.
 	logger.Info("executing before_task_execution hooks")
-	executeHooks(ctx, taskID, "before_task_execution", metadata, workDir, taskClient, tl)
+	executeHooks(ctx, taskID, "before_task_execution", metadata, workDir, taskClient, tl, queryRunner)
 	logger.Info("before_task_execution hooks completed")
 
 	// Start interaction stream listener for this task.
@@ -169,7 +170,7 @@ func runTask(
 			logger.Debug("resuming session", "session_id", sessionID)
 		}
 
-		result, err := runQuerySyncWithLog(ctx, prompt, opts, workDir, taskID, fmt.Sprintf("task_turn%d", turn))
+		result, err := queryRunner.RunQuerySync(ctx, prompt, opts, workDir, taskID, fmt.Sprintf("task_turn%d", turn))
 
 		logger.Info("Claude CLI finished", "turn", turn, "has_error", err != nil)
 		if err != nil {
@@ -317,7 +318,7 @@ func runTask(
 			wtDir := filepath.Join(workDir, ".claude", "worktrees", worktreeName)
 			if info, err := os.Stat(wtDir); err == nil && info.IsDir() {
 				worktreeHookFired = true
-				executeHooks(ctx, taskID, "after_worktree_creation", metadata, wtDir, taskClient, tl)
+				executeHooks(ctx, taskID, "after_worktree_creation", metadata, wtDir, taskClient, tl, queryRunner)
 			}
 		}
 
@@ -379,7 +380,7 @@ func runTask(
 					reportTaskResult(ctx, client, taskID, displaySummary, "")
 					reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (invalid transition after retries)")
 					afterHooks()
-					maybeRunAgentMDHarness(ctx, metadata, taskID, displaySummary, workDir, tl, client)
+					maybeRunAgentMDHarness(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner)
 					return
 				}
 
@@ -409,7 +410,7 @@ func runTask(
 			afterHooks()
 			logger.Info("after hooks completed")
 			// Launch AGENT.md harness in background goroutine if enabled.
-			maybeRunAgentMDHarness(ctx, metadata, taskID, displaySummary, workDir, tl, client)
+			maybeRunAgentMDHarness(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner)
 			logger.Info("calling handleStatusTransition", "next_status", nextStatusID)
 			if err := handleStatusTransition(ctx, taskClient, taskID, nextStatusID, metadata, tl); err != nil {
 				logger.Error("status transition failed", "error", err)
@@ -429,7 +430,7 @@ func runTask(
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed")
 			// Launch AGENT.md harness in background goroutine if enabled.
-			maybeRunAgentMDHarness(ctx, metadata, taskID, summary, workDir, tl, client)
+			maybeRunAgentMDHarness(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner)
 			return
 		}
 
@@ -444,7 +445,7 @@ func runTask(
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (auto-transition)")
 			afterHooks()
-			maybeRunAgentMDHarness(ctx, metadata, taskID, summary, workDir, tl, client)
+			maybeRunAgentMDHarness(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner)
 			if err := handleStatusTransition(ctx, taskClient, taskID, autoName, metadata, tl); err != nil {
 				logger.Error("auto status transition failed", "error", err)
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
