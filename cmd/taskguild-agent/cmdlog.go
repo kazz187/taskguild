@@ -344,18 +344,15 @@ func runQuerySyncWithLog(
 					transport.EndInput()
 					stdinClosed = true
 				}
-				// Close the transport to terminate the subprocess and
-				// unblock any goroutine reading from the stdout pipe.
-				// transport.Close() closes pipes first (unblocking the
-				// scanner), then kills the process group, then waits.
-				// We intentionally do NOT call transportCancel() before
-				// Close(): exec.CommandContext's internal kill only targets
-				// the main process PID, leaving child processes (and their
-				// inherited pipe handles) alive. This races with Close()'s
-				// process-group kill and can cause cmd.Wait() to block.
-				slog.Info("closing transport", "task_id", taskID, "label", label)
-				closeErr := transport.Close()
-				slog.Info("transport closed", "task_id", taskID, "label", label, "error", closeErr)
+				// Cancel the transport context so exec.CommandContext's
+				// internal watchCtx goroutine sends to ctxResult,
+				// which cmd.Wait() reads before returning. Without
+				// this, cmd.Wait() blocks on <-c.ctxResult forever.
+				transportCancel()
+				// Close the transport: closes pipes (unblocking the
+				// ReadMessages scanner), kills the process group, and
+				// waits for the process to exit via cmd.Wait().
+				transport.Close()
 				tl.LogResult(result.Result, nil)
 				return result, nil
 			}

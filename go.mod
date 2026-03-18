@@ -14,7 +14,7 @@ require (
 	github.com/fatih/color v1.15.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-chi/chi/v5 v5.2.2
-	github.com/kazz187/claude-agent-sdk-go v0.0.15
+	github.com/kazz187/claude-agent-sdk-go v0.0.16
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/oklog/ulid/v2 v2.1.1
 	github.com/pmezard/go-difflib v1.0.0
