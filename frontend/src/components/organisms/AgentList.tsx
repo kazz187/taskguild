@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { listAgents, createAgent, updateAgent, deleteAgent, syncAgentsFromDir } from '@taskguild/proto/taskguild/v1/agent-AgentService_connectquery.ts'
 import { saveAsTemplate, listTemplates } from '@taskguild/proto/taskguild/v1/template-TemplateService_connectquery.ts'
@@ -93,7 +94,8 @@ function diffTypeLabel(dt: AgentDiffType): string {
   }
 }
 
-export function AgentList({ projectId }: { projectId: string }) {
+export function AgentList({ projectId, editAgentId, mode }: { projectId: string; editAgentId?: string; mode?: 'create' }) {
+  const navigate = useNavigate()
   const { data, refetch, isLoading } = useQuery(listAgents, { projectId })
   const createMut = useMutation(createAgent)
   const updateMut = useMutation(updateAgent)
@@ -107,8 +109,10 @@ export function AgentList({ projectId }: { projectId: string }) {
   const { data: comparisonData, refetch: refetchComparison } = useQuery(getAgentComparison, { projectId })
   const resolveConflictMut = useMutation(resolveAgentConflict)
 
-  const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null)
-  const [editingId, setEditingId] = useState<string | null>(null)
+  // Derive form mode from URL search params
+  const formMode: 'create' | 'edit' | null = mode === 'create' ? 'create' : editAgentId ? 'edit' : null
+  const editingId: string | null = editAgentId ?? null
+
   const [form, setForm] = useState<AgentFormData>(emptyForm)
   const [skillInput, setSkillInput] = useState('')
 
@@ -119,7 +123,6 @@ export function AgentList({ projectId }: { projectId: string }) {
   // Diff resolution dialog state
   const [diffDialog, setDiffDialog] = useState<AgentDiff | null>(null)
 
-  const agents = data?.agents ?? []
   const agentTemplates = templatesData?.templates ?? []
   const diffs = comparisonData?.diffs ?? []
 
@@ -141,25 +144,39 @@ export function AgentList({ projectId }: { projectId: string }) {
   useEventSubscription(comparisonEventTypes, projectId, onComparisonEvent)
 
   const openCreate = () => {
-    setFormMode('create')
-    setEditingId(null)
-    setForm(emptyForm)
-    setSkillInput('')
+    navigate({ to: '/projects/$projectId/agents', params: { projectId }, search: { mode: 'create' } })
   }
 
   const openEdit = (a: AgentDefinition) => {
-    setFormMode('edit')
-    setEditingId(a.id)
-    setForm(agentToForm(a))
-    setSkillInput('')
+    navigate({ to: '/projects/$projectId/agents', params: { projectId }, search: { edit: a.id } })
   }
 
   const closeForm = () => {
-    setFormMode(null)
-    setEditingId(null)
-    setForm(emptyForm)
-    setSkillInput('')
+    navigate({ to: '/projects/$projectId/agents', params: { projectId }, search: {} })
   }
+
+  // Sync form state when URL params or agents data change
+  const agents = data?.agents ?? []
+  const skipFormResetRef = useRef(false)
+  useEffect(() => {
+    if (skipFormResetRef.current) {
+      skipFormResetRef.current = false
+      return
+    }
+    if (mode === 'create') {
+      setForm(emptyForm)
+      setSkillInput('')
+    } else if (editAgentId) {
+      const agent = agents.find(a => a.id === editAgentId)
+      if (agent) {
+        setForm(agentToForm(agent))
+        setSkillInput('')
+      }
+    } else {
+      setForm(emptyForm)
+      setSkillInput('')
+    }
+  }, [mode, editAgentId, agents])
 
   // Template handlers
   const handleSaveAsTemplate = (agent: AgentDefinition) => {
@@ -193,8 +210,7 @@ export function AgentList({ projectId }: { projectId: string }) {
   const handleCreateFromTemplate = (tmpl: Template) => {
     if (!tmpl.agentConfig) return
     setTemplatePickerOpen(false)
-    setFormMode('create')
-    setEditingId(null)
+    // Pre-fill form before navigating to create mode
     setForm({
       name: tmpl.agentConfig.name,
       description: tmpl.agentConfig.description,
@@ -207,6 +223,8 @@ export function AgentList({ projectId }: { projectId: string }) {
       memory: tmpl.agentConfig.memory,
     })
     setSkillInput('')
+    skipFormResetRef.current = true
+    navigate({ to: '/projects/$projectId/agents', params: { projectId }, search: { mode: 'create' } })
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -566,7 +584,10 @@ export function AgentList({ projectId }: { projectId: string }) {
                   <Bot className="w-5 h-5 text-cyan-400 mt-0.5 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-sm font-semibold text-white truncate">{agent.name}</h3>
+                      <h3
+                        className="text-sm font-semibold text-white truncate cursor-pointer hover:text-cyan-400 transition-colors"
+                        onClick={() => openEdit(agent)}
+                      >{agent.name}</h3>
                       {agent.isSynced && (
                         <Badge color="blue" size="xs" pill variant="outline" icon={<Cloud className="w-2.5 h-2.5" />}>
                           synced
