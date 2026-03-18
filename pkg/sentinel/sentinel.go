@@ -282,9 +282,12 @@ func (s *Sentinel) stopChild(cmd *exec.Cmd) {
 		time.Sleep(GracePeriod)
 		// Check if process is still alive by trying to signal it.
 		if err := cmd.Process.Signal(syscall.Signal(0)); err == nil {
-			slog.Warn("grace period expired, sending SIGKILL to child", "pid", pid)
-			if err := cmd.Process.Kill(); err != nil {
-				slog.Error("failed to send SIGKILL", "pid", pid, "error", err)
+			slog.Warn("grace period expired, sending SIGKILL to child process group", "pid", pid)
+			// Kill the entire process group (pgid == pid because Setpgid is set).
+			// This ensures any child processes that haven't been cleaned up
+			// are also terminated (e.g. git commands, other non-session subprocesses).
+			if err := syscall.Kill(-pid, syscall.SIGKILL); err != nil {
+				slog.Error("failed to send SIGKILL to process group", "pid", pid, "error", err)
 			}
 		}
 	})
