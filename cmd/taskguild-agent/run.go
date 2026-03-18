@@ -433,7 +433,7 @@ func runSubscribeLoop(
 				}()
 
 				slog.Info("launching runTask goroutine", "task_id", tID)
-				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache, scpCache)
+				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache, scpCache, subprocessQueryRunner{})
 				slog.Info("runTask goroutine finished", "task_id", tID)
 			})
 
@@ -576,7 +576,7 @@ func runSubscribeLoop(
 				}()
 
 				slog.Info("launching runTask goroutine (assigned)", "task_id", tID)
-				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache, scpCache)
+				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache, scpCache, subprocessQueryRunner{})
 				slog.Info("runTask goroutine finished (assigned)", "task_id", tID)
 			})
 

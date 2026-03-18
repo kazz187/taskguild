@@ -35,7 +35,7 @@ type hookEntry struct {
 // not block the main task.
 // If taskClient is provided, hook results containing TASK_METADATA directives
 // will be used to update the task's metadata.
-func executeHooks(ctx context.Context, taskID string, trigger string, metadata map[string]string, workDir string, taskClient taskguildv1connect.TaskServiceClient, tl *taskLogger) {
+func executeHooks(ctx context.Context, taskID string, trigger string, metadata map[string]string, workDir string, taskClient taskguildv1connect.TaskServiceClient, tl *taskLogger, qr QueryRunner) {
 	logger := clog.LoggerFromContext(ctx)
 
 	hooksJSON := metadata["_hooks"]
@@ -82,7 +82,7 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 			MaxTurns:       &maxTurns,
 		}
 
-		result, err := runQuerySyncWithLog(hookCtx, h.Content, opts, workDir, taskID, fmt.Sprintf("hook_%s", h.Name))
+		result, err := qr.RunQuerySync(hookCtx, h.Content, opts, workDir, taskID, fmt.Sprintf("hook_%s", h.Name))
 		cancel()
 
 		if err != nil {
@@ -201,7 +201,7 @@ func ensureWorktree(ctx context.Context, workDir, worktreeName, taskID string) (
 // generateWorktreeName creates a git-safe worktree/branch name from the task ID and title.
 // If the title is mostly non-ASCII (e.g. Japanese), it uses a lightweight Claude call
 // to generate an English slug. Format: {taskID first 6 chars}_{slug} (max 50 chars).
-func generateWorktreeName(ctx context.Context, taskID, title, workDir string) string {
+func generateWorktreeName(ctx context.Context, taskID, title, workDir string, qr QueryRunner) string {
 	id := strings.ToLower(taskID)
 	prefix := id
 	if len(id) > 6 {
@@ -212,7 +212,7 @@ func generateWorktreeName(ctx context.Context, taskID, title, workDir string) st
 
 	// If the ASCII slug is too short (title was mostly non-ASCII), ask Claude to translate.
 	if len(slug) < 4 && title != "" {
-		if englishSlug := translateToEnglishSlug(ctx, title, workDir); englishSlug != "" {
+		if englishSlug := translateToEnglishSlug(ctx, title, workDir, qr); englishSlug != "" {
 			slug = englishSlug
 		}
 	}
@@ -231,7 +231,7 @@ func generateWorktreeName(ctx context.Context, taskID, title, workDir string) st
 
 // translateToEnglishSlug uses a lightweight Claude call to convert a non-English
 // title into a short English slug suitable for a git branch name.
-func translateToEnglishSlug(ctx context.Context, title, workDir string) string {
+func translateToEnglishSlug(ctx context.Context, title, workDir string, qr QueryRunner) string {
 	prompt := fmt.Sprintf(
 		"Translate the following title into a short English slug for a git branch name. "+
 			"Output ONLY the slug (lowercase, hyphens, no spaces, max 30 chars). No explanation.\n\nTitle: %s",
@@ -247,7 +247,7 @@ func translateToEnglishSlug(ctx context.Context, title, workDir string) string {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	result, err := runQuerySyncWithLog(timeoutCtx, prompt, opts, workDir, "", "translate_slug")
+	result, err := qr.RunQuerySync(timeoutCtx, prompt, opts, workDir, "", "translate_slug")
 	if err != nil || result.Result == nil {
 		slog.Warn("translateToEnglishSlug failed", "error", err)
 		return ""
