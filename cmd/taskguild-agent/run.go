@@ -148,6 +148,20 @@ func runAgent() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// taskRootCtx is a separate context tree for tasks. Cancelling ctx
+	// (for subscribe loop teardown) does NOT cascade to running tasks,
+	// allowing them to finish during graceful hot-reload.
+	taskRootCtx, taskRootCancel := context.WithCancel(context.Background())
+	defer taskRootCancel()
+
+	// rejectTasks is set to true on SIGUSR1 to prevent new task claims.
+	var rejectTasks atomic.Bool
+
+	// taskWg tracks task goroutines separately so the SIGUSR1 handler can
+	// wait for tasks to drain without waiting for infrastructure goroutines
+	// (which depend on ctx and would deadlock).
+	var taskWg conc.WaitGroup
+
 	// Handle OS signals
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
@@ -157,35 +171,41 @@ func runAgent() {
 		case sig := <-sigCh:
 			slog.Info("received signal, shutting down", "signal", sig)
 			cancel()
+			taskRootCancel()
 		case <-ctx.Done():
 		}
 	})
 
 	// Handle SIGUSR1 for graceful hot-reload.
 	// When the sentinel detects a binary update it sends SIGUSR1 instead of
-	// SIGTERM. This handler stops accepting new scripts, waits for running
-	// scripts to complete, and then triggers the normal shutdown flow.
+	// SIGTERM. This handler stops accepting new scripts and tasks, waits for
+	// all running scripts and tasks to complete naturally, and then triggers
+	// the normal shutdown flow.
 	usr1Ch := make(chan os.Signal, 1)
 	signal.Notify(usr1Ch, syscall.SIGUSR1)
 	sigWg.Go(func() {
 		select {
 		case <-usr1Ch:
-			slog.Info("received SIGUSR1 (hot reload), cancelling running scripts")
+			slog.Info("received SIGUSR1 (hot reload), draining running scripts and tasks")
+
+			// Reject new scripts and tasks.
 			scriptTracker.mu.Lock()
 			scriptTracker.reject = true
 			scriptTracker.mu.Unlock()
+			rejectTasks.Store(true)
 
-			// Cancel all running script executions so they terminate promptly.
-			runningScripts.mu.Lock()
-			for reqID, cancelFn := range runningScripts.cancels {
-				slog.Info("cancelling script for hot reload", "request_id", reqID)
-				cancelFn()
-			}
-			runningScripts.mu.Unlock()
-
+			// Wait for running scripts to complete naturally (no cancellation).
+			slog.Info("waiting for running scripts to complete")
 			scriptTracker.wg.Wait()
-			slog.Info("all scripts completed, shutting down for hot reload restart")
+			slog.Info("all scripts completed")
+
+			// Wait for running tasks to complete naturally (no cancellation).
+			slog.Info("waiting for running tasks to complete")
+			taskWg.Wait()
+			slog.Info("all tasks completed, shutting down for hot reload restart")
+
 			cancel()
+			taskRootCancel()
 		case <-ctx.Done():
 		}
 	})
@@ -220,9 +240,8 @@ func runAgent() {
 	var (
 		mu          sync.Mutex
 		activeTasks = make(map[string]context.CancelFunc)
-		wg          conc.WaitGroup
+		wg          conc.WaitGroup // infrastructure goroutines (heartbeat, etc.)
 	)
-
 	// Start heartbeat goroutine
 	wg.Go(func() {
 		heartbeat(ctx, client, cfg.AgentManagerID)
@@ -252,7 +271,7 @@ func runAgent() {
 		syncScripts(ctx, client, cfg, nil) // nil = don't force-overwrite any existing files
 		syncSkills(ctx, client, cfg, nil)
 
-		err := runSubscribeLoop(ctx, client, taskClient, interClient, cfg, &mu, activeTasks, &wg, permCache, scpCache, subscribeReceiveTimeout)
+		err := runSubscribeLoop(ctx, client, taskClient, interClient, cfg, &mu, activeTasks, &wg, &taskWg, taskRootCtx, &rejectTasks, permCache, scpCache, subscribeReceiveTimeout)
 		if ctx.Err() != nil {
 			break
 		}
@@ -274,14 +293,18 @@ func runAgent() {
 	}
 
 	slog.Info("waiting for active tasks to finish")
-	// Cancel all active tasks
-	mu.Lock()
-	for taskID, cancelFn := range activeTasks {
-		slog.Info("cancelling task", "task_id", taskID)
-		cancelFn()
+	// On normal shutdown (SIGINT/SIGTERM), cancel all active tasks.
+	// On hot-reload (SIGUSR1), tasks already drained naturally.
+	if !rejectTasks.Load() {
+		mu.Lock()
+		for taskID, cancelFn := range activeTasks {
+			slog.Info("cancelling task", "task_id", taskID)
+			cancelFn()
+		}
+		mu.Unlock()
 	}
-	mu.Unlock()
 
+	taskWg.Wait()
 	wg.Wait()
 	sigWg.Wait()
 	slog.Info("agent-manager stopped")
@@ -296,6 +319,9 @@ func runSubscribeLoop(
 	mu *sync.Mutex,
 	activeTasks map[string]context.CancelFunc,
 	wg *conc.WaitGroup,
+	taskWg *conc.WaitGroup,
+	taskRootCtx context.Context,
+	rejectTasks *atomic.Bool,
 	permCache *permissionCache,
 	scpCache *singleCommandPermissionCache,
 	receiveTimeout time.Duration,
@@ -376,6 +402,12 @@ func runSubscribeLoop(
 			taskID := taskAvail.GetTaskId()
 			slog.Info("task available", "task_id", taskID, "title", taskAvail.GetTitle())
 
+			// Reject new tasks during hot-reload drain.
+			if rejectTasks.Load() {
+				slog.Info("rejecting task: agent is shutting down for hot reload", "task_id", taskID)
+				continue
+			}
+
 			// Skip if this task is already running.
 			mu.Lock()
 			if prevCancel, ok := activeTasks[taskID]; ok {
@@ -413,12 +445,12 @@ func runSubscribeLoop(
 			instructions := claimResp.Msg.GetInstructions()
 			metadata := claimResp.Msg.GetMetadata()
 
-			taskCtx, taskCancel := context.WithCancel(ctx)
+			taskCtx, taskCancel := context.WithCancel(taskRootCtx)
 			mu.Lock()
 			activeTasks[taskID] = taskCancel
 			mu.Unlock()
 
-			wg.Go(func() {
+			taskWg.Go(func() {
 				tID := taskID
 				defer func() {
 					mu.Lock()
@@ -534,6 +566,12 @@ func runSubscribeLoop(
 			taskID := assignCmd.GetTaskId()
 			slog.Info("direct task assignment", "task_id", taskID)
 
+			// Reject new tasks during hot-reload drain.
+			if rejectTasks.Load() {
+				slog.Info("rejecting assigned task: agent is shutting down for hot reload", "task_id", taskID)
+				continue
+			}
+
 			// Cancel previous run if the same task is re-assigned.
 			mu.Lock()
 			if prevCancel, ok := activeTasks[taskID]; ok {
@@ -556,12 +594,12 @@ func runSubscribeLoop(
 			}
 			mu.Unlock()
 
-			taskCtx, taskCancel := context.WithCancel(ctx)
+			taskCtx, taskCancel := context.WithCancel(taskRootCtx)
 			mu.Lock()
 			activeTasks[taskID] = taskCancel
 			mu.Unlock()
 
-			wg.Go(func() {
+			taskWg.Go(func() {
 				tID := taskID
 				defer func() {
 					mu.Lock()
