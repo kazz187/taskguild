@@ -122,6 +122,19 @@ func runTask(
 	}
 	defer afterHooks()
 
+	// Defense-in-depth: if context is cancelled (e.g. user stop), report
+	// the cancellation with a fresh context so the RPC can still succeed.
+	// This defer runs after afterHooks (LIFO) but before tl.Close.
+	defer func() {
+		if ctx.Err() == context.Canceled {
+			bgCtx, bgCancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer bgCancel()
+			reportTaskResult(bgCtx, client, taskID, "", "stopped by user")
+			reportAgentStatus(bgCtx, client, agentManagerID, taskID,
+				v1.AgentStatus_AGENT_STATUS_IDLE, "stopped by user")
+		}
+	}()
+
 	// Execute before_task_execution hooks.
 	logger.Info("executing before_task_execution hooks")
 	executeHooks(ctx, taskID, "before_task_execution", metadata, workDir, taskClient, tl, queryRunner)

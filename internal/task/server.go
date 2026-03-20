@@ -347,16 +347,23 @@ func (s *Server) StopTask(ctx context.Context, req *connect.Request[taskguildv1.
 		t.Metadata = make(map[string]string)
 	}
 	t.Metadata["_stopped_by_user"] = "true"
+
+	// Save agent ID before clearing — needed for the cancel command.
+	agentID := t.AssignedAgentID
+
+	// Immediately mark as unassigned so the UI updates right away.
+	t.AssignmentStatus = AssignmentStatusUnassigned
+	t.AssignedAgentID = ""
 	t.UpdatedAt = time.Now()
 	if err := s.repo.Update(ctx, t); err != nil {
 		return nil, err
 	}
 
-	// Send cancel command to the agent.
-	if err := s.stopper.RequestTaskStop(t.ID, t.AssignedAgentID); err != nil {
+	// Send cancel command to the agent (best-effort cleanup).
+	if err := s.stopper.RequestTaskStop(t.ID, agentID); err != nil {
 		slog.Warn("failed to send stop command to agent",
 			"task_id", t.ID,
-			"agent_id", t.AssignedAgentID,
+			"agent_id", agentID,
 			"error", err,
 		)
 	}

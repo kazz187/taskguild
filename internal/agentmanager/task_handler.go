@@ -303,6 +303,27 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 		return nil, err
 	}
 
+	// If the task is already unassigned (e.g. stopped by user via StopTask),
+	// just update metadata without triggering retry logic.
+	if t.AssignmentStatus == task.AssignmentStatusUnassigned && t.AssignedAgentID == "" {
+		if t.Metadata == nil {
+			t.Metadata = make(map[string]string)
+		}
+		if req.Msg.Summary != "" {
+			t.Metadata["result_summary"] = req.Msg.Summary
+		}
+		if req.Msg.ErrorMessage != "" {
+			t.Metadata["result_error"] = req.Msg.ErrorMessage
+		}
+		delete(t.Metadata, "_stopped_by_user")
+		t.UpdatedAt = time.Now()
+		if err := s.taskRepo.Update(ctx, t); err != nil {
+			return nil, err
+		}
+		slog.Info("task already unassigned, updated metadata only", "task_id", t.ID)
+		return connect.NewResponse(&taskguildv1.ReportTaskResultResponse{}), nil
+	}
+
 	// Clear assigned agent.
 	t.AssignedAgentID = ""
 	t.UpdatedAt = time.Now()
