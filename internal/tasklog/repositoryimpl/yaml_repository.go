@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"gopkg.in/yaml.v3"
 
@@ -219,4 +221,56 @@ func (r *YAMLRepository) DeleteByTaskID(ctx context.Context, taskID string) (int
 		count++
 	}
 	return count, nil
+}
+
+// CleanupOlderThan removes task log entries older than maxAge.
+// It scans all log files, reads the created_at field using fast text
+// extraction, and deletes entries that exceed the age threshold.
+func (r *YAMLRepository) CleanupOlderThan(ctx context.Context, maxAge time.Duration) (int, error) {
+	r.ensureIndex(ctx)
+
+	cutoff := time.Now().Add(-maxAge)
+
+	// Snapshot all IDs to iterate.
+	r.indexMu.RLock()
+	ids := make([]string, len(r.allIDs))
+	copy(ids, r.allIDs)
+	r.indexMu.RUnlock()
+
+	deleted := 0
+	for _, id := range ids {
+		data, err := r.storage.Read(ctx, logPath(id))
+		if err != nil {
+			continue
+		}
+
+		createdStr := extractField(data, "created_at")
+		if createdStr == "" {
+			continue
+		}
+		createdAt, err := time.Parse(time.RFC3339Nano, createdStr)
+		if err != nil {
+			// Try alternative format.
+			createdAt, err = time.Parse(time.RFC3339, createdStr)
+			if err != nil {
+				continue
+			}
+		}
+
+		if createdAt.Before(cutoff) {
+			taskID := extractField(data, "task_id")
+			if delErr := r.storage.Delete(ctx, logPath(id)); delErr != nil {
+				continue
+			}
+			if taskID != "" {
+				r.removeFromIndex(id, taskID)
+			}
+			deleted++
+		}
+	}
+
+	if deleted > 0 {
+		slog.Info("task log cleanup completed", "deleted", deleted, "max_age", maxAge)
+	}
+	return deleted, nil
 }

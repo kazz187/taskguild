@@ -261,6 +261,14 @@ func runServer() {
 	// Start broker cleanup goroutine for expired executions (TTL-based).
 	scriptBroker.StartCleanup(ctx)
 
+	// Cleanup old task logs on startup to prevent unbounded file accumulation
+	// that causes massive disk IO on first access.
+	if cleaned, err := taskLogRepo.CleanupOlderThan(ctx, 7*24*time.Hour); err != nil {
+		slog.Error("task log cleanup failed", "error", err)
+	} else if cleaned > 0 {
+		slog.Info("startup task log cleanup", "deleted", cleaned)
+	}
+
 	// Handle SIGUSR1 for graceful hot-reload.
 	// When the sentinel detects a binary update it sends SIGUSR1 instead of
 	// SIGTERM. This handler stops accepting new script executions and waits
@@ -302,6 +310,24 @@ func runServer() {
 	svcWg.Go(func() { orch.Start(ctx) })
 	svcWg.Go(func() { pushDispatcher.Start(ctx) })
 	svcWg.Go(func() { chatNotifier.Start(ctx) })
+
+	// Periodic task log cleanup every 6 hours.
+	svcWg.Go(func() {
+		ticker := time.NewTicker(6 * time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if cleaned, err := taskLogRepo.CleanupOlderThan(ctx, 7*24*time.Hour); err != nil {
+					slog.Error("periodic task log cleanup failed", "error", err)
+				} else if cleaned > 0 {
+					slog.Info("periodic task log cleanup", "deleted", cleaned)
+				}
+			}
+		}
+	})
 
 	svcWg.Go(func() {
 		if err := srv.ListenAndServe(ctx); err != nil && err != http.ErrServerClosed {

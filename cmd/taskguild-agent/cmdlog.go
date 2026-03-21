@@ -56,6 +56,19 @@ func newTurnLog(workDir, taskID, label string) *turnLog {
 		return &turnLog{}
 	}
 
+	// Rotate old log files to prevent unbounded disk growth.
+	const maxLogFiles = 50
+	if entries, err := os.ReadDir(logDir); err == nil && len(entries) > maxLogFiles {
+		// Entries are sorted by name (timestamp-prefixed), so oldest are first.
+		toDelete := len(entries) - maxLogFiles
+		for i := 0; i < toDelete; i++ {
+			if entries[i].IsDir() {
+				continue
+			}
+			_ = os.Remove(filepath.Join(logDir, entries[i].Name()))
+		}
+	}
+
 	ts := time.Now().UTC().Format(time.RFC3339Nano)
 	filename := fmt.Sprintf("%s_%s.log", ts, label)
 	logPath := filepath.Join(logDir, filename)
