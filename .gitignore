@@ -72,3 +72,4 @@ __pycache__/
 **/CLAUDE.md
 .claude
 frontend/.vite/
+log/
