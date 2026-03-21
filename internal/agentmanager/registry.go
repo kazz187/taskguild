@@ -135,6 +135,24 @@ func (r *Registry) BroadcastCommandToProject(projectName string, cmd *taskguildv
 	}
 }
 
+// UnregisterIfMatch removes the connection for agentManagerID only if the
+// currently-registered command channel is the same as the one the caller holds.
+// Returns true if the connection was removed (caller was the active handler),
+// false if the connection belongs to a newer handler or was already removed.
+// This prevents a superseded Subscribe handler from accidentally closing a
+// newer handler's channel during deferred cleanup.
+func (r *Registry) UnregisterIfMatch(agentManagerID string, ch chan *taskguildv1.AgentCommand) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	conn, ok := r.conns[agentManagerID]
+	if !ok || conn.commandCh != ch {
+		return false
+	}
+	close(conn.commandCh)
+	delete(r.conns, agentManagerID)
+	return true
+}
+
 // GetProjectName returns the project name for a connected agent-manager.
 func (r *Registry) GetProjectName(agentManagerID string) (string, bool) {
 	r.mu.RLock()

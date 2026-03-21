@@ -6,13 +6,20 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 )
 
 // LocalStorage implements Storage using the local filesystem.
+//
+// Individual file operations (Read, Write, Delete, Exists) are inherently
+// safe for concurrent use: each operates on a single file, and Write uses
+// an atomic temp-file-then-rename pattern. Multi-operation atomicity (e.g.
+// check-then-write for Claim) is handled by repository-level mutexes
+// (e.g. claimMu in the task repo). Removing the previous global RWMutex
+// eliminates cross-repository lock contention that caused disk IO spikes
+// when a long-running scan (e.g. task log index build) blocked all storage
+// operations system-wide.
 type LocalStorage struct {
 	basePath string
-	mu       sync.RWMutex
 }
 
 // NewLocalStorage creates a new LocalStorage rooted at basePath.
@@ -32,9 +39,6 @@ func (s *LocalStorage) resolve(path string) string {
 }
 
 func (s *LocalStorage) Read(_ context.Context, path string) ([]byte, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	data, err := os.ReadFile(s.resolve(path))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -46,9 +50,6 @@ func (s *LocalStorage) Read(_ context.Context, path string) ([]byte, error) {
 }
 
 func (s *LocalStorage) Write(_ context.Context, path string, data []byte) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	full := s.resolve(path)
 	dir := filepath.Dir(full)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -68,9 +69,6 @@ func (s *LocalStorage) Write(_ context.Context, path string, data []byte) error 
 }
 
 func (s *LocalStorage) Delete(_ context.Context, path string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	full := s.resolve(path)
 	if err := os.Remove(full); err != nil {
 		if os.IsNotExist(err) {
@@ -82,9 +80,6 @@ func (s *LocalStorage) Delete(_ context.Context, path string) error {
 }
 
 func (s *LocalStorage) List(_ context.Context, prefix string) ([]string, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	dir := s.resolve(prefix)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -105,9 +100,6 @@ func (s *LocalStorage) List(_ context.Context, prefix string) ([]string, error) 
 }
 
 func (s *LocalStorage) Exists(_ context.Context, path string) (bool, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	_, err := os.Stat(s.resolve(path))
 	if err != nil {
 		if os.IsNotExist(err) {
