@@ -251,10 +251,10 @@ func (s *Server) sendPendingTasksToStream(ctx context.Context, projectName strin
 			wfCache[t.WorkflowID] = wf
 		}
 
+		// agentConfigID may be empty when no agent is configured for the
+		// status (e.g. comment-triggered launch). ClaimTask handles this
+		// gracefully by falling back to a plain agent.
 		agentConfigID := wf.FindAgentIDForStatus(t.StatusID)
-		if agentConfigID == "" {
-			continue // no agent configured for this status
-		}
 
 		cmd := &taskguildv1.AgentCommand{
 			Command: &taskguildv1.AgentCommand_TaskAvailable{
