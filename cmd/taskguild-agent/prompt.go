@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 )
 
 // buildUserPrompt constructs the user prompt from enriched metadata.
@@ -109,9 +111,16 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 	}
 
 	sb.WriteString("\n## Interactive Session\n")
-	sb.WriteString("You are in an interactive session. ")
-	sb.WriteString("If you need user input, approval, or clarification, ")
-	sb.WriteString("clearly state what you need. You will receive a response and can continue.\n")
+	if metadata["_permission_mode"] == string(claudeagent.PermissionModePlan) {
+		sb.WriteString("You are in plan mode — an interactive planning session with the user. ")
+		sb.WriteString("Your role is to explore the codebase, analyze requirements, and propose a detailed implementation plan. ")
+		sb.WriteString("Do NOT output NEXT_STATUS until the user explicitly confirms the plan is ready to proceed. ")
+		sb.WriteString("Present your plan clearly and ask the user for feedback or approval before transitioning.\n")
+	} else {
+		sb.WriteString("You are in an interactive session. ")
+		sb.WriteString("If you need user input, approval, or clarification, ")
+		sb.WriteString("clearly state what you need. You will receive a response and can continue.\n")
+	}
 	sb.WriteString("When the task is fully complete, output NEXT_STATUS on the last line.\n")
 
 	return sb.String()
