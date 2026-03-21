@@ -287,8 +287,16 @@ func runAgent() {
 				subscribeBackoff = subscribeMaxBackoff
 			}
 		} else {
-			// Successful connection (clean disconnect) — reset backoff.
+			// Successful connection (clean disconnect) — reset backoff but
+			// still wait a short delay to prevent reconnection storms when
+			// the server forcefully replaces connections in quick succession
+			// (e.g. old handler's deferred Unregister racing with new handler).
 			subscribeBackoff = subscribeInitialBackoff
+			slog.Info("clean disconnect, reconnecting after short delay", "delay", subscribeBackoff)
+			select {
+			case <-time.After(subscribeBackoff):
+			case <-ctx.Done():
+			}
 		}
 	}
 

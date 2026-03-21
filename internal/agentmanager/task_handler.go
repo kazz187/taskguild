@@ -53,12 +53,19 @@ func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1
 
 	commandCh := s.registry.Register(agentManagerID, req.Msg.MaxConcurrentTasks, projectName)
 	defer func() {
-		s.registry.Unregister(agentManagerID)
-		// On disconnect, release assigned tasks so other agents can pick them up.
-		// We release ALL tasks here (no exceptions) because the agent is actually
-		// disconnecting. If it reconnects, it will send active_task_ids to reclaim.
-		s.releaseAgentTasks(context.Background(), agentManagerID)
-		slog.Info("agent-manager disconnected", "agent_manager_id", agentManagerID)
+		wasActive := s.registry.UnregisterIfMatch(agentManagerID, commandCh)
+		if wasActive {
+			// This handler was the active one — the agent truly disconnected.
+			// Release all tasks so other agents can pick them up.
+			s.releaseAgentTasks(context.Background(), agentManagerID)
+			slog.Info("agent-manager disconnected", "agent_manager_id", agentManagerID)
+		} else {
+			// A newer Subscribe handler has replaced us via Register. Do NOT
+			// release tasks — the new handler already called releaseAgentTasksExcept
+			// on connect and is now the authoritative connection for this agent.
+			slog.Info("agent-manager handler superseded, skipping task release",
+				"agent_manager_id", agentManagerID)
+		}
 	}()
 
 	// Send existing PENDING tasks to this agent so it can pick them up
