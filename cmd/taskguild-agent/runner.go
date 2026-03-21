@@ -448,8 +448,11 @@ func runTask(
 		}
 
 		// No NEXT_STATUS output but transitions exist — try auto-transition
-		// if exactly one transition is available.
-		if transitions, err := parseAvailableTransitions(metadata); err == nil && len(transitions) == 1 {
+		// if exactly one transition is available. Skip for plan mode so
+		// the user can review and interact before transitioning.
+		if metadata["_permission_mode"] == string(claudeagent.PermissionModePlan) {
+			logger.Info("skipping auto-transition (plan mode)", "turn", turn)
+		} else if transitions, err := parseAvailableTransitions(metadata); err == nil && len(transitions) == 1 {
 			autoName := transitions[0].Name
 			logger.Info("no NEXT_STATUS output, auto-transitioning (single transition available)",
 				"next_status_name", autoName, "turn", turn)
