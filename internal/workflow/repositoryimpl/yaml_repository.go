@@ -3,7 +3,10 @@ package repositoryimpl
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"sort"
+	"strings"
+	"sync"
 
 	"gopkg.in/yaml.v3"
 
@@ -12,40 +15,89 @@ import (
 	"github.com/kazz187/taskguild/pkg/storage"
 )
 
-const workflowsPrefix = "workflows"
+const (
+	projectsPrefix = "projects"
+	entityType     = "workflows"
+)
 
 type YAMLRepository struct {
-	storage storage.Storage
+	storage     storage.Storage
+	indexOnce   sync.Once
+	indexMu     sync.RWMutex
+	idToProject map[string]string
 }
 
 func NewYAMLRepository(s storage.Storage) *YAMLRepository {
 	return &YAMLRepository{storage: s}
 }
 
-func path(id string) string {
-	return fmt.Sprintf("%s/%s.yaml", workflowsPrefix, id)
+func entityPath(projectID, id string) string {
+	return fmt.Sprintf("%s/%s/%s/%s.yaml", projectsPrefix, projectID, entityType, id)
+}
+
+func entityPrefix(projectID string) string {
+	return fmt.Sprintf("%s/%s/%s", projectsPrefix, projectID, entityType)
+}
+
+func (r *YAMLRepository) ensureIndex(ctx context.Context) {
+	r.indexOnce.Do(func() {
+		r.indexMu.Lock()
+		defer r.indexMu.Unlock()
+		r.idToProject = make(map[string]string)
+
+		dirs, err := r.storage.ListDirs(ctx, projectsPrefix)
+		if err != nil {
+			return
+		}
+		for _, d := range dirs {
+			pid := filepath.Base(d)
+			files, err := r.storage.List(ctx, entityPrefix(pid))
+			if err != nil {
+				continue
+			}
+			for _, f := range files {
+				id := strings.TrimSuffix(filepath.Base(f), ".yaml")
+				r.idToProject[id] = pid
+			}
+		}
+	})
 }
 
 func (r *YAMLRepository) Create(ctx context.Context, w *workflow.Workflow) error {
-	exists, err := r.storage.Exists(ctx, path(w.ID))
-	if err != nil {
-		return cerr.WrapStorageWriteError("workflow", err)
-	}
+	r.ensureIndex(ctx)
+
+	r.indexMu.RLock()
+	_, exists := r.idToProject[w.ID]
+	r.indexMu.RUnlock()
 	if exists {
 		return cerr.NewError(cerr.AlreadyExists, "workflow already exists", nil)
 	}
+
 	data, err := yaml.Marshal(w)
 	if err != nil {
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal workflow: %w", err))
 	}
-	if err := r.storage.Write(ctx, path(w.ID), data); err != nil {
+	if err := r.storage.Write(ctx, entityPath(w.ProjectID, w.ID), data); err != nil {
 		return cerr.WrapStorageWriteError("workflow", err)
 	}
+
+	r.indexMu.Lock()
+	r.idToProject[w.ID] = w.ProjectID
+	r.indexMu.Unlock()
 	return nil
 }
 
 func (r *YAMLRepository) Get(ctx context.Context, id string) (*workflow.Workflow, error) {
-	data, err := r.storage.Read(ctx, path(id))
+	r.ensureIndex(ctx)
+
+	r.indexMu.RLock()
+	pid, ok := r.idToProject[id]
+	r.indexMu.RUnlock()
+	if !ok {
+		return nil, cerr.NewError(cerr.NotFound, "workflow not found", nil)
+	}
+
+	data, err := r.storage.Read(ctx, entityPath(pid, id))
 	if err != nil {
 		return nil, cerr.WrapStorageReadError("workflow", err)
 	}
@@ -57,25 +109,33 @@ func (r *YAMLRepository) Get(ctx context.Context, id string) (*workflow.Workflow
 }
 
 func (r *YAMLRepository) List(ctx context.Context, projectID string, limit, offset int) ([]*workflow.Workflow, int, error) {
-	paths, err := r.storage.List(ctx, workflowsPrefix)
-	if err != nil {
-		return nil, 0, cerr.WrapStorageReadError("workflows", err)
+	r.ensureIndex(ctx)
+
+	var filePaths []string
+	if projectID != "" {
+		paths, err := r.storage.List(ctx, entityPrefix(projectID))
+		if err != nil {
+			return nil, 0, cerr.WrapStorageReadError("workflows", err)
+		}
+		filePaths = paths
+	} else {
+		r.indexMu.RLock()
+		for id, pid := range r.idToProject {
+			filePaths = append(filePaths, entityPath(pid, id))
+		}
+		r.indexMu.RUnlock()
 	}
 
-	sort.Strings(paths)
+	sort.Strings(filePaths)
 
-	// Read all and filter by projectID in memory.
 	var all []*workflow.Workflow
-	for _, p := range paths {
+	for _, p := range filePaths {
 		data, err := r.storage.Read(ctx, p)
 		if err != nil {
 			continue
 		}
 		var w workflow.Workflow
 		if err := yaml.Unmarshal(data, &w); err != nil {
-			continue
-		}
-		if projectID != "" && w.ProjectID != projectID {
 			continue
 		}
 		all = append(all, &w)
@@ -93,26 +153,49 @@ func (r *YAMLRepository) List(ctx context.Context, projectID string, limit, offs
 }
 
 func (r *YAMLRepository) Update(ctx context.Context, w *workflow.Workflow) error {
-	exists, err := r.storage.Exists(ctx, path(w.ID))
-	if err != nil {
-		return cerr.WrapStorageWriteError("workflow", err)
-	}
-	if !exists {
+	r.ensureIndex(ctx)
+
+	r.indexMu.RLock()
+	pid, ok := r.idToProject[w.ID]
+	r.indexMu.RUnlock()
+	if !ok {
 		return cerr.NewError(cerr.NotFound, "workflow not found", nil)
 	}
+
+	if pid != w.ProjectID {
+		_ = r.storage.Delete(ctx, entityPath(pid, w.ID))
+	}
+
 	data, err := yaml.Marshal(w)
 	if err != nil {
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal workflow: %w", err))
 	}
-	if err := r.storage.Write(ctx, path(w.ID), data); err != nil {
+	if err := r.storage.Write(ctx, entityPath(w.ProjectID, w.ID), data); err != nil {
 		return cerr.WrapStorageWriteError("workflow", err)
 	}
+
+	r.indexMu.Lock()
+	r.idToProject[w.ID] = w.ProjectID
+	r.indexMu.Unlock()
 	return nil
 }
 
 func (r *YAMLRepository) Delete(ctx context.Context, id string) error {
-	if err := r.storage.Delete(ctx, path(id)); err != nil {
+	r.ensureIndex(ctx)
+
+	r.indexMu.RLock()
+	pid, ok := r.idToProject[id]
+	r.indexMu.RUnlock()
+	if !ok {
+		return cerr.NewError(cerr.NotFound, "workflow not found", nil)
+	}
+
+	if err := r.storage.Delete(ctx, entityPath(pid, id)); err != nil {
 		return cerr.WrapStorageDeleteError("workflow", err)
 	}
+
+	r.indexMu.Lock()
+	delete(r.idToProject, id)
+	r.indexMu.Unlock()
 	return nil
 }

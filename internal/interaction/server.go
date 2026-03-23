@@ -204,6 +204,7 @@ func (s *Server) SendMessage(ctx context.Context, req *connect.Request[taskguild
 	now := time.Now()
 	inter := &Interaction{
 		ID:          ulid.Make().String(),
+		ProjectID:   t.ProjectID,
 		TaskID:      req.Msg.TaskId,
 		Type:        TypeUserMessage,
 		Status:      StatusResponded,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"sort"
 	"sync"
 	"time"
@@ -15,15 +16,23 @@ import (
 	"github.com/kazz187/taskguild/pkg/storage"
 )
 
-const tasksPrefix = "tasks"
-const archivedPrefix = "tasks/archived"
+const projectsPrefix = "projects"
+
+// knownSubdirs contains directory names that are NOT task directories.
+var knownSubdirs = map[string]bool{
+	"agents":                   true,
+	"workflows":                true,
+	"skills":                   true,
+	"scripts":                  true,
+	"singlecommandpermissions": true,
+	"archived":                 true,
+}
 
 type YAMLRepository struct {
 	storage storage.Storage
 	claimMu sync.Mutex
 
 	// In-memory cache for active tasks, lazily loaded on first access.
-	// Eliminates repeated full-directory scans that caused excessive disk IO.
 	cacheOnce sync.Once
 	cacheMu   sync.RWMutex
 	tasks     map[string]*task.Task // id -> cached task
@@ -33,38 +42,57 @@ func NewYAMLRepository(s storage.Storage) *YAMLRepository {
 	return &YAMLRepository{storage: s}
 }
 
-func path(id string) string {
-	return fmt.Sprintf("%s/%s.yaml", tasksPrefix, id)
+func taskPath(projectID, taskID string) string {
+	return fmt.Sprintf("%s/%s/%s/task.yaml", projectsPrefix, projectID, taskID)
 }
 
-func archivedPath(id string) string {
-	return fmt.Sprintf("%s/%s.yaml", archivedPrefix, id)
+func archivedTaskPath(projectID, taskID string) string {
+	return fmt.Sprintf("%s/%s/archived/%s/task.yaml", projectsPrefix, projectID, taskID)
+}
+
+func taskDirPath(projectID, taskID string) string {
+	return fmt.Sprintf("%s/%s/%s", projectsPrefix, projectID, taskID)
+}
+
+func archivedTaskDirPath(projectID, taskID string) string {
+	return fmt.Sprintf("%s/%s/archived/%s", projectsPrefix, projectID, taskID)
 }
 
 // ensureCache lazily loads all active tasks from disk into the in-memory cache.
-// Uses sync.Once so the disk scan happens only once per process lifetime.
 func (r *YAMLRepository) ensureCache(ctx context.Context) {
 	r.cacheOnce.Do(func() {
 		r.cacheMu.Lock()
 		defer r.cacheMu.Unlock()
 		r.tasks = make(map[string]*task.Task)
 
-		paths, err := r.storage.List(ctx, tasksPrefix)
+		projectDirs, err := r.storage.ListDirs(ctx, projectsPrefix)
 		if err != nil {
-			slog.Error("failed to list tasks for cache", "error", err)
+			slog.Error("failed to list project dirs for task cache", "error", err)
 			return
 		}
 
-		for _, p := range paths {
-			data, err := r.storage.Read(ctx, p)
+		for _, pd := range projectDirs {
+			pid := filepath.Base(pd)
+			subdirs, err := r.storage.ListDirs(ctx, pd)
 			if err != nil {
 				continue
 			}
-			var t task.Task
-			if err := yaml.Unmarshal(data, &t); err != nil {
-				continue
+			for _, sd := range subdirs {
+				name := filepath.Base(sd)
+				if knownSubdirs[name] {
+					continue
+				}
+				p := taskPath(pid, name)
+				data, err := r.storage.Read(ctx, p)
+				if err != nil {
+					continue
+				}
+				var t task.Task
+				if err := yaml.Unmarshal(data, &t); err != nil {
+					continue
+				}
+				r.tasks[t.ID] = &t
 			}
-			r.tasks[t.ID] = &t
 		}
 		slog.Info("task cache initialized", "count", len(r.tasks))
 	})
@@ -96,7 +124,7 @@ func (r *YAMLRepository) Create(ctx context.Context, t *task.Task) error {
 	if err != nil {
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal task: %w", err))
 	}
-	if err := r.storage.Write(ctx, path(t.ID), data); err != nil {
+	if err := r.storage.Write(ctx, taskPath(t.ProjectID, t.ID), data); err != nil {
 		return cerr.WrapStorageWriteError("task", err)
 	}
 
@@ -116,28 +144,13 @@ func (r *YAMLRepository) Get(ctx context.Context, id string) (*task.Task, error)
 		return copyTask(cached), nil
 	}
 
-	// Not in cache — might be a race or not loaded. Fall back to disk.
-	data, err := r.storage.Read(ctx, path(id))
-	if err != nil {
-		return nil, cerr.WrapStorageReadError("task", err)
-	}
-	var t task.Task
-	if err := yaml.Unmarshal(data, &t); err != nil {
-		return nil, cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to unmarshal task: %w", err))
-	}
-
-	// Add to cache for future access.
-	r.cacheMu.Lock()
-	r.tasks[t.ID] = copyTask(&t)
-	r.cacheMu.Unlock()
-	return &t, nil
+	return nil, cerr.NewError(cerr.NotFound, "task not found", nil)
 }
 
 func (r *YAMLRepository) List(ctx context.Context, projectID, workflowID, statusID string, limit, offset int) ([]*task.Task, int, error) {
 	r.ensureCache(ctx)
 
 	r.cacheMu.RLock()
-	// Collect matching tasks from cache.
 	var all []*task.Task
 	for _, t := range r.tasks {
 		if projectID != "" && t.ProjectID != projectID {
@@ -153,7 +166,6 @@ func (r *YAMLRepository) List(ctx context.Context, projectID, workflowID, status
 	}
 	r.cacheMu.RUnlock()
 
-	// Sort by ID for deterministic ordering.
 	sort.Slice(all, func(i, j int) bool {
 		return all[i].ID < all[j].ID
 	})
@@ -176,21 +188,14 @@ func (r *YAMLRepository) Update(ctx context.Context, t *task.Task) error {
 	_, exists := r.tasks[t.ID]
 	r.cacheMu.RUnlock()
 	if !exists {
-		// Fall back to disk check for tasks not in cache.
-		diskExists, err := r.storage.Exists(ctx, path(t.ID))
-		if err != nil {
-			return cerr.WrapStorageWriteError("task", err)
-		}
-		if !diskExists {
-			return cerr.NewError(cerr.NotFound, "task not found", nil)
-		}
+		return cerr.NewError(cerr.NotFound, "task not found", nil)
 	}
 
 	data, err := yaml.Marshal(t)
 	if err != nil {
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal task: %w", err))
 	}
-	if err := r.storage.Write(ctx, path(t.ID), data); err != nil {
+	if err := r.storage.Write(ctx, taskPath(t.ProjectID, t.ID), data); err != nil {
 		return cerr.WrapStorageWriteError("task", err)
 	}
 
@@ -201,7 +206,16 @@ func (r *YAMLRepository) Update(ctx context.Context, t *task.Task) error {
 }
 
 func (r *YAMLRepository) Delete(ctx context.Context, id string) error {
-	if err := r.storage.Delete(ctx, path(id)); err != nil {
+	r.ensureCache(ctx)
+
+	r.cacheMu.RLock()
+	cached, ok := r.tasks[id]
+	r.cacheMu.RUnlock()
+	if !ok {
+		return cerr.NewError(cerr.NotFound, "task not found", nil)
+	}
+
+	if err := r.storage.Delete(ctx, taskPath(cached.ProjectID, id)); err != nil {
 		return cerr.WrapStorageDeleteError("task", err)
 	}
 
@@ -295,25 +309,23 @@ func (r *YAMLRepository) Claim(ctx context.Context, taskID, agentID string) (*ta
 }
 
 func (r *YAMLRepository) Archive(ctx context.Context, id string) error {
-	// Read the task from active path.
-	data, err := r.storage.Read(ctx, path(id))
-	if err != nil {
-		return cerr.WrapStorageReadError("task", err)
+	r.ensureCache(ctx)
+
+	r.cacheMu.RLock()
+	cached, ok := r.tasks[id]
+	r.cacheMu.RUnlock()
+	if !ok {
+		return cerr.NewError(cerr.NotFound, "task not found", nil)
 	}
 
-	// Write to archived path.
-	if err := r.storage.Write(ctx, archivedPath(id), data); err != nil {
+	pid := cached.ProjectID
+	src := taskDirPath(pid, id)
+	dst := archivedTaskDirPath(pid, id)
+
+	if err := r.storage.MoveDir(ctx, src, dst); err != nil {
 		return cerr.WrapStorageWriteError("archived task", err)
 	}
 
-	// Delete from active path.
-	if err := r.storage.Delete(ctx, path(id)); err != nil {
-		// Try to clean up archived copy on failure.
-		_ = r.storage.Delete(ctx, archivedPath(id))
-		return cerr.WrapStorageDeleteError("task", err)
-	}
-
-	// Remove from cache.
 	r.cacheMu.Lock()
 	delete(r.tasks, id)
 	r.cacheMu.Unlock()
@@ -321,72 +333,118 @@ func (r *YAMLRepository) Archive(ctx context.Context, id string) error {
 }
 
 func (r *YAMLRepository) Unarchive(ctx context.Context, id string) error {
-	// Read the task from archived path.
-	data, err := r.storage.Read(ctx, archivedPath(id))
+	// We need to find the project that has this archived task.
+	// Scan all projects' archived directories.
+	projectDirs, err := r.storage.ListDirs(ctx, projectsPrefix)
 	if err != nil {
 		return cerr.WrapStorageReadError("archived task", err)
 	}
 
-	// Write to active path.
-	if err := r.storage.Write(ctx, path(id), data); err != nil {
+	var foundPID string
+	for _, pd := range projectDirs {
+		pid := filepath.Base(pd)
+		archivedDir := fmt.Sprintf("%s/%s/archived", projectsPrefix, pid)
+		taskDirs, err := r.storage.ListDirs(ctx, archivedDir)
+		if err != nil {
+			continue
+		}
+		for _, td := range taskDirs {
+			if filepath.Base(td) == id {
+				foundPID = pid
+				break
+			}
+		}
+		if foundPID != "" {
+			break
+		}
+	}
+
+	if foundPID == "" {
+		return cerr.NewError(cerr.NotFound, "archived task not found", nil)
+	}
+
+	src := archivedTaskDirPath(foundPID, id)
+	dst := taskDirPath(foundPID, id)
+
+	if err := r.storage.MoveDir(ctx, src, dst); err != nil {
 		return cerr.WrapStorageWriteError("task", err)
 	}
 
-	// Delete from archived path.
-	if err := r.storage.Delete(ctx, archivedPath(id)); err != nil {
-		// Try to clean up active copy on failure.
-		_ = r.storage.Delete(ctx, path(id))
-		return cerr.WrapStorageDeleteError("archived task", err)
-	}
-
-	// Add to cache.
-	var t task.Task
-	if err := yaml.Unmarshal(data, &t); err == nil {
-		r.cacheMu.Lock()
-		r.tasks[t.ID] = &t
-		r.cacheMu.Unlock()
+	// Read the task and add to cache.
+	data, err := r.storage.Read(ctx, taskPath(foundPID, id))
+	if err == nil {
+		var t task.Task
+		if err := yaml.Unmarshal(data, &t); err == nil {
+			r.cacheMu.Lock()
+			r.tasks[t.ID] = &t
+			r.cacheMu.Unlock()
+		}
 	}
 	return nil
 }
 
 func (r *YAMLRepository) GetArchived(ctx context.Context, id string) (*task.Task, error) {
-	data, err := r.storage.Read(ctx, archivedPath(id))
+	projectDirs, err := r.storage.ListDirs(ctx, projectsPrefix)
 	if err != nil {
 		return nil, cerr.WrapStorageReadError("archived task", err)
 	}
-	var t task.Task
-	if err := yaml.Unmarshal(data, &t); err != nil {
-		return nil, cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to unmarshal archived task: %w", err))
-	}
-	return &t, nil
-}
 
-func (r *YAMLRepository) ListArchived(ctx context.Context, projectID, workflowID string, limit, offset int) ([]*task.Task, int, error) {
-	paths, err := r.storage.List(ctx, archivedPrefix)
-	if err != nil {
-		return nil, 0, cerr.WrapStorageReadError("archived tasks", err)
-	}
-
-	sort.Strings(paths)
-
-	var all []*task.Task
-	for _, p := range paths {
-		data, err := r.storage.Read(ctx, p)
+	for _, pd := range projectDirs {
+		pid := filepath.Base(pd)
+		data, err := r.storage.Read(ctx, archivedTaskPath(pid, id))
 		if err != nil {
 			continue
 		}
 		var t task.Task
 		if err := yaml.Unmarshal(data, &t); err != nil {
-			continue
+			return nil, cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to unmarshal archived task: %w", err))
 		}
-		if projectID != "" && t.ProjectID != projectID {
-			continue
-		}
-		if workflowID != "" && t.WorkflowID != workflowID {
-			continue
-		}
-		all = append(all, &t)
+		return &t, nil
 	}
+	return nil, cerr.NewError(cerr.NotFound, "archived task not found", nil)
+}
+
+func (r *YAMLRepository) ListArchived(ctx context.Context, projectID, workflowID string, limit, offset int) ([]*task.Task, int, error) {
+	var projectIDs []string
+	if projectID != "" {
+		projectIDs = []string{projectID}
+	} else {
+		dirs, err := r.storage.ListDirs(ctx, projectsPrefix)
+		if err != nil {
+			return nil, 0, cerr.WrapStorageReadError("archived tasks", err)
+		}
+		for _, d := range dirs {
+			projectIDs = append(projectIDs, filepath.Base(d))
+		}
+	}
+
+	var all []*task.Task
+	for _, pid := range projectIDs {
+		archivedDir := fmt.Sprintf("%s/%s/archived", projectsPrefix, pid)
+		taskDirs, err := r.storage.ListDirs(ctx, archivedDir)
+		if err != nil {
+			continue
+		}
+		for _, td := range taskDirs {
+			tid := filepath.Base(td)
+			data, err := r.storage.Read(ctx, archivedTaskPath(pid, tid))
+			if err != nil {
+				continue
+			}
+			var t task.Task
+			if err := yaml.Unmarshal(data, &t); err != nil {
+				continue
+			}
+			if workflowID != "" && t.WorkflowID != workflowID {
+				continue
+			}
+			all = append(all, &t)
+		}
+	}
+
+	sort.Slice(all, func(i, j int) bool {
+		return all[i].ID < all[j].ID
+	})
 
 	total := len(all)
 	if offset >= total {

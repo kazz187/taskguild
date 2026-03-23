@@ -23,6 +23,7 @@ const (
 
 type Interaction struct {
 	ID            string            `yaml:"id"`
+	ProjectID     string            `yaml:"project_id"`
 	TaskID        string            `yaml:"task_id"`
 	AgentID       string            `yaml:"agent_id"`
 	Type          InteractionType   `yaml:"type"`

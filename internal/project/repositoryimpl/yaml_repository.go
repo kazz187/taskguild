@@ -23,7 +23,7 @@ func NewYAMLRepository(s storage.Storage) *YAMLRepository {
 }
 
 func path(id string) string {
-	return fmt.Sprintf("%s/%s.yaml", projectsPrefix, id)
+	return fmt.Sprintf("%s/%s/project.yaml", projectsPrefix, id)
 }
 
 func (r *YAMLRepository) Create(ctx context.Context, p *project.Project) error {
@@ -57,21 +57,13 @@ func (r *YAMLRepository) Get(ctx context.Context, id string) (*project.Project, 
 }
 
 func (r *YAMLRepository) FindByName(ctx context.Context, name string) (*project.Project, error) {
-	paths, err := r.storage.List(ctx, projectsPrefix)
+	projects, err := r.readAll(ctx)
 	if err != nil {
-		return nil, cerr.WrapStorageReadError("project", err)
+		return nil, err
 	}
-	for _, p := range paths {
-		data, err := r.storage.Read(ctx, p)
-		if err != nil {
-			continue
-		}
-		var proj project.Project
-		if err := yaml.Unmarshal(data, &proj); err != nil {
-			continue
-		}
+	for _, proj := range projects {
 		if proj.Name == name {
-			return &proj, nil
+			return proj, nil
 		}
 	}
 	return nil, cerr.NewError(cerr.NotFound, "project not found", nil)
@@ -79,13 +71,14 @@ func (r *YAMLRepository) FindByName(ctx context.Context, name string) (*project.
 
 // readAll reads all project YAML files and returns them unsorted.
 func (r *YAMLRepository) readAll(ctx context.Context) ([]*project.Project, error) {
-	paths, err := r.storage.List(ctx, projectsPrefix)
+	dirs, err := r.storage.ListDirs(ctx, projectsPrefix)
 	if err != nil {
 		return nil, cerr.WrapStorageReadError("projects", err)
 	}
-	projects := make([]*project.Project, 0, len(paths))
-	for _, p := range paths {
-		data, err := r.storage.Read(ctx, p)
+	projects := make([]*project.Project, 0, len(dirs))
+	for _, d := range dirs {
+		projectPath := fmt.Sprintf("%s/project.yaml", d)
+		data, err := r.storage.Read(ctx, projectPath)
 		if err != nil {
 			continue
 		}

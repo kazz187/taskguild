@@ -17,9 +17,16 @@ func (s *Server) ReportTaskLog(ctx context.Context, req *connect.Request[taskgui
 		return nil, cerr.NewError(cerr.InvalidArgument, "task_id is required", nil).ConnectError()
 	}
 
+	// Look up the task to get ProjectID for storage path construction.
+	t, err := s.taskRepo.Get(ctx, req.Msg.TaskId)
+	if err != nil {
+		return nil, err
+	}
+
 	now := time.Now()
 	l := &tasklog.TaskLog{
 		ID:        ulid.Make().String(),
+		ProjectID: t.ProjectID,
 		TaskID:    req.Msg.TaskId,
 		Level:     int32(req.Msg.Level),
 		Category:  int32(req.Msg.Category),
@@ -32,11 +39,7 @@ func (s *Server) ReportTaskLog(ctx context.Context, req *connect.Request[taskgui
 		return nil, err
 	}
 
-	// Resolve project_id from the task for event metadata.
-	eventMeta := map[string]string{"task_id": req.Msg.TaskId}
-	if t, err := s.taskRepo.Get(ctx, req.Msg.TaskId); err == nil {
-		eventMeta["project_id"] = t.ProjectID
-	}
+	eventMeta := map[string]string{"task_id": req.Msg.TaskId, "project_id": t.ProjectID}
 
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_TASK_LOG,

@@ -99,6 +99,41 @@ func (s *LocalStorage) List(_ context.Context, prefix string) ([]string, error) 
 	return paths, nil
 }
 
+func (s *LocalStorage) ListDirs(_ context.Context, prefix string) ([]string, error) {
+	dir := s.resolve(prefix)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to list dirs %s: %w", prefix, err)
+	}
+
+	var dirs []string
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		dirs = append(dirs, strings.TrimPrefix(filepath.Join(prefix, entry.Name()), "/"))
+	}
+	return dirs, nil
+}
+
+func (s *LocalStorage) MoveDir(_ context.Context, oldPrefix, newPrefix string) error {
+	oldFull := s.resolve(oldPrefix)
+	newFull := s.resolve(newPrefix)
+
+	// Ensure parent directory of destination exists.
+	if err := os.MkdirAll(filepath.Dir(newFull), 0o755); err != nil {
+		return fmt.Errorf("failed to create parent directory for %s: %w", newPrefix, err)
+	}
+
+	if err := os.Rename(oldFull, newFull); err != nil {
+		return fmt.Errorf("failed to move %s to %s: %w", oldPrefix, newPrefix, err)
+	}
+	return nil
+}
+
 func (s *LocalStorage) Exists(_ context.Context, path string) (bool, error) {
 	_, err := os.Stat(s.resolve(path))
 	if err != nil {

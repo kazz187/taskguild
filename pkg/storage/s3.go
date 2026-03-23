@@ -109,6 +109,92 @@ func (s *S3Storage) List(ctx context.Context, prefix string) ([]string, error) {
 	return paths, nil
 }
 
+func (s *S3Storage) ListDirs(ctx context.Context, prefix string) ([]string, error) {
+	fullPrefix := s.key(prefix)
+	if !strings.HasSuffix(fullPrefix, "/") {
+		fullPrefix += "/"
+	}
+	var dirs []string
+	var continuationToken *string
+	for {
+		out, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+			Bucket:            aws.String(s.bucket),
+			Prefix:            aws.String(fullPrefix),
+			Delimiter:         aws.String("/"),
+			ContinuationToken: continuationToken,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to list dirs s3://%s/%s: %w", s.bucket, fullPrefix, err)
+		}
+		for _, cp := range out.CommonPrefixes {
+			rel := strings.TrimPrefix(aws.ToString(cp.Prefix), s.prefix)
+			rel = strings.TrimSuffix(rel, "/")
+			dirs = append(dirs, rel)
+		}
+		if !aws.ToBool(out.IsTruncated) {
+			break
+		}
+		continuationToken = out.NextContinuationToken
+	}
+	return dirs, nil
+}
+
+func (s *S3Storage) MoveDir(ctx context.Context, oldPrefix, newPrefix string) error {
+	fullOldPrefix := s.key(oldPrefix)
+	if !strings.HasSuffix(fullOldPrefix, "/") {
+		fullOldPrefix += "/"
+	}
+
+	// List all objects under oldPrefix.
+	var keys []string
+	var continuationToken *string
+	for {
+		out, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+			Bucket:            aws.String(s.bucket),
+			Prefix:            aws.String(fullOldPrefix),
+			ContinuationToken: continuationToken,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to list s3://%s/%s: %w", s.bucket, fullOldPrefix, err)
+		}
+		for _, obj := range out.Contents {
+			keys = append(keys, aws.ToString(obj.Key))
+		}
+		if !aws.ToBool(out.IsTruncated) {
+			break
+		}
+		continuationToken = out.NextContinuationToken
+	}
+
+	// Copy each object to the new prefix, then delete the original.
+	for _, oldKey := range keys {
+		rel := strings.TrimPrefix(oldKey, fullOldPrefix)
+		newFullPrefix := s.key(newPrefix)
+		if !strings.HasSuffix(newFullPrefix, "/") {
+			newFullPrefix += "/"
+		}
+		newKey := newFullPrefix + rel
+
+		_, err := s.client.CopyObject(ctx, &s3.CopyObjectInput{
+			Bucket:     aws.String(s.bucket),
+			CopySource: aws.String(s.bucket + "/" + oldKey),
+			Key:        aws.String(newKey),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to copy s3://%s/%s to %s: %w", s.bucket, oldKey, newKey, err)
+		}
+
+		_, err = s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+			Bucket: aws.String(s.bucket),
+			Key:    aws.String(oldKey),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to delete s3://%s/%s after copy: %w", s.bucket, oldKey, err)
+		}
+	}
+	return nil
+}
+
 func (s *S3Storage) Exists(ctx context.Context, path string) (bool, error) {
 	_, err := s.client.HeadObject(ctx, &s3.HeadObjectInput{
 		Bucket: aws.String(s.bucket),
