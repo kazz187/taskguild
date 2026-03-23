@@ -109,6 +109,25 @@ export function SidebarNav() {
 
   return (
     <div className="space-y-1">
+      <div className="space-y-0.5 mb-3 pb-3 border-b border-slate-800">
+        <Link
+          to="/global-chat"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-slate-800/40 rounded-lg transition-colors"
+          activeProps={{ className: 'flex items-center gap-1.5 px-3 py-1.5 text-sm text-white bg-slate-800/60 rounded-lg' }}
+        >
+          <MessageSquare className="w-3.5 h-3.5 text-cyan-400" />
+          Global Chats
+        </Link>
+        <Link
+          to="/templates"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-slate-800/40 rounded-lg transition-colors"
+          activeProps={{ className: 'flex items-center gap-1.5 px-3 py-1.5 text-sm text-white bg-slate-800/60 rounded-lg' }}
+        >
+          <Layers className="w-3.5 h-3.5 text-amber-400" />
+          Templates
+        </Link>
+      </div>
+
       <p className="px-3 py-1.5 text-[11px] uppercase tracking-wider text-gray-500 font-semibold">
         Projects
       </p>
@@ -134,25 +153,6 @@ export function SidebarNav() {
           ) : null}
         </DragOverlay>
       </DndContext>
-
-      <div className="pt-3 mt-3 border-t border-slate-800 space-y-0.5">
-        <Link
-          to="/global-chat"
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-slate-800/40 rounded-lg transition-colors"
-          activeProps={{ className: 'flex items-center gap-1.5 px-3 py-1.5 text-sm text-white bg-slate-800/60 rounded-lg' }}
-        >
-          <MessageSquare className="w-3.5 h-3.5 text-cyan-400" />
-          Chat
-        </Link>
-        <Link
-          to="/templates"
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-slate-800/40 rounded-lg transition-colors"
-          activeProps={{ className: 'flex items-center gap-1.5 px-3 py-1.5 text-sm text-white bg-slate-800/60 rounded-lg' }}
-        >
-          <Layers className="w-3.5 h-3.5 text-amber-400" />
-          Templates
-        </Link>
-      </div>
     </div>
   )
 }
@@ -285,10 +285,15 @@ function ProjectChildren({ projectId }: { projectId: string }) {
 function WorkflowsNode({ projectId, workflows }: { projectId: string; workflows: { id: string; name: string }[] }) {
   return (
     <div>
-      <div className="flex items-center gap-1.5 px-3 py-1 text-xs text-gray-400">
+      <Link
+        to="/projects/$projectId/workflows"
+        params={{ projectId }}
+        className="flex items-center gap-1.5 px-3 py-1 text-xs text-gray-400 hover:text-white hover:bg-slate-800/40 rounded-md transition-colors"
+        activeProps={{ className: 'flex items-center gap-1.5 px-3 py-1 text-xs text-white bg-slate-800 rounded-md' }}
+      >
         <Workflow className="w-3 h-3 shrink-0" />
         <span>Workflows</span>
-      </div>
+      </Link>
       {workflows.length > 0 && (
         <div className="ml-3 border-l border-slate-800 pl-2 space-y-0.5 py-0.5">
           {workflows.map((wf) => (

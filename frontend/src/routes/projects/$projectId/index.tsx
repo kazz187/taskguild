@@ -5,13 +5,14 @@ import { listWorkflows } from '@taskguild/proto/taskguild/v1/workflow-WorkflowSe
 import type { Workflow } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { TaskBoard } from '@/components/organisms/TaskBoard'
 import { WorkflowForm } from '@/components/organisms/WorkflowForm'
+import { TaskCreateModal } from '@/components/organisms/TaskCreateModal'
 import { useState, useEffect, useRef } from 'react'
 import { Link } from '@tanstack/react-router'
 import { listAgents } from '@taskguild/proto/taskguild/v1/agent-AgentService_connectquery.ts'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
-import { GitBranch, Plus, Settings, Bot } from 'lucide-react'
+import { GitBranch, Plus, Settings, Bot, Workflow as WorkflowIcon } from 'lucide-react'
 
-type FormMode = { kind: 'create' } | { kind: 'edit'; workflow: Workflow }
+type FormMode = { kind: 'edit'; workflow: Workflow }
 
 export const Route = createFileRoute('/projects/$projectId/')({
   component: ProjectDetailPage,
@@ -25,6 +26,7 @@ function ProjectDetailPage() {
   const { workflowId } = Route.useSearch()
   const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null)
   const [formMode, setFormMode] = useState<FormMode | null>(null)
+  const [showCreateTask, setShowCreateTask] = useState(false)
   const headerActionsRef = useRef<HTMLDivElement>(null)
 
   const { data: projectData } = useQuery(getProject, { id: projectId })
@@ -117,13 +119,15 @@ function ProjectDetailPage() {
                 <span className="hidden sm:inline">Edit</span>
               </button>
             )}
-            <button
-              onClick={() => setFormMode({ kind: 'create' })}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs md:text-sm bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">New Workflow</span>
-            </button>
+            {selectedWorkflow && !formMode && (
+              <button
+                onClick={() => setShowCreateTask(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs md:text-sm bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">New Task</span>
+              </button>
+            )}
             {/* Portal target for TaskBoard header actions (e.g. Clean button) */}
             <div ref={headerActionsRef} className="flex items-center gap-2 shrink-0" />
           </div>
@@ -134,7 +138,7 @@ function ProjectDetailPage() {
       {formMode ? (
         <WorkflowForm
           projectId={projectId}
-          workflow={formMode.kind === 'edit' ? formMode.workflow : undefined}
+          workflow={formMode.workflow}
           onClose={() => setFormMode(null)}
           onSaved={handleSaved}
         />
@@ -161,15 +165,27 @@ function ProjectDetailPage() {
                 ? `Agents (${agentsData!.agents.length})`
                 : 'Create Agents'}
             </Link>
-            <button
-              onClick={() => setFormMode({ kind: 'create' })}
+            <Link
+              to="/projects/$projectId/workflows"
+              params={{ projectId }}
               className="flex items-center gap-1.5 px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors"
             >
-              <Plus className="w-4 h-4" />
+              <WorkflowIcon className="w-4 h-4" />
               Create Workflow
-            </button>
+            </Link>
           </div>
         </div>
+      )}
+
+      {/* New Task modal */}
+      {showCreateTask && selectedWorkflow && (
+        <TaskCreateModal
+          projectId={projectId}
+          workflowId={selectedWorkflow.id}
+          defaultUseWorktree={selectedWorkflow.defaultUseWorktree}
+          onCreated={() => refetchWorkflows()}
+          onClose={() => setShowCreateTask(false)}
+        />
       )}
     </div>
   )
