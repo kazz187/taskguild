@@ -216,7 +216,8 @@ func runServer() {
 	scriptBroker := script.NewScriptExecutionBroker()
 
 	// Setup servers
-	projectServer := project.NewServer(projectRepo)
+	projectSeeder := project.NewSeeder(workflowRepo, agentRepo, skillRepo)
+	projectServer := project.NewServer(projectRepo, projectSeeder)
 	workflowServer := workflow.NewServer(workflowRepo)
 	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, projectRepo, skillRepo, scriptRepo, taskLogRepo, permissionRepo, scpRepo, claudeSettingsRepo, bus, scriptBroker)
 	taskServer := task.NewServer(taskRepo, workflowRepo, bus, agentManagerServer, agentManagerServer, taskLogRepo, interactionRepo)
