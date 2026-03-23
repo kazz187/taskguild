@@ -234,7 +234,8 @@ func slugifyASCII(s string) string {
 }
 
 // ensureWorktree creates a git worktree if the directory does not already exist.
-// It uses "git worktree add" with a new branch based on HEAD.
+// It fetches the latest default branch from origin and creates the worktree
+// from origin/<default-branch> to ensure it starts from the most recent code.
 func ensureWorktree(ctx context.Context, workDir, worktreeName, taskID string) (string, error) {
 	logger := clog.LoggerFromContext(ctx)
 
@@ -252,18 +253,25 @@ func ensureWorktree(ctx context.Context, workDir, worktreeName, taskID string) (
 
 	// Fetch the latest default branch from origin so the worktree starts
 	// from the most recent commit rather than a potentially stale local HEAD.
+	// If fetch fails (e.g. no network), fall back to creating from local HEAD.
 	defaultBranch := detectDefaultBranch(ctx, workDir)
+	startPoint := "" // empty means HEAD (fallback)
 	fetchCmd := exec.CommandContext(ctx, "git", "fetch", "origin", defaultBranch)
 	fetchCmd.Dir = workDir
 	if out, err := fetchCmd.CombinedOutput(); err != nil {
 		logger.Warn("git fetch origin failed, creating worktree from local HEAD", "error", err, "output", string(out))
 	} else {
 		logger.Info("fetched latest default branch from origin", "branch", defaultBranch)
+		startPoint = "origin/" + defaultBranch
 	}
 
 	branchName := "worktree-" + worktreeName
-	startPoint := "origin/" + defaultBranch
-	cmd := exec.CommandContext(ctx, "git", "worktree", "add", "-b", branchName, wtDir, startPoint)
+	var cmd *exec.Cmd
+	if startPoint != "" {
+		cmd = exec.CommandContext(ctx, "git", "worktree", "add", "-b", branchName, wtDir, startPoint)
+	} else {
+		cmd = exec.CommandContext(ctx, "git", "worktree", "add", "-b", branchName, wtDir)
+	}
 	cmd.Dir = workDir
 	if out, err := cmd.CombinedOutput(); err != nil {
 		// Branch may already exist from a previous run; try without -b.
