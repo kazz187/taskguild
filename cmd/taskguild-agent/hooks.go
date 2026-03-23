@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/fs"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -176,6 +178,9 @@ func ensureWorktree(ctx context.Context, workDir, worktreeName, taskID string) (
 
 	wtDir := filepath.Join(workDir, ".claude", "worktrees", worktreeName)
 	if info, err := os.Stat(wtDir); err == nil && info.IsDir() {
+		// Sync .claude/ resources even for existing worktrees in case
+		// agent/skill definitions have been updated since creation.
+		syncClaudeDirToWorktree(logger, workDir, wtDir)
 		return wtDir, nil
 	}
 
@@ -195,7 +200,106 @@ func ensureWorktree(ctx context.Context, workDir, worktreeName, taskID string) (
 		}
 	}
 	logger.Info("created worktree", "worktree_dir", wtDir, "branch", branchName)
+
+	// Copy .claude/ resources that are not carried over by git worktree add.
+	// These are typically .gitignored so they must be explicitly synced.
+	syncClaudeDirToWorktree(logger, workDir, wtDir)
+
 	return wtDir, nil
+}
+
+// syncClaudeDirToWorktree copies .claude/ resources from the main repo to the
+// worktree directory. git worktree add does not copy .gitignored files, so
+// agents/, skills/, and settings.json must be synced explicitly.
+// Directories are copied recursively; existing files in the worktree are not
+// overwritten so that worktree-local customizations are preserved.
+func syncClaudeDirToWorktree(logger *slog.Logger, workDir, wtDir string) {
+	srcClaude := filepath.Join(workDir, ".claude")
+	dstClaude := filepath.Join(wtDir, ".claude")
+
+	// Directories to copy recursively.
+	for _, dir := range []string{"agents", "skills"} {
+		src := filepath.Join(srcClaude, dir)
+		dst := filepath.Join(dstClaude, dir)
+		if err := syncDir(src, dst); err != nil {
+			logger.Warn("failed to sync .claude/"+dir, "error", err)
+		} else {
+			logger.Info("synced .claude/" + dir + " to worktree")
+		}
+	}
+
+	// Single files to copy.
+	for _, name := range []string{"settings.json"} {
+		src := filepath.Join(srcClaude, name)
+		dst := filepath.Join(dstClaude, name)
+		if err := copyFile(src, dst); err != nil {
+			logger.Warn("failed to sync .claude/"+name, "error", err)
+		} else {
+			logger.Info("synced .claude/" + name + " to worktree")
+		}
+	}
+}
+
+// syncDir mirrors the contents of src into dst. Files in src overwrite those
+// in dst, and files/directories in dst that do not exist in src are removed.
+func syncDir(src, dst string) error {
+	info, err := os.Stat(src)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // nothing to copy
+		}
+		return err
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("%s is not a directory", src)
+	}
+
+	// Remove dst entirely first so stale files are cleaned up.
+	if err := os.RemoveAll(dst); err != nil {
+		return fmt.Errorf("remove old dir: %w", err)
+	}
+
+	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(src, path)
+		target := filepath.Join(dst, rel)
+
+		if d.IsDir() {
+			return os.MkdirAll(target, 0o755)
+		}
+		return copyFile(path, target)
+	})
+}
+
+// copyFile copies a single file from src to dst, overwriting dst if it exists.
+// If src does not exist, it is silently skipped.
+func copyFile(src, dst string) error {
+	if _, err := os.Stat(src); os.IsNotExist(err) {
+		return nil
+	}
+
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	if _, err := io.Copy(out, in); err != nil {
+		return err
+	}
+	return out.Close()
 }
 
 // generateWorktreeName creates a git-safe worktree/branch name from the task ID and title.
