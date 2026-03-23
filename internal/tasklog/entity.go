@@ -4,6 +4,7 @@ import "time"
 
 type TaskLog struct {
 	ID        string            `yaml:"id"`
+	ProjectID string            `yaml:"project_id"`
 	TaskID    string            `yaml:"task_id"`
 	Level     int32             `yaml:"level"`
 	Category  int32             `yaml:"category"`

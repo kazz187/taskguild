@@ -11,7 +11,7 @@ import (
 	"github.com/kazz187/taskguild/pkg/storage"
 )
 
-const claudeSettingsPrefix = "claude_settings"
+const projectsPrefix = "projects"
 
 // YAMLRepository stores Claude Code settings as YAML files keyed by project ID.
 type YAMLRepository struct {
@@ -24,7 +24,7 @@ func NewYAMLRepository(s storage.Storage) *YAMLRepository {
 }
 
 func path(projectID string) string {
-	return fmt.Sprintf("%s/%s.yaml", claudeSettingsPrefix, projectID)
+	return fmt.Sprintf("%s/%s/claude_settings.yaml", projectsPrefix, projectID)
 }
 
 // Get returns the settings for a project.

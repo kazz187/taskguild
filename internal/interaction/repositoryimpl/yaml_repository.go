@@ -1,7 +1,6 @@
 package repositoryimpl
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"path/filepath"
@@ -17,57 +16,112 @@ import (
 	"github.com/kazz187/taskguild/pkg/storage"
 )
 
-const interactionsPrefix = "interactions"
+const projectsPrefix = "projects"
+
+// knownSubdirs contains directory names under a project that are NOT task directories.
+var knownSubdirs = map[string]bool{
+	"agents":                   true,
+	"workflows":                true,
+	"skills":                   true,
+	"scripts":                  true,
+	"singlecommandpermissions": true,
+	"archived":                 true,
+}
+
+type entityLocation struct {
+	projectID string
+	taskID    string
+}
 
 // YAMLRepository implements interaction.Repository using YAML files on Storage.
-//
-// An in-memory index is built lazily on first access and maintained
-// incrementally on Create/Update/Delete. This avoids reading and
-// YAML-parsing every file on each List or token-lookup call.
 type YAMLRepository struct {
 	storage storage.Storage
 
-	indexOnce  sync.Once
-	indexMu    sync.RWMutex
-	taskIndex  map[string][]string // taskID -> sorted []interactionID
-	tokenIndex map[string]string   // responseToken -> interactionID (pending only)
-	allIDs     []string            // all interaction IDs in sorted order
+	indexOnce     sync.Once
+	indexMu       sync.RWMutex
+	taskIndex     map[string][]string          // taskID -> sorted []interactionID
+	tokenIndex    map[string]string            // responseToken -> interactionID (pending only)
+	locationIndex map[string]entityLocation    // interactionID -> {projectID, taskID}
+	allIDs        []string                     // all interaction IDs in sorted order
 }
 
 func NewYAMLRepository(s storage.Storage) *YAMLRepository {
 	return &YAMLRepository{storage: s}
 }
 
-func interactionPath(id string) string {
-	return fmt.Sprintf("%s/%s.yaml", interactionsPrefix, id)
+func interactionPath(projectID, taskID, id string) string {
+	return fmt.Sprintf("%s/%s/%s/interactions/%s.yaml", projectsPrefix, projectID, taskID, id)
+}
+
+func interactionPrefix(projectID, taskID string) string {
+	return fmt.Sprintf("%s/%s/%s/interactions", projectsPrefix, projectID, taskID)
 }
 
 func pathToID(p string) string {
 	return strings.TrimSuffix(filepath.Base(p), ".yaml")
 }
 
-// extractField does a fast text scan for a top-level YAML scalar field
-// (e.g. "task_id: VALUE") without full YAML parsing.
+// extractField does a fast text scan for a top-level YAML scalar field.
 func extractField(data []byte, field string) string {
 	prefix := []byte("\n" + field + ": ")
 	prefixStart := []byte(field + ": ")
 
 	var start int
-	if bytes.HasPrefix(data, prefixStart) {
+	if len(data) >= len(prefixStart) && string(data[:len(prefixStart)]) == string(prefixStart) {
 		start = len(prefixStart)
 	} else {
-		idx := bytes.Index(data, prefix)
+		idx := -1
+		for i := 0; i <= len(data)-len(prefix); i++ {
+			if string(data[i:i+len(prefix)]) == string(prefix) {
+				idx = i
+				break
+			}
+		}
 		if idx < 0 {
 			return ""
 		}
 		start = idx + len(prefix)
 	}
 
-	end := bytes.IndexByte(data[start:], '\n')
+	end := -1
+	for i := start; i < len(data); i++ {
+		if data[i] == '\n' {
+			end = i
+			break
+		}
+	}
 	if end < 0 {
 		return strings.TrimSpace(string(data[start:]))
 	}
-	return strings.TrimSpace(string(data[start : start+end]))
+	return strings.TrimSpace(string(data[start:end]))
+}
+
+// scanTaskDirs returns all task directory paths (active + archived) for a project.
+func (r *YAMLRepository) scanTaskDirs(ctx context.Context, pid string) []struct{ projectID, taskID string } {
+	var result []struct{ projectID, taskID string }
+
+	projectDir := fmt.Sprintf("%s/%s", projectsPrefix, pid)
+	subdirs, err := r.storage.ListDirs(ctx, projectDir)
+	if err != nil {
+		return result
+	}
+	for _, sd := range subdirs {
+		name := filepath.Base(sd)
+		if name == "archived" {
+			// Scan archived subdirectories.
+			archivedDirs, err := r.storage.ListDirs(ctx, sd)
+			if err != nil {
+				continue
+			}
+			for _, ad := range archivedDirs {
+				tid := filepath.Base(ad)
+				result = append(result, struct{ projectID, taskID string }{pid, tid})
+			}
+		} else if !knownSubdirs[name] {
+			result = append(result, struct{ projectID, taskID string }{pid, name})
+		}
+	}
+	return result
 }
 
 // ensureIndex lazily builds the in-memory index on first access.
@@ -77,33 +131,49 @@ func (r *YAMLRepository) ensureIndex(ctx context.Context) {
 		defer r.indexMu.Unlock()
 		r.taskIndex = make(map[string][]string)
 		r.tokenIndex = make(map[string]string)
+		r.locationIndex = make(map[string]entityLocation)
 
-		paths, err := r.storage.List(ctx, interactionsPrefix)
+		projectDirs, err := r.storage.ListDirs(ctx, projectsPrefix)
 		if err != nil {
 			return
 		}
-		sort.Strings(paths)
 
-		r.allIDs = make([]string, 0, len(paths))
-		for _, p := range paths {
-			data, err := r.storage.Read(ctx, p)
-			if err != nil {
-				continue
-			}
-			id := pathToID(p)
-			taskID := extractField(data, "task_id")
-			if id == "" || taskID == "" {
-				continue
-			}
-			r.taskIndex[taskID] = append(r.taskIndex[taskID], id)
-			r.allIDs = append(r.allIDs, id)
+		for _, pd := range projectDirs {
+			pid := filepath.Base(pd)
+			taskDirs := r.scanTaskDirs(ctx, pid)
+			for _, td := range taskDirs {
+				prefix := interactionPrefix(td.projectID, td.taskID)
+				files, err := r.storage.List(ctx, prefix)
+				if err != nil {
+					continue
+				}
+				for _, f := range files {
+					id := pathToID(f)
+					if id == "" {
+						continue
+					}
 
-			// Index response tokens for pending interactions.
-			token := extractField(data, "response_token")
-			statusStr := extractField(data, "status")
-			if token != "" && statusStr == "1" { // StatusPending = 1
-				r.tokenIndex[token] = id
+					r.locationIndex[id] = entityLocation{projectID: td.projectID, taskID: td.taskID}
+					r.taskIndex[td.taskID] = append(r.taskIndex[td.taskID], id)
+					r.allIDs = append(r.allIDs, id)
+
+					// Index response tokens for pending interactions.
+					data, err := r.storage.Read(ctx, f)
+					if err != nil {
+						continue
+					}
+					token := extractField(data, "response_token")
+					statusStr := extractField(data, "status")
+					if token != "" && statusStr == "1" { // StatusPending = 1
+						r.tokenIndex[token] = id
+					}
+				}
 			}
+		}
+
+		sort.Strings(r.allIDs)
+		for tid := range r.taskIndex {
+			sort.Strings(r.taskIndex[tid])
 		}
 	})
 }
@@ -112,6 +182,7 @@ func (r *YAMLRepository) addToIndex(i *interaction.Interaction) {
 	r.indexMu.Lock()
 	defer r.indexMu.Unlock()
 
+	r.locationIndex[i.ID] = entityLocation{projectID: i.ProjectID, taskID: i.TaskID}
 	r.taskIndex[i.TaskID] = append(r.taskIndex[i.TaskID], i.ID)
 	sort.Strings(r.taskIndex[i.TaskID])
 
@@ -128,6 +199,8 @@ func (r *YAMLRepository) addToIndex(i *interaction.Interaction) {
 func (r *YAMLRepository) removeFromIndex(id, taskID string) {
 	r.indexMu.Lock()
 	defer r.indexMu.Unlock()
+
+	delete(r.locationIndex, id)
 
 	if ids, ok := r.taskIndex[taskID]; ok {
 		for i, eid := range ids {
@@ -148,7 +221,6 @@ func (r *YAMLRepository) removeFromIndex(id, taskID string) {
 		}
 	}
 
-	// Remove any token index entry for this ID.
 	for token, tid := range r.tokenIndex {
 		if tid == id {
 			delete(r.tokenIndex, token)
@@ -174,18 +246,18 @@ func (r *YAMLRepository) updateTokenIndex(i *interaction.Interaction) {
 func (r *YAMLRepository) Create(ctx context.Context, i *interaction.Interaction) error {
 	r.ensureIndex(ctx)
 
-	exists, err := r.storage.Exists(ctx, interactionPath(i.ID))
-	if err != nil {
-		return cerr.WrapStorageWriteError("interaction", err)
-	}
+	r.indexMu.RLock()
+	_, exists := r.locationIndex[i.ID]
+	r.indexMu.RUnlock()
 	if exists {
 		return cerr.NewError(cerr.AlreadyExists, "interaction already exists", nil)
 	}
+
 	data, err := yaml.Marshal(i)
 	if err != nil {
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal interaction: %w", err))
 	}
-	if err := r.storage.Write(ctx, interactionPath(i.ID), data); err != nil {
+	if err := r.storage.Write(ctx, interactionPath(i.ProjectID, i.TaskID, i.ID), data); err != nil {
 		return cerr.WrapStorageWriteError("interaction", err)
 	}
 	r.addToIndex(i)
@@ -193,7 +265,16 @@ func (r *YAMLRepository) Create(ctx context.Context, i *interaction.Interaction)
 }
 
 func (r *YAMLRepository) Get(ctx context.Context, id string) (*interaction.Interaction, error) {
-	data, err := r.storage.Read(ctx, interactionPath(id))
+	r.ensureIndex(ctx)
+
+	r.indexMu.RLock()
+	loc, ok := r.locationIndex[id]
+	r.indexMu.RUnlock()
+	if !ok {
+		return nil, cerr.NewError(cerr.NotFound, "interaction not found", nil)
+	}
+
+	data, err := r.storage.Read(ctx, interactionPath(loc.projectID, loc.taskID, id))
 	if err != nil {
 		return nil, cerr.WrapStorageReadError("interaction", err)
 	}
@@ -235,7 +316,13 @@ func (r *YAMLRepository) List(ctx context.Context, taskID string, taskIDs []stri
 
 	result := make([]*interaction.Interaction, 0, len(paginated))
 	for _, id := range paginated {
-		data, err := r.storage.Read(ctx, interactionPath(id))
+		r.indexMu.RLock()
+		loc, ok := r.locationIndex[id]
+		r.indexMu.RUnlock()
+		if !ok {
+			continue
+		}
+		data, err := r.storage.Read(ctx, interactionPath(loc.projectID, loc.taskID, id))
 		if err != nil {
 			continue
 		}
@@ -251,15 +338,18 @@ func (r *YAMLRepository) List(ctx context.Context, taskID string, taskIDs []stri
 func (r *YAMLRepository) Update(ctx context.Context, i *interaction.Interaction) error {
 	r.ensureIndex(ctx)
 
-	// Skip the separate Exists() check — callers always Get() first, so
-	// the interaction is already verified to exist. If it was deleted in
-	// the meantime, Write() will simply create it again (acceptable for
-	// YAML-file storage).
+	r.indexMu.RLock()
+	loc, ok := r.locationIndex[i.ID]
+	r.indexMu.RUnlock()
+	if !ok {
+		return cerr.NewError(cerr.NotFound, "interaction not found", nil)
+	}
+
 	data, err := yaml.Marshal(i)
 	if err != nil {
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal interaction: %w", err))
 	}
-	if err := r.storage.Write(ctx, interactionPath(i.ID), data); err != nil {
+	if err := r.storage.Write(ctx, interactionPath(loc.projectID, loc.taskID, i.ID), data); err != nil {
 		return cerr.WrapStorageWriteError("interaction", err)
 	}
 	r.updateTokenIndex(i)
@@ -292,7 +382,13 @@ func (r *YAMLRepository) DeleteByTaskID(ctx context.Context, taskID string) (int
 
 	count := 0
 	for _, id := range ids {
-		if err := r.storage.Delete(ctx, interactionPath(id)); err != nil {
+		r.indexMu.RLock()
+		loc, ok := r.locationIndex[id]
+		r.indexMu.RUnlock()
+		if !ok {
+			continue
+		}
+		if err := r.storage.Delete(ctx, interactionPath(loc.projectID, loc.taskID, id)); err != nil {
 			return count, cerr.WrapStorageDeleteError("interaction", err)
 		}
 		r.removeFromIndex(id, taskID)
@@ -302,7 +398,6 @@ func (r *YAMLRepository) DeleteByTaskID(ctx context.Context, taskID string) (int
 }
 
 func (r *YAMLRepository) ExpirePendingByTask(ctx context.Context, taskID string) (int, error) {
-	// List all interactions for this task (uses index, reads only matching files).
 	all, _, err := r.List(ctx, taskID, nil, 0, 0)
 	if err != nil {
 		return 0, err

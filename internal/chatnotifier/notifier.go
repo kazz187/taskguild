@@ -85,6 +85,7 @@ func (n *Notifier) handleTaskStatusChanged(ctx context.Context, event *taskguild
 	now := time.Now()
 	inter := &interaction.Interaction{
 		ID:          ulid.Make().String(),
+		ProjectID:   t.ProjectID,
 		TaskID:      taskID,
 		Type:        interaction.TypeNotification,
 		Status:      interaction.StatusResponded,

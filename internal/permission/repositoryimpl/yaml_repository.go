@@ -11,7 +11,7 @@ import (
 	"github.com/kazz187/taskguild/pkg/storage"
 )
 
-const permissionsPrefix = "permissions"
+const projectsPrefix = "projects"
 
 // YAMLRepository stores permission sets as YAML files keyed by project ID.
 type YAMLRepository struct {
@@ -24,7 +24,7 @@ func NewYAMLRepository(s storage.Storage) *YAMLRepository {
 }
 
 func path(projectID string) string {
-	return fmt.Sprintf("%s/%s.yaml", permissionsPrefix, projectID)
+	return fmt.Sprintf("%s/%s/permissions.yaml", projectsPrefix, projectID)
 }
 
 // Get returns the permission set for a project.

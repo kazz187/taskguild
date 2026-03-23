@@ -14,9 +14,16 @@ import (
 )
 
 func (s *Server) CreateInteraction(ctx context.Context, req *connect.Request[taskguildv1.CreateInteractionRequest]) (*connect.Response[taskguildv1.CreateInteractionResponse], error) {
+	// Look up the task to get ProjectID for storage path construction.
+	t, err := s.taskRepo.Get(ctx, req.Msg.TaskId)
+	if err != nil {
+		return nil, err
+	}
+
 	now := time.Now()
 	inter := &interaction.Interaction{
 		ID:          ulid.Make().String(),
+		ProjectID:   t.ProjectID,
 		TaskID:      req.Msg.TaskId,
 		AgentID:     req.Msg.AgentId,
 		Type:        interaction.InteractionType(req.Msg.Type),

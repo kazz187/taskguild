@@ -7,6 +7,7 @@ import (
 	_ "net/http/pprof" // registers /debug/pprof/* handlers on DefaultServeMux
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -188,6 +189,21 @@ func runServer() {
 			slog.Error("failed to create local storage", "error", err)
 			os.Exit(1)
 		}
+	}
+
+	// Check storage version — require migration before running.
+	if versionData, err := store.Read(context.Background(), ".storage-version"); err != nil {
+		// No version file means either fresh install or pre-migration storage.
+		// Check if old-format data exists (e.g., flat "tasks/" directory).
+		if oldTasks, _ := store.List(context.Background(), "tasks"); len(oldTasks) > 0 {
+			slog.Error("storage is in v1 format, please run: taskguild-server migrate")
+			os.Exit(1)
+		}
+		// Fresh install — write v2 marker.
+		_ = store.Write(context.Background(), ".storage-version", []byte("v2"))
+	} else if strings.TrimSpace(string(versionData)) != "v2" {
+		slog.Error("storage is in unsupported format, please run: taskguild-server migrate")
+		os.Exit(1)
 	}
 
 	// Setup event bus

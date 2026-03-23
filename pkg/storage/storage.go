@@ -14,5 +14,7 @@ type Storage interface {
 	Write(ctx context.Context, path string, data []byte) error
 	Delete(ctx context.Context, path string) error
 	List(ctx context.Context, prefix string) ([]string, error)
+	ListDirs(ctx context.Context, prefix string) ([]string, error)
 	Exists(ctx context.Context, path string) (bool, error)
+	MoveDir(ctx context.Context, oldPrefix, newPrefix string) error
 }

@@ -14,7 +14,8 @@ var (
 	runProf    = runCmd.Flag("prof", "Enable pprof server on :6060").Bool()
 	sentinelCmd  = app.Command("sentinel", "Supervisor that manages 'run' with auto-restart and binary watching")
 	sentinelProf = sentinelCmd.Flag("prof", "Enable pprof server in child 'run' process").Bool()
-	migrateCmd   = app.Command("migrate", "Run data migrations")
+	migrateCmd     = app.Command("migrate", "Run data migrations")
+	migrateDryRun  = migrateCmd.Flag("dry-run", "Print planned changes without executing").Bool()
 )
 
 func main() {
