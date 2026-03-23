@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { formatTime } from './InputBar.tsx'
 import { Badge } from '../atoms/index.ts'
+import { WorktreePath } from '../atoms/WorktreePath.tsx'
 import { MarkdownDescription } from './MarkdownDescription.tsx'
 
 export type TimelineItem =
@@ -222,7 +223,7 @@ function SimpleLogEntry({ log }: { log: TaskLog }) {
           {log.message}
         </pre>
       ) : (
-        <span className={`truncate flex-1 min-w-0 ${levelColor}`}>{log.message}</span>
+        <WorktreePath text={log.message} className={`truncate flex-1 min-w-0 ${levelColor}`} />
       )}
     </div>
   )
@@ -246,7 +247,7 @@ function ExpandableLogEntry({ log }: { log: TaskLog }) {
         </span>
         <span className="shrink-0 mt-0.5">{icon}</span>
         <span className={`text-[11px] w-16 shrink-0 mt-0.5 ${levelColor}`}>{typeLabel}</span>
-        <span className={`truncate flex-1 min-w-0 ${levelColor}`}>{log.message}</span>
+        <WorktreePath text={log.message} className={`truncate flex-1 min-w-0 ${levelColor}`} />
         <span className="shrink-0 mt-0.5 text-gray-600">
           {expanded ? (
             <ChevronDown className="w-3 h-3" />
@@ -394,13 +395,19 @@ function JsonKeyValueDisplay({ raw }: { raw: string }) {
   const entries = Object.entries(parsed as Record<string, unknown>)
   if (entries.length === 0) return null
 
+  const pathKeys = new Set(['file_path', 'path', 'notebook_path'])
+
   return (
     <div className="bg-slate-900/50 rounded px-2 py-1 max-h-48 overflow-y-auto space-y-1">
       {entries.map(([key, value]) => (
         <div key={key}>
           <div className="text-[10px] text-gray-500 font-medium capitalize">{key}</div>
           <div className="text-[11px] text-gray-400 font-mono whitespace-pre-wrap break-all">
-            {formatValue(value)}
+            {pathKeys.has(key) && typeof value === 'string' ? (
+              <WorktreePath text={value} />
+            ) : (
+              formatValue(value)
+            )}
           </div>
         </div>
       ))}
