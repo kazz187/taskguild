@@ -16,6 +16,7 @@ import (
 
 	"github.com/kazz187/taskguild/internal/agent"
 	"github.com/kazz187/taskguild/internal/agentmanager"
+	"github.com/kazz187/taskguild/internal/claudesettings"
 	"github.com/kazz187/taskguild/internal/event"
 	"github.com/kazz187/taskguild/internal/interaction"
 	"github.com/kazz187/taskguild/internal/permission"
@@ -51,6 +52,7 @@ type Server struct {
 	permissionServer              *permission.Server
 	singleCommandPermissionServer *singlecommandpermission.Server
 	templateServer                *tmpl.Server
+	claudeSettingsServer          *claudesettings.Server
 }
 
 func NewServer(
@@ -69,6 +71,7 @@ func NewServer(
 	permissionServer *permission.Server,
 	singleCommandPermissionServer *singlecommandpermission.Server,
 	templateServer *tmpl.Server,
+	claudeSettingsServer *claudesettings.Server,
 ) *Server {
 	return &Server{
 		env:                           env,
@@ -86,6 +89,7 @@ func NewServer(
 		permissionServer:              permissionServer,
 		singleCommandPermissionServer: singleCommandPermissionServer,
 		templateServer:                templateServer,
+		claudeSettingsServer:          claudeSettingsServer,
 	}
 }
 
@@ -128,6 +132,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	mux.Handle(taskguildv1connect.NewPermissionServiceHandler(s.permissionServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewSingleCommandPermissionServiceHandler(s.singleCommandPermissionServer, handlerOpts))
 	mux.Handle(taskguildv1connect.NewTemplateServiceHandler(s.templateServer, handlerOpts))
+	mux.Handle(taskguildv1connect.NewClaudeSettingsServiceHandler(s.claudeSettingsServer, handlerOpts))
 
 	addr := net.JoinHostPort(s.env.HTTPHost, s.env.HTTPPort)
 	slog.Info("starting server", "addr", addr)

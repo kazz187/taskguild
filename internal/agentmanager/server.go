@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/kazz187/taskguild/internal/agent"
+	"github.com/kazz187/taskguild/internal/claudesettings"
 	"github.com/kazz187/taskguild/internal/eventbus"
 	"github.com/kazz187/taskguild/internal/interaction"
 	"github.com/kazz187/taskguild/internal/permission"
@@ -30,9 +31,10 @@ type Server struct {
 	skillRepo       skill.Repository
 	scriptRepo      script.Repository
 	taskLogRepo     tasklog.Repository
-	permissionRepo  permission.Repository
-	scpRepo         scp.Repository
-	eventBus        *eventbus.Bus
+	permissionRepo     permission.Repository
+	scpRepo            scp.Repository
+	claudeSettingsRepo claudesettings.Repository
+	eventBus           *eventbus.Bus
 
 	// scriptBroker manages streaming script execution output.
 	scriptBroker *script.ScriptExecutionBroker
@@ -58,20 +60,21 @@ type Server struct {
 	skillDiffCache map[string][]*taskguildv1.SkillDiff // project_id -> diffs
 }
 
-func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, projectRepo project.Repository, skillRepo skill.Repository, scriptRepo script.Repository, taskLogRepo tasklog.Repository, permissionRepo permission.Repository, scpRepo scp.Repository, eventBus *eventbus.Bus, scriptBroker *script.ScriptExecutionBroker) *Server {
+func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workflow.Repository, agentRepo agent.Repository, interactionRepo interaction.Repository, projectRepo project.Repository, skillRepo skill.Repository, scriptRepo script.Repository, taskLogRepo tasklog.Repository, permissionRepo permission.Repository, scpRepo scp.Repository, claudeSettingsRepo claudesettings.Repository, eventBus *eventbus.Bus, scriptBroker *script.ScriptExecutionBroker) *Server {
 	return &Server{
-		registry:        registry,
-		taskRepo:        taskRepo,
-		workflowRepo:    workflowRepo,
-		agentRepo:       agentRepo,
-		interactionRepo: interactionRepo,
-		projectRepo:     projectRepo,
-		skillRepo:       skillRepo,
-		scriptRepo:      scriptRepo,
-		taskLogRepo:     taskLogRepo,
-		permissionRepo:  permissionRepo,
-		scpRepo:         scpRepo,
-		eventBus:        eventBus,
+		registry:           registry,
+		taskRepo:           taskRepo,
+		workflowRepo:       workflowRepo,
+		agentRepo:          agentRepo,
+		interactionRepo:    interactionRepo,
+		projectRepo:        projectRepo,
+		skillRepo:          skillRepo,
+		scriptRepo:         scriptRepo,
+		taskLogRepo:        taskLogRepo,
+		permissionRepo:     permissionRepo,
+		scpRepo:            scpRepo,
+		claudeSettingsRepo: claudeSettingsRepo,
+		eventBus:           eventBus,
 		scriptBroker:    scriptBroker,
 		worktreeCache:   make(map[string][]*taskguildv1.WorktreeInfo),
 		scriptDiffCache: make(map[string][]*taskguildv1.ScriptDiff),

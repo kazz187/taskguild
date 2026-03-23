@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package taskguild.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// ClaudeSettingsService manages project-scoped Claude Code settings
+// (e.g. language) that are synced to .claude/settings.json on agents.
+service ClaudeSettingsService {
+  // GetClaudeSettings returns the settings for a project.
+  // Returns empty/default values if none exist yet.
+  rpc GetClaudeSettings(GetClaudeSettingsRequest) returns (GetClaudeSettingsResponse);
+
+  // UpdateClaudeSettings replaces the settings for a project.
+  rpc UpdateClaudeSettings(UpdateClaudeSettingsRequest) returns (UpdateClaudeSettingsResponse);
+
+  // SyncClaudeSettingsFromDir reads .claude/settings.json from the given
+  // directory and merges its settings into the stored set.
+  rpc SyncClaudeSettingsFromDir(SyncClaudeSettingsFromDirRequest) returns (SyncClaudeSettingsFromDirResponse);
+}
+
+// ClaudeSettings represents project-scoped Claude Code settings.
+message ClaudeSettings {
+  string project_id = 1;
+  string language = 2;
+  google.protobuf.Timestamp updated_at = 3;
+}
+
+message GetClaudeSettingsRequest {
+  string project_id = 1;
+}
+message GetClaudeSettingsResponse {
+  ClaudeSettings settings = 1;
+}
+
+message UpdateClaudeSettingsRequest {
+  string project_id = 1;
+  string language = 2;
+}
+message UpdateClaudeSettingsResponse {
+  ClaudeSettings settings = 1;
+}
+
+message SyncClaudeSettingsFromDirRequest {
+  string project_id = 1;
+  string directory = 2;  // path to the repository root directory
+}
+message SyncClaudeSettingsFromDirResponse {
+  ClaudeSettings settings = 1;
+}

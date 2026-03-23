@@ -104,6 +104,11 @@ func (m *mockAgentManagerClient) ReportGitPullMainResult(_ context.Context, _ *c
 	return connect.NewResponse(&v1.ReportGitPullMainResultResponse{}), nil
 }
 
+func (m *mockAgentManagerClient) SyncClaudeSettings(_ context.Context, _ *connect.Request[v1.SyncClaudeSettingsAgentRequest]) (*connect.Response[v1.SyncClaudeSettingsAgentResponse], error) {
+	return connect.NewResponse(&v1.SyncClaudeSettingsAgentResponse{
+		Settings: &v1.ClaudeSettings{},
+	}), nil
+}
 
 func TestHandlePermissionRequest_BashAutoAllow(t *testing.T) {
 	mock := &mockAgentManagerClient{}

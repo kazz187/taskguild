@@ -138,6 +138,9 @@ const (
 	// AgentManagerServiceResolveSkillConflictProcedure is the fully-qualified name of the
 	// AgentManagerService's ResolveSkillConflict RPC.
 	AgentManagerServiceResolveSkillConflictProcedure = "/taskguild.v1.AgentManagerService/ResolveSkillConflict"
+	// AgentManagerServiceSyncClaudeSettingsProcedure is the fully-qualified name of the
+	// AgentManagerService's SyncClaudeSettings RPC.
+	AgentManagerServiceSyncClaudeSettingsProcedure = "/taskguild.v1.AgentManagerService/SyncClaudeSettings"
 )
 
 // AgentManagerServiceClient is a client for the taskguild.v1.AgentManagerService service.
@@ -217,6 +220,9 @@ type AgentManagerServiceClient interface {
 	GetSkillComparison(context.Context, *connect.Request[v1.GetSkillComparisonRequest]) (*connect.Response[v1.GetSkillComparisonResponse], error)
 	// ResolveSkillConflict resolves a single skill conflict between server and agent versions.
 	ResolveSkillConflict(context.Context, *connect.Request[v1.ResolveSkillConflictRequest]) (*connect.Response[v1.ResolveSkillConflictResponse], error)
+	// SyncClaudeSettings merges local .claude/settings.json settings (language, etc.)
+	// with the backend's stored settings and returns the merged result.
+	SyncClaudeSettings(context.Context, *connect.Request[v1.SyncClaudeSettingsAgentRequest]) (*connect.Response[v1.SyncClaudeSettingsAgentResponse], error)
 }
 
 // NewAgentManagerServiceClient constructs a client for the taskguild.v1.AgentManagerService
@@ -440,6 +446,12 @@ func NewAgentManagerServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(agentManagerServiceMethods.ByName("ResolveSkillConflict")),
 			connect.WithClientOptions(opts...),
 		),
+		syncClaudeSettings: connect.NewClient[v1.SyncClaudeSettingsAgentRequest, v1.SyncClaudeSettingsAgentResponse](
+			httpClient,
+			baseURL+AgentManagerServiceSyncClaudeSettingsProcedure,
+			connect.WithSchema(agentManagerServiceMethods.ByName("SyncClaudeSettings")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -480,6 +492,7 @@ type agentManagerServiceClient struct {
 	reportSkillComparison        *connect.Client[v1.ReportSkillComparisonRequest, v1.ReportSkillComparisonResponse]
 	getSkillComparison           *connect.Client[v1.GetSkillComparisonRequest, v1.GetSkillComparisonResponse]
 	resolveSkillConflict         *connect.Client[v1.ResolveSkillConflictRequest, v1.ResolveSkillConflictResponse]
+	syncClaudeSettings           *connect.Client[v1.SyncClaudeSettingsAgentRequest, v1.SyncClaudeSettingsAgentResponse]
 }
 
 // Subscribe calls taskguild.v1.AgentManagerService.Subscribe.
@@ -657,6 +670,11 @@ func (c *agentManagerServiceClient) ResolveSkillConflict(ctx context.Context, re
 	return c.resolveSkillConflict.CallUnary(ctx, req)
 }
 
+// SyncClaudeSettings calls taskguild.v1.AgentManagerService.SyncClaudeSettings.
+func (c *agentManagerServiceClient) SyncClaudeSettings(ctx context.Context, req *connect.Request[v1.SyncClaudeSettingsAgentRequest]) (*connect.Response[v1.SyncClaudeSettingsAgentResponse], error) {
+	return c.syncClaudeSettings.CallUnary(ctx, req)
+}
+
 // AgentManagerServiceHandler is an implementation of the taskguild.v1.AgentManagerService service.
 type AgentManagerServiceHandler interface {
 	// Subscribe opens a server-stream for receiving commands from the backend.
@@ -734,6 +752,9 @@ type AgentManagerServiceHandler interface {
 	GetSkillComparison(context.Context, *connect.Request[v1.GetSkillComparisonRequest]) (*connect.Response[v1.GetSkillComparisonResponse], error)
 	// ResolveSkillConflict resolves a single skill conflict between server and agent versions.
 	ResolveSkillConflict(context.Context, *connect.Request[v1.ResolveSkillConflictRequest]) (*connect.Response[v1.ResolveSkillConflictResponse], error)
+	// SyncClaudeSettings merges local .claude/settings.json settings (language, etc.)
+	// with the backend's stored settings and returns the merged result.
+	SyncClaudeSettings(context.Context, *connect.Request[v1.SyncClaudeSettingsAgentRequest]) (*connect.Response[v1.SyncClaudeSettingsAgentResponse], error)
 }
 
 // NewAgentManagerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -953,6 +974,12 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 		connect.WithSchema(agentManagerServiceMethods.ByName("ResolveSkillConflict")),
 		connect.WithHandlerOptions(opts...),
 	)
+	agentManagerServiceSyncClaudeSettingsHandler := connect.NewUnaryHandler(
+		AgentManagerServiceSyncClaudeSettingsProcedure,
+		svc.SyncClaudeSettings,
+		connect.WithSchema(agentManagerServiceMethods.ByName("SyncClaudeSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/taskguild.v1.AgentManagerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AgentManagerServiceSubscribeProcedure:
@@ -1025,6 +1052,8 @@ func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...conne
 			agentManagerServiceGetSkillComparisonHandler.ServeHTTP(w, r)
 		case AgentManagerServiceResolveSkillConflictProcedure:
 			agentManagerServiceResolveSkillConflictHandler.ServeHTTP(w, r)
+		case AgentManagerServiceSyncClaudeSettingsProcedure:
+			agentManagerServiceSyncClaudeSettingsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1172,4 +1201,8 @@ func (UnimplementedAgentManagerServiceHandler) GetSkillComparison(context.Contex
 
 func (UnimplementedAgentManagerServiceHandler) ResolveSkillConflict(context.Context, *connect.Request[v1.ResolveSkillConflictRequest]) (*connect.Response[v1.ResolveSkillConflictResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ResolveSkillConflict is not implemented"))
+}
+
+func (UnimplementedAgentManagerServiceHandler) SyncClaudeSettings(context.Context, *connect.Request[v1.SyncClaudeSettingsAgentRequest]) (*connect.Response[v1.SyncClaudeSettingsAgentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.SyncClaudeSettings is not implemented"))
 }

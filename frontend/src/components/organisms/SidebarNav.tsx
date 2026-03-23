@@ -20,7 +20,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { ChevronRight, ChevronDown, MessageSquare, Bot, Sparkles, Terminal, Shield, Workflow, GitFork, Layers } from 'lucide-react'
+import { ChevronRight, ChevronDown, MessageSquare, Bot, Sparkles, Terminal, Shield, Workflow, GitFork, Layers, Settings } from 'lucide-react'
 
 export function SidebarNav() {
   const { data, refetch } = useQuery(listProjects, {})
@@ -259,6 +259,15 @@ function ProjectChildren({ projectId }: { projectId: string }) {
       >
         <GitFork className="w-3 h-3" />
         Worktrees
+      </Link>
+      <Link
+        to="/projects/$projectId/settings"
+        params={{ projectId }}
+        className="flex items-center gap-1.5 px-3 py-1 text-xs text-gray-400 hover:text-white hover:bg-slate-800/40 rounded-md transition-colors"
+        activeProps={{ className: 'flex items-center gap-1.5 px-3 py-1 text-xs text-white bg-slate-800 rounded-md' }}
+      >
+        <Settings className="w-3 h-3" />
+        Settings
       </Link>
       <Link
         to="/projects/$projectId/chat"

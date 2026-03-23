@@ -9,6 +9,7 @@ import "taskguild/v1/permission.proto";
 import "taskguild/v1/script.proto";
 import "taskguild/v1/single_command_permission.proto";
 import "taskguild/v1/skill.proto";
+import "taskguild/v1/claude_settings.proto";
 import "taskguild/v1/task_log.proto";
 
 // AgentManagerService is the bidirectional communication channel between
@@ -89,6 +90,9 @@ service AgentManagerService {
   rpc GetSkillComparison(GetSkillComparisonRequest) returns (GetSkillComparisonResponse);
   // ResolveSkillConflict resolves a single skill conflict between server and agent versions.
   rpc ResolveSkillConflict(ResolveSkillConflictRequest) returns (ResolveSkillConflictResponse);
+  // SyncClaudeSettings merges local .claude/settings.json settings (language, etc.)
+  // with the backend's stored settings and returns the merged result.
+  rpc SyncClaudeSettings(SyncClaudeSettingsAgentRequest) returns (SyncClaudeSettingsAgentResponse);
 }
 
 // --- Subscribe stream ---
@@ -134,6 +138,9 @@ message AgentCommand {
     // CompareSkillsCommand tells the agent to compare its local .claude/skills/
     // files with server-side versions and report any differences.
     CompareSkillsCommand compare_skills = 17;
+    // SyncClaudeSettingsCommand tells the agent to re-sync its local
+    // .claude/settings.json settings (language, etc.).
+    SyncClaudeSettingsCommand sync_claude_settings = 18;
   }
 }
 
@@ -656,4 +663,18 @@ message AddSingleCommandPermissionRequest {
 }
 message AddSingleCommandPermissionResponse {
   SingleCommandPermission permission = 1;
+}
+
+// --- Claude Settings sync ---
+
+// SyncClaudeSettingsCommand tells the agent to re-sync its local
+// .claude/settings.json settings (language, etc.).
+message SyncClaudeSettingsCommand {}
+
+message SyncClaudeSettingsAgentRequest {
+  string project_name = 1;
+  string local_language = 2;
+}
+message SyncClaudeSettingsAgentResponse {
+  ClaudeSettings settings = 1;
 }

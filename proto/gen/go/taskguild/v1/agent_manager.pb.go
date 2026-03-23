@@ -483,6 +483,7 @@ type AgentCommand struct {
 	//	*AgentCommand_CompareAgents
 	//	*AgentCommand_SyncSkills
 	//	*AgentCommand_CompareSkills
+	//	*AgentCommand_SyncClaudeSettings
 	Command       isAgentCommand_Command `protobuf_oneof:"command"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -678,6 +679,15 @@ func (x *AgentCommand) GetCompareSkills() *CompareSkillsCommand {
 	return nil
 }
 
+func (x *AgentCommand) GetSyncClaudeSettings() *SyncClaudeSettingsCommand {
+	if x != nil {
+		if x, ok := x.Command.(*AgentCommand_SyncClaudeSettings); ok {
+			return x.SyncClaudeSettings
+		}
+	}
+	return nil
+}
+
 type isAgentCommand_Command interface {
 	isAgentCommand_Command()
 }
@@ -758,6 +768,12 @@ type AgentCommand_CompareSkills struct {
 	CompareSkills *CompareSkillsCommand `protobuf:"bytes,17,opt,name=compare_skills,json=compareSkills,proto3,oneof"`
 }
 
+type AgentCommand_SyncClaudeSettings struct {
+	// SyncClaudeSettingsCommand tells the agent to re-sync its local
+	// .claude/settings.json settings (language, etc.).
+	SyncClaudeSettings *SyncClaudeSettingsCommand `protobuf:"bytes,18,opt,name=sync_claude_settings,json=syncClaudeSettings,proto3,oneof"`
+}
+
 func (*AgentCommand_TaskAvailable) isAgentCommand_Command() {}
 
 func (*AgentCommand_AssignTask) isAgentCommand_Command() {}
@@ -791,6 +807,8 @@ func (*AgentCommand_CompareAgents) isAgentCommand_Command() {}
 func (*AgentCommand_SyncSkills) isAgentCommand_Command() {}
 
 func (*AgentCommand_CompareSkills) isAgentCommand_Command() {}
+
+func (*AgentCommand_SyncClaudeSettings) isAgentCommand_Command() {}
 
 // PingCommand is a keepalive message. The client should silently ignore it.
 type PingCommand struct {
@@ -5475,17 +5493,151 @@ func (x *AddSingleCommandPermissionResponse) GetPermission() *SingleCommandPermi
 	return nil
 }
 
+// SyncClaudeSettingsCommand tells the agent to re-sync its local
+// .claude/settings.json settings (language, etc.).
+type SyncClaudeSettingsCommand struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SyncClaudeSettingsCommand) Reset() {
+	*x = SyncClaudeSettingsCommand{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[91]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncClaudeSettingsCommand) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncClaudeSettingsCommand) ProtoMessage() {}
+
+func (x *SyncClaudeSettingsCommand) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[91]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncClaudeSettingsCommand.ProtoReflect.Descriptor instead.
+func (*SyncClaudeSettingsCommand) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{91}
+}
+
+type SyncClaudeSettingsAgentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectName   string                 `protobuf:"bytes,1,opt,name=project_name,json=projectName,proto3" json:"project_name,omitempty"`
+	LocalLanguage string                 `protobuf:"bytes,2,opt,name=local_language,json=localLanguage,proto3" json:"local_language,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SyncClaudeSettingsAgentRequest) Reset() {
+	*x = SyncClaudeSettingsAgentRequest{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[92]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncClaudeSettingsAgentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncClaudeSettingsAgentRequest) ProtoMessage() {}
+
+func (x *SyncClaudeSettingsAgentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[92]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncClaudeSettingsAgentRequest.ProtoReflect.Descriptor instead.
+func (*SyncClaudeSettingsAgentRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{92}
+}
+
+func (x *SyncClaudeSettingsAgentRequest) GetProjectName() string {
+	if x != nil {
+		return x.ProjectName
+	}
+	return ""
+}
+
+func (x *SyncClaudeSettingsAgentRequest) GetLocalLanguage() string {
+	if x != nil {
+		return x.LocalLanguage
+	}
+	return ""
+}
+
+type SyncClaudeSettingsAgentResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Settings      *ClaudeSettings        `protobuf:"bytes,1,opt,name=settings,proto3" json:"settings,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SyncClaudeSettingsAgentResponse) Reset() {
+	*x = SyncClaudeSettingsAgentResponse{}
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[93]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncClaudeSettingsAgentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncClaudeSettingsAgentResponse) ProtoMessage() {}
+
+func (x *SyncClaudeSettingsAgentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_agent_manager_proto_msgTypes[93]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncClaudeSettingsAgentResponse.ProtoReflect.Descriptor instead.
+func (*SyncClaudeSettingsAgentResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{93}
+}
+
+func (x *SyncClaudeSettingsAgentResponse) GetSettings() *ClaudeSettings {
+	if x != nil {
+		return x.Settings
+	}
+	return nil
+}
+
 var File_taskguild_v1_agent_manager_proto protoreflect.FileDescriptor
 
 const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\n" +
-	" taskguild/v1/agent_manager.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x18taskguild/v1/agent.proto\x1a\x1etaskguild/v1/interaction.proto\x1a\x1dtaskguild/v1/permission.proto\x1a\x19taskguild/v1/script.proto\x1a,taskguild/v1/single_command_permission.proto\x1a\x18taskguild/v1/skill.proto\x1a\x1btaskguild/v1/task_log.proto\"\xea\x01\n" +
+	" taskguild/v1/agent_manager.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x18taskguild/v1/agent.proto\x1a\x1etaskguild/v1/interaction.proto\x1a\x1dtaskguild/v1/permission.proto\x1a\x19taskguild/v1/script.proto\x1a,taskguild/v1/single_command_permission.proto\x1a\x18taskguild/v1/skill.proto\x1a\"taskguild/v1/claude_settings.proto\x1a\x1btaskguild/v1/task_log.proto\"\xea\x01\n" +
 	"\x1cAgentManagerSubscribeRequest\x12(\n" +
 	"\x10agent_manager_id\x18\x01 \x01(\tR\x0eagentManagerId\x12!\n" +
 	"\fproject_name\x18\x02 \x01(\tR\vprojectName\x120\n" +
 	"\x14max_concurrent_tasks\x18\x03 \x01(\x05R\x12maxConcurrentTasks\x12&\n" +
 	"\x0factive_task_ids\x18\x04 \x03(\tR\ractiveTaskIds\x12#\n" +
-	"\ragent_version\x18\x05 \x01(\tR\fagentVersion\"\x80\n" +
+	"\ragent_version\x18\x05 \x01(\tR\fagentVersion\"\xdd\n" +
 	"\n" +
 	"\fAgentCommand\x12K\n" +
 	"\x0etask_available\x18\x01 \x01(\v2\".taskguild.v1.TaskAvailableCommandH\x00R\rtaskAvailable\x12B\n" +
@@ -5510,7 +5662,8 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\x0ecompare_agents\x18\x0f \x01(\v2\".taskguild.v1.CompareAgentsCommandH\x00R\rcompareAgents\x12B\n" +
 	"\vsync_skills\x18\x10 \x01(\v2\x1f.taskguild.v1.SyncSkillsCommandH\x00R\n" +
 	"syncSkills\x12K\n" +
-	"\x0ecompare_skills\x18\x11 \x01(\v2\".taskguild.v1.CompareSkillsCommandH\x00R\rcompareSkillsB\t\n" +
+	"\x0ecompare_skills\x18\x11 \x01(\v2\".taskguild.v1.CompareSkillsCommandH\x00R\rcompareSkills\x12[\n" +
+	"\x14sync_claude_settings\x18\x12 \x01(\v2'.taskguild.v1.SyncClaudeSettingsCommandH\x00R\x12syncClaudeSettingsB\t\n" +
 	"\acommand\"\r\n" +
 	"\vPingCommand\"\xf8\x01\n" +
 	"\x14TaskAvailableCommand\x12\x17\n" +
@@ -5841,7 +5994,13 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\"AddSingleCommandPermissionResponse\x12E\n" +
 	"\n" +
 	"permission\x18\x01 \x01(\v2%.taskguild.v1.SingleCommandPermissionR\n" +
-	"permission*\x8e\x01\n" +
+	"permission\"\x1b\n" +
+	"\x19SyncClaudeSettingsCommand\"j\n" +
+	"\x1eSyncClaudeSettingsAgentRequest\x12!\n" +
+	"\fproject_name\x18\x01 \x01(\tR\vprojectName\x12%\n" +
+	"\x0elocal_language\x18\x02 \x01(\tR\rlocalLanguage\"[\n" +
+	"\x1fSyncClaudeSettingsAgentResponse\x128\n" +
+	"\bsettings\x18\x01 \x01(\v2\x1c.taskguild.v1.ClaudeSettingsR\bsettings*\x8e\x01\n" +
 	"\vAgentStatus\x12\x1c\n" +
 	"\x18AGENT_STATUS_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11AGENT_STATUS_IDLE\x10\x01\x12\x18\n" +
@@ -5874,7 +6033,7 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\x15SkillResolutionChoice\x12'\n" +
 	"#SKILL_RESOLUTION_CHOICE_UNSPECIFIED\x10\x00\x12\"\n" +
 	"\x1eSKILL_RESOLUTION_CHOICE_SERVER\x10\x01\x12!\n" +
-	"\x1dSKILL_RESOLUTION_CHOICE_AGENT\x10\x022\xbe\x1d\n" +
+	"\x1dSKILL_RESOLUTION_CHOICE_AGENT\x10\x022\xb1\x1e\n" +
 	"\x13AgentManagerService\x12U\n" +
 	"\tSubscribe\x12*.taskguild.v1.AgentManagerSubscribeRequest\x1a\x1a.taskguild.v1.AgentCommand0\x01\x12L\n" +
 	"\tClaimTask\x12\x1e.taskguild.v1.ClaimTaskRequest\x1a\x1f.taskguild.v1.ClaimTaskResponse\x12a\n" +
@@ -5912,7 +6071,8 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\x16RequestSkillComparison\x12+.taskguild.v1.RequestSkillComparisonRequest\x1a,.taskguild.v1.RequestSkillComparisonResponse\x12p\n" +
 	"\x15ReportSkillComparison\x12*.taskguild.v1.ReportSkillComparisonRequest\x1a+.taskguild.v1.ReportSkillComparisonResponse\x12g\n" +
 	"\x12GetSkillComparison\x12'.taskguild.v1.GetSkillComparisonRequest\x1a(.taskguild.v1.GetSkillComparisonResponse\x12m\n" +
-	"\x14ResolveSkillConflict\x12).taskguild.v1.ResolveSkillConflictRequest\x1a*.taskguild.v1.ResolveSkillConflictResponseB\xba\x01\n" +
+	"\x14ResolveSkillConflict\x12).taskguild.v1.ResolveSkillConflictRequest\x1a*.taskguild.v1.ResolveSkillConflictResponse\x12q\n" +
+	"\x12SyncClaudeSettings\x12,.taskguild.v1.SyncClaudeSettingsAgentRequest\x1a-.taskguild.v1.SyncClaudeSettingsAgentResponseB\xba\x01\n" +
 	"\x10com.taskguild.v1B\x11AgentManagerProtoP\x01ZBgithub.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
@@ -5928,7 +6088,7 @@ func file_taskguild_v1_agent_manager_proto_rawDescGZIP() []byte {
 }
 
 var file_taskguild_v1_agent_manager_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
-var file_taskguild_v1_agent_manager_proto_msgTypes = make([]protoimpl.MessageInfo, 95)
+var file_taskguild_v1_agent_manager_proto_msgTypes = make([]protoimpl.MessageInfo, 98)
 var file_taskguild_v1_agent_manager_proto_goTypes = []any{
 	(AgentStatus)(0),                                  // 0: taskguild.v1.AgentStatus
 	(ScriptDiffType)(0),                               // 1: taskguild.v1.ScriptDiffType
@@ -6028,22 +6188,26 @@ var file_taskguild_v1_agent_manager_proto_goTypes = []any{
 	(*ListSingleCommandPermissionsAgentResponse)(nil), // 95: taskguild.v1.ListSingleCommandPermissionsAgentResponse
 	(*AddSingleCommandPermissionRequest)(nil),         // 96: taskguild.v1.AddSingleCommandPermissionRequest
 	(*AddSingleCommandPermissionResponse)(nil),        // 97: taskguild.v1.AddSingleCommandPermissionResponse
-	nil,                             // 98: taskguild.v1.TaskAvailableCommand.MetadataEntry
-	nil,                             // 99: taskguild.v1.AssignTaskCommand.MetadataEntry
-	nil,                             // 100: taskguild.v1.ClaimTaskResponse.MetadataEntry
-	nil,                             // 101: taskguild.v1.ReportTaskLogRequest.MetadataEntry
-	(*timestamppb.Timestamp)(nil),   // 102: google.protobuf.Timestamp
-	(InteractionType)(0),            // 103: taskguild.v1.InteractionType
-	(*InteractionOption)(nil),       // 104: taskguild.v1.InteractionOption
-	(*Interaction)(nil),             // 105: taskguild.v1.Interaction
-	(*AgentDefinition)(nil),         // 106: taskguild.v1.AgentDefinition
-	(*PermissionSet)(nil),           // 107: taskguild.v1.PermissionSet
-	(TaskLogLevel)(0),               // 108: taskguild.v1.TaskLogLevel
-	(TaskLogCategory)(0),            // 109: taskguild.v1.TaskLogCategory
-	(*ScriptDefinition)(nil),        // 110: taskguild.v1.ScriptDefinition
-	(*ScriptLogEntry)(nil),          // 111: taskguild.v1.ScriptLogEntry
-	(*SkillDefinition)(nil),         // 112: taskguild.v1.SkillDefinition
-	(*SingleCommandPermission)(nil), // 113: taskguild.v1.SingleCommandPermission
+	(*SyncClaudeSettingsCommand)(nil),                 // 98: taskguild.v1.SyncClaudeSettingsCommand
+	(*SyncClaudeSettingsAgentRequest)(nil),            // 99: taskguild.v1.SyncClaudeSettingsAgentRequest
+	(*SyncClaudeSettingsAgentResponse)(nil),           // 100: taskguild.v1.SyncClaudeSettingsAgentResponse
+	nil,                                               // 101: taskguild.v1.TaskAvailableCommand.MetadataEntry
+	nil,                                               // 102: taskguild.v1.AssignTaskCommand.MetadataEntry
+	nil,                                               // 103: taskguild.v1.ClaimTaskResponse.MetadataEntry
+	nil,                                               // 104: taskguild.v1.ReportTaskLogRequest.MetadataEntry
+	(*timestamppb.Timestamp)(nil),                     // 105: google.protobuf.Timestamp
+	(InteractionType)(0),                              // 106: taskguild.v1.InteractionType
+	(*InteractionOption)(nil),                         // 107: taskguild.v1.InteractionOption
+	(*Interaction)(nil),                               // 108: taskguild.v1.Interaction
+	(*AgentDefinition)(nil),                           // 109: taskguild.v1.AgentDefinition
+	(*PermissionSet)(nil),                             // 110: taskguild.v1.PermissionSet
+	(TaskLogLevel)(0),                                 // 111: taskguild.v1.TaskLogLevel
+	(TaskLogCategory)(0),                              // 112: taskguild.v1.TaskLogCategory
+	(*ScriptDefinition)(nil),                          // 113: taskguild.v1.ScriptDefinition
+	(*ScriptLogEntry)(nil),                            // 114: taskguild.v1.ScriptLogEntry
+	(*SkillDefinition)(nil),                           // 115: taskguild.v1.SkillDefinition
+	(*SingleCommandPermission)(nil),                   // 116: taskguild.v1.SingleCommandPermission
+	(*ClaudeSettings)(nil),                            // 117: taskguild.v1.ClaudeSettings
 }
 var file_taskguild_v1_agent_manager_proto_depIdxs = []int32{
 	10,  // 0: taskguild.v1.AgentCommand.task_available:type_name -> taskguild.v1.TaskAvailableCommand
@@ -6063,121 +6227,125 @@ var file_taskguild_v1_agent_manager_proto_depIdxs = []int32{
 	71,  // 14: taskguild.v1.AgentCommand.compare_agents:type_name -> taskguild.v1.CompareAgentsCommand
 	81,  // 15: taskguild.v1.AgentCommand.sync_skills:type_name -> taskguild.v1.SyncSkillsCommand
 	82,  // 16: taskguild.v1.AgentCommand.compare_skills:type_name -> taskguild.v1.CompareSkillsCommand
-	98,  // 17: taskguild.v1.TaskAvailableCommand.metadata:type_name -> taskguild.v1.TaskAvailableCommand.MetadataEntry
-	99,  // 18: taskguild.v1.AssignTaskCommand.metadata:type_name -> taskguild.v1.AssignTaskCommand.MetadataEntry
-	100, // 19: taskguild.v1.ClaimTaskResponse.metadata:type_name -> taskguild.v1.ClaimTaskResponse.MetadataEntry
-	0,   // 20: taskguild.v1.ReportAgentStatusRequest.status:type_name -> taskguild.v1.AgentStatus
-	102, // 21: taskguild.v1.HeartbeatRequest.timestamp:type_name -> google.protobuf.Timestamp
-	103, // 22: taskguild.v1.CreateInteractionRequest.type:type_name -> taskguild.v1.InteractionType
-	104, // 23: taskguild.v1.CreateInteractionRequest.options:type_name -> taskguild.v1.InteractionOption
-	105, // 24: taskguild.v1.CreateInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
-	105, // 25: taskguild.v1.GetInteractionResponseResponse.interaction:type_name -> taskguild.v1.Interaction
-	106, // 26: taskguild.v1.SyncAgentsResponse.agents:type_name -> taskguild.v1.AgentDefinition
-	107, // 27: taskguild.v1.SyncPermissionsResponse.permissions:type_name -> taskguild.v1.PermissionSet
-	108, // 28: taskguild.v1.ReportTaskLogRequest.level:type_name -> taskguild.v1.TaskLogLevel
-	109, // 29: taskguild.v1.ReportTaskLogRequest.category:type_name -> taskguild.v1.TaskLogCategory
-	101, // 30: taskguild.v1.ReportTaskLogRequest.metadata:type_name -> taskguild.v1.ReportTaskLogRequest.MetadataEntry
-	35,  // 31: taskguild.v1.ReportWorktreeListRequest.worktrees:type_name -> taskguild.v1.WorktreeInfo
-	35,  // 32: taskguild.v1.GetWorktreeListResponse.worktrees:type_name -> taskguild.v1.WorktreeInfo
-	110, // 33: taskguild.v1.CompareScriptsCommand.scripts:type_name -> taskguild.v1.ScriptDefinition
-	110, // 34: taskguild.v1.SyncScriptsResponse.scripts:type_name -> taskguild.v1.ScriptDefinition
-	111, // 35: taskguild.v1.ReportScriptExecutionResultRequest.log_entries:type_name -> taskguild.v1.ScriptLogEntry
-	111, // 36: taskguild.v1.ReportScriptOutputChunkRequest.entries:type_name -> taskguild.v1.ScriptLogEntry
-	1,   // 37: taskguild.v1.ScriptDiff.diff_type:type_name -> taskguild.v1.ScriptDiffType
-	62,  // 38: taskguild.v1.ReportScriptComparisonRequest.diffs:type_name -> taskguild.v1.ScriptDiff
-	62,  // 39: taskguild.v1.GetScriptComparisonResponse.diffs:type_name -> taskguild.v1.ScriptDiff
-	2,   // 40: taskguild.v1.ResolveScriptConflictRequest.choice:type_name -> taskguild.v1.ScriptResolutionChoice
-	110, // 41: taskguild.v1.ResolveScriptConflictResponse.script:type_name -> taskguild.v1.ScriptDefinition
-	106, // 42: taskguild.v1.CompareAgentsCommand.agents:type_name -> taskguild.v1.AgentDefinition
-	3,   // 43: taskguild.v1.AgentDiff.diff_type:type_name -> taskguild.v1.AgentDiffType
-	72,  // 44: taskguild.v1.ReportAgentComparisonRequest.diffs:type_name -> taskguild.v1.AgentDiff
-	72,  // 45: taskguild.v1.GetAgentComparisonResponse.diffs:type_name -> taskguild.v1.AgentDiff
-	4,   // 46: taskguild.v1.ResolveAgentConflictRequest.choice:type_name -> taskguild.v1.AgentResolutionChoice
-	106, // 47: taskguild.v1.ResolveAgentConflictResponse.agent:type_name -> taskguild.v1.AgentDefinition
-	112, // 48: taskguild.v1.CompareSkillsCommand.skills:type_name -> taskguild.v1.SkillDefinition
-	112, // 49: taskguild.v1.SyncSkillsResponse.skills:type_name -> taskguild.v1.SkillDefinition
-	5,   // 50: taskguild.v1.SkillDiff.diff_type:type_name -> taskguild.v1.SkillDiffType
-	85,  // 51: taskguild.v1.ReportSkillComparisonRequest.diffs:type_name -> taskguild.v1.SkillDiff
-	85,  // 52: taskguild.v1.GetSkillComparisonResponse.diffs:type_name -> taskguild.v1.SkillDiff
-	6,   // 53: taskguild.v1.ResolveSkillConflictRequest.choice:type_name -> taskguild.v1.SkillResolutionChoice
-	112, // 54: taskguild.v1.ResolveSkillConflictResponse.skill:type_name -> taskguild.v1.SkillDefinition
-	113, // 55: taskguild.v1.ListSingleCommandPermissionsAgentResponse.permissions:type_name -> taskguild.v1.SingleCommandPermission
-	113, // 56: taskguild.v1.AddSingleCommandPermissionResponse.permission:type_name -> taskguild.v1.SingleCommandPermission
-	7,   // 57: taskguild.v1.AgentManagerService.Subscribe:input_type -> taskguild.v1.AgentManagerSubscribeRequest
-	17,  // 58: taskguild.v1.AgentManagerService.ClaimTask:input_type -> taskguild.v1.ClaimTaskRequest
-	19,  // 59: taskguild.v1.AgentManagerService.ReportTaskResult:input_type -> taskguild.v1.ReportTaskResultRequest
-	21,  // 60: taskguild.v1.AgentManagerService.ReportAgentStatus:input_type -> taskguild.v1.ReportAgentStatusRequest
-	23,  // 61: taskguild.v1.AgentManagerService.Heartbeat:input_type -> taskguild.v1.HeartbeatRequest
-	25,  // 62: taskguild.v1.AgentManagerService.CreateInteraction:input_type -> taskguild.v1.CreateInteractionRequest
-	27,  // 63: taskguild.v1.AgentManagerService.GetInteractionResponse:input_type -> taskguild.v1.GetInteractionResponseRequest
-	29,  // 64: taskguild.v1.AgentManagerService.SyncAgents:input_type -> taskguild.v1.SyncAgentsRequest
-	33,  // 65: taskguild.v1.AgentManagerService.ReportTaskLog:input_type -> taskguild.v1.ReportTaskLogRequest
-	31,  // 66: taskguild.v1.AgentManagerService.SyncPermissions:input_type -> taskguild.v1.SyncPermissionsRequest
-	37,  // 67: taskguild.v1.AgentManagerService.ReportWorktreeList:input_type -> taskguild.v1.ReportWorktreeListRequest
-	39,  // 68: taskguild.v1.AgentManagerService.RequestWorktreeList:input_type -> taskguild.v1.RequestWorktreeListRequest
-	41,  // 69: taskguild.v1.AgentManagerService.GetWorktreeList:input_type -> taskguild.v1.GetWorktreeListRequest
-	43,  // 70: taskguild.v1.AgentManagerService.RequestWorktreeDelete:input_type -> taskguild.v1.RequestWorktreeDeleteRequest
-	45,  // 71: taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult:input_type -> taskguild.v1.ReportWorktreeDeleteResultRequest
-	48,  // 72: taskguild.v1.AgentManagerService.RequestGitPullMain:input_type -> taskguild.v1.RequestGitPullMainRequest
-	50,  // 73: taskguild.v1.AgentManagerService.ReportGitPullMainResult:input_type -> taskguild.v1.ReportGitPullMainResultRequest
-	55,  // 74: taskguild.v1.AgentManagerService.SyncScripts:input_type -> taskguild.v1.SyncScriptsRequest
-	57,  // 75: taskguild.v1.AgentManagerService.ReportScriptExecutionResult:input_type -> taskguild.v1.ReportScriptExecutionResultRequest
-	59,  // 76: taskguild.v1.AgentManagerService.ReportScriptOutputChunk:input_type -> taskguild.v1.ReportScriptOutputChunkRequest
-	63,  // 77: taskguild.v1.AgentManagerService.RequestScriptComparison:input_type -> taskguild.v1.RequestScriptComparisonRequest
-	65,  // 78: taskguild.v1.AgentManagerService.ReportScriptComparison:input_type -> taskguild.v1.ReportScriptComparisonRequest
-	67,  // 79: taskguild.v1.AgentManagerService.GetScriptComparison:input_type -> taskguild.v1.GetScriptComparisonRequest
-	69,  // 80: taskguild.v1.AgentManagerService.ResolveScriptConflict:input_type -> taskguild.v1.ResolveScriptConflictRequest
-	73,  // 81: taskguild.v1.AgentManagerService.RequestAgentComparison:input_type -> taskguild.v1.RequestAgentComparisonRequest
-	75,  // 82: taskguild.v1.AgentManagerService.ReportAgentComparison:input_type -> taskguild.v1.ReportAgentComparisonRequest
-	77,  // 83: taskguild.v1.AgentManagerService.GetAgentComparison:input_type -> taskguild.v1.GetAgentComparisonRequest
-	79,  // 84: taskguild.v1.AgentManagerService.ResolveAgentConflict:input_type -> taskguild.v1.ResolveAgentConflictRequest
-	94,  // 85: taskguild.v1.AgentManagerService.ListSingleCommandPermissions:input_type -> taskguild.v1.ListSingleCommandPermissionsAgentRequest
-	96,  // 86: taskguild.v1.AgentManagerService.AddSingleCommandPermission:input_type -> taskguild.v1.AddSingleCommandPermissionRequest
-	83,  // 87: taskguild.v1.AgentManagerService.SyncSkills:input_type -> taskguild.v1.SyncSkillsRequest
-	86,  // 88: taskguild.v1.AgentManagerService.RequestSkillComparison:input_type -> taskguild.v1.RequestSkillComparisonRequest
-	88,  // 89: taskguild.v1.AgentManagerService.ReportSkillComparison:input_type -> taskguild.v1.ReportSkillComparisonRequest
-	90,  // 90: taskguild.v1.AgentManagerService.GetSkillComparison:input_type -> taskguild.v1.GetSkillComparisonRequest
-	92,  // 91: taskguild.v1.AgentManagerService.ResolveSkillConflict:input_type -> taskguild.v1.ResolveSkillConflictRequest
-	8,   // 92: taskguild.v1.AgentManagerService.Subscribe:output_type -> taskguild.v1.AgentCommand
-	18,  // 93: taskguild.v1.AgentManagerService.ClaimTask:output_type -> taskguild.v1.ClaimTaskResponse
-	20,  // 94: taskguild.v1.AgentManagerService.ReportTaskResult:output_type -> taskguild.v1.ReportTaskResultResponse
-	22,  // 95: taskguild.v1.AgentManagerService.ReportAgentStatus:output_type -> taskguild.v1.ReportAgentStatusResponse
-	24,  // 96: taskguild.v1.AgentManagerService.Heartbeat:output_type -> taskguild.v1.HeartbeatResponse
-	26,  // 97: taskguild.v1.AgentManagerService.CreateInteraction:output_type -> taskguild.v1.CreateInteractionResponse
-	28,  // 98: taskguild.v1.AgentManagerService.GetInteractionResponse:output_type -> taskguild.v1.GetInteractionResponseResponse
-	30,  // 99: taskguild.v1.AgentManagerService.SyncAgents:output_type -> taskguild.v1.SyncAgentsResponse
-	34,  // 100: taskguild.v1.AgentManagerService.ReportTaskLog:output_type -> taskguild.v1.ReportTaskLogResponse
-	32,  // 101: taskguild.v1.AgentManagerService.SyncPermissions:output_type -> taskguild.v1.SyncPermissionsResponse
-	38,  // 102: taskguild.v1.AgentManagerService.ReportWorktreeList:output_type -> taskguild.v1.ReportWorktreeListResponse
-	40,  // 103: taskguild.v1.AgentManagerService.RequestWorktreeList:output_type -> taskguild.v1.RequestWorktreeListResponse
-	42,  // 104: taskguild.v1.AgentManagerService.GetWorktreeList:output_type -> taskguild.v1.GetWorktreeListResponse
-	44,  // 105: taskguild.v1.AgentManagerService.RequestWorktreeDelete:output_type -> taskguild.v1.RequestWorktreeDeleteResponse
-	46,  // 106: taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult:output_type -> taskguild.v1.ReportWorktreeDeleteResultResponse
-	49,  // 107: taskguild.v1.AgentManagerService.RequestGitPullMain:output_type -> taskguild.v1.RequestGitPullMainResponse
-	51,  // 108: taskguild.v1.AgentManagerService.ReportGitPullMainResult:output_type -> taskguild.v1.ReportGitPullMainResultResponse
-	56,  // 109: taskguild.v1.AgentManagerService.SyncScripts:output_type -> taskguild.v1.SyncScriptsResponse
-	58,  // 110: taskguild.v1.AgentManagerService.ReportScriptExecutionResult:output_type -> taskguild.v1.ReportScriptExecutionResultResponse
-	60,  // 111: taskguild.v1.AgentManagerService.ReportScriptOutputChunk:output_type -> taskguild.v1.ReportScriptOutputChunkResponse
-	64,  // 112: taskguild.v1.AgentManagerService.RequestScriptComparison:output_type -> taskguild.v1.RequestScriptComparisonResponse
-	66,  // 113: taskguild.v1.AgentManagerService.ReportScriptComparison:output_type -> taskguild.v1.ReportScriptComparisonResponse
-	68,  // 114: taskguild.v1.AgentManagerService.GetScriptComparison:output_type -> taskguild.v1.GetScriptComparisonResponse
-	70,  // 115: taskguild.v1.AgentManagerService.ResolveScriptConflict:output_type -> taskguild.v1.ResolveScriptConflictResponse
-	74,  // 116: taskguild.v1.AgentManagerService.RequestAgentComparison:output_type -> taskguild.v1.RequestAgentComparisonResponse
-	76,  // 117: taskguild.v1.AgentManagerService.ReportAgentComparison:output_type -> taskguild.v1.ReportAgentComparisonResponse
-	78,  // 118: taskguild.v1.AgentManagerService.GetAgentComparison:output_type -> taskguild.v1.GetAgentComparisonResponse
-	80,  // 119: taskguild.v1.AgentManagerService.ResolveAgentConflict:output_type -> taskguild.v1.ResolveAgentConflictResponse
-	95,  // 120: taskguild.v1.AgentManagerService.ListSingleCommandPermissions:output_type -> taskguild.v1.ListSingleCommandPermissionsAgentResponse
-	97,  // 121: taskguild.v1.AgentManagerService.AddSingleCommandPermission:output_type -> taskguild.v1.AddSingleCommandPermissionResponse
-	84,  // 122: taskguild.v1.AgentManagerService.SyncSkills:output_type -> taskguild.v1.SyncSkillsResponse
-	87,  // 123: taskguild.v1.AgentManagerService.RequestSkillComparison:output_type -> taskguild.v1.RequestSkillComparisonResponse
-	89,  // 124: taskguild.v1.AgentManagerService.ReportSkillComparison:output_type -> taskguild.v1.ReportSkillComparisonResponse
-	91,  // 125: taskguild.v1.AgentManagerService.GetSkillComparison:output_type -> taskguild.v1.GetSkillComparisonResponse
-	93,  // 126: taskguild.v1.AgentManagerService.ResolveSkillConflict:output_type -> taskguild.v1.ResolveSkillConflictResponse
-	92,  // [92:127] is the sub-list for method output_type
-	57,  // [57:92] is the sub-list for method input_type
-	57,  // [57:57] is the sub-list for extension type_name
-	57,  // [57:57] is the sub-list for extension extendee
-	0,   // [0:57] is the sub-list for field type_name
+	98,  // 17: taskguild.v1.AgentCommand.sync_claude_settings:type_name -> taskguild.v1.SyncClaudeSettingsCommand
+	101, // 18: taskguild.v1.TaskAvailableCommand.metadata:type_name -> taskguild.v1.TaskAvailableCommand.MetadataEntry
+	102, // 19: taskguild.v1.AssignTaskCommand.metadata:type_name -> taskguild.v1.AssignTaskCommand.MetadataEntry
+	103, // 20: taskguild.v1.ClaimTaskResponse.metadata:type_name -> taskguild.v1.ClaimTaskResponse.MetadataEntry
+	0,   // 21: taskguild.v1.ReportAgentStatusRequest.status:type_name -> taskguild.v1.AgentStatus
+	105, // 22: taskguild.v1.HeartbeatRequest.timestamp:type_name -> google.protobuf.Timestamp
+	106, // 23: taskguild.v1.CreateInteractionRequest.type:type_name -> taskguild.v1.InteractionType
+	107, // 24: taskguild.v1.CreateInteractionRequest.options:type_name -> taskguild.v1.InteractionOption
+	108, // 25: taskguild.v1.CreateInteractionResponse.interaction:type_name -> taskguild.v1.Interaction
+	108, // 26: taskguild.v1.GetInteractionResponseResponse.interaction:type_name -> taskguild.v1.Interaction
+	109, // 27: taskguild.v1.SyncAgentsResponse.agents:type_name -> taskguild.v1.AgentDefinition
+	110, // 28: taskguild.v1.SyncPermissionsResponse.permissions:type_name -> taskguild.v1.PermissionSet
+	111, // 29: taskguild.v1.ReportTaskLogRequest.level:type_name -> taskguild.v1.TaskLogLevel
+	112, // 30: taskguild.v1.ReportTaskLogRequest.category:type_name -> taskguild.v1.TaskLogCategory
+	104, // 31: taskguild.v1.ReportTaskLogRequest.metadata:type_name -> taskguild.v1.ReportTaskLogRequest.MetadataEntry
+	35,  // 32: taskguild.v1.ReportWorktreeListRequest.worktrees:type_name -> taskguild.v1.WorktreeInfo
+	35,  // 33: taskguild.v1.GetWorktreeListResponse.worktrees:type_name -> taskguild.v1.WorktreeInfo
+	113, // 34: taskguild.v1.CompareScriptsCommand.scripts:type_name -> taskguild.v1.ScriptDefinition
+	113, // 35: taskguild.v1.SyncScriptsResponse.scripts:type_name -> taskguild.v1.ScriptDefinition
+	114, // 36: taskguild.v1.ReportScriptExecutionResultRequest.log_entries:type_name -> taskguild.v1.ScriptLogEntry
+	114, // 37: taskguild.v1.ReportScriptOutputChunkRequest.entries:type_name -> taskguild.v1.ScriptLogEntry
+	1,   // 38: taskguild.v1.ScriptDiff.diff_type:type_name -> taskguild.v1.ScriptDiffType
+	62,  // 39: taskguild.v1.ReportScriptComparisonRequest.diffs:type_name -> taskguild.v1.ScriptDiff
+	62,  // 40: taskguild.v1.GetScriptComparisonResponse.diffs:type_name -> taskguild.v1.ScriptDiff
+	2,   // 41: taskguild.v1.ResolveScriptConflictRequest.choice:type_name -> taskguild.v1.ScriptResolutionChoice
+	113, // 42: taskguild.v1.ResolveScriptConflictResponse.script:type_name -> taskguild.v1.ScriptDefinition
+	109, // 43: taskguild.v1.CompareAgentsCommand.agents:type_name -> taskguild.v1.AgentDefinition
+	3,   // 44: taskguild.v1.AgentDiff.diff_type:type_name -> taskguild.v1.AgentDiffType
+	72,  // 45: taskguild.v1.ReportAgentComparisonRequest.diffs:type_name -> taskguild.v1.AgentDiff
+	72,  // 46: taskguild.v1.GetAgentComparisonResponse.diffs:type_name -> taskguild.v1.AgentDiff
+	4,   // 47: taskguild.v1.ResolveAgentConflictRequest.choice:type_name -> taskguild.v1.AgentResolutionChoice
+	109, // 48: taskguild.v1.ResolveAgentConflictResponse.agent:type_name -> taskguild.v1.AgentDefinition
+	115, // 49: taskguild.v1.CompareSkillsCommand.skills:type_name -> taskguild.v1.SkillDefinition
+	115, // 50: taskguild.v1.SyncSkillsResponse.skills:type_name -> taskguild.v1.SkillDefinition
+	5,   // 51: taskguild.v1.SkillDiff.diff_type:type_name -> taskguild.v1.SkillDiffType
+	85,  // 52: taskguild.v1.ReportSkillComparisonRequest.diffs:type_name -> taskguild.v1.SkillDiff
+	85,  // 53: taskguild.v1.GetSkillComparisonResponse.diffs:type_name -> taskguild.v1.SkillDiff
+	6,   // 54: taskguild.v1.ResolveSkillConflictRequest.choice:type_name -> taskguild.v1.SkillResolutionChoice
+	115, // 55: taskguild.v1.ResolveSkillConflictResponse.skill:type_name -> taskguild.v1.SkillDefinition
+	116, // 56: taskguild.v1.ListSingleCommandPermissionsAgentResponse.permissions:type_name -> taskguild.v1.SingleCommandPermission
+	116, // 57: taskguild.v1.AddSingleCommandPermissionResponse.permission:type_name -> taskguild.v1.SingleCommandPermission
+	117, // 58: taskguild.v1.SyncClaudeSettingsAgentResponse.settings:type_name -> taskguild.v1.ClaudeSettings
+	7,   // 59: taskguild.v1.AgentManagerService.Subscribe:input_type -> taskguild.v1.AgentManagerSubscribeRequest
+	17,  // 60: taskguild.v1.AgentManagerService.ClaimTask:input_type -> taskguild.v1.ClaimTaskRequest
+	19,  // 61: taskguild.v1.AgentManagerService.ReportTaskResult:input_type -> taskguild.v1.ReportTaskResultRequest
+	21,  // 62: taskguild.v1.AgentManagerService.ReportAgentStatus:input_type -> taskguild.v1.ReportAgentStatusRequest
+	23,  // 63: taskguild.v1.AgentManagerService.Heartbeat:input_type -> taskguild.v1.HeartbeatRequest
+	25,  // 64: taskguild.v1.AgentManagerService.CreateInteraction:input_type -> taskguild.v1.CreateInteractionRequest
+	27,  // 65: taskguild.v1.AgentManagerService.GetInteractionResponse:input_type -> taskguild.v1.GetInteractionResponseRequest
+	29,  // 66: taskguild.v1.AgentManagerService.SyncAgents:input_type -> taskguild.v1.SyncAgentsRequest
+	33,  // 67: taskguild.v1.AgentManagerService.ReportTaskLog:input_type -> taskguild.v1.ReportTaskLogRequest
+	31,  // 68: taskguild.v1.AgentManagerService.SyncPermissions:input_type -> taskguild.v1.SyncPermissionsRequest
+	37,  // 69: taskguild.v1.AgentManagerService.ReportWorktreeList:input_type -> taskguild.v1.ReportWorktreeListRequest
+	39,  // 70: taskguild.v1.AgentManagerService.RequestWorktreeList:input_type -> taskguild.v1.RequestWorktreeListRequest
+	41,  // 71: taskguild.v1.AgentManagerService.GetWorktreeList:input_type -> taskguild.v1.GetWorktreeListRequest
+	43,  // 72: taskguild.v1.AgentManagerService.RequestWorktreeDelete:input_type -> taskguild.v1.RequestWorktreeDeleteRequest
+	45,  // 73: taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult:input_type -> taskguild.v1.ReportWorktreeDeleteResultRequest
+	48,  // 74: taskguild.v1.AgentManagerService.RequestGitPullMain:input_type -> taskguild.v1.RequestGitPullMainRequest
+	50,  // 75: taskguild.v1.AgentManagerService.ReportGitPullMainResult:input_type -> taskguild.v1.ReportGitPullMainResultRequest
+	55,  // 76: taskguild.v1.AgentManagerService.SyncScripts:input_type -> taskguild.v1.SyncScriptsRequest
+	57,  // 77: taskguild.v1.AgentManagerService.ReportScriptExecutionResult:input_type -> taskguild.v1.ReportScriptExecutionResultRequest
+	59,  // 78: taskguild.v1.AgentManagerService.ReportScriptOutputChunk:input_type -> taskguild.v1.ReportScriptOutputChunkRequest
+	63,  // 79: taskguild.v1.AgentManagerService.RequestScriptComparison:input_type -> taskguild.v1.RequestScriptComparisonRequest
+	65,  // 80: taskguild.v1.AgentManagerService.ReportScriptComparison:input_type -> taskguild.v1.ReportScriptComparisonRequest
+	67,  // 81: taskguild.v1.AgentManagerService.GetScriptComparison:input_type -> taskguild.v1.GetScriptComparisonRequest
+	69,  // 82: taskguild.v1.AgentManagerService.ResolveScriptConflict:input_type -> taskguild.v1.ResolveScriptConflictRequest
+	73,  // 83: taskguild.v1.AgentManagerService.RequestAgentComparison:input_type -> taskguild.v1.RequestAgentComparisonRequest
+	75,  // 84: taskguild.v1.AgentManagerService.ReportAgentComparison:input_type -> taskguild.v1.ReportAgentComparisonRequest
+	77,  // 85: taskguild.v1.AgentManagerService.GetAgentComparison:input_type -> taskguild.v1.GetAgentComparisonRequest
+	79,  // 86: taskguild.v1.AgentManagerService.ResolveAgentConflict:input_type -> taskguild.v1.ResolveAgentConflictRequest
+	94,  // 87: taskguild.v1.AgentManagerService.ListSingleCommandPermissions:input_type -> taskguild.v1.ListSingleCommandPermissionsAgentRequest
+	96,  // 88: taskguild.v1.AgentManagerService.AddSingleCommandPermission:input_type -> taskguild.v1.AddSingleCommandPermissionRequest
+	83,  // 89: taskguild.v1.AgentManagerService.SyncSkills:input_type -> taskguild.v1.SyncSkillsRequest
+	86,  // 90: taskguild.v1.AgentManagerService.RequestSkillComparison:input_type -> taskguild.v1.RequestSkillComparisonRequest
+	88,  // 91: taskguild.v1.AgentManagerService.ReportSkillComparison:input_type -> taskguild.v1.ReportSkillComparisonRequest
+	90,  // 92: taskguild.v1.AgentManagerService.GetSkillComparison:input_type -> taskguild.v1.GetSkillComparisonRequest
+	92,  // 93: taskguild.v1.AgentManagerService.ResolveSkillConflict:input_type -> taskguild.v1.ResolveSkillConflictRequest
+	99,  // 94: taskguild.v1.AgentManagerService.SyncClaudeSettings:input_type -> taskguild.v1.SyncClaudeSettingsAgentRequest
+	8,   // 95: taskguild.v1.AgentManagerService.Subscribe:output_type -> taskguild.v1.AgentCommand
+	18,  // 96: taskguild.v1.AgentManagerService.ClaimTask:output_type -> taskguild.v1.ClaimTaskResponse
+	20,  // 97: taskguild.v1.AgentManagerService.ReportTaskResult:output_type -> taskguild.v1.ReportTaskResultResponse
+	22,  // 98: taskguild.v1.AgentManagerService.ReportAgentStatus:output_type -> taskguild.v1.ReportAgentStatusResponse
+	24,  // 99: taskguild.v1.AgentManagerService.Heartbeat:output_type -> taskguild.v1.HeartbeatResponse
+	26,  // 100: taskguild.v1.AgentManagerService.CreateInteraction:output_type -> taskguild.v1.CreateInteractionResponse
+	28,  // 101: taskguild.v1.AgentManagerService.GetInteractionResponse:output_type -> taskguild.v1.GetInteractionResponseResponse
+	30,  // 102: taskguild.v1.AgentManagerService.SyncAgents:output_type -> taskguild.v1.SyncAgentsResponse
+	34,  // 103: taskguild.v1.AgentManagerService.ReportTaskLog:output_type -> taskguild.v1.ReportTaskLogResponse
+	32,  // 104: taskguild.v1.AgentManagerService.SyncPermissions:output_type -> taskguild.v1.SyncPermissionsResponse
+	38,  // 105: taskguild.v1.AgentManagerService.ReportWorktreeList:output_type -> taskguild.v1.ReportWorktreeListResponse
+	40,  // 106: taskguild.v1.AgentManagerService.RequestWorktreeList:output_type -> taskguild.v1.RequestWorktreeListResponse
+	42,  // 107: taskguild.v1.AgentManagerService.GetWorktreeList:output_type -> taskguild.v1.GetWorktreeListResponse
+	44,  // 108: taskguild.v1.AgentManagerService.RequestWorktreeDelete:output_type -> taskguild.v1.RequestWorktreeDeleteResponse
+	46,  // 109: taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult:output_type -> taskguild.v1.ReportWorktreeDeleteResultResponse
+	49,  // 110: taskguild.v1.AgentManagerService.RequestGitPullMain:output_type -> taskguild.v1.RequestGitPullMainResponse
+	51,  // 111: taskguild.v1.AgentManagerService.ReportGitPullMainResult:output_type -> taskguild.v1.ReportGitPullMainResultResponse
+	56,  // 112: taskguild.v1.AgentManagerService.SyncScripts:output_type -> taskguild.v1.SyncScriptsResponse
+	58,  // 113: taskguild.v1.AgentManagerService.ReportScriptExecutionResult:output_type -> taskguild.v1.ReportScriptExecutionResultResponse
+	60,  // 114: taskguild.v1.AgentManagerService.ReportScriptOutputChunk:output_type -> taskguild.v1.ReportScriptOutputChunkResponse
+	64,  // 115: taskguild.v1.AgentManagerService.RequestScriptComparison:output_type -> taskguild.v1.RequestScriptComparisonResponse
+	66,  // 116: taskguild.v1.AgentManagerService.ReportScriptComparison:output_type -> taskguild.v1.ReportScriptComparisonResponse
+	68,  // 117: taskguild.v1.AgentManagerService.GetScriptComparison:output_type -> taskguild.v1.GetScriptComparisonResponse
+	70,  // 118: taskguild.v1.AgentManagerService.ResolveScriptConflict:output_type -> taskguild.v1.ResolveScriptConflictResponse
+	74,  // 119: taskguild.v1.AgentManagerService.RequestAgentComparison:output_type -> taskguild.v1.RequestAgentComparisonResponse
+	76,  // 120: taskguild.v1.AgentManagerService.ReportAgentComparison:output_type -> taskguild.v1.ReportAgentComparisonResponse
+	78,  // 121: taskguild.v1.AgentManagerService.GetAgentComparison:output_type -> taskguild.v1.GetAgentComparisonResponse
+	80,  // 122: taskguild.v1.AgentManagerService.ResolveAgentConflict:output_type -> taskguild.v1.ResolveAgentConflictResponse
+	95,  // 123: taskguild.v1.AgentManagerService.ListSingleCommandPermissions:output_type -> taskguild.v1.ListSingleCommandPermissionsAgentResponse
+	97,  // 124: taskguild.v1.AgentManagerService.AddSingleCommandPermission:output_type -> taskguild.v1.AddSingleCommandPermissionResponse
+	84,  // 125: taskguild.v1.AgentManagerService.SyncSkills:output_type -> taskguild.v1.SyncSkillsResponse
+	87,  // 126: taskguild.v1.AgentManagerService.RequestSkillComparison:output_type -> taskguild.v1.RequestSkillComparisonResponse
+	89,  // 127: taskguild.v1.AgentManagerService.ReportSkillComparison:output_type -> taskguild.v1.ReportSkillComparisonResponse
+	91,  // 128: taskguild.v1.AgentManagerService.GetSkillComparison:output_type -> taskguild.v1.GetSkillComparisonResponse
+	93,  // 129: taskguild.v1.AgentManagerService.ResolveSkillConflict:output_type -> taskguild.v1.ResolveSkillConflictResponse
+	100, // 130: taskguild.v1.AgentManagerService.SyncClaudeSettings:output_type -> taskguild.v1.SyncClaudeSettingsAgentResponse
+	95,  // [95:131] is the sub-list for method output_type
+	59,  // [59:95] is the sub-list for method input_type
+	59,  // [59:59] is the sub-list for extension type_name
+	59,  // [59:59] is the sub-list for extension extendee
+	0,   // [0:59] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_agent_manager_proto_init() }
@@ -6191,6 +6359,7 @@ func file_taskguild_v1_agent_manager_proto_init() {
 	file_taskguild_v1_script_proto_init()
 	file_taskguild_v1_single_command_permission_proto_init()
 	file_taskguild_v1_skill_proto_init()
+	file_taskguild_v1_claude_settings_proto_init()
 	file_taskguild_v1_task_log_proto_init()
 	file_taskguild_v1_agent_manager_proto_msgTypes[1].OneofWrappers = []any{
 		(*AgentCommand_TaskAvailable)(nil),
@@ -6210,6 +6379,7 @@ func file_taskguild_v1_agent_manager_proto_init() {
 		(*AgentCommand_CompareAgents)(nil),
 		(*AgentCommand_SyncSkills)(nil),
 		(*AgentCommand_CompareSkills)(nil),
+		(*AgentCommand_SyncClaudeSettings)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -6217,7 +6387,7 @@ func file_taskguild_v1_agent_manager_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_agent_manager_proto_rawDesc), len(file_taskguild_v1_agent_manager_proto_rawDesc)),
 			NumEnums:      7,
-			NumMessages:   95,
+			NumMessages:   98,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
