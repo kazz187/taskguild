@@ -24,19 +24,36 @@ const (
 )
 
 // agentMDHarnessPrompt is the system prompt for the agent MD harness agent.
-const agentMDHarnessPrompt = `You are a retrospective reviewer. Your job is to review the work just completed on a task and update the agent's definition file (.claude/agents/<name>.md) with lessons learned.
+const agentMDHarnessPrompt = `You are an efficiency analyst. Your job is to review the work just completed on a task and update the agent's definition file (.claude/agents/<name>.md) with knowledge that will make future tasks faster and cheaper.
 
 The agent definition file uses YAML frontmatter (between --- delimiters) followed by the system prompt body. You MUST preserve the YAML frontmatter exactly as-is. Only modify the prompt body below the closing ---.
 
+Your focus is on TWO types of insights:
+
+**Codebase & Process knowledge** (HIGHER priority):
+- What parts of the codebase did the agent explore unnecessarily? What should it have known to go directly to the right place?
+- What architectural assumptions did the agent make that turned out to be wrong?
+- What existing patterns, utilities, or conventions did the agent miss that would have saved time?
+- What commands or approaches did the agent try that were wrong for this system?
+- What knowledge would have reduced the number of turns or context consumed?
+
+**Technical Guards** (LOWER priority):
+- What specific technical mistakes caused bugs, regressions, or test failures?
+- What API contracts or behavioral quirks need to be remembered?
+
 Rules:
 1. Read the existing agent definition file.
-2. Analyze the task summary and identify any failures, mistakes, or inefficiencies encountered.
-3. For each failure, determine a concise preventive guideline.
-4. Append or merge new lessons into a "## Lessons Learned" section at the end of the prompt body.
-5. Keep entries concise (one line per lesson). Do not duplicate existing entries.
-6. If no failures or issues were encountered, do not modify the file.
-7. Do NOT modify the YAML frontmatter between the --- delimiters.
-8. Write in English.`
+2. Analyze the task summary using the questions above.
+3. Prioritize generalizable process insights over task-specific technical fixes.
+4. Append new lessons to the "## Lessons Learned" section at the end of the prompt body, organized under subsections:
+   - "### Codebase & Process" for navigational/architectural/workflow knowledge
+   - "### Technical Guards" for specific technical pitfalls
+5. If subsections do not exist yet, create them and move any existing uncategorized lessons under "### Technical Guards".
+6. Keep entries concise (one or two lines per lesson). Do not duplicate existing entries.
+7. A lesson is worth adding ONLY if it would save time on a DIFFERENT future task -- not just prevent the exact same bug.
+8. If the task was completed efficiently with no wasted exploration or mistakes, do not modify the file.
+9. Do NOT modify the YAML frontmatter between the --- delimiters.
+10. Write in English.`
 
 // maybeRunAgentMDHarness checks the metadata flag and launches the agent MD
 // harness in a background goroutine if enabled.
@@ -178,14 +195,25 @@ func buildHarnessUserPrompt(taskID, title, description, summary, agentMDPath str
 ### Task Summary / Output
 %s
 
+## Analysis
+
+Before updating the agent definition file, answer these questions internally:
+
+1. **Wasted exploration**: Did the agent spend turns reading files or exploring directories that turned out to be irrelevant? What prior knowledge of the codebase structure would have let it go directly to the right files?
+2. **Wrong assumptions**: Did the agent assume something about the architecture, build system, or conventions that turned out to be incorrect? What should the agent know about how this system works?
+3. **Missed existing patterns**: Did the agent write something from scratch when an existing utility, helper, or pattern was already available? Where should it look first in the future?
+4. **Inefficient commands**: Did the agent run commands that failed or were unnecessary because it misunderstood the development workflow?
+5. **Technical errors**: Did the agent introduce bugs, fail tests, or hit runtime errors that required backtracking?
+
 ## Instructions
 
 1. Read the agent definition file at: %s
-2. Review the task summary above for any failures, mistakes, regressions, or inefficiencies.
-3. If issues are found, append concise one-line prevention guidelines to a "## Lessons Learned" section at the end of the prompt body (after the YAML frontmatter).
-4. Do not duplicate existing lessons. Merge similar ones.
-5. Do NOT modify the YAML frontmatter (the content between --- delimiters).
-6. If no issues were found, leave the file unchanged.
+2. Based on your analysis above, add lessons that would help the agent work MORE EFFICIENTLY on future tasks.
+3. Organize lessons under "### Codebase & Process" (for navigational/workflow knowledge) or "### Technical Guards" (for specific technical pitfalls) within the "## Lessons Learned" section.
+4. Prefer process-level insights over task-specific fixes. Good examples: "always check existing test files in pkg/X/testdata/ before writing new test fixtures", "the workflow status definitions are in internal/project/seeder.go, not in the proto files". Bad examples: "use buffered channel for X".
+5. Do not duplicate existing lessons. Merge similar ones.
+6. Do NOT modify the YAML frontmatter (the content between --- delimiters).
+7. If the task was completed efficiently with no issues, leave the file unchanged.
 `,
 		taskID, title, description, summary, agentMDPath)
 }

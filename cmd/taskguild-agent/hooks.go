@@ -68,6 +68,12 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 
 	logger.Info("executing hooks", "count", len(filtered), "trigger", trigger)
 
+	// Warn if worktree branch has no commits ahead of the default branch.
+	// This catches cases where the agent accidentally committed on the wrong branch.
+	if trigger == "after_task_execution" {
+		warnIfWorktreeEmpty(ctx, workDir, logger, tl)
+	}
+
 	for _, h := range filtered {
 		logger.Info("running hook", "name", h.Name, "hook_id", h.ID, "skill_id", h.SkillID)
 		if tl != nil {
@@ -89,18 +95,70 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 
 		if err != nil {
 			logger.Error("hook failed", "name", h.Name, "error", err)
+			if tl != nil {
+				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_HOOK, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
+					fmt.Sprintf("Hook failed: %s: %v", h.Name, err), nil)
+			}
 			continue
 		}
 		if result.Result != nil && result.Result.IsError {
 			logger.Error("hook returned error", "name", h.Name, "result", result.Result.Result)
+			if tl != nil {
+				resultPreview := truncateText(result.Result.Result, 200)
+				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_HOOK, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
+					fmt.Sprintf("Hook returned error: %s: %s", h.Name, resultPreview), nil)
+			}
 			continue
 		}
 
 		logger.Info("hook completed successfully", "name", h.Name)
+		if tl != nil {
+			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_HOOK, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+				fmt.Sprintf("Hook completed: %s", h.Name), nil)
+		}
 
 		// Parse TASK_METADATA directives from hook output and update the task.
 		if taskClient != nil && result.Result != nil {
 			applyHookMetadata(ctx, taskID, result.Result.Result, taskClient)
+		}
+	}
+}
+
+// warnIfWorktreeEmpty checks whether the current branch in workDir has any
+// commits ahead of the default branch (main/master). If not, it logs a warning
+// to the task logger so the user knows that hooks like create-pr will fail.
+// This catches the common mistake where the agent accidentally committed on
+// the main repository branch instead of the worktree branch.
+func warnIfWorktreeEmpty(ctx context.Context, workDir string, logger *slog.Logger, tl *taskLogger) {
+	// Detect default branch name.
+	defaultBranch := "main"
+	cmd := exec.CommandContext(ctx, "git", "rev-parse", "--verify", "--quiet", "main")
+	cmd.Dir = workDir
+	if err := cmd.Run(); err != nil {
+		cmd2 := exec.CommandContext(ctx, "git", "rev-parse", "--verify", "--quiet", "master")
+		cmd2.Dir = workDir
+		if err2 := cmd2.Run(); err2 != nil {
+			// Neither main nor master exist; skip the check.
+			return
+		}
+		defaultBranch = "master"
+	}
+
+	// Count commits ahead of the default branch.
+	logCmd := exec.CommandContext(ctx, "git", "log", defaultBranch+"..HEAD", "--oneline")
+	logCmd.Dir = workDir
+	out, err := logCmd.Output()
+	if err != nil {
+		logger.Warn("warnIfWorktreeEmpty: git log failed", "error", err)
+		return
+	}
+
+	lines := strings.TrimSpace(string(out))
+	if lines == "" {
+		msg := fmt.Sprintf("Warning: worktree branch has no commits ahead of %s — hooks that create PRs will not find any diff", defaultBranch)
+		logger.Warn(msg, "workDir", workDir)
+		if tl != nil {
+			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_HOOK, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN, msg, nil)
 		}
 	}
 }

@@ -131,6 +131,9 @@ func buildWorkflowContext(metadata map[string]string) string {
 			sb.WriteString("\n### Git Worktree\n")
 			sb.WriteString(fmt.Sprintf("Branch: `worktree-%s` | Dir: `.claude/worktrees/%s/`\n", wt, wt))
 			sb.WriteString("All file modifications and commits must occur within this worktree.\n")
+			sb.WriteString("IMPORTANT: Do NOT use `cd` to navigate outside of this worktree directory.\n")
+			sb.WriteString("Your CWD is already set to the worktree — use relative paths or paths within this directory.\n")
+			sb.WriteString("Any `git add`, `git commit`, `git push` commands must be executed from within the worktree.\n")
 		}
 	}
 
