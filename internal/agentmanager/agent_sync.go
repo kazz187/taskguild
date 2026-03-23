@@ -127,7 +127,7 @@ func (s *Server) SyncClaudeSettings(ctx context.Context, req *connect.Request[ta
 	}
 
 	// Merge: local value takes precedence if non-empty and stored is empty.
-	merged := mergeClaudeSettings(stored, req.Msg.LocalLanguage)
+	merged := mergeClaudeSettings(stored, req.Msg.LocalLanguage, attributionFromProto(req.Msg.LocalAttribution))
 
 	if err := s.claudeSettingsRepo.Upsert(ctx, merged); err != nil {
 		return nil, cerr.ExtractConnectError(ctx, err)
@@ -135,23 +135,56 @@ func (s *Server) SyncClaudeSettings(ctx context.Context, req *connect.Request[ta
 
 	return connect.NewResponse(&taskguildv1.SyncClaudeSettingsAgentResponse{
 		Settings: &taskguildv1.ClaudeSettings{
-			ProjectId: proj.ID,
-			Language:  merged.Language,
-			UpdatedAt: timestamppb.New(merged.UpdatedAt),
+			ProjectId:   proj.ID,
+			Language:    merged.Language,
+			Attribution: attributionToProto(merged.Attribution),
+			UpdatedAt:   timestamppb.New(merged.UpdatedAt),
 		},
 	}), nil
 }
 
+func attributionFromProto(a *taskguildv1.Attribution) *claudesettings.Attribution {
+	if a == nil {
+		return nil
+	}
+	return &claudesettings.Attribution{
+		Commit: a.Commit,
+		Pr:     a.Pr,
+	}
+}
+
+func attributionToProto(a *claudesettings.Attribution) *taskguildv1.Attribution {
+	if a == nil {
+		return nil
+	}
+	return &taskguildv1.Attribution{
+		Commit: a.Commit,
+		Pr:     a.Pr,
+	}
+}
+
 // mergeClaudeSettings merges local settings with stored settings.
 // Stored values take precedence; local values fill in empty fields.
-func mergeClaudeSettings(stored *claudesettings.ClaudeSettings, localLanguage string) *claudesettings.ClaudeSettings {
+func mergeClaudeSettings(stored *claudesettings.ClaudeSettings, localLanguage string, localAttribution *claudesettings.Attribution) *claudesettings.ClaudeSettings {
 	result := &claudesettings.ClaudeSettings{
-		ProjectID: stored.ProjectID,
-		Language:  stored.Language,
-		UpdatedAt: time.Now(),
+		ProjectID:   stored.ProjectID,
+		Language:    stored.Language,
+		Attribution: stored.Attribution,
+		UpdatedAt:   time.Now(),
 	}
 	if result.Language == "" && localLanguage != "" {
 		result.Language = localLanguage
+	}
+	if localAttribution != nil {
+		if result.Attribution == nil {
+			result.Attribution = &claudesettings.Attribution{}
+		}
+		if result.Attribution.Commit == nil && localAttribution.Commit != nil {
+			result.Attribution.Commit = localAttribution.Commit
+		}
+		if result.Attribution.Pr == nil && localAttribution.Pr != nil {
+			result.Attribution.Pr = localAttribution.Pr
+		}
 	}
 	return result
 }

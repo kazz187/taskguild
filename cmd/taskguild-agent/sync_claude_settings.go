@@ -24,12 +24,13 @@ func syncClaudeSettings(ctx context.Context, client taskguildv1connect.AgentMana
 	settingsPath := filepath.Join(cfg.WorkDir, ".claude", "settings.json")
 
 	// Read existing settings.json (may not exist).
-	localLanguage, rawSettings := readLocalClaudeSettings(settingsPath)
+	localLanguage, localAttribution, rawSettings := readLocalClaudeSettings(settingsPath)
 
 	// Call SyncClaudeSettings RPC.
 	resp, err := client.SyncClaudeSettings(ctx, connect.NewRequest(&v1.SyncClaudeSettingsAgentRequest{
-		ProjectName:   cfg.ProjectName,
-		LocalLanguage: localLanguage,
+		ProjectName:      cfg.ProjectName,
+		LocalLanguage:    localLanguage,
+		LocalAttribution: localAttribution,
 	}))
 	if err != nil {
 		slog.Error("claude settings sync failed", "error", err)
@@ -47,21 +48,36 @@ func syncClaudeSettings(ctx context.Context, client taskguildv1connect.AgentMana
 
 // readLocalClaudeSettings reads the settings fields from a .claude/settings.json file.
 // Returns empty values and an empty map if the file doesn't exist or has no settings.
-func readLocalClaudeSettings(path string) (language string, raw map[string]interface{}) {
+func readLocalClaudeSettings(path string) (language string, attribution *v1.Attribution, raw map[string]interface{}) {
 	raw = make(map[string]interface{})
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return "", raw
+		return "", nil, raw
 	}
 
 	if err := json.Unmarshal(data, &raw); err != nil {
 		slog.Warn("failed to parse settings.json for claude settings", "error", err)
-		return "", raw
+		return "", nil, raw
 	}
 
 	language, _ = raw["language"].(string)
-	return language, raw
+
+	if attrRaw, ok := raw["attribution"].(map[string]interface{}); ok {
+		attribution = &v1.Attribution{}
+		if val, exists := attrRaw["commit"]; exists {
+			if s, ok := val.(string); ok {
+				attribution.Commit = &s
+			}
+		}
+		if val, exists := attrRaw["pr"]; exists {
+			if s, ok := val.(string); ok {
+				attribution.Pr = &s
+			}
+		}
+	}
+
+	return language, attribution, raw
 }
 
 // writeLocalClaudeSettings writes the merged settings back to settings.json,
@@ -78,9 +94,24 @@ func writeLocalClaudeSettings(path string, raw map[string]interface{}, merged *v
 		return
 	}
 
-	// Update only the settings fields (language).
+	// Update only the settings fields (language, attribution).
 	if merged.GetLanguage() != "" {
 		raw["language"] = merged.GetLanguage()
+	}
+
+	if attr := merged.GetAttribution(); attr != nil {
+		attrMap := make(map[string]interface{})
+		if attr.Commit != nil {
+			attrMap["commit"] = *attr.Commit
+		} else {
+			attrMap["commit"] = nil
+		}
+		if attr.Pr != nil {
+			attrMap["pr"] = *attr.Pr
+		} else {
+			attrMap["pr"] = nil
+		}
+		raw["attribution"] = attrMap
 	}
 
 	data, err := json.MarshalIndent(raw, "", "    ")

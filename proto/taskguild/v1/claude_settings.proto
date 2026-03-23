@@ -19,11 +19,19 @@ service ClaudeSettingsService {
   rpc SyncClaudeSettingsFromDir(SyncClaudeSettingsFromDirRequest) returns (SyncClaudeSettingsFromDirResponse);
 }
 
+// Attribution holds optional attribution messages appended to commits and PRs.
+// Each field uses proto3 optional so that null (not set) and "" (empty) are distinct.
+message Attribution {
+  optional string commit = 1;  // null = not configured, "" = off, value = custom text
+  optional string pr = 2;      // null = not configured, "" = off, value = custom text
+}
+
 // ClaudeSettings represents project-scoped Claude Code settings.
 message ClaudeSettings {
   string project_id = 1;
   string language = 2;
   google.protobuf.Timestamp updated_at = 3;
+  Attribution attribution = 4;
 }
 
 message GetClaudeSettingsRequest {
@@ -36,6 +44,7 @@ message GetClaudeSettingsResponse {
 message UpdateClaudeSettingsRequest {
   string project_id = 1;
   string language = 2;
+  Attribution attribution = 3;
 }
 message UpdateClaudeSettingsResponse {
   ClaudeSettings settings = 1;
