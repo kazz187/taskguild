@@ -292,17 +292,13 @@ function ToolUseDetail({ metadata }: { metadata: Record<string, string> }) {
       {toolInput && (
         <div>
           <div className="text-[9px] text-gray-600 font-medium mb-0.5 uppercase tracking-wider">Input</div>
-          <pre className="text-[11px] text-gray-400 font-mono whitespace-pre-wrap break-all bg-slate-900/50 rounded px-2 py-1 max-h-48 overflow-y-auto">
-            {formatJsonSafe(toolInput)}
-          </pre>
+          <JsonKeyValueDisplay raw={toolInput} />
         </div>
       )}
       {toolOutput && (
         <div>
           <div className="text-[9px] text-gray-600 font-medium mb-0.5 uppercase tracking-wider">Output</div>
-          <pre className="text-[11px] text-gray-400 font-mono whitespace-pre-wrap break-all bg-slate-900/50 rounded px-2 py-1 max-h-48 overflow-y-auto">
-            {formatJsonSafe(toolOutput)}
-          </pre>
+          <JsonKeyValueDisplay raw={toolOutput} />
         </div>
       )}
       {error && (
@@ -366,41 +362,50 @@ function isExpandableCategory(category: TaskLogCategory): boolean {
   )
 }
 
-/** Try to pretty-print JSON with depth-limited expansion (2 levels), fall back to raw string. */
-function formatJsonSafe(raw: string): string {
-  try {
-    const parsed = JSON.parse(raw)
-    return stringifyDepthLimited(parsed, 2)
-  } catch {
-    return raw
-  }
+/** Format a value as a display string. Objects/arrays are shown as compact JSON. */
+function formatValue(value: unknown): string {
+  if (value === null || value === undefined) return String(value)
+  if (typeof value === 'string') return value
+  if (typeof value === 'object') return JSON.stringify(value)
+  return String(value)
 }
 
-/** Stringify JSON expanding objects/arrays only up to maxDepth levels. Beyond that, inline. */
-function stringifyDepthLimited(value: unknown, maxDepth: number, currentDepth = 0): string {
-  if (value === null || value === undefined || typeof value !== 'object') {
-    return JSON.stringify(value)
+/** Render JSON as flat key-value pairs. Falls back to raw string for non-object JSON. */
+function JsonKeyValueDisplay({ raw }: { raw: string }) {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return (
+      <pre className="text-[11px] text-gray-400 font-mono whitespace-pre-wrap break-all bg-slate-900/50 rounded px-2 py-1 max-h-48 overflow-y-auto">
+        {raw}
+      </pre>
+    )
   }
 
-  const indent = '  '.repeat(currentDepth + 1)
-  const closingIndent = '  '.repeat(currentDepth)
-
-  if (Array.isArray(value)) {
-    if (value.length === 0) return '[]'
-    if (currentDepth >= maxDepth) return JSON.stringify(value)
-    const items = value.map((item) => `${indent}${stringifyDepthLimited(item, maxDepth, currentDepth + 1)}`)
-    return `[\n${items.join(',\n')}\n${closingIndent}]`
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return (
+      <pre className="text-[11px] text-gray-400 font-mono whitespace-pre-wrap break-all bg-slate-900/50 rounded px-2 py-1 max-h-48 overflow-y-auto">
+        {typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, 2)}
+      </pre>
+    )
   }
 
-  const keys = Object.keys(value as Record<string, unknown>)
-  if (keys.length === 0) return '{}'
-  if (currentDepth >= maxDepth) return JSON.stringify(value)
+  const entries = Object.entries(parsed as Record<string, unknown>)
+  if (entries.length === 0) return null
 
-  const entries = keys.map((key) => {
-    const val = (value as Record<string, unknown>)[key]
-    return `${indent}${JSON.stringify(key)}: ${stringifyDepthLimited(val, maxDepth, currentDepth + 1)}`
-  })
-  return `{\n${entries.join(',\n')}\n${closingIndent}}`
+  return (
+    <div className="bg-slate-900/50 rounded px-2 py-1 max-h-48 overflow-y-auto space-y-1">
+      {entries.map(([key, value]) => (
+        <div key={key}>
+          <div className="text-[10px] text-gray-500 font-medium capitalize">{key}</div>
+          <div className="text-[11px] text-gray-400 font-mono whitespace-pre-wrap break-all">
+            {formatValue(value)}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function getCategoryIcon(category: TaskLogCategory) {
