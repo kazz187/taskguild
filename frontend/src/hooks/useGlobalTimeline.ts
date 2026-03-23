@@ -6,7 +6,7 @@ import { listInteractions } from '@taskguild/proto/taskguild/v1/interaction-Inte
 import { listTaskLogs } from '@taskguild/proto/taskguild/v1/task_log-TaskLogService_connectquery.ts'
 import { InteractionStatus, InteractionType } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
-import { useEventSubscription, type ConnectionStatus } from './useEventSubscription'
+import { useEventSubscription } from './useEventSubscription'
 import type { Interaction } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import type { TimelineItem } from '@/components/organisms/TimelineEntry'
 

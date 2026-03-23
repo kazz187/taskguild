@@ -144,8 +144,10 @@ function ProjectChatPage() {
             <p className="text-gray-500 text-sm text-center py-12">No interactions yet.</p>
           )}
           {timelineItems.map((item, idx) => {
+            if (item.kind !== 'interaction') return null
+            const prev = idx > 0 ? timelineItems[idx - 1] : null
             const taskId = item.interaction.taskId
-            const prevTaskId = idx > 0 ? timelineItems[idx - 1].interaction.taskId : null
+            const prevTaskId = prev?.kind === 'interaction' ? prev.interaction.taskId : null
             const showTaskLabel = taskId !== prevTaskId
             const taskTitle = taskMap.get(taskId) || shortId(taskId)
 

@@ -26,19 +26,22 @@ const (
 type ScriptLogStream int32
 
 const (
-	ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT ScriptLogStream = 0
-	ScriptLogStream_SCRIPT_LOG_STREAM_STDERR ScriptLogStream = 1
+	ScriptLogStream_SCRIPT_LOG_STREAM_UNSPECIFIED ScriptLogStream = 0
+	ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT      ScriptLogStream = 1
+	ScriptLogStream_SCRIPT_LOG_STREAM_STDERR      ScriptLogStream = 2
 )
 
 // Enum value maps for ScriptLogStream.
 var (
 	ScriptLogStream_name = map[int32]string{
-		0: "SCRIPT_LOG_STREAM_STDOUT",
-		1: "SCRIPT_LOG_STREAM_STDERR",
+		0: "SCRIPT_LOG_STREAM_UNSPECIFIED",
+		1: "SCRIPT_LOG_STREAM_STDOUT",
+		2: "SCRIPT_LOG_STREAM_STDERR",
 	}
 	ScriptLogStream_value = map[string]int32{
-		"SCRIPT_LOG_STREAM_STDOUT": 0,
-		"SCRIPT_LOG_STREAM_STDERR": 1,
+		"SCRIPT_LOG_STREAM_UNSPECIFIED": 0,
+		"SCRIPT_LOG_STREAM_STDOUT":      1,
+		"SCRIPT_LOG_STREAM_STDERR":      2,
 	}
 )
 
@@ -1153,7 +1156,7 @@ func (x *ScriptLogEntry) GetStream() ScriptLogStream {
 	if x != nil {
 		return x.Stream
 	}
-	return ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT
+	return ScriptLogStream_SCRIPT_LOG_STREAM_UNSPECIFIED
 }
 
 func (x *ScriptLogEntry) GetText() string {
@@ -1561,10 +1564,11 @@ const file_taskguild_v1_script_proto_rawDesc = "" +
 	"\tcompleted\x18\x03 \x01(\bR\tcompleted\x12\x18\n" +
 	"\asuccess\x18\x04 \x01(\bR\asuccess\x12\x1b\n" +
 	"\texit_code\x18\x05 \x01(\x05R\bexitCode\x12#\n" +
-	"\rerror_message\x18\x06 \x01(\tR\ferrorMessage*M\n" +
-	"\x0fScriptLogStream\x12\x1c\n" +
-	"\x18SCRIPT_LOG_STREAM_STDOUT\x10\x00\x12\x1c\n" +
-	"\x18SCRIPT_LOG_STREAM_STDERR\x10\x012\xbf\a\n" +
+	"\rerror_message\x18\x06 \x01(\tR\ferrorMessage*p\n" +
+	"\x0fScriptLogStream\x12!\n" +
+	"\x1dSCRIPT_LOG_STREAM_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18SCRIPT_LOG_STREAM_STDOUT\x10\x01\x12\x1c\n" +
+	"\x18SCRIPT_LOG_STREAM_STDERR\x10\x022\xbf\a\n" +
 	"\rScriptService\x12U\n" +
 	"\fCreateScript\x12!.taskguild.v1.CreateScriptRequest\x1a\".taskguild.v1.CreateScriptResponse\x12L\n" +
 	"\tGetScript\x12\x1e.taskguild.v1.GetScriptRequest\x1a\x1f.taskguild.v1.GetScriptResponse\x12R\n" +
