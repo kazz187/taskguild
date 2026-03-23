@@ -14,6 +14,7 @@ import { Route as GlobalChatRouteImport } from './routes/global-chat'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectsProjectIdIndexRouteImport } from './routes/projects/$projectId/index'
 import { Route as ProjectsProjectIdWorktreesRouteImport } from './routes/projects/$projectId/worktrees'
+import { Route as ProjectsProjectIdWorkflowsRouteImport } from './routes/projects/$projectId/workflows'
 import { Route as ProjectsProjectIdSkillsRouteImport } from './routes/projects/$projectId/skills'
 import { Route as ProjectsProjectIdSettingsRouteImport } from './routes/projects/$projectId/settings'
 import { Route as ProjectsProjectIdScriptsRouteImport } from './routes/projects/$projectId/scripts'
@@ -46,6 +47,12 @@ const ProjectsProjectIdWorktreesRoute =
   ProjectsProjectIdWorktreesRouteImport.update({
     id: '/projects/$projectId/worktrees',
     path: '/projects/$projectId/worktrees',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ProjectsProjectIdWorkflowsRoute =
+  ProjectsProjectIdWorkflowsRouteImport.update({
+    id: '/projects/$projectId/workflows',
+    path: '/projects/$projectId/workflows',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ProjectsProjectIdSkillsRoute = ProjectsProjectIdSkillsRouteImport.update({
@@ -98,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/scripts': typeof ProjectsProjectIdScriptsRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId/skills': typeof ProjectsProjectIdSkillsRoute
+  '/projects/$projectId/workflows': typeof ProjectsProjectIdWorkflowsRoute
   '/projects/$projectId/worktrees': typeof ProjectsProjectIdWorktreesRoute
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/tasks/$taskId': typeof ProjectsProjectIdTasksTaskIdRoute
@@ -112,6 +120,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/scripts': typeof ProjectsProjectIdScriptsRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId/skills': typeof ProjectsProjectIdSkillsRoute
+  '/projects/$projectId/workflows': typeof ProjectsProjectIdWorkflowsRoute
   '/projects/$projectId/worktrees': typeof ProjectsProjectIdWorktreesRoute
   '/projects/$projectId': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/tasks/$taskId': typeof ProjectsProjectIdTasksTaskIdRoute
@@ -127,6 +136,7 @@ export interface FileRoutesById {
   '/projects/$projectId/scripts': typeof ProjectsProjectIdScriptsRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId/skills': typeof ProjectsProjectIdSkillsRoute
+  '/projects/$projectId/workflows': typeof ProjectsProjectIdWorkflowsRoute
   '/projects/$projectId/worktrees': typeof ProjectsProjectIdWorktreesRoute
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/tasks/$taskId': typeof ProjectsProjectIdTasksTaskIdRoute
@@ -143,6 +153,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/scripts'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/skills'
+    | '/projects/$projectId/workflows'
     | '/projects/$projectId/worktrees'
     | '/projects/$projectId/'
     | '/projects/$projectId/tasks/$taskId'
@@ -157,6 +168,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/scripts'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/skills'
+    | '/projects/$projectId/workflows'
     | '/projects/$projectId/worktrees'
     | '/projects/$projectId'
     | '/projects/$projectId/tasks/$taskId'
@@ -171,6 +183,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/scripts'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/skills'
+    | '/projects/$projectId/workflows'
     | '/projects/$projectId/worktrees'
     | '/projects/$projectId/'
     | '/projects/$projectId/tasks/$taskId'
@@ -186,6 +199,7 @@ export interface RootRouteChildren {
   ProjectsProjectIdScriptsRoute: typeof ProjectsProjectIdScriptsRoute
   ProjectsProjectIdSettingsRoute: typeof ProjectsProjectIdSettingsRoute
   ProjectsProjectIdSkillsRoute: typeof ProjectsProjectIdSkillsRoute
+  ProjectsProjectIdWorkflowsRoute: typeof ProjectsProjectIdWorkflowsRoute
   ProjectsProjectIdWorktreesRoute: typeof ProjectsProjectIdWorktreesRoute
   ProjectsProjectIdIndexRoute: typeof ProjectsProjectIdIndexRoute
   ProjectsProjectIdTasksTaskIdRoute: typeof ProjectsProjectIdTasksTaskIdRoute
@@ -226,6 +240,13 @@ declare module '@tanstack/react-router' {
       path: '/projects/$projectId/worktrees'
       fullPath: '/projects/$projectId/worktrees'
       preLoaderRoute: typeof ProjectsProjectIdWorktreesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects/$projectId/workflows': {
+      id: '/projects/$projectId/workflows'
+      path: '/projects/$projectId/workflows'
+      fullPath: '/projects/$projectId/workflows'
+      preLoaderRoute: typeof ProjectsProjectIdWorkflowsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects/$projectId/skills': {
@@ -290,6 +311,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProjectsProjectIdScriptsRoute: ProjectsProjectIdScriptsRoute,
   ProjectsProjectIdSettingsRoute: ProjectsProjectIdSettingsRoute,
   ProjectsProjectIdSkillsRoute: ProjectsProjectIdSkillsRoute,
+  ProjectsProjectIdWorkflowsRoute: ProjectsProjectIdWorkflowsRoute,
   ProjectsProjectIdWorktreesRoute: ProjectsProjectIdWorktreesRoute,
   ProjectsProjectIdIndexRoute: ProjectsProjectIdIndexRoute,
   ProjectsProjectIdTasksTaskIdRoute: ProjectsProjectIdTasksTaskIdRoute,

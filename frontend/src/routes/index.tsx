@@ -1,8 +1,8 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { listProjects, createProject, reorderProjects, updateProject } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
-import { Folder, ArrowRight, Plus, X, Eye, EyeOff } from 'lucide-react'
+import { Folder, ArrowRight, Plus, X, Eye, EyeOff, MessageSquare, Layers } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import {
   DndContext,
@@ -96,6 +96,26 @@ function ProjectsPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-4xl">
+      {/* Global Chats & Templates */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-6 md:mb-8">
+        <Link
+          to="/global-chat"
+          className="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-cyan-500/50 transition-all group"
+        >
+          <MessageSquare className="w-5 h-5 text-cyan-400 shrink-0" />
+          <span className="text-base font-semibold text-white group-hover:text-cyan-400 transition-colors">Global Chats</span>
+          <ArrowRight className="w-4 h-4 text-gray-600 group-hover:text-cyan-400 transition-colors ml-auto" />
+        </Link>
+        <Link
+          to="/templates"
+          className="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-amber-500/50 transition-all group"
+        >
+          <Layers className="w-5 h-5 text-amber-400 shrink-0" />
+          <span className="text-base font-semibold text-white group-hover:text-amber-400 transition-colors">Templates</span>
+          <ArrowRight className="w-4 h-4 text-gray-600 group-hover:text-amber-400 transition-colors ml-auto" />
+        </Link>
+      </div>
+
       <div className="flex items-center justify-between mb-4 md:mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-white">Projects</h1>
         <button
@@ -198,7 +218,7 @@ function SortableProjectCard({ projectId, name, description, repositoryUrl, hidd
       ref={setNodeRef}
       style={style}
       className="block bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-5 hover:border-cyan-500/50 transition-all group active:bg-slate-800/50 cursor-grab active:cursor-grabbing"
-      onClick={() => navigate({ to: '/projects/$projectId', params: { projectId } })}
+      onClick={() => navigate({ to: '/projects/$projectId/workflows', params: { projectId } })}
       {...attributes}
       {...listeners}
     >
