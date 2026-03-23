@@ -34,12 +34,12 @@ func TestBuildWorkflowContext(t *testing.T) {
 			},
 			contains: []string{
 				"## TaskGuild Workflow Context",
-				"### Workflow Statuses",
+				"### Workflow",
 				"- Backlog\n",
-				"- In Progress  <-- current\n",
+				"- **In Progress** (current)\n",
 				"- Review\n",
 				"- Done\n",
-				"### Available Transitions",
+				"### Status Transition",
 				"- Review\n",
 				"### Hooks",
 				`"Run linter" (skill)`,
@@ -57,10 +57,10 @@ func TestBuildWorkflowContext(t *testing.T) {
 				"_available_transitions": `[{"name":"In Progress"}]`,
 			},
 			contains: []string{
-				"### Workflow Statuses",
-				"- Backlog  <-- current\n",
+				"### Workflow",
+				"- **Backlog** (current)\n",
 				"- In Progress\n",
-				"### Available Transitions",
+				"### Status Transition",
 			},
 			excludes: []string{
 				"### Hooks",
@@ -78,8 +78,8 @@ func TestBuildWorkflowContext(t *testing.T) {
 				"## TaskGuild Workflow Context",
 			},
 			excludes: []string{
-				"### Workflow Statuses",
-				"### Available Transitions",
+				"### Workflow",
+				"### Status Transition",
 				"### Hooks",
 			},
 		},
@@ -104,7 +104,7 @@ func TestBuildWorkflowContext(t *testing.T) {
 			contains: []string{
 				"- A\n",
 				"- B\n",
-				"- C  <-- current\n",
+				"- **C** (current)\n",
 			},
 		},
 	}

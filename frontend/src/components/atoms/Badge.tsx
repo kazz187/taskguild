@@ -12,6 +12,7 @@ export interface BadgeProps {
   pill?: boolean
   icon?: ReactNode
   className?: string
+  onClick?: () => void
 }
 
 const colorMap: Record<
@@ -69,17 +70,21 @@ export function Badge({
   pill = false,
   icon,
   className = '',
+  onClick,
 }: BadgeProps) {
   const colorCls = colorMap[color][variant]
   const sizeCls = sizeClasses[size]
   const roundedCls = pill ? 'rounded-full' : 'rounded'
+  const Tag = onClick ? 'button' : 'span'
 
   return (
-    <span
+    <Tag
+      type={onClick ? 'button' : undefined}
+      onClick={onClick}
       className={`inline-flex items-center gap-1 font-medium shrink-0 ${roundedCls} ${colorCls} ${sizeCls} ${className}`}
     >
       {icon && <span className="shrink-0">{icon}</span>}
       {children}
-    </span>
+    </Tag>
   )
 }
