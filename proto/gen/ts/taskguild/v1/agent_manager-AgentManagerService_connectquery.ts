@@ -246,3 +246,11 @@ export const getSkillComparison = AgentManagerService.method.getSkillComparison;
  * @generated from rpc taskguild.v1.AgentManagerService.ResolveSkillConflict
  */
 export const resolveSkillConflict = AgentManagerService.method.resolveSkillConflict;
+
+/**
+ * SyncClaudeSettings merges local .claude/settings.json settings (language, etc.)
+ * with the backend's stored settings and returns the merged result.
+ *
+ * @generated from rpc taskguild.v1.AgentManagerService.SyncClaudeSettings
+ */
+export const syncClaudeSettings = AgentManagerService.method.syncClaudeSettings;

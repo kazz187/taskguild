@@ -268,6 +268,7 @@ func runAgent() {
 		syncAgents(ctx, client, cfg, nil, forceAll)
 		firstSync = false
 		syncPermissions(ctx, client, cfg, permCache)
+		syncClaudeSettings(ctx, client, cfg)
 		syncScripts(ctx, client, cfg, nil) // nil = don't force-overwrite any existing files
 		syncSkills(ctx, client, cfg, nil)
 
@@ -556,6 +557,10 @@ func runSubscribeLoop(
 			compareCmd := c.CompareSkills
 			slog.Info("received compare skills command", "request_id", compareCmd.GetRequestId())
 			safeGo("handleCompareSkills", func() { handleCompareSkills(ctx, client, cfg, compareCmd) })
+
+		case *v1.AgentCommand_SyncClaudeSettings:
+			slog.Info("received sync claude settings command, re-syncing")
+			syncClaudeSettings(ctx, client, cfg)
 
 		case *v1.AgentCommand_CancelTask:
 			cancelCmd := c.CancelTask

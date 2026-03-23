@@ -6,7 +6,10 @@ import (
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"time"
+
 	"github.com/kazz187/taskguild/internal/agent"
+	"github.com/kazz187/taskguild/internal/claudesettings"
 	"github.com/kazz187/taskguild/internal/permission"
 	"github.com/kazz187/taskguild/pkg/cerr"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
@@ -105,4 +108,50 @@ func (s *Server) ReportAgentStatus(ctx context.Context, req *connect.Request[tas
 		},
 	)
 	return connect.NewResponse(&taskguildv1.ReportAgentStatusResponse{}), nil
+}
+
+func (s *Server) SyncClaudeSettings(ctx context.Context, req *connect.Request[taskguildv1.SyncClaudeSettingsAgentRequest]) (*connect.Response[taskguildv1.SyncClaudeSettingsAgentResponse], error) {
+	projectName := req.Msg.ProjectName
+	if projectName == "" {
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+	}
+
+	proj, err := s.projectRepo.FindByName(ctx, projectName)
+	if err != nil {
+		return nil, cerr.ExtractConnectError(ctx, err)
+	}
+
+	stored, err := s.claudeSettingsRepo.Get(ctx, proj.ID)
+	if err != nil {
+		return nil, cerr.ExtractConnectError(ctx, err)
+	}
+
+	// Merge: local value takes precedence if non-empty and stored is empty.
+	merged := mergeClaudeSettings(stored, req.Msg.LocalLanguage)
+
+	if err := s.claudeSettingsRepo.Upsert(ctx, merged); err != nil {
+		return nil, cerr.ExtractConnectError(ctx, err)
+	}
+
+	return connect.NewResponse(&taskguildv1.SyncClaudeSettingsAgentResponse{
+		Settings: &taskguildv1.ClaudeSettings{
+			ProjectId: proj.ID,
+			Language:  merged.Language,
+			UpdatedAt: timestamppb.New(merged.UpdatedAt),
+		},
+	}), nil
+}
+
+// mergeClaudeSettings merges local settings with stored settings.
+// Stored values take precedence; local values fill in empty fields.
+func mergeClaudeSettings(stored *claudesettings.ClaudeSettings, localLanguage string) *claudesettings.ClaudeSettings {
+	result := &claudesettings.ClaudeSettings{
+		ProjectID: stored.ProjectID,
+		Language:  stored.Language,
+		UpdatedAt: time.Now(),
+	}
+	if result.Language == "" && localLanguage != "" {
+		result.Language = localLanguage
+	}
+	return result
 }

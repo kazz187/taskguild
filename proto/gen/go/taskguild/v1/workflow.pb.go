@@ -349,14 +349,15 @@ func (x *StatusHook) GetActionId() string {
 // WorkflowStatus defines a custom status in a workflow.
 type WorkflowStatus struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name  string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Order int32                  `protobuf:"varint,3,opt,name=order,proto3" json:"order,omitempty"`
+	// Deprecated: Marked as deprecated in taskguild/v1/workflow.proto.
+	Id    string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"` // Deprecated: use name as unique identifier
+	Name  string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Order int32  `protobuf:"varint,3,opt,name=order,proto3" json:"order,omitempty"`
 	// status flags
 	IsInitial  bool `protobuf:"varint,4,opt,name=is_initial,json=isInitial,proto3" json:"is_initial,omitempty"`
 	IsTerminal bool `protobuf:"varint,5,opt,name=is_terminal,json=isTerminal,proto3" json:"is_terminal,omitempty"`
 	// transitions & agent
-	TransitionsTo []string `protobuf:"bytes,6,rep,name=transitions_to,json=transitionsTo,proto3" json:"transitions_to,omitempty"` // IDs of statuses this can transition to
+	TransitionsTo []string `protobuf:"bytes,6,rep,name=transitions_to,json=transitionsTo,proto3" json:"transitions_to,omitempty"` // Names of statuses this can transition to
 	AgentId       string   `protobuf:"bytes,7,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`                   // ID of the AgentDefinition assigned to this status
 	// hooks
 	Hooks []*StatusHook `protobuf:"bytes,8,rep,name=hooks,proto3" json:"hooks,omitempty"`
@@ -403,6 +404,7 @@ func (*WorkflowStatus) Descriptor() ([]byte, []int) {
 	return file_taskguild_v1_workflow_proto_rawDescGZIP(), []int{2}
 }
 
+// Deprecated: Marked as deprecated in taskguild/v1/workflow.proto.
 func (x *WorkflowStatus) GetId() string {
 	if x != nil {
 		return x.Id
@@ -1165,9 +1167,9 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\x04name\x18\x05 \x01(\tR\x04name\x12=\n" +
 	"\vaction_type\x18\x06 \x01(\x0e2\x1c.taskguild.v1.HookActionTypeR\n" +
 	"actionType\x12\x1b\n" +
-	"\taction_id\x18\a \x01(\tR\bactionId\"\xac\x03\n" +
-	"\x0eWorkflowStatus\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\taction_id\x18\a \x01(\tR\bactionId\"\xb0\x03\n" +
+	"\x0eWorkflowStatus\x12\x12\n" +
+	"\x02id\x18\x01 \x01(\tB\x02\x18\x01R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
 	"\x05order\x18\x03 \x01(\x05R\x05order\x12\x1d\n" +
 	"\n" +

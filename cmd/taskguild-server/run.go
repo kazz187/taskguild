@@ -16,6 +16,8 @@ import (
 	agentrepo "github.com/kazz187/taskguild/internal/agent/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/agentmanager"
 	"github.com/kazz187/taskguild/internal/chatnotifier"
+	"github.com/kazz187/taskguild/internal/claudesettings"
+	claudesettingsrepo "github.com/kazz187/taskguild/internal/claudesettings/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/config"
 	"github.com/kazz187/taskguild/internal/event"
 	"github.com/kazz187/taskguild/internal/eventbus"
@@ -119,6 +121,26 @@ type skillChangeNotifier struct {
 	projectRepo project.Repository
 }
 
+// claudeSettingsChangeNotifier implements claudesettings.ChangeNotifier by broadcasting
+// a SyncClaudeSettingsCommand to connected agents in the same project.
+type claudeSettingsChangeNotifier struct {
+	registry    *agentmanager.Registry
+	projectRepo project.Repository
+}
+
+func (n *claudeSettingsChangeNotifier) NotifyClaudeSettingsChange(projectID string) {
+	p, err := n.projectRepo.Get(context.Background(), projectID)
+	if err != nil {
+		slog.Error("failed to look up project for claude settings change notification", "project_id", projectID, "error", err)
+		return
+	}
+	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
+		Command: &taskguildv1.AgentCommand_SyncClaudeSettings{
+			SyncClaudeSettings: &taskguildv1.SyncClaudeSettingsCommand{},
+		},
+	})
+}
+
 func (n *skillChangeNotifier) NotifySkillChange(projectID string) {
 	p, err := n.projectRepo.Get(context.Background(), projectID)
 	if err != nil {
@@ -184,6 +206,7 @@ func runServer() {
 	permissionRepo := permissionrepo.NewYAMLRepository(store)
 	scpRepo := scprepo.NewYAMLRepository(store)
 	templateRepo := tmplrepo.NewYAMLRepository(store)
+	claudeSettingsRepo := claudesettingsrepo.NewYAMLRepository(store)
 
 	// Setup agent-manager registry
 	agentManagerRegistry := agentmanager.NewRegistry()
@@ -195,7 +218,7 @@ func runServer() {
 	// Setup servers
 	projectServer := project.NewServer(projectRepo)
 	workflowServer := workflow.NewServer(workflowRepo)
-	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, projectRepo, skillRepo, scriptRepo, taskLogRepo, permissionRepo, scpRepo, bus, scriptBroker)
+	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, projectRepo, skillRepo, scriptRepo, taskLogRepo, permissionRepo, scpRepo, claudeSettingsRepo, bus, scriptBroker)
 	taskServer := task.NewServer(taskRepo, workflowRepo, bus, agentManagerServer, agentManagerServer, taskLogRepo, interactionRepo)
 	interactionServer := interaction.NewServer(interactionRepo, taskRepo, bus)
 	agentChangeNotifier := &agentChangeNotifier{
@@ -222,6 +245,11 @@ func runServer() {
 	}
 	scpServer := singlecommandpermission.NewServer(scpRepo, scpChangeNotifier)
 	templateServer := tmpl.NewServer(templateRepo, agentRepo, skillRepo, scriptRepo)
+	csChangeNotifier := &claudeSettingsChangeNotifier{
+		registry:    agentManagerRegistry,
+		projectRepo: projectRepo,
+	}
+	claudeSettingsServer := claudesettings.NewServer(claudeSettingsRepo, csChangeNotifier)
 
 	// Setup push notification
 	vapidEnv := config.VAPIDEnvFromEnv(env)
@@ -246,6 +274,7 @@ func runServer() {
 		permissionServer,
 		scpServer,
 		templateServer,
+		claudeSettingsServer,
 	)
 
 	// Setup orchestrator
