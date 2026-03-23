@@ -674,6 +674,7 @@ message SyncClaudeSettingsCommand {}
 message SyncClaudeSettingsAgentRequest {
   string project_name = 1;
   string local_language = 2;
+  Attribution local_attribution = 3;
 }
 message SyncClaudeSettingsAgentResponse {
   ClaudeSettings settings = 1;

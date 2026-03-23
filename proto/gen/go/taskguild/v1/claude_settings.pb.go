@@ -22,19 +22,74 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Attribution holds optional attribution messages appended to commits and PRs.
+// Each field uses proto3 optional so that null (not set) and "" (empty) are distinct.
+type Attribution struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Commit        *string                `protobuf:"bytes,1,opt,name=commit,proto3,oneof" json:"commit,omitempty"` // null = not configured, "" = off, value = custom text
+	Pr            *string                `protobuf:"bytes,2,opt,name=pr,proto3,oneof" json:"pr,omitempty"`         // null = not configured, "" = off, value = custom text
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Attribution) Reset() {
+	*x = Attribution{}
+	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Attribution) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Attribution) ProtoMessage() {}
+
+func (x *Attribution) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Attribution.ProtoReflect.Descriptor instead.
+func (*Attribution) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_claude_settings_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *Attribution) GetCommit() string {
+	if x != nil && x.Commit != nil {
+		return *x.Commit
+	}
+	return ""
+}
+
+func (x *Attribution) GetPr() string {
+	if x != nil && x.Pr != nil {
+		return *x.Pr
+	}
+	return ""
+}
+
 // ClaudeSettings represents project-scoped Claude Code settings.
 type ClaudeSettings struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	Language      string                 `protobuf:"bytes,2,opt,name=language,proto3" json:"language,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Attribution   *Attribution           `protobuf:"bytes,4,opt,name=attribution,proto3" json:"attribution,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ClaudeSettings) Reset() {
 	*x = ClaudeSettings{}
-	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[0]
+	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -46,7 +101,7 @@ func (x *ClaudeSettings) String() string {
 func (*ClaudeSettings) ProtoMessage() {}
 
 func (x *ClaudeSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[0]
+	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -59,7 +114,7 @@ func (x *ClaudeSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClaudeSettings.ProtoReflect.Descriptor instead.
 func (*ClaudeSettings) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_claude_settings_proto_rawDescGZIP(), []int{0}
+	return file_taskguild_v1_claude_settings_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ClaudeSettings) GetProjectId() string {
@@ -83,6 +138,13 @@ func (x *ClaudeSettings) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *ClaudeSettings) GetAttribution() *Attribution {
+	if x != nil {
+		return x.Attribution
+	}
+	return nil
+}
+
 type GetClaudeSettingsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
@@ -92,7 +154,7 @@ type GetClaudeSettingsRequest struct {
 
 func (x *GetClaudeSettingsRequest) Reset() {
 	*x = GetClaudeSettingsRequest{}
-	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[1]
+	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -104,7 +166,7 @@ func (x *GetClaudeSettingsRequest) String() string {
 func (*GetClaudeSettingsRequest) ProtoMessage() {}
 
 func (x *GetClaudeSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[1]
+	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -117,7 +179,7 @@ func (x *GetClaudeSettingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetClaudeSettingsRequest.ProtoReflect.Descriptor instead.
 func (*GetClaudeSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_claude_settings_proto_rawDescGZIP(), []int{1}
+	return file_taskguild_v1_claude_settings_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *GetClaudeSettingsRequest) GetProjectId() string {
@@ -136,7 +198,7 @@ type GetClaudeSettingsResponse struct {
 
 func (x *GetClaudeSettingsResponse) Reset() {
 	*x = GetClaudeSettingsResponse{}
-	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[2]
+	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -148,7 +210,7 @@ func (x *GetClaudeSettingsResponse) String() string {
 func (*GetClaudeSettingsResponse) ProtoMessage() {}
 
 func (x *GetClaudeSettingsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[2]
+	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -161,7 +223,7 @@ func (x *GetClaudeSettingsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetClaudeSettingsResponse.ProtoReflect.Descriptor instead.
 func (*GetClaudeSettingsResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_claude_settings_proto_rawDescGZIP(), []int{2}
+	return file_taskguild_v1_claude_settings_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetClaudeSettingsResponse) GetSettings() *ClaudeSettings {
@@ -175,13 +237,14 @@ type UpdateClaudeSettingsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	Language      string                 `protobuf:"bytes,2,opt,name=language,proto3" json:"language,omitempty"`
+	Attribution   *Attribution           `protobuf:"bytes,3,opt,name=attribution,proto3" json:"attribution,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateClaudeSettingsRequest) Reset() {
 	*x = UpdateClaudeSettingsRequest{}
-	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[3]
+	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -193,7 +256,7 @@ func (x *UpdateClaudeSettingsRequest) String() string {
 func (*UpdateClaudeSettingsRequest) ProtoMessage() {}
 
 func (x *UpdateClaudeSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[3]
+	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -206,7 +269,7 @@ func (x *UpdateClaudeSettingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateClaudeSettingsRequest.ProtoReflect.Descriptor instead.
 func (*UpdateClaudeSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_claude_settings_proto_rawDescGZIP(), []int{3}
+	return file_taskguild_v1_claude_settings_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *UpdateClaudeSettingsRequest) GetProjectId() string {
@@ -223,6 +286,13 @@ func (x *UpdateClaudeSettingsRequest) GetLanguage() string {
 	return ""
 }
 
+func (x *UpdateClaudeSettingsRequest) GetAttribution() *Attribution {
+	if x != nil {
+		return x.Attribution
+	}
+	return nil
+}
+
 type UpdateClaudeSettingsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Settings      *ClaudeSettings        `protobuf:"bytes,1,opt,name=settings,proto3" json:"settings,omitempty"`
@@ -232,7 +302,7 @@ type UpdateClaudeSettingsResponse struct {
 
 func (x *UpdateClaudeSettingsResponse) Reset() {
 	*x = UpdateClaudeSettingsResponse{}
-	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[4]
+	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -244,7 +314,7 @@ func (x *UpdateClaudeSettingsResponse) String() string {
 func (*UpdateClaudeSettingsResponse) ProtoMessage() {}
 
 func (x *UpdateClaudeSettingsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[4]
+	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -257,7 +327,7 @@ func (x *UpdateClaudeSettingsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateClaudeSettingsResponse.ProtoReflect.Descriptor instead.
 func (*UpdateClaudeSettingsResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_claude_settings_proto_rawDescGZIP(), []int{4}
+	return file_taskguild_v1_claude_settings_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *UpdateClaudeSettingsResponse) GetSettings() *ClaudeSettings {
@@ -277,7 +347,7 @@ type SyncClaudeSettingsFromDirRequest struct {
 
 func (x *SyncClaudeSettingsFromDirRequest) Reset() {
 	*x = SyncClaudeSettingsFromDirRequest{}
-	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[5]
+	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -289,7 +359,7 @@ func (x *SyncClaudeSettingsFromDirRequest) String() string {
 func (*SyncClaudeSettingsFromDirRequest) ProtoMessage() {}
 
 func (x *SyncClaudeSettingsFromDirRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[5]
+	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -302,7 +372,7 @@ func (x *SyncClaudeSettingsFromDirRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncClaudeSettingsFromDirRequest.ProtoReflect.Descriptor instead.
 func (*SyncClaudeSettingsFromDirRequest) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_claude_settings_proto_rawDescGZIP(), []int{5}
+	return file_taskguild_v1_claude_settings_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *SyncClaudeSettingsFromDirRequest) GetProjectId() string {
@@ -328,7 +398,7 @@ type SyncClaudeSettingsFromDirResponse struct {
 
 func (x *SyncClaudeSettingsFromDirResponse) Reset() {
 	*x = SyncClaudeSettingsFromDirResponse{}
-	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[6]
+	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -340,7 +410,7 @@ func (x *SyncClaudeSettingsFromDirResponse) String() string {
 func (*SyncClaudeSettingsFromDirResponse) ProtoMessage() {}
 
 func (x *SyncClaudeSettingsFromDirResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[6]
+	mi := &file_taskguild_v1_claude_settings_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -353,7 +423,7 @@ func (x *SyncClaudeSettingsFromDirResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use SyncClaudeSettingsFromDirResponse.ProtoReflect.Descriptor instead.
 func (*SyncClaudeSettingsFromDirResponse) Descriptor() ([]byte, []int) {
-	return file_taskguild_v1_claude_settings_proto_rawDescGZIP(), []int{6}
+	return file_taskguild_v1_claude_settings_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *SyncClaudeSettingsFromDirResponse) GetSettings() *ClaudeSettings {
@@ -367,22 +437,29 @@ var File_taskguild_v1_claude_settings_proto protoreflect.FileDescriptor
 
 const file_taskguild_v1_claude_settings_proto_rawDesc = "" +
 	"\n" +
-	"\"taskguild/v1/claude_settings.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x86\x01\n" +
+	"\"taskguild/v1/claude_settings.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"Q\n" +
+	"\vAttribution\x12\x1b\n" +
+	"\x06commit\x18\x01 \x01(\tH\x00R\x06commit\x88\x01\x01\x12\x13\n" +
+	"\x02pr\x18\x02 \x01(\tH\x01R\x02pr\x88\x01\x01B\t\n" +
+	"\a_commitB\x05\n" +
+	"\x03_pr\"\xc3\x01\n" +
 	"\x0eClaudeSettings\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1a\n" +
 	"\blanguage\x18\x02 \x01(\tR\blanguage\x129\n" +
 	"\n" +
-	"updated_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"9\n" +
+	"updated_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12;\n" +
+	"\vattribution\x18\x04 \x01(\v2\x19.taskguild.v1.AttributionR\vattribution\"9\n" +
 	"\x18GetClaudeSettingsRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\"U\n" +
 	"\x19GetClaudeSettingsResponse\x128\n" +
-	"\bsettings\x18\x01 \x01(\v2\x1c.taskguild.v1.ClaudeSettingsR\bsettings\"X\n" +
+	"\bsettings\x18\x01 \x01(\v2\x1c.taskguild.v1.ClaudeSettingsR\bsettings\"\x95\x01\n" +
 	"\x1bUpdateClaudeSettingsRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1a\n" +
-	"\blanguage\x18\x02 \x01(\tR\blanguage\"X\n" +
+	"\blanguage\x18\x02 \x01(\tR\blanguage\x12;\n" +
+	"\vattribution\x18\x03 \x01(\v2\x19.taskguild.v1.AttributionR\vattribution\"X\n" +
 	"\x1cUpdateClaudeSettingsResponse\x128\n" +
 	"\bsettings\x18\x01 \x01(\v2\x1c.taskguild.v1.ClaudeSettingsR\bsettings\"_\n" +
 	" SyncClaudeSettingsFromDirRequest\x12\x1d\n" +
@@ -409,33 +486,36 @@ func file_taskguild_v1_claude_settings_proto_rawDescGZIP() []byte {
 	return file_taskguild_v1_claude_settings_proto_rawDescData
 }
 
-var file_taskguild_v1_claude_settings_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_taskguild_v1_claude_settings_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_taskguild_v1_claude_settings_proto_goTypes = []any{
-	(*ClaudeSettings)(nil),                    // 0: taskguild.v1.ClaudeSettings
-	(*GetClaudeSettingsRequest)(nil),          // 1: taskguild.v1.GetClaudeSettingsRequest
-	(*GetClaudeSettingsResponse)(nil),         // 2: taskguild.v1.GetClaudeSettingsResponse
-	(*UpdateClaudeSettingsRequest)(nil),       // 3: taskguild.v1.UpdateClaudeSettingsRequest
-	(*UpdateClaudeSettingsResponse)(nil),      // 4: taskguild.v1.UpdateClaudeSettingsResponse
-	(*SyncClaudeSettingsFromDirRequest)(nil),  // 5: taskguild.v1.SyncClaudeSettingsFromDirRequest
-	(*SyncClaudeSettingsFromDirResponse)(nil), // 6: taskguild.v1.SyncClaudeSettingsFromDirResponse
-	(*timestamppb.Timestamp)(nil),             // 7: google.protobuf.Timestamp
+	(*Attribution)(nil),                       // 0: taskguild.v1.Attribution
+	(*ClaudeSettings)(nil),                    // 1: taskguild.v1.ClaudeSettings
+	(*GetClaudeSettingsRequest)(nil),          // 2: taskguild.v1.GetClaudeSettingsRequest
+	(*GetClaudeSettingsResponse)(nil),         // 3: taskguild.v1.GetClaudeSettingsResponse
+	(*UpdateClaudeSettingsRequest)(nil),       // 4: taskguild.v1.UpdateClaudeSettingsRequest
+	(*UpdateClaudeSettingsResponse)(nil),      // 5: taskguild.v1.UpdateClaudeSettingsResponse
+	(*SyncClaudeSettingsFromDirRequest)(nil),  // 6: taskguild.v1.SyncClaudeSettingsFromDirRequest
+	(*SyncClaudeSettingsFromDirResponse)(nil), // 7: taskguild.v1.SyncClaudeSettingsFromDirResponse
+	(*timestamppb.Timestamp)(nil),             // 8: google.protobuf.Timestamp
 }
 var file_taskguild_v1_claude_settings_proto_depIdxs = []int32{
-	7, // 0: taskguild.v1.ClaudeSettings.updated_at:type_name -> google.protobuf.Timestamp
-	0, // 1: taskguild.v1.GetClaudeSettingsResponse.settings:type_name -> taskguild.v1.ClaudeSettings
-	0, // 2: taskguild.v1.UpdateClaudeSettingsResponse.settings:type_name -> taskguild.v1.ClaudeSettings
-	0, // 3: taskguild.v1.SyncClaudeSettingsFromDirResponse.settings:type_name -> taskguild.v1.ClaudeSettings
-	1, // 4: taskguild.v1.ClaudeSettingsService.GetClaudeSettings:input_type -> taskguild.v1.GetClaudeSettingsRequest
-	3, // 5: taskguild.v1.ClaudeSettingsService.UpdateClaudeSettings:input_type -> taskguild.v1.UpdateClaudeSettingsRequest
-	5, // 6: taskguild.v1.ClaudeSettingsService.SyncClaudeSettingsFromDir:input_type -> taskguild.v1.SyncClaudeSettingsFromDirRequest
-	2, // 7: taskguild.v1.ClaudeSettingsService.GetClaudeSettings:output_type -> taskguild.v1.GetClaudeSettingsResponse
-	4, // 8: taskguild.v1.ClaudeSettingsService.UpdateClaudeSettings:output_type -> taskguild.v1.UpdateClaudeSettingsResponse
-	6, // 9: taskguild.v1.ClaudeSettingsService.SyncClaudeSettingsFromDir:output_type -> taskguild.v1.SyncClaudeSettingsFromDirResponse
-	7, // [7:10] is the sub-list for method output_type
-	4, // [4:7] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	8, // 0: taskguild.v1.ClaudeSettings.updated_at:type_name -> google.protobuf.Timestamp
+	0, // 1: taskguild.v1.ClaudeSettings.attribution:type_name -> taskguild.v1.Attribution
+	1, // 2: taskguild.v1.GetClaudeSettingsResponse.settings:type_name -> taskguild.v1.ClaudeSettings
+	0, // 3: taskguild.v1.UpdateClaudeSettingsRequest.attribution:type_name -> taskguild.v1.Attribution
+	1, // 4: taskguild.v1.UpdateClaudeSettingsResponse.settings:type_name -> taskguild.v1.ClaudeSettings
+	1, // 5: taskguild.v1.SyncClaudeSettingsFromDirResponse.settings:type_name -> taskguild.v1.ClaudeSettings
+	2, // 6: taskguild.v1.ClaudeSettingsService.GetClaudeSettings:input_type -> taskguild.v1.GetClaudeSettingsRequest
+	4, // 7: taskguild.v1.ClaudeSettingsService.UpdateClaudeSettings:input_type -> taskguild.v1.UpdateClaudeSettingsRequest
+	6, // 8: taskguild.v1.ClaudeSettingsService.SyncClaudeSettingsFromDir:input_type -> taskguild.v1.SyncClaudeSettingsFromDirRequest
+	3, // 9: taskguild.v1.ClaudeSettingsService.GetClaudeSettings:output_type -> taskguild.v1.GetClaudeSettingsResponse
+	5, // 10: taskguild.v1.ClaudeSettingsService.UpdateClaudeSettings:output_type -> taskguild.v1.UpdateClaudeSettingsResponse
+	7, // 11: taskguild.v1.ClaudeSettingsService.SyncClaudeSettingsFromDir:output_type -> taskguild.v1.SyncClaudeSettingsFromDirResponse
+	9, // [9:12] is the sub-list for method output_type
+	6, // [6:9] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_claude_settings_proto_init() }
@@ -443,13 +523,14 @@ func file_taskguild_v1_claude_settings_proto_init() {
 	if File_taskguild_v1_claude_settings_proto != nil {
 		return
 	}
+	file_taskguild_v1_claude_settings_proto_msgTypes[0].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_claude_settings_proto_rawDesc), len(file_taskguild_v1_claude_settings_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

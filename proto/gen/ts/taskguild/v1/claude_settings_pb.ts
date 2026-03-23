@@ -12,7 +12,36 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file taskguild/v1/claude_settings.proto.
  */
 export const file_taskguild_v1_claude_settings: GenFile = /*@__PURE__*/
-  fileDesc("CiJ0YXNrZ3VpbGQvdjEvY2xhdWRlX3NldHRpbmdzLnByb3RvEgx0YXNrZ3VpbGQudjEiZgoOQ2xhdWRlU2V0dGluZ3MSEgoKcHJvamVjdF9pZBgBIAEoCRIQCghsYW5ndWFnZRgCIAEoCRIuCgp1cGRhdGVkX2F0GAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIuChhHZXRDbGF1ZGVTZXR0aW5nc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCSJLChlHZXRDbGF1ZGVTZXR0aW5nc1Jlc3BvbnNlEi4KCHNldHRpbmdzGAEgASgLMhwudGFza2d1aWxkLnYxLkNsYXVkZVNldHRpbmdzIkMKG1VwZGF0ZUNsYXVkZVNldHRpbmdzUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhAKCGxhbmd1YWdlGAIgASgJIk4KHFVwZGF0ZUNsYXVkZVNldHRpbmdzUmVzcG9uc2USLgoIc2V0dGluZ3MYASABKAsyHC50YXNrZ3VpbGQudjEuQ2xhdWRlU2V0dGluZ3MiSQogU3luY0NsYXVkZVNldHRpbmdzRnJvbURpclJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIRCglkaXJlY3RvcnkYAiABKAkiUwohU3luY0NsYXVkZVNldHRpbmdzRnJvbURpclJlc3BvbnNlEi4KCHNldHRpbmdzGAEgASgLMhwudGFza2d1aWxkLnYxLkNsYXVkZVNldHRpbmdzMuoCChVDbGF1ZGVTZXR0aW5nc1NlcnZpY2USZAoRR2V0Q2xhdWRlU2V0dGluZ3MSJi50YXNrZ3VpbGQudjEuR2V0Q2xhdWRlU2V0dGluZ3NSZXF1ZXN0GicudGFza2d1aWxkLnYxLkdldENsYXVkZVNldHRpbmdzUmVzcG9uc2USbQoUVXBkYXRlQ2xhdWRlU2V0dGluZ3MSKS50YXNrZ3VpbGQudjEuVXBkYXRlQ2xhdWRlU2V0dGluZ3NSZXF1ZXN0GioudGFza2d1aWxkLnYxLlVwZGF0ZUNsYXVkZVNldHRpbmdzUmVzcG9uc2USfAoZU3luY0NsYXVkZVNldHRpbmdzRnJvbURpchIuLnRhc2tndWlsZC52MS5TeW5jQ2xhdWRlU2V0dGluZ3NGcm9tRGlyUmVxdWVzdBovLnRhc2tndWlsZC52MS5TeW5jQ2xhdWRlU2V0dGluZ3NGcm9tRGlyUmVzcG9uc2VCvAEKEGNvbS50YXNrZ3VpbGQudjFCE0NsYXVkZVNldHRpbmdzUHJvdG9QAVpCZ2l0aHViLmNvbS9rYXp6MTg3L3Rhc2tndWlsZC9wcm90by9nZW4vZ28vdGFza2d1aWxkL3YxO3Rhc2tndWlsZHYxogIDVFhYqgIMVGFza2d1aWxkLlYxygIMVGFza2d1aWxkXFYx4gIYVGFza2d1aWxkXFYxXEdQQk1ldGFkYXRh6gINVGFza2d1aWxkOjpWMWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+  fileDesc("CiJ0YXNrZ3VpbGQvdjEvY2xhdWRlX3NldHRpbmdzLnByb3RvEgx0YXNrZ3VpbGQudjEiRQoLQXR0cmlidXRpb24SEwoGY29tbWl0GAEgASgJSACIAQESDwoCcHIYAiABKAlIAYgBAUIJCgdfY29tbWl0QgUKA19wciKWAQoOQ2xhdWRlU2V0dGluZ3MSEgoKcHJvamVjdF9pZBgBIAEoCRIQCghsYW5ndWFnZRgCIAEoCRIuCgp1cGRhdGVkX2F0GAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgthdHRyaWJ1dGlvbhgEIAEoCzIZLnRhc2tndWlsZC52MS5BdHRyaWJ1dGlvbiIuChhHZXRDbGF1ZGVTZXR0aW5nc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCSJLChlHZXRDbGF1ZGVTZXR0aW5nc1Jlc3BvbnNlEi4KCHNldHRpbmdzGAEgASgLMhwudGFza2d1aWxkLnYxLkNsYXVkZVNldHRpbmdzInMKG1VwZGF0ZUNsYXVkZVNldHRpbmdzUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhAKCGxhbmd1YWdlGAIgASgJEi4KC2F0dHJpYnV0aW9uGAMgASgLMhkudGFza2d1aWxkLnYxLkF0dHJpYnV0aW9uIk4KHFVwZGF0ZUNsYXVkZVNldHRpbmdzUmVzcG9uc2USLgoIc2V0dGluZ3MYASABKAsyHC50YXNrZ3VpbGQudjEuQ2xhdWRlU2V0dGluZ3MiSQogU3luY0NsYXVkZVNldHRpbmdzRnJvbURpclJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIRCglkaXJlY3RvcnkYAiABKAkiUwohU3luY0NsYXVkZVNldHRpbmdzRnJvbURpclJlc3BvbnNlEi4KCHNldHRpbmdzGAEgASgLMhwudGFza2d1aWxkLnYxLkNsYXVkZVNldHRpbmdzMuoCChVDbGF1ZGVTZXR0aW5nc1NlcnZpY2USZAoRR2V0Q2xhdWRlU2V0dGluZ3MSJi50YXNrZ3VpbGQudjEuR2V0Q2xhdWRlU2V0dGluZ3NSZXF1ZXN0GicudGFza2d1aWxkLnYxLkdldENsYXVkZVNldHRpbmdzUmVzcG9uc2USbQoUVXBkYXRlQ2xhdWRlU2V0dGluZ3MSKS50YXNrZ3VpbGQudjEuVXBkYXRlQ2xhdWRlU2V0dGluZ3NSZXF1ZXN0GioudGFza2d1aWxkLnYxLlVwZGF0ZUNsYXVkZVNldHRpbmdzUmVzcG9uc2USfAoZU3luY0NsYXVkZVNldHRpbmdzRnJvbURpchIuLnRhc2tndWlsZC52MS5TeW5jQ2xhdWRlU2V0dGluZ3NGcm9tRGlyUmVxdWVzdBovLnRhc2tndWlsZC52MS5TeW5jQ2xhdWRlU2V0dGluZ3NGcm9tRGlyUmVzcG9uc2VCvAEKEGNvbS50YXNrZ3VpbGQudjFCE0NsYXVkZVNldHRpbmdzUHJvdG9QAVpCZ2l0aHViLmNvbS9rYXp6MTg3L3Rhc2tndWlsZC9wcm90by9nZW4vZ28vdGFza2d1aWxkL3YxO3Rhc2tndWlsZHYxogIDVFhYqgIMVGFza2d1aWxkLlYxygIMVGFza2d1aWxkXFYx4gIYVGFza2d1aWxkXFYxXEdQQk1ldGFkYXRh6gINVGFza2d1aWxkOjpWMWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+
+/**
+ * Attribution holds optional attribution messages appended to commits and PRs.
+ * Each field uses proto3 optional so that null (not set) and "" (empty) are distinct.
+ *
+ * @generated from message taskguild.v1.Attribution
+ */
+export type Attribution = Message<"taskguild.v1.Attribution"> & {
+  /**
+   * null = not configured, "" = off, value = custom text
+   *
+   * @generated from field: optional string commit = 1;
+   */
+  commit?: string;
+
+  /**
+   * null = not configured, "" = off, value = custom text
+   *
+   * @generated from field: optional string pr = 2;
+   */
+  pr?: string;
+};
+
+/**
+ * Describes the message taskguild.v1.Attribution.
+ * Use `create(AttributionSchema)` to create a new message.
+ */
+export const AttributionSchema: GenMessage<Attribution> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_claude_settings, 0);
 
 /**
  * ClaudeSettings represents project-scoped Claude Code settings.
@@ -34,6 +63,11 @@ export type ClaudeSettings = Message<"taskguild.v1.ClaudeSettings"> & {
    * @generated from field: google.protobuf.Timestamp updated_at = 3;
    */
   updatedAt?: Timestamp;
+
+  /**
+   * @generated from field: taskguild.v1.Attribution attribution = 4;
+   */
+  attribution?: Attribution;
 };
 
 /**
@@ -41,7 +75,7 @@ export type ClaudeSettings = Message<"taskguild.v1.ClaudeSettings"> & {
  * Use `create(ClaudeSettingsSchema)` to create a new message.
  */
 export const ClaudeSettingsSchema: GenMessage<ClaudeSettings> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_claude_settings, 0);
+  messageDesc(file_taskguild_v1_claude_settings, 1);
 
 /**
  * @generated from message taskguild.v1.GetClaudeSettingsRequest
@@ -58,7 +92,7 @@ export type GetClaudeSettingsRequest = Message<"taskguild.v1.GetClaudeSettingsRe
  * Use `create(GetClaudeSettingsRequestSchema)` to create a new message.
  */
 export const GetClaudeSettingsRequestSchema: GenMessage<GetClaudeSettingsRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_claude_settings, 1);
+  messageDesc(file_taskguild_v1_claude_settings, 2);
 
 /**
  * @generated from message taskguild.v1.GetClaudeSettingsResponse
@@ -75,7 +109,7 @@ export type GetClaudeSettingsResponse = Message<"taskguild.v1.GetClaudeSettingsR
  * Use `create(GetClaudeSettingsResponseSchema)` to create a new message.
  */
 export const GetClaudeSettingsResponseSchema: GenMessage<GetClaudeSettingsResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_claude_settings, 2);
+  messageDesc(file_taskguild_v1_claude_settings, 3);
 
 /**
  * @generated from message taskguild.v1.UpdateClaudeSettingsRequest
@@ -90,6 +124,11 @@ export type UpdateClaudeSettingsRequest = Message<"taskguild.v1.UpdateClaudeSett
    * @generated from field: string language = 2;
    */
   language: string;
+
+  /**
+   * @generated from field: taskguild.v1.Attribution attribution = 3;
+   */
+  attribution?: Attribution;
 };
 
 /**
@@ -97,7 +136,7 @@ export type UpdateClaudeSettingsRequest = Message<"taskguild.v1.UpdateClaudeSett
  * Use `create(UpdateClaudeSettingsRequestSchema)` to create a new message.
  */
 export const UpdateClaudeSettingsRequestSchema: GenMessage<UpdateClaudeSettingsRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_claude_settings, 3);
+  messageDesc(file_taskguild_v1_claude_settings, 4);
 
 /**
  * @generated from message taskguild.v1.UpdateClaudeSettingsResponse
@@ -114,7 +153,7 @@ export type UpdateClaudeSettingsResponse = Message<"taskguild.v1.UpdateClaudeSet
  * Use `create(UpdateClaudeSettingsResponseSchema)` to create a new message.
  */
 export const UpdateClaudeSettingsResponseSchema: GenMessage<UpdateClaudeSettingsResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_claude_settings, 4);
+  messageDesc(file_taskguild_v1_claude_settings, 5);
 
 /**
  * @generated from message taskguild.v1.SyncClaudeSettingsFromDirRequest
@@ -138,7 +177,7 @@ export type SyncClaudeSettingsFromDirRequest = Message<"taskguild.v1.SyncClaudeS
  * Use `create(SyncClaudeSettingsFromDirRequestSchema)` to create a new message.
  */
 export const SyncClaudeSettingsFromDirRequestSchema: GenMessage<SyncClaudeSettingsFromDirRequest> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_claude_settings, 5);
+  messageDesc(file_taskguild_v1_claude_settings, 6);
 
 /**
  * @generated from message taskguild.v1.SyncClaudeSettingsFromDirResponse
@@ -155,7 +194,7 @@ export type SyncClaudeSettingsFromDirResponse = Message<"taskguild.v1.SyncClaude
  * Use `create(SyncClaudeSettingsFromDirResponseSchema)` to create a new message.
  */
 export const SyncClaudeSettingsFromDirResponseSchema: GenMessage<SyncClaudeSettingsFromDirResponse> = /*@__PURE__*/
-  messageDesc(file_taskguild_v1_claude_settings, 6);
+  messageDesc(file_taskguild_v1_claude_settings, 7);
 
 /**
  * ClaudeSettingsService manages project-scoped Claude Code settings

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { getClaudeSettings, updateClaudeSettings, syncClaudeSettingsFromDir } from '@taskguild/proto/taskguild/v1/claude_settings-ClaudeSettingsService_connectquery.ts'
 import { Settings, Save, RefreshCw } from 'lucide-react'
-import { Button, Input } from '../atoms/index.ts'
+import { Button, Input, Checkbox } from '../atoms/index.ts'
 import { Card } from '../molecules/index.ts'
 
 export function ClaudeSettingsList({ projectId }: { projectId: string }) {
@@ -11,11 +11,20 @@ export function ClaudeSettingsList({ projectId }: { projectId: string }) {
   const syncMut = useMutation(syncClaudeSettingsFromDir)
 
   const [language, setLanguage] = useState('')
+  const [commitEnabled, setCommitEnabled] = useState(false)
+  const [commitText, setCommitText] = useState('')
+  const [prEnabled, setPrEnabled] = useState(false)
+  const [prText, setPrText] = useState('')
   const [dirty, setDirty] = useState(false)
 
   useEffect(() => {
     if (data?.settings) {
       setLanguage(data.settings.language ?? '')
+      const attr = data.settings.attribution
+      setCommitEnabled(attr?.commit !== undefined)
+      setCommitText(attr?.commit ?? '')
+      setPrEnabled(attr?.pr !== undefined)
+      setPrText(attr?.pr ?? '')
       setDirty(false)
     }
   }, [data])
@@ -27,7 +36,14 @@ export function ClaudeSettingsList({ projectId }: { projectId: string }) {
 
   const handleSave = () => {
     updateMut.mutate(
-      { projectId, language },
+      {
+        projectId,
+        language,
+        attribution: {
+          commit: commitEnabled ? commitText : undefined,
+          pr: prEnabled ? prText : undefined,
+        },
+      },
       {
         onSuccess: () => {
           refetch()
@@ -109,7 +125,8 @@ export function ClaudeSettingsList({ projectId }: { projectId: string }) {
       )}
 
       {!isLoading && (
-        <Card className="space-y-4">
+        <Card className="space-y-6">
+          {/* Language */}
           <div>
             <label htmlFor="language" className="block text-sm font-medium text-gray-300 mb-1.5">
               Language
@@ -123,6 +140,77 @@ export function ClaudeSettingsList({ projectId }: { projectId: string }) {
             <p className="text-xs text-gray-500 mt-1">
               The language Claude should use when communicating.
             </p>
+          </div>
+
+          {/* Attribution */}
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-sm font-medium text-gray-300">Attribution</h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Custom messages appended to commits and PRs by Claude Code.
+                Check to enable, uncheck to disable (null in settings.json).
+              </p>
+            </div>
+
+            {/* Commit attribution */}
+            <div className="flex items-start gap-3">
+              <div className="pt-2">
+                <Checkbox
+                  checked={commitEnabled}
+                  onChange={(e) => {
+                    setCommitEnabled(e.target.checked)
+                    setDirty(true)
+                  }}
+                  color="purple"
+                />
+              </div>
+              <div className="flex-1">
+                <label htmlFor="attr-commit" className="block text-xs text-gray-400 mb-1">
+                  Commit message
+                </label>
+                <Input
+                  id="attr-commit"
+                  value={commitText}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setCommitText(e.target.value)
+                    if (!commitEnabled) setCommitEnabled(true)
+                    setDirty(true)
+                  }}
+                  placeholder='e.g. "Created by author with Claude Code"'
+                  className={!commitEnabled ? 'opacity-50' : ''}
+                />
+              </div>
+            </div>
+
+            {/* PR attribution */}
+            <div className="flex items-start gap-3">
+              <div className="pt-2">
+                <Checkbox
+                  checked={prEnabled}
+                  onChange={(e) => {
+                    setPrEnabled(e.target.checked)
+                    setDirty(true)
+                  }}
+                  color="purple"
+                />
+              </div>
+              <div className="flex-1">
+                <label htmlFor="attr-pr" className="block text-xs text-gray-400 mb-1">
+                  PR description
+                </label>
+                <Input
+                  id="attr-pr"
+                  value={prText}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setPrText(e.target.value)
+                    if (!prEnabled) setPrEnabled(true)
+                    setDirty(true)
+                  }}
+                  placeholder='e.g. "このPRはClaude Codeを活用して作成しました"'
+                  className={!prEnabled ? 'opacity-50' : ''}
+                />
+              </div>
+            </div>
           </div>
         </Card>
       )}
