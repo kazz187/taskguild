@@ -14,7 +14,7 @@ type Attribution struct {
 // One ClaudeSettings per project.
 type ClaudeSettings struct {
 	ProjectID   string       `yaml:"project_id"`
-	Language    string       `yaml:"language"`
+	Language    *string      `yaml:"language,omitempty"`
 	Attribution *Attribution `yaml:"attribution,omitempty"`
 	UpdatedAt   time.Time    `yaml:"updated_at"`
 }

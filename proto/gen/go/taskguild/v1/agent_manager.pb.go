@@ -5534,7 +5534,7 @@ func (*SyncClaudeSettingsCommand) Descriptor() ([]byte, []int) {
 type SyncClaudeSettingsAgentRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	ProjectName      string                 `protobuf:"bytes,1,opt,name=project_name,json=projectName,proto3" json:"project_name,omitempty"`
-	LocalLanguage    string                 `protobuf:"bytes,2,opt,name=local_language,json=localLanguage,proto3" json:"local_language,omitempty"`
+	LocalLanguage    *string                `protobuf:"bytes,2,opt,name=local_language,json=localLanguage,proto3,oneof" json:"local_language,omitempty"`
 	LocalAttribution *Attribution           `protobuf:"bytes,3,opt,name=local_attribution,json=localAttribution,proto3" json:"local_attribution,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
@@ -5578,8 +5578,8 @@ func (x *SyncClaudeSettingsAgentRequest) GetProjectName() string {
 }
 
 func (x *SyncClaudeSettingsAgentRequest) GetLocalLanguage() string {
-	if x != nil {
-		return x.LocalLanguage
+	if x != nil && x.LocalLanguage != nil {
+		return *x.LocalLanguage
 	}
 	return ""
 }
@@ -6003,11 +6003,12 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"\n" +
 	"permission\x18\x01 \x01(\v2%.taskguild.v1.SingleCommandPermissionR\n" +
 	"permission\"\x1b\n" +
-	"\x19SyncClaudeSettingsCommand\"\xb2\x01\n" +
+	"\x19SyncClaudeSettingsCommand\"\xca\x01\n" +
 	"\x1eSyncClaudeSettingsAgentRequest\x12!\n" +
-	"\fproject_name\x18\x01 \x01(\tR\vprojectName\x12%\n" +
-	"\x0elocal_language\x18\x02 \x01(\tR\rlocalLanguage\x12F\n" +
-	"\x11local_attribution\x18\x03 \x01(\v2\x19.taskguild.v1.AttributionR\x10localAttribution\"[\n" +
+	"\fproject_name\x18\x01 \x01(\tR\vprojectName\x12*\n" +
+	"\x0elocal_language\x18\x02 \x01(\tH\x00R\rlocalLanguage\x88\x01\x01\x12F\n" +
+	"\x11local_attribution\x18\x03 \x01(\v2\x19.taskguild.v1.AttributionR\x10localAttributionB\x11\n" +
+	"\x0f_local_language\"[\n" +
 	"\x1fSyncClaudeSettingsAgentResponse\x128\n" +
 	"\bsettings\x18\x01 \x01(\v2\x1c.taskguild.v1.ClaudeSettingsR\bsettings*\x8e\x01\n" +
 	"\vAgentStatus\x12\x1c\n" +
@@ -6392,6 +6393,7 @@ func file_taskguild_v1_agent_manager_proto_init() {
 		(*AgentCommand_CompareSkills)(nil),
 		(*AgentCommand_SyncClaudeSettings)(nil),
 	}
+	file_taskguild_v1_agent_manager_proto_msgTypes[92].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

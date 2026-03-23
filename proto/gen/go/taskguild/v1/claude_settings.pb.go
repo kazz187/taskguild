@@ -80,7 +80,7 @@ func (x *Attribution) GetPr() string {
 type ClaudeSettings struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Language      string                 `protobuf:"bytes,2,opt,name=language,proto3" json:"language,omitempty"`
+	Language      *string                `protobuf:"bytes,2,opt,name=language,proto3,oneof" json:"language,omitempty"` // null = not configured, "" = off, value = custom text
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	Attribution   *Attribution           `protobuf:"bytes,4,opt,name=attribution,proto3" json:"attribution,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -125,8 +125,8 @@ func (x *ClaudeSettings) GetProjectId() string {
 }
 
 func (x *ClaudeSettings) GetLanguage() string {
-	if x != nil {
-		return x.Language
+	if x != nil && x.Language != nil {
+		return *x.Language
 	}
 	return ""
 }
@@ -236,7 +236,7 @@ func (x *GetClaudeSettingsResponse) GetSettings() *ClaudeSettings {
 type UpdateClaudeSettingsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Language      string                 `protobuf:"bytes,2,opt,name=language,proto3" json:"language,omitempty"`
+	Language      *string                `protobuf:"bytes,2,opt,name=language,proto3,oneof" json:"language,omitempty"` // null = not configured, "" = off, value = custom text
 	Attribution   *Attribution           `protobuf:"bytes,3,opt,name=attribution,proto3" json:"attribution,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -280,8 +280,8 @@ func (x *UpdateClaudeSettingsRequest) GetProjectId() string {
 }
 
 func (x *UpdateClaudeSettingsRequest) GetLanguage() string {
-	if x != nil {
-		return x.Language
+	if x != nil && x.Language != nil {
+		return *x.Language
 	}
 	return ""
 }
@@ -442,24 +442,26 @@ const file_taskguild_v1_claude_settings_proto_rawDesc = "" +
 	"\x06commit\x18\x01 \x01(\tH\x00R\x06commit\x88\x01\x01\x12\x13\n" +
 	"\x02pr\x18\x02 \x01(\tH\x01R\x02pr\x88\x01\x01B\t\n" +
 	"\a_commitB\x05\n" +
-	"\x03_pr\"\xc3\x01\n" +
+	"\x03_pr\"\xd5\x01\n" +
 	"\x0eClaudeSettings\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1a\n" +
-	"\blanguage\x18\x02 \x01(\tR\blanguage\x129\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1f\n" +
+	"\blanguage\x18\x02 \x01(\tH\x00R\blanguage\x88\x01\x01\x129\n" +
 	"\n" +
 	"updated_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12;\n" +
-	"\vattribution\x18\x04 \x01(\v2\x19.taskguild.v1.AttributionR\vattribution\"9\n" +
+	"\vattribution\x18\x04 \x01(\v2\x19.taskguild.v1.AttributionR\vattributionB\v\n" +
+	"\t_language\"9\n" +
 	"\x18GetClaudeSettingsRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\"U\n" +
 	"\x19GetClaudeSettingsResponse\x128\n" +
-	"\bsettings\x18\x01 \x01(\v2\x1c.taskguild.v1.ClaudeSettingsR\bsettings\"\x95\x01\n" +
+	"\bsettings\x18\x01 \x01(\v2\x1c.taskguild.v1.ClaudeSettingsR\bsettings\"\xa7\x01\n" +
 	"\x1bUpdateClaudeSettingsRequest\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1a\n" +
-	"\blanguage\x18\x02 \x01(\tR\blanguage\x12;\n" +
-	"\vattribution\x18\x03 \x01(\v2\x19.taskguild.v1.AttributionR\vattribution\"X\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1f\n" +
+	"\blanguage\x18\x02 \x01(\tH\x00R\blanguage\x88\x01\x01\x12;\n" +
+	"\vattribution\x18\x03 \x01(\v2\x19.taskguild.v1.AttributionR\vattributionB\v\n" +
+	"\t_language\"X\n" +
 	"\x1cUpdateClaudeSettingsResponse\x128\n" +
 	"\bsettings\x18\x01 \x01(\v2\x1c.taskguild.v1.ClaudeSettingsR\bsettings\"_\n" +
 	" SyncClaudeSettingsFromDirRequest\x12\x1d\n" +
@@ -524,6 +526,8 @@ func file_taskguild_v1_claude_settings_proto_init() {
 		return
 	}
 	file_taskguild_v1_claude_settings_proto_msgTypes[0].OneofWrappers = []any{}
+	file_taskguild_v1_claude_settings_proto_msgTypes[1].OneofWrappers = []any{}
+	file_taskguild_v1_claude_settings_proto_msgTypes[4].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
