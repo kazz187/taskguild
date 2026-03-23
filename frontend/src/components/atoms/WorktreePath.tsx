@@ -18,7 +18,7 @@ export function WorktreePath({ text, className }: { text: string; className?: st
         seg.kind === 'text' ? (
           <span key={i}>{seg.value}</span>
         ) : (
-          <span key={i} title={seg.fullPath} className="cursor-help">
+          <span key={i} title={seg.fullPath} className="cursor-pointer">
             <span className="text-cyan-500/70">$worktree</span>
             {seg.shortened.slice('$worktree'.length)}
           </span>
