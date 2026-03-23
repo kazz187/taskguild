@@ -676,6 +676,13 @@ func heartbeat(ctx context.Context, client taskguildv1connect.AgentManagerServic
 	}
 }
 
+// isClaudeInternalPath returns true if the given file path is under the .claude/ directory.
+// These files are managed by Claude Code and should be ignored when checking for
+// uncommitted changes in worktrees.
+func isClaudeInternalPath(path string) bool {
+	return strings.HasPrefix(path, ".claude/") || path == ".claude"
+}
+
 // handleListWorktrees scans the .claude/worktrees/ directory and reports
 // available worktrees to the backend.
 func handleListWorktrees(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, cfg *config, requestID string) {
@@ -714,6 +721,7 @@ func handleListWorktrees(ctx context.Context, client taskguildv1connect.AgentMan
 		}
 
 		// Detect uncommitted changes using git status --porcelain.
+		// Changes under .claude/ are ignored as they are managed by Claude Code.
 		var hasChanges bool
 		var changedFiles []string
 		statusCmd := exec.CommandContext(ctx, "git", "status", "--porcelain")
@@ -725,10 +733,14 @@ func handleListWorktrees(ctx context.Context, client taskguildv1connect.AgentMan
 				if line == "" {
 					continue
 				}
-				hasChanges = true
 				// git status --porcelain format: "XY filename" (filename starts at position 3)
 				if len(line) > 3 {
-					changedFiles = append(changedFiles, line[3:])
+					filePath := line[3:]
+					if isClaudeInternalPath(filePath) {
+						continue
+					}
+					changedFiles = append(changedFiles, filePath)
+					hasChanges = true
 				}
 			}
 		}
@@ -781,13 +793,30 @@ func handleDeleteWorktree(ctx context.Context, client taskguildv1connect.AgentMa
 	}
 
 	// Check for uncommitted changes (unless force).
+	// Changes under .claude/ are ignored as they are managed by Claude Code.
+	hasClaudeOnlyChanges := false
 	if !force {
 		statusCmd := exec.CommandContext(ctx, "git", "status", "--porcelain")
 		statusCmd.Dir = wtDir
 		if out, err := statusCmd.Output(); err == nil {
-			if strings.TrimSpace(string(out)) != "" {
-				reportResult(false, "worktree has uncommitted changes; use force delete")
-				return
+			raw := strings.TrimSpace(string(out))
+			if raw != "" {
+				hasNonClaudeChanges := false
+				for _, line := range strings.Split(raw, "\n") {
+					line = strings.TrimSpace(line)
+					if line == "" {
+						continue
+					}
+					if len(line) > 3 && isClaudeInternalPath(line[3:]) {
+						hasClaudeOnlyChanges = true
+						continue
+					}
+					hasNonClaudeChanges = true
+				}
+				if hasNonClaudeChanges {
+					reportResult(false, "worktree has uncommitted changes; use force delete")
+					return
+				}
 			}
 		}
 	}
@@ -802,9 +831,10 @@ func handleDeleteWorktree(ctx context.Context, client taskguildv1connect.AgentMa
 		}
 	}
 
-	// Remove the git worktree.
+	// Remove the git worktree. Use --force when there are .claude/-only changes
+	// since git worktree remove also checks for uncommitted changes.
 	var removeCmd *exec.Cmd
-	if force {
+	if force || hasClaudeOnlyChanges {
 		removeCmd = exec.CommandContext(ctx, "git", "worktree", "remove", "--force", wtDir)
 	} else {
 		removeCmd = exec.CommandContext(ctx, "git", "worktree", "remove", wtDir)
