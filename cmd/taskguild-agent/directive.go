@@ -437,7 +437,7 @@ func saveTaskDescription(ctx context.Context, taskClient taskguildv1connect.Task
 	}
 }
 
-func savePlanResult(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, content string) {
+func savePlanResult(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, content string, tl *taskLogger) {
 	logger := clog.LoggerFromContext(ctx)
 	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
 		Id:       taskID,
@@ -447,5 +447,19 @@ func savePlanResult(ctx context.Context, taskClient taskguildv1connect.TaskServi
 		logger.Error("failed to save plan_result", "error", err)
 	} else {
 		logger.Info("plan_result saved", "content_length", len(content))
+	}
+
+	// Emit a chronological RESULT log so plan results are preserved across status transitions.
+	if tl != nil {
+		preview := content
+		if len(preview) > 200 {
+			preview = preview[:200] + "..."
+		}
+		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_RESULT, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+			preview,
+			map[string]string{
+				"full_text":   content,
+				"result_type": "plan",
+			})
 	}
 }

@@ -9,8 +9,10 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/oklog/ulid/v2"
 
 	"github.com/kazz187/taskguild/internal/task"
+	"github.com/kazz187/taskguild/internal/tasklog"
 	"github.com/kazz187/taskguild/internal/version"
 	"github.com/kazz187/taskguild/internal/workflow"
 	"github.com/kazz187/taskguild/pkg/cerr"
@@ -328,6 +330,7 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 			return nil, err
 		}
 		slog.Info("task already unassigned, updated metadata only", "task_id", t.ID)
+		s.emitResultLog(ctx, t, req.Msg.Summary, req.Msg.ErrorMessage)
 		return connect.NewResponse(&taskguildv1.ReportTaskResultResponse{}), nil
 	}
 
@@ -346,6 +349,9 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 	if req.Msg.ErrorMessage != "" {
 		t.Metadata["result_error"] = req.Msg.ErrorMessage
 	}
+
+	// Emit a chronological RESULT log entry so results are not lost on status transitions.
+	s.emitResultLog(ctx, t, req.Msg.Summary, req.Msg.ErrorMessage)
 
 	eventMeta := map[string]string{
 		"project_id":  t.ProjectID,
@@ -501,6 +507,59 @@ func (s *Server) delayedRebroadcast(taskID, projectID, workflowID string, delay 
 		"retry_count", t.Metadata[retryMetadataKey],
 		"agent_config_id", agentConfigID,
 		"project_name", projectName,
+	)
+}
+
+// emitResultLog creates a chronological RESULT TaskLog entry so that results
+// are preserved across status transitions instead of being overwritten.
+func (s *Server) emitResultLog(ctx context.Context, t *task.Task, summary, errMsg string) {
+	if summary == "" && errMsg == "" {
+		return
+	}
+
+	now := time.Now()
+	level := int32(taskguildv1.TaskLogLevel_TASK_LOG_LEVEL_INFO)
+	resultType := "summary"
+	text := summary
+
+	if errMsg != "" {
+		level = int32(taskguildv1.TaskLogLevel_TASK_LOG_LEVEL_ERROR)
+		resultType = "error"
+		text = errMsg
+	}
+
+	preview := text
+	if len(preview) > 200 {
+		preview = preview[:200] + "..."
+	}
+
+	meta := map[string]string{
+		"full_text":   text,
+		"result_type": resultType,
+		"status_id":   t.StatusID,
+	}
+
+	l := &tasklog.TaskLog{
+		ID:        ulid.Make().String(),
+		ProjectID: t.ProjectID,
+		TaskID:    t.ID,
+		Level:     level,
+		Category:  int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_RESULT),
+		Message:   preview,
+		Metadata:  meta,
+		CreatedAt: now,
+	}
+
+	if err := s.taskLogRepo.Create(ctx, l); err != nil {
+		slog.Error("failed to create result log", "task_id", t.ID, "error", err)
+		return
+	}
+
+	s.eventBus.PublishNew(
+		taskguildv1.EventType_EVENT_TYPE_TASK_LOG,
+		l.ID,
+		"",
+		map[string]string{"task_id": t.ID, "project_id": t.ProjectID},
 	)
 }
 

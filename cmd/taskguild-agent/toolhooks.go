@@ -67,7 +67,7 @@ func buildToolUseHooks(tl *taskLogger, taskID string, taskClient taskguildv1conn
 								}
 							}
 							if planContent != "" {
-								savePlanResult(context.Background(), taskClient, taskID, planContent)
+								savePlanResult(context.Background(), taskClient, taskID, planContent, tl)
 							}
 						}
 
