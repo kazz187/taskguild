@@ -247,6 +247,7 @@ func runQuerySyncWithLog(
 	// Log command args.
 	if args := transport.CommandArgs(); args != nil {
 		tl.LogCommandArgs(args)
+		slog.Debug("claude CLI command", "args", strings.Join(args, " "))
 	}
 
 	// Calculate initialize timeout (matching RunQuery behavior).
