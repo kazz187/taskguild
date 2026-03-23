@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -174,7 +173,18 @@ func runTask(
 		logger.Info("starting Claude CLI", "turn", turn, "session_id", sessionID)
 		logger.Debug("Claude SDK input", "turn", turn)
 		if turn == 0 {
-			logger.Debug("system prompt", "prompt", instructions)
+			// Log the actual system prompt from opts (after buildWorkflowContext appends).
+			switch sp := opts.SystemPrompt.(type) {
+			case *claudeagent.SystemPromptPreset:
+				logger.Debug("append-system-prompt", "prompt", sp.Append)
+			case string:
+				logger.Debug("system prompt", "prompt", sp)
+			default:
+				logger.Debug("system prompt", "prompt", fmt.Sprintf("%v", opts.SystemPrompt))
+			}
+			if opts.Agent != "" {
+				logger.Debug("agent", "name", opts.Agent)
+			}
 			logger.Debug("metadata", "metadata", fmt.Sprintf("%v", metadata))
 			logger.Debug("work directory", "work_dir", workDir)
 		}
@@ -589,14 +599,6 @@ func buildClaudeOptions(
 		}
 	} else {
 		opts.SystemPrompt = instructions
-	}
-
-	// Parse and pass sub-agents from metadata.
-	if subAgentsJSON := metadata["_sub_agents"]; subAgentsJSON != "" {
-		var subAgents map[string]*claudeagent.AgentDefinition
-		if err := json.Unmarshal([]byte(subAgentsJSON), &subAgents); err == nil && len(subAgents) > 0 {
-			opts.Agents = subAgents
-		}
 	}
 
 	if sessionID != "" {

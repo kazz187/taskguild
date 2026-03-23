@@ -736,37 +736,6 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		}
 	}
 
-	// Build sub-agents from project's Agent definitions.
-	// All agents in the project (except the current one) are passed as sub-agents.
-	if s.agentRepo != nil {
-		agents, _, err := s.agentRepo.List(ctx, t.ProjectID, 100, 0)
-		if err == nil && len(agents) > 0 {
-			type subAgentDef struct {
-				Description string   `json:"description"`
-				Prompt      string   `json:"prompt"`
-				Tools       []string `json:"tools,omitempty"`
-				Model       string   `json:"model,omitempty"`
-			}
-			subAgents := make(map[string]subAgentDef)
-			for _, ag := range agents {
-				if ag.ID == agentConfigID {
-					continue // skip the current agent
-				}
-				subAgents[ag.Name] = subAgentDef{
-					Description: ag.Description,
-					Prompt:      ag.Prompt,
-					Tools:       ag.Tools,
-					Model:       ag.Model,
-				}
-			}
-			if len(subAgents) > 0 {
-				if b, err := json.Marshal(subAgents); err == nil {
-					enrichedMetadata["_sub_agents"] = string(b)
-				}
-			}
-		}
-	}
-
 	// Publish agent assigned event.
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_AGENT_ASSIGNED,
