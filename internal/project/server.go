@@ -15,11 +15,12 @@ import (
 var _ taskguildv1connect.ProjectServiceHandler = (*Server)(nil)
 
 type Server struct {
-	repo Repository
+	repo   Repository
+	seeder *Seeder
 }
 
-func NewServer(repo Repository) *Server {
-	return &Server{repo: repo}
+func NewServer(repo Repository, seeder *Seeder) *Server {
+	return &Server{repo: repo, seeder: seeder}
 }
 
 func (s *Server) CreateProject(ctx context.Context, req *connect.Request[taskguildv1.CreateProjectRequest]) (*connect.Response[taskguildv1.CreateProjectResponse], error) {
@@ -49,6 +50,16 @@ func (s *Server) CreateProject(ctx context.Context, req *connect.Request[taskgui
 	if err := s.repo.Create(ctx, p); err != nil {
 		return nil, err
 	}
+
+	// Seed default workflow, agents, and skills for the new project.
+	if s.seeder != nil {
+		if err := s.seeder.Seed(ctx, p.ID); err != nil {
+			// Clean up the project if seeding fails.
+			_ = s.repo.Delete(ctx, p.ID)
+			return nil, err
+		}
+	}
+
 	return connect.NewResponse(&taskguildv1.CreateProjectResponse{
 		Project: toProto(p),
 	}), nil
