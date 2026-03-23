@@ -126,7 +126,7 @@ func (s *Server) SyncClaudeSettings(ctx context.Context, req *connect.Request[ta
 		return nil, cerr.ExtractConnectError(ctx, err)
 	}
 
-	// Merge: local value takes precedence if non-empty and stored is empty.
+	// Merge: local value fills in nil fields.
 	merged := mergeClaudeSettings(stored, req.Msg.LocalLanguage, attributionFromProto(req.Msg.LocalAttribution))
 
 	if err := s.claudeSettingsRepo.Upsert(ctx, merged); err != nil {
@@ -136,7 +136,7 @@ func (s *Server) SyncClaudeSettings(ctx context.Context, req *connect.Request[ta
 	return connect.NewResponse(&taskguildv1.SyncClaudeSettingsAgentResponse{
 		Settings: &taskguildv1.ClaudeSettings{
 			ProjectId:   proj.ID,
-			Language:    merged.Language,
+			Language:    merged.Language,  // both are *string
 			Attribution: attributionToProto(merged.Attribution),
 			UpdatedAt:   timestamppb.New(merged.UpdatedAt),
 		},
@@ -164,15 +164,15 @@ func attributionToProto(a *claudesettings.Attribution) *taskguildv1.Attribution 
 }
 
 // mergeClaudeSettings merges local settings with stored settings.
-// Stored values take precedence; local values fill in empty fields.
-func mergeClaudeSettings(stored *claudesettings.ClaudeSettings, localLanguage string, localAttribution *claudesettings.Attribution) *claudesettings.ClaudeSettings {
+// Stored values take precedence; local values fill in nil fields.
+func mergeClaudeSettings(stored *claudesettings.ClaudeSettings, localLanguage *string, localAttribution *claudesettings.Attribution) *claudesettings.ClaudeSettings {
 	result := &claudesettings.ClaudeSettings{
 		ProjectID:   stored.ProjectID,
 		Language:    stored.Language,
 		Attribution: stored.Attribution,
 		UpdatedAt:   time.Now(),
 	}
-	if result.Language == "" && localLanguage != "" {
+	if result.Language == nil && localLanguage != nil {
 		result.Language = localLanguage
 	}
 	if localAttribution != nil {

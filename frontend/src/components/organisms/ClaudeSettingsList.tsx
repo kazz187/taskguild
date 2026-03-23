@@ -10,6 +10,7 @@ export function ClaudeSettingsList({ projectId }: { projectId: string }) {
   const updateMut = useMutation(updateClaudeSettings)
   const syncMut = useMutation(syncClaudeSettingsFromDir)
 
+  const [languageEnabled, setLanguageEnabled] = useState(false)
   const [language, setLanguage] = useState('')
   const [commitEnabled, setCommitEnabled] = useState(false)
   const [commitText, setCommitText] = useState('')
@@ -19,6 +20,7 @@ export function ClaudeSettingsList({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     if (data?.settings) {
+      setLanguageEnabled(data.settings.language !== undefined)
       setLanguage(data.settings.language ?? '')
       const attr = data.settings.attribution
       setCommitEnabled(attr?.commit !== undefined)
@@ -29,16 +31,11 @@ export function ClaudeSettingsList({ projectId }: { projectId: string }) {
     }
   }, [data])
 
-  const handleLanguageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLanguage(e.target.value)
-    setDirty(true)
-  }
-
   const handleSave = () => {
     updateMut.mutate(
       {
         projectId,
-        language,
+        language: languageEnabled ? language : undefined,
         attribution: {
           commit: commitEnabled ? commitText : undefined,
           pr: prEnabled ? prText : undefined,
@@ -128,18 +125,38 @@ export function ClaudeSettingsList({ projectId }: { projectId: string }) {
         <Card className="space-y-6">
           {/* Language */}
           <div>
-            <label htmlFor="language" className="block text-sm font-medium text-gray-300 mb-1.5">
-              Language
-            </label>
-            <Input
-              id="language"
-              value={language}
-              onChange={handleLanguageChange}
-              placeholder="e.g. Japanese, English, etc."
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              The language Claude should use when communicating.
-            </p>
+            <div className="mb-1.5">
+              <h3 className="text-sm font-medium text-gray-300">Language</h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                The language Claude should use when communicating.
+                Check to enable, uncheck to disable (null in settings.json).
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="pt-2">
+                <Checkbox
+                  checked={languageEnabled}
+                  onChange={(e) => {
+                    setLanguageEnabled(e.target.checked)
+                    setDirty(true)
+                  }}
+                  color="purple"
+                />
+              </div>
+              <div className="flex-1">
+                <Input
+                  id="language"
+                  value={language}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setLanguage(e.target.value)
+                    if (!languageEnabled) setLanguageEnabled(true)
+                    setDirty(true)
+                  }}
+                  placeholder="e.g. Japanese, English, etc."
+                  className={!languageEnabled ? 'opacity-50' : ''}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Attribution */}

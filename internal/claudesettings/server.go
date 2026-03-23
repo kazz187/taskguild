@@ -87,9 +87,9 @@ func (s *Server) SyncClaudeSettingsFromDir(ctx context.Context, req *connect.Req
 		return nil, err
 	}
 
-	// Merge: local value takes precedence if non-empty/non-nil.
+	// Merge: local value takes precedence if non-nil and stored is nil.
 	changed := false
-	if localLanguage != "" {
+	if localLanguage != nil && stored.Language == nil {
 		stored.Language = localLanguage
 		changed = true
 	}
@@ -120,22 +120,27 @@ func (s *Server) SyncClaudeSettingsFromDir(ctx context.Context, req *connect.Req
 }
 
 // readSettingsFromFile reads the "language" and "attribution" fields from a .claude/settings.json file.
-// Returns empty/nil values if the file does not exist or fields are absent.
-func readSettingsFromFile(path string) (string, *Attribution, error) {
+// Returns nil values if the file does not exist or fields are absent.
+func readSettingsFromFile(path string) (*string, *Attribution, error) {
 	data, readErr := os.ReadFile(path)
 	if readErr != nil {
 		if os.IsNotExist(readErr) {
-			return "", nil, nil
+			return nil, nil, nil
 		}
-		return "", nil, readErr
+		return nil, nil, readErr
 	}
 
 	var raw map[string]interface{}
 	if err := json.Unmarshal(data, &raw); err != nil {
-		return "", nil, fmt.Errorf("invalid JSON in %s: %w", path, err)
+		return nil, nil, fmt.Errorf("invalid JSON in %s: %w", path, err)
 	}
 
-	lang, _ := raw["language"].(string)
+	var lang *string
+	if v, exists := raw["language"]; exists {
+		if s, ok := v.(string); ok {
+			lang = &s
+		}
+	}
 
 	var attr *Attribution
 	if attrRaw, ok := raw["attribution"].(map[string]interface{}); ok {
@@ -178,7 +183,7 @@ func attributionToProto(a *Attribution) *taskguildv1.Attribution {
 func toProto(cs *ClaudeSettings) *taskguildv1.ClaudeSettings {
 	return &taskguildv1.ClaudeSettings{
 		ProjectId:   cs.ProjectID,
-		Language:    cs.Language,
+		Language:    cs.Language,  // both are *string
 		Attribution: attributionToProto(cs.Attribution),
 		UpdatedAt:   timestamppb.New(cs.UpdatedAt),
 	}

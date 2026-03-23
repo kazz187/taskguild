@@ -29,7 +29,7 @@ func syncClaudeSettings(ctx context.Context, client taskguildv1connect.AgentMana
 	// Call SyncClaudeSettings RPC.
 	resp, err := client.SyncClaudeSettings(ctx, connect.NewRequest(&v1.SyncClaudeSettingsAgentRequest{
 		ProjectName:      cfg.ProjectName,
-		LocalLanguage:    localLanguage,
+		LocalLanguage:    localLanguage,  // *string, matches proto optional
 		LocalAttribution: localAttribution,
 	}))
 	if err != nil {
@@ -39,7 +39,7 @@ func syncClaudeSettings(ctx context.Context, client taskguildv1connect.AgentMana
 
 	merged := resp.Msg.GetSettings()
 	slog.Info("claude settings sync complete",
-		"language", merged.GetLanguage(),
+		"language", merged.Language,
 	)
 
 	// Write merged settings back to settings.json.
@@ -47,21 +47,25 @@ func syncClaudeSettings(ctx context.Context, client taskguildv1connect.AgentMana
 }
 
 // readLocalClaudeSettings reads the settings fields from a .claude/settings.json file.
-// Returns empty values and an empty map if the file doesn't exist or has no settings.
-func readLocalClaudeSettings(path string) (language string, attribution *v1.Attribution, raw map[string]interface{}) {
+// Returns nil values and an empty map if the file doesn't exist or has no settings.
+func readLocalClaudeSettings(path string) (language *string, attribution *v1.Attribution, raw map[string]interface{}) {
 	raw = make(map[string]interface{})
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return "", nil, raw
+		return nil, nil, raw
 	}
 
 	if err := json.Unmarshal(data, &raw); err != nil {
 		slog.Warn("failed to parse settings.json for claude settings", "error", err)
-		return "", nil, raw
+		return nil, nil, raw
 	}
 
-	language, _ = raw["language"].(string)
+	if v, exists := raw["language"]; exists {
+		if s, ok := v.(string); ok {
+			language = &s
+		}
+	}
 
 	if attrRaw, ok := raw["attribution"].(map[string]interface{}); ok {
 		attribution = &v1.Attribution{}
@@ -95,8 +99,10 @@ func writeLocalClaudeSettings(path string, raw map[string]interface{}, merged *v
 	}
 
 	// Update only the settings fields (language, attribution).
-	if merged.GetLanguage() != "" {
-		raw["language"] = merged.GetLanguage()
+	if merged.Language != nil {
+		raw["language"] = *merged.Language
+	} else {
+		raw["language"] = nil
 	}
 
 	if attr := merged.GetAttribution(); attr != nil {
