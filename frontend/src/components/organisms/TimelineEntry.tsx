@@ -291,7 +291,7 @@ function ToolUseDetail({ metadata }: { metadata: Record<string, string> }) {
     <div className="space-y-1.5">
       {toolInput && (
         <div>
-          <div className="text-[10px] text-gray-500 font-medium mb-0.5">Input</div>
+          <div className="text-[9px] text-gray-600 font-medium mb-0.5 uppercase tracking-wider">Input</div>
           <pre className="text-[11px] text-gray-400 font-mono whitespace-pre-wrap break-all bg-slate-900/50 rounded px-2 py-1 max-h-48 overflow-y-auto">
             {formatJsonSafe(toolInput)}
           </pre>
@@ -299,7 +299,7 @@ function ToolUseDetail({ metadata }: { metadata: Record<string, string> }) {
       )}
       {toolOutput && (
         <div>
-          <div className="text-[10px] text-gray-500 font-medium mb-0.5">Output</div>
+          <div className="text-[9px] text-gray-600 font-medium mb-0.5 uppercase tracking-wider">Output</div>
           <pre className="text-[11px] text-gray-400 font-mono whitespace-pre-wrap break-all bg-slate-900/50 rounded px-2 py-1 max-h-48 overflow-y-auto">
             {formatJsonSafe(toolOutput)}
           </pre>
@@ -307,7 +307,7 @@ function ToolUseDetail({ metadata }: { metadata: Record<string, string> }) {
       )}
       {error && (
         <div>
-          <div className="text-[10px] text-red-400 font-medium mb-0.5">Error</div>
+          <div className="text-[9px] text-red-400 font-medium mb-0.5 uppercase tracking-wider">Error</div>
           <pre className="text-[11px] text-red-300 font-mono whitespace-pre-wrap break-all bg-red-900/20 rounded px-2 py-1 max-h-48 overflow-y-auto">
             {error}
           </pre>
@@ -366,14 +366,41 @@ function isExpandableCategory(category: TaskLogCategory): boolean {
   )
 }
 
-/** Try to pretty-print JSON, fall back to raw string. */
+/** Try to pretty-print JSON with depth-limited expansion (2 levels), fall back to raw string. */
 function formatJsonSafe(raw: string): string {
   try {
     const parsed = JSON.parse(raw)
-    return JSON.stringify(parsed, null, 2)
+    return stringifyDepthLimited(parsed, 2)
   } catch {
     return raw
   }
+}
+
+/** Stringify JSON expanding objects/arrays only up to maxDepth levels. Beyond that, inline. */
+function stringifyDepthLimited(value: unknown, maxDepth: number, currentDepth = 0): string {
+  if (value === null || value === undefined || typeof value !== 'object') {
+    return JSON.stringify(value)
+  }
+
+  const indent = '  '.repeat(currentDepth + 1)
+  const closingIndent = '  '.repeat(currentDepth)
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '[]'
+    if (currentDepth >= maxDepth) return JSON.stringify(value)
+    const items = value.map((item) => `${indent}${stringifyDepthLimited(item, maxDepth, currentDepth + 1)}`)
+    return `[\n${items.join(',\n')}\n${closingIndent}]`
+  }
+
+  const keys = Object.keys(value as Record<string, unknown>)
+  if (keys.length === 0) return '{}'
+  if (currentDepth >= maxDepth) return JSON.stringify(value)
+
+  const entries = keys.map((key) => {
+    const val = (value as Record<string, unknown>)[key]
+    return `${indent}${JSON.stringify(key)}: ${stringifyDepthLimited(val, maxDepth, currentDepth + 1)}`
+  })
+  return `{\n${entries.join(',\n')}\n${closingIndent}}`
 }
 
 function getCategoryIcon(category: TaskLogCategory) {
