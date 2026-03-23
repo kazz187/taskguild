@@ -82,7 +82,23 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 		return err
 	}
 
-	// 3. Create development workflow referencing the created agent and skill IDs.
+	// 3. Create sync-default-branch skill.
+	syncBranchSkill := &skill.Skill{
+		ID:            ulid.Make().String(),
+		ProjectID:     projectID,
+		Name:          "sync-default-branch",
+		Description:   "Fetches the latest default branch from origin before worktree creation.",
+		Content:       defaultSyncDefaultBranchSkillContent,
+		UserInvocable: false,
+		AllowedTools:  []string{"Bash"},
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+	if err := s.skillRepo.Create(ctx, syncBranchSkill); err != nil {
+		return err
+	}
+
+	// 4. Create development workflow referencing the created agent and skill IDs.
 	hookID := ulid.Make().String()
 	wf := &workflow.Workflow{
 		ID:        ulid.Make().String(),
@@ -110,6 +126,15 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 				TransitionsTo: []string{"Develop", "Review"},
 				AgentID:       swEngineerAgent.ID,
 				Hooks: []workflow.StatusHook{
+					{
+						ID:         ulid.Make().String(),
+						SkillID:    syncBranchSkill.ID,
+						Trigger:    workflow.HookTriggerBeforeWorktreeCreation,
+						Name:       "sync-default-branch",
+						ActionType: workflow.HookActionTypeSkill,
+						ActionID:   syncBranchSkill.ID,
+						Order:      0,
+					},
 					{
 						ID:         hookID,
 						SkillID:    createPRSkill.ID,
@@ -284,3 +309,38 @@ TASK_METADATA: pr_url=<PRのURL>
 
 - ` + "`git push --force`" + ` および ` + "`git push --force-with-lease`" + ` は絶対に行わないこと
 - コミットメッセージやPRの body に機密情報を含めないこと`
+
+const defaultSyncDefaultBranchSkillContent = `# Sync Default Branch
+
+worktree 作成前にリモートの最新デフォルトブランチを取得するスキルです。
+
+## 手順
+
+### 1. デフォルトブランチ名を取得する
+
+` + "```bash" + `
+gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
+` + "```" + `
+
+取得したブランチ名を ` + "`<default-branch>`" + ` と表記します。
+
+### 2. リモートから最新を取得する
+
+` + "```bash" + `
+git fetch origin <default-branch>
+` + "```" + `
+
+### 3. ローカルブランチのポインタを更新する
+
+ローカルの ` + "`<default-branch>`" + ` ブランチを ` + "`origin/<default-branch>`" + ` に合わせます。
+working tree を変更せずにブランチポインタのみを更新します:
+
+` + "```bash" + `
+git update-ref refs/heads/<default-branch> origin/<default-branch>
+` + "```" + `
+
+## 重要事項
+
+- ` + "`git checkout`" + ` や ` + "`git pull`" + ` は使用しないこと（メインリポジトリの working tree を変更してしまうため）
+- ` + "`git update-ref`" + ` はブランチポインタのみを更新するため安全
+- fetch が失敗した場合もエラーにはせず、ローカルの状態でworktreeを作成する`

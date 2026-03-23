@@ -714,6 +714,7 @@ export function WorkflowForm({
                               <option value={HookTrigger.BEFORE_TASK_EXECUTION}>Before Task</option>
                               <option value={HookTrigger.AFTER_TASK_EXECUTION}>After Task</option>
                               <option value={HookTrigger.AFTER_WORKTREE_CREATION}>After Worktree</option>
+                              <option value={HookTrigger.BEFORE_WORKTREE_CREATION}>Before Worktree</option>
                             </Select>
                             <Select
                               value={h.actionType}

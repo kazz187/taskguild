@@ -89,6 +89,13 @@ func runTask(
 		metadata["worktree"] = worktreeName // keep local metadata in sync for buildUserPrompt
 	}
 
+	// Execute before_worktree_creation hooks (runs in the main repo directory).
+	if metadata["_use_worktree"] == "true" && worktreeName != "" {
+		logger.Info("executing before_worktree_creation hooks")
+		executeHooks(ctx, taskID, "before_worktree_creation", metadata, workDir, taskClient, tl, queryRunner)
+		logger.Info("before_worktree_creation hooks completed")
+	}
+
 	// Ensure the worktree directory exists before launching Claude so that
 	// Cwd is set to the worktree from the very first turn.
 	if metadata["_use_worktree"] == "true" && worktreeName != "" {
