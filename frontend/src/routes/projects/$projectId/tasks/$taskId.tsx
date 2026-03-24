@@ -442,6 +442,50 @@ function TaskDetailPage() {
             </div>
           )}
 
+          {/* Results — chronological result logs */}
+          {(() => {
+            const resultLogs = logs
+              .filter((l) => l.category === TaskLogCategory.RESULT)
+              .sort((a, b) => {
+                if (!a.createdAt || !b.createdAt) return 0
+                const diff = Number(a.createdAt.seconds) - Number(b.createdAt.seconds)
+                return diff !== 0 ? diff : a.createdAt.nanos - b.createdAt.nanos
+              })
+            if (resultLogs.length === 0) return null
+            return (
+              <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Results</p>
+                <div className="space-y-2">
+                  {resultLogs.map((log) => {
+                    const resultType = log.metadata['result_type'] ?? 'summary'
+                    const fullText = log.metadata['full_text'] ?? log.message
+                    const borderColor =
+                      resultType === 'error' ? 'border-red-500/30' :
+                      resultType === 'plan' ? 'border-blue-500/30' :
+                      'border-green-500/30'
+                    const labelColor =
+                      resultType === 'error' ? 'text-red-400' :
+                      resultType === 'plan' ? 'text-blue-400' :
+                      'text-green-400'
+                    return (
+                      <div key={log.id} className={`border-l-2 ${borderColor} pl-3 py-1`}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-[10px] font-medium uppercase ${labelColor}`}>{resultType}</span>
+                          {log.createdAt && (
+                            <span className="text-[10px] text-gray-600">
+                              {new Date(Number(log.createdAt.seconds) * 1000).toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                        <MarkdownDescription content={fullText} className="text-sm text-gray-300" />
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
+
           {/* Plan Result */}
           {planResult && (
             <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
