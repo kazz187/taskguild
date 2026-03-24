@@ -19,13 +19,15 @@ type QueryRunner interface {
 
 // subprocessQueryRunner is the production implementation that delegates to
 // runQuerySyncWithLog to launch a real Claude CLI subprocess.
-type subprocessQueryRunner struct{}
+type subprocessQueryRunner struct {
+	projectID string
+}
 
-func (subprocessQueryRunner) RunQuerySync(
+func (r subprocessQueryRunner) RunQuerySync(
 	ctx context.Context,
 	prompt string,
 	options *claudeagent.ClaudeAgentOptions,
 	workDir, taskID, label string,
 ) (*claudeagent.QueryResult, error) {
-	return runQuerySyncWithLog(ctx, prompt, options, workDir, taskID, label)
+	return runQuerySyncWithLog(ctx, prompt, options, workDir, r.projectID, taskID, label)
 }
