@@ -43,8 +43,14 @@ function ProjectChatPage() {
     for (const t of tasks) {
       m.set(t.id, t.title)
     }
+    // Supplement from listInteractions response (includes archived tasks)
+    if (interactionsData?.taskTitles) {
+      for (const [id, title] of Object.entries(interactionsData.taskTitles)) {
+        if (!m.has(id)) m.set(id, title)
+      }
+    }
     return m
-  }, [tasks])
+  }, [tasks, interactionsData?.taskTitles])
 
   // Wrap interactions as TimelineItems
   const timelineItems = useMemo<TimelineItem[]>(
