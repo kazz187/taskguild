@@ -15,6 +15,7 @@ import (
 
 	"github.com/kazz187/taskguild/internal/tasklog"
 	"github.com/kazz187/taskguild/pkg/cerr"
+	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -28,22 +29,18 @@ var knownSubdirs = map[string]bool{
 	"archived":                 true,
 }
 
-// categoryNames maps proto int32 values to human-readable strings.
 var categoryNames = map[int32]string{
 	0: "unspecified", 1: "turn_start", 2: "turn_end", 3: "status_change",
 	4: "hook", 5: "stderr", 6: "error", 7: "system",
 	8: "tool_use", 9: "agent_output", 10: "directive", 11: "result",
 }
 
-// categoryValues is the reverse map of categoryNames.
 var categoryValues map[string]int32
 
-// levelNames maps proto int32 values to human-readable strings.
 var levelNames = map[int32]string{
 	0: "unspecified", 1: "info", 2: "debug", 3: "warn", 4: "error",
 }
 
-// levelValues is the reverse map of levelNames.
 var levelValues map[string]int32
 
 func init() {
@@ -57,11 +54,6 @@ func init() {
 	}
 }
 
-const (
-	categoryTurnStart int32 = 1
-	categoryTurnEnd   int32 = 2
-)
-
 // jsonlEntry is the on-disk representation of a single log line.
 type jsonlEntry struct {
 	ID        string            `json:"id"`
@@ -72,7 +64,6 @@ type jsonlEntry struct {
 	CreatedAt time.Time         `json:"created_at"`
 }
 
-// turnFileState tracks an open JSONL file for a task's current turn.
 type turnFileState struct {
 	file      *os.File
 	projectID string
@@ -95,9 +86,9 @@ type JSONLRepository struct {
 
 	indexOnce     sync.Once
 	indexMu       sync.RWMutex
-	taskIndex     map[string][]string      // taskID -> sorted []logID
-	locationIndex map[string]logLocation   // logID -> location info
-	allIDs        []string                 // all log IDs in sorted order
+	taskIndex     map[string][]string    // taskID -> sorted []logID
+	locationIndex map[string]logLocation // logID -> location info
+	allIDs        []string               // all log IDs in sorted order
 }
 
 func NewJSONLRepository(baseDir string) *JSONLRepository {
@@ -111,16 +102,45 @@ func NewJSONLRepository(baseDir string) *JSONLRepository {
 	}
 }
 
+// Close closes all open turn file handles.
+func (r *JSONLRepository) Close() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for taskID, ts := range r.turnFiles {
+		ts.file.Close()
+		delete(r.turnFiles, taskID)
+	}
+}
+
 func (r *JSONLRepository) logsDir(projectID, taskID string) string {
 	return filepath.Join(r.baseDir, "projects", projectID, taskID, "logs")
 }
 
-func (r *JSONLRepository) turnFilePath(projectID, taskID, turnID string) string {
-	return filepath.Join(r.logsDir(projectID, taskID), turnID+".jsonl")
+// openTurnFile creates a new JSONL file for a turn and registers it. Caller must hold r.mu.
+func (r *JSONLRepository) openTurnFile(projectID, taskID, turnID string) (*os.File, error) {
+	p := filepath.Join(r.logsDir(projectID, taskID), turnID+".jsonl")
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create logs dir: %w", err)
+	}
+	f, err := os.OpenFile(p, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open log file %s: %w", turnID, err)
+	}
+	r.turnFiles[taskID] = &turnFileState{
+		file:      f,
+		projectID: projectID,
+		taskID:    taskID,
+		turnID:    turnID,
+	}
+	return f, nil
 }
 
-func (r *JSONLRepository) defaultFilePath(projectID, taskID string) string {
-	return filepath.Join(r.logsDir(projectID, taskID), "_default.jsonl")
+// closeTurnFile closes and removes the turn file for a task. Caller must hold r.mu.
+func (r *JSONLRepository) closeTurnFile(taskID string) {
+	if ts, ok := r.turnFiles[taskID]; ok {
+		ts.file.Close()
+		delete(r.turnFiles, taskID)
+	}
 }
 
 func toJSONLEntry(l *tasklog.TaskLog) jsonlEntry {
@@ -155,30 +175,6 @@ func fromJSONLEntry(e *jsonlEntry, projectID, taskID string) *tasklog.TaskLog {
 	}
 }
 
-// getOrCreateTurnFile returns the file handle for the current turn of the given task.
-// Caller must hold r.mu.
-func (r *JSONLRepository) getOrCreateTurnFile(projectID, taskID string) (*os.File, error) {
-	if ts, ok := r.turnFiles[taskID]; ok {
-		return ts.file, nil
-	}
-	// No active turn; use _default.jsonl.
-	p := r.defaultFilePath(projectID, taskID)
-	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-		return nil, fmt.Errorf("failed to create logs dir: %w", err)
-	}
-	f, err := os.OpenFile(p, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open default log file: %w", err)
-	}
-	r.turnFiles[taskID] = &turnFileState{
-		file:      f,
-		projectID: projectID,
-		taskID:    taskID,
-		turnID:    "_default",
-	}
-	return f, nil
-}
-
 func (r *JSONLRepository) Create(ctx context.Context, l *tasklog.TaskLog) error {
 	r.ensureIndex(ctx)
 
@@ -193,35 +189,20 @@ func (r *JSONLRepository) Create(ctx context.Context, l *tasklog.TaskLog) error 
 	defer r.mu.Unlock()
 
 	// On TURN_START, open a new JSONL file.
-	if l.Category == categoryTurnStart {
-		// Close any existing turn file for this task.
-		if ts, ok := r.turnFiles[l.TaskID]; ok {
-			ts.file.Close()
-			delete(r.turnFiles, l.TaskID)
-		}
-
-		turnID := ulid.Make().String()
-		p := r.turnFilePath(l.ProjectID, l.TaskID, turnID)
-		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-			return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to create logs dir: %w", err))
-		}
-		f, err := os.OpenFile(p, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
-		if err != nil {
-			return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to create turn log file: %w", err))
-		}
-		r.turnFiles[l.TaskID] = &turnFileState{
-			file:      f,
-			projectID: l.ProjectID,
-			taskID:    l.TaskID,
-			turnID:    turnID,
+	if l.Category == int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_START) {
+		r.closeTurnFile(l.TaskID)
+		if _, err := r.openTurnFile(l.ProjectID, l.TaskID, ulid.Make().String()); err != nil {
+			return cerr.NewError(cerr.Internal, "server error", err)
 		}
 	}
 
-	// Get the file to write to.
-	f, err := r.getOrCreateTurnFile(l.ProjectID, l.TaskID)
-	if err != nil {
-		return cerr.NewError(cerr.Internal, "server error", err)
+	// Get or create the file to write to (falls back to _default.jsonl).
+	if _, ok := r.turnFiles[l.TaskID]; !ok {
+		if _, err := r.openTurnFile(l.ProjectID, l.TaskID, "_default"); err != nil {
+			return cerr.NewError(cerr.Internal, "server error", err)
+		}
 	}
+	ts := r.turnFiles[l.TaskID]
 
 	// Serialize and append.
 	entry := toJSONLEntry(l)
@@ -230,21 +211,16 @@ func (r *JSONLRepository) Create(ctx context.Context, l *tasklog.TaskLog) error 
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal task log: %w", err))
 	}
 	data = append(data, '\n')
-	if _, err := f.Write(data); err != nil {
+	if _, err := ts.file.Write(data); err != nil {
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to write task log: %w", err))
 	}
 
-	// Determine the relative file path for the index.
-	ts := r.turnFiles[l.TaskID]
 	relPath := filepath.Join("projects", l.ProjectID, l.TaskID, "logs", ts.turnID+".jsonl")
 	r.addToIndex(l.ID, l.ProjectID, l.TaskID, relPath)
 
 	// On TURN_END, close the turn file.
-	if l.Category == categoryTurnEnd {
-		if ts, ok := r.turnFiles[l.TaskID]; ok {
-			ts.file.Close()
-			delete(r.turnFiles, l.TaskID)
-		}
+	if l.Category == int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_END) {
+		r.closeTurnFile(l.TaskID)
 	}
 
 	return nil
@@ -279,7 +255,6 @@ func (r *JSONLRepository) List(ctx context.Context, taskID string, taskIDs []str
 		paginated = paginated[:limit]
 	}
 
-	// Collect unique file paths to read.
 	type idAndLoc struct {
 		id  string
 		loc logLocation
@@ -294,8 +269,8 @@ func (r *JSONLRepository) List(ctx context.Context, taskID string, taskIDs []str
 	r.indexMu.RUnlock()
 
 	// Group by file path to avoid re-reading the same file.
-	fileEntries := make(map[string]map[string]*tasklog.TaskLog) // filePath -> logID -> TaskLog
-	fileGroups := make(map[string]logLocation)                   // filePath -> location (for projectID/taskID)
+	fileEntries := make(map[string]map[string]*tasklog.TaskLog)
+	fileGroups := make(map[string]logLocation)
 	neededIDs := make(map[string]bool, len(needed))
 	for _, n := range needed {
 		neededIDs[n.id] = true
@@ -317,7 +292,6 @@ func (r *JSONLRepository) List(ctx context.Context, taskID string, taskIDs []str
 		fileEntries[fp] = m
 	}
 
-	// Build result in order.
 	result := make([]*tasklog.TaskLog, 0, len(paginated))
 	for _, n := range needed {
 		if m, ok := fileEntries[n.loc.filePath]; ok {
@@ -333,15 +307,10 @@ func (r *JSONLRepository) List(ctx context.Context, taskID string, taskIDs []str
 func (r *JSONLRepository) DeleteByTaskID(ctx context.Context, taskID string) (int, error) {
 	r.ensureIndex(ctx)
 
-	// Close any open turn file for this task.
 	r.mu.Lock()
-	if ts, ok := r.turnFiles[taskID]; ok {
-		ts.file.Close()
-		delete(r.turnFiles, taskID)
-	}
+	r.closeTurnFile(taskID)
 	r.mu.Unlock()
 
-	// Get count and projectID from index.
 	r.indexMu.RLock()
 	ids := make([]string, len(r.taskIndex[taskID]))
 	copy(ids, r.taskIndex[taskID])
@@ -358,19 +327,15 @@ func (r *JSONLRepository) DeleteByTaskID(ctx context.Context, taskID string) (in
 		return 0, nil
 	}
 
-	// Remove the logs directory.
-	logsDir := r.logsDir(projectID, taskID)
-	if err := os.RemoveAll(logsDir); err != nil {
+	if err := os.RemoveAll(r.logsDir(projectID, taskID)); err != nil {
 		return 0, cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to remove logs dir: %w", err))
 	}
 
-	// Remove from index.
 	r.indexMu.Lock()
 	for _, id := range ids {
 		delete(r.locationIndex, id)
 	}
 	delete(r.taskIndex, taskID)
-	// Rebuild allIDs without deleted IDs.
 	deletedSet := make(map[string]bool, len(ids))
 	for _, id := range ids {
 		deletedSet[id] = true
@@ -407,17 +372,8 @@ func (r *JSONLRepository) CleanupOlderThan(ctx context.Context, maxAge time.Dura
 			continue
 		}
 		projectID := pd.Name()
-		projectPath := filepath.Join(projectsDir, projectID)
-		taskDirs, err := os.ReadDir(projectPath)
-		if err != nil {
-			continue
-		}
-		for _, td := range taskDirs {
-			if !td.IsDir() || knownSubdirs[td.Name()] {
-				continue
-			}
-			taskID := td.Name()
-			logsPath := filepath.Join(projectPath, taskID, "logs")
+		for _, td := range r.listTaskDirs(filepath.Join(projectsDir, projectID)) {
+			logsPath := filepath.Join(projectsDir, projectID, td.dir, "logs")
 			logFiles, err := os.ReadDir(logsPath)
 			if err != nil {
 				continue
@@ -432,13 +388,12 @@ func (r *JSONLRepository) CleanupOlderThan(ctx context.Context, maxAge time.Dura
 				}
 				if info.ModTime().Before(cutoff) {
 					absPath := filepath.Join(logsPath, lf.Name())
-					// Read entries to get IDs for index cleanup.
-					entries, _ := r.readJSONLFile(absPath, projectID, taskID)
+					ids := r.scanJSONLIDs(absPath)
 					if err := os.Remove(absPath); err != nil {
 						continue
 					}
-					for _, e := range entries {
-						r.removeFromIndex(e.ID, taskID)
+					for _, id := range ids {
+						r.removeFromIndex(id, td.taskID)
 						deleted++
 					}
 				}
@@ -462,7 +417,7 @@ func (r *JSONLRepository) readJSONLFile(absPath, projectID, taskID string) ([]*t
 
 	var result []*tasklog.TaskLog
 	scanner := bufio.NewScanner(f)
-	// Increase buffer for large log lines (e.g., agent output with full text).
+	// Large buffer for agent_output entries that can contain full LLM responses.
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for scanner.Scan() {
 		line := scanner.Bytes()
@@ -475,7 +430,39 @@ func (r *JSONLRepository) readJSONLFile(absPath, projectID, taskID string) ([]*t
 		}
 		result = append(result, fromJSONLEntry(&e, projectID, taskID))
 	}
+	if err := scanner.Err(); err != nil {
+		slog.Warn("error reading JSONL file", "path", absPath, "error", err)
+	}
 	return result, nil
+}
+
+// scanJSONLIDs extracts only the IDs from a JSONL file without full deserialization.
+func (r *JSONLRepository) scanJSONLIDs(absPath string) []string {
+	f, err := os.Open(absPath)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+
+	var ids []string
+	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+		var partial struct {
+			ID string `json:"id"`
+		}
+		if err := json.Unmarshal(line, &partial); err != nil {
+			continue
+		}
+		if partial.ID != "" {
+			ids = append(ids, partial.ID)
+		}
+	}
+	return ids
 }
 
 // ensureIndex lazily builds the in-memory index on first access.
@@ -497,7 +484,9 @@ func (r *JSONLRepository) ensureIndex(ctx context.Context) {
 				continue
 			}
 			projectID := pd.Name()
-			r.scanProjectTaskDirs(projectID)
+			for _, td := range r.listTaskDirs(filepath.Join(projectsDir, projectID)) {
+				r.scanTaskLogs(projectID, td.taskID, td.dir)
+			}
 		}
 
 		sort.Strings(r.allIDs)
@@ -507,13 +496,18 @@ func (r *JSONLRepository) ensureIndex(ctx context.Context) {
 	})
 }
 
-// scanProjectTaskDirs scans all task directories (active + archived) for a project.
-func (r *JSONLRepository) scanProjectTaskDirs(projectID string) {
-	projectPath := filepath.Join(r.baseDir, "projects", projectID)
+type taskDirEntry struct {
+	taskID string
+	dir    string // relative path from project dir (e.g., "TASKID" or "archived/TASKID")
+}
+
+// listTaskDirs returns all task directory entries (active + archived) for a project path.
+func (r *JSONLRepository) listTaskDirs(projectPath string) []taskDirEntry {
 	subdirs, err := os.ReadDir(projectPath)
 	if err != nil {
-		return
+		return nil
 	}
+	var result []taskDirEntry
 	for _, sd := range subdirs {
 		if !sd.IsDir() {
 			continue
@@ -527,18 +521,19 @@ func (r *JSONLRepository) scanProjectTaskDirs(projectID string) {
 			}
 			for _, ad := range archivedDirs {
 				if ad.IsDir() {
-					r.scanTaskLogs(projectID, ad.Name())
+					result = append(result, taskDirEntry{taskID: ad.Name(), dir: filepath.Join("archived", ad.Name())})
 				}
 			}
 		} else if !knownSubdirs[name] {
-			r.scanTaskLogs(projectID, name)
+			result = append(result, taskDirEntry{taskID: name, dir: name})
 		}
 	}
+	return result
 }
 
 // scanTaskLogs reads all .jsonl files under a task's logs directory and indexes their entries.
-func (r *JSONLRepository) scanTaskLogs(projectID, taskID string) {
-	logsPath := filepath.Join(r.baseDir, "projects", projectID, taskID, "logs")
+func (r *JSONLRepository) scanTaskLogs(projectID, taskID, dir string) {
+	logsPath := filepath.Join(r.baseDir, "projects", projectID, dir, "logs")
 	entries, err := os.ReadDir(logsPath)
 	if err != nil {
 		return
@@ -548,19 +543,16 @@ func (r *JSONLRepository) scanTaskLogs(projectID, taskID string) {
 			continue
 		}
 		absPath := filepath.Join(logsPath, entry.Name())
-		relPath := filepath.Join("projects", projectID, taskID, "logs", entry.Name())
-		logs, err := r.readJSONLFile(absPath, projectID, taskID)
-		if err != nil {
-			continue
-		}
-		for _, l := range logs {
-			r.locationIndex[l.ID] = logLocation{
+		relPath := filepath.Join("projects", projectID, dir, "logs", entry.Name())
+		ids := r.scanJSONLIDs(absPath)
+		for _, id := range ids {
+			r.locationIndex[id] = logLocation{
 				projectID: projectID,
 				taskID:    taskID,
 				filePath:  relPath,
 			}
-			r.taskIndex[taskID] = append(r.taskIndex[taskID], l.ID)
-			r.allIDs = append(r.allIDs, l.ID)
+			r.taskIndex[taskID] = append(r.taskIndex[taskID], id)
+			r.allIDs = append(r.allIDs, id)
 		}
 	}
 }
@@ -571,12 +563,8 @@ func (r *JSONLRepository) addToIndex(id, projectID, taskID, relPath string) {
 
 	r.locationIndex[id] = logLocation{projectID: projectID, taskID: taskID, filePath: relPath}
 	r.taskIndex[taskID] = append(r.taskIndex[taskID], id)
-	sort.Strings(r.taskIndex[taskID])
-
-	i := sort.SearchStrings(r.allIDs, id)
-	r.allIDs = append(r.allIDs, "")
-	copy(r.allIDs[i+1:], r.allIDs[i:])
-	r.allIDs[i] = id
+	// ULIDs are monotonically increasing, so the new ID is always the largest.
+	r.allIDs = append(r.allIDs, id)
 }
 
 func (r *JSONLRepository) removeFromIndex(id, taskID string) {
