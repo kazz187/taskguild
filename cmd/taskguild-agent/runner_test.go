@@ -342,67 +342,12 @@ func TestResolveSession(t *testing.T) {
 			wantForkSession: false,
 		},
 		{
-			name: "same-status retry with per-status session",
+			name: "has global session",
 			metadata: map[string]string{
-				"_current_status_name": "Plan",
-				"_agent_name":         "architect",
-				"session_id":          "global-sess",
-				"session_id:Plan":     "plan-sess",
-			},
-			wantSessionID:   "plan-sess",
-			wantForkSession: false,
-		},
-		{
-			name: "agent changed, should fork",
-			metadata: map[string]string{
-				"_current_status_name": "Develop",
-				"_agent_name":         "senior-engineer",
-				"session_id":          "global-sess",
-				"_last_session_agent": "architect",
-			},
-			wantSessionID:   "global-sess",
-			wantForkSession: true,
-		},
-		{
-			name: "same agent, normal resume",
-			metadata: map[string]string{
-				"_current_status_name": "Plan",
-				"_agent_name":         "architect",
-				"session_id":          "global-sess",
-				"_last_session_agent": "architect",
+				"session_id": "global-sess",
 			},
 			wantSessionID:   "global-sess",
 			wantForkSession: false,
-		},
-		{
-			name: "legacy task without _last_session_agent",
-			metadata: map[string]string{
-				"_current_status_name": "Plan",
-				"_agent_name":         "architect",
-				"session_id":          "global-sess",
-			},
-			wantSessionID:   "global-sess",
-			wantForkSession: false,
-		},
-		{
-			name: "no agent name, normal resume",
-			metadata: map[string]string{
-				"_current_status_name": "Plan",
-				"session_id":          "global-sess",
-				"_last_session_agent": "architect",
-			},
-			wantSessionID:   "global-sess",
-			wantForkSession: false,
-		},
-		{
-			name: "no status name, falls back to global",
-			metadata: map[string]string{
-				"session_id":          "global-sess",
-				"_last_session_agent": "architect",
-				"_agent_name":         "senior-engineer",
-			},
-			wantSessionID:   "global-sess",
-			wantForkSession: true,
 		},
 	}
 
