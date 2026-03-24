@@ -6,7 +6,7 @@ import type { TaskLog } from '@taskguild/proto/taskguild/v1/task_log_pb.ts'
 import {
   Shield, MessageSquare, Bell, Mail, Play, Square, RefreshCw, Anchor,
   Terminal, AlertTriangle, Cog, Wrench, FileText, Zap, ChevronRight, ChevronDown,
-  CheckCircle,
+  CheckCircle, ClipboardCheck,
 } from 'lucide-react'
 import { formatTime } from './InputBar.tsx'
 import { Badge } from '../atoms/index.ts'
@@ -277,6 +277,8 @@ function ExpandedContent({ log }: { log: TaskLog }) {
       return <AgentOutputDetail metadata={metadata} />
     case TaskLogCategory.DIRECTIVE:
       return <DirectiveDetail metadata={metadata} />
+    case TaskLogCategory.RESULT:
+      return <ResultDetail metadata={metadata} />
     default:
       return null
   }
@@ -354,12 +356,31 @@ function DirectiveDetail({ metadata }: { metadata: Record<string, string> }) {
   )
 }
 
+/** Result expanded detail: shows result content as markdown. */
+function ResultDetail({ metadata }: { metadata: Record<string, string> }) {
+  const fullText = metadata['full_text']
+  const resultType = metadata['result_type'] ?? 'summary'
+  if (!fullText) return null
+
+  const borderColor =
+    resultType === 'error' ? 'border-red-500/30' :
+    resultType === 'plan' ? 'border-blue-500/30' :
+    'border-green-500/30'
+
+  return (
+    <div className={`bg-slate-900/50 rounded border-l-2 ${borderColor} px-3 py-2 max-h-96 overflow-y-auto`}>
+      <MarkdownDescription content={fullText} className="text-[12px] text-gray-300" />
+    </div>
+  )
+}
+
 /** Check if a log category supports expand/collapse. */
 function isExpandableCategory(category: TaskLogCategory): boolean {
   return (
     category === TaskLogCategory.TOOL_USE ||
     category === TaskLogCategory.AGENT_OUTPUT ||
-    category === TaskLogCategory.DIRECTIVE
+    category === TaskLogCategory.DIRECTIVE ||
+    category === TaskLogCategory.RESULT
   )
 }
 
@@ -437,6 +458,8 @@ function getCategoryIcon(category: TaskLogCategory) {
       return <FileText className="w-3.5 h-3.5 text-green-300" />
     case TaskLogCategory.DIRECTIVE:
       return <Zap className="w-3.5 h-3.5 text-yellow-400" />
+    case TaskLogCategory.RESULT:
+      return <ClipboardCheck className="w-3.5 h-3.5 text-emerald-400" />
     default:
       return <Cog className="w-3.5 h-3.5 text-gray-500" />
   }
@@ -464,6 +487,8 @@ function getCategoryLabel(category: TaskLogCategory): string {
       return 'Output'
     case TaskLogCategory.DIRECTIVE:
       return 'Directive'
+    case TaskLogCategory.RESULT:
+      return 'Result'
     default:
       return 'Log'
   }

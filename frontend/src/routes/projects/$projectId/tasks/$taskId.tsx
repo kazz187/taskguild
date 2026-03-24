@@ -11,6 +11,7 @@ import { InteractionStatus, InteractionType } from '@taskguild/proto/taskguild/v
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { useTaskLogs } from '@/hooks/useTaskLogs'
+import { TaskLogCategory } from '@taskguild/proto/taskguild/v1/task_log_pb.ts'
 import { useNotificationSound } from '@/hooks/useNotificationSound'
 import { TaskDetailModal } from '@/components/organisms/TaskDetailModal'
 import { ChildTaskCreateModal } from '@/components/organisms/ChildTaskCreateModal'
@@ -283,8 +284,10 @@ function TaskDetailPage() {
   }
 
   const metadata = task.metadata ?? {}
-  const resultSummary = metadata['result_summary'] ?? ''
-  const rawPlanResult = metadata['plan_result'] ?? ''
+  // Show legacy result cards only when there are no RESULT log entries (backward compat for old tasks).
+  const hasResultLogs = logs.some((l) => l.category === TaskLogCategory.RESULT)
+  const resultSummary = hasResultLogs ? '' : (metadata['result_summary'] ?? '')
+  const rawPlanResult = hasResultLogs ? '' : (metadata['plan_result'] ?? '')
   // Handle legacy plan_result that may be stored as JSON with a "plan" field
   const planResult = (() => {
     if (!rawPlanResult) return ''
