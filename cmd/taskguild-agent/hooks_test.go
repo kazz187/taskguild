@@ -296,7 +296,7 @@ func TestRunTask_WithAfterHooks(t *testing.T) {
 
 	runTask(ctx, tc.agentClient, tc.taskClient, tc.interClient,
 		"agent-mgr-1", "task-with-hooks", "instructions", metadata,
-		t.TempDir(), permCache, scpCache, qr)
+		t.TempDir(), permCache, scpCache, qr, func() bool { return false })
 
 	// Verify both main task and hook were executed
 	calls := qr.getCalls()

@@ -67,6 +67,7 @@ func runTask(
 	permCache *permissionCache,
 	scpCache *singleCommandPermissionCache,
 	queryRunner QueryRunner,
+	isUserStopped func() bool,
 ) {
 	// Create task-scoped logger and embed in context.
 	logger := slog.Default().With("task_id", taskID)
@@ -138,11 +139,14 @@ func runTask(
 	}
 	defer afterHooks()
 
-	// Defense-in-depth: if context is cancelled (e.g. user stop), report
+	// Defense-in-depth: if context is cancelled by user stop, report
 	// the cancellation with a fresh context so the RPC can still succeed.
+	// Only report "stopped by user" when the user explicitly stopped the task;
+	// system-initiated cancellations (e.g. task re-assignment after status
+	// transition) should not produce this error.
 	// This defer runs after afterHooks (LIFO) but before tl.Close.
 	defer func() {
-		if ctx.Err() == context.Canceled {
+		if ctx.Err() == context.Canceled && isUserStopped() {
 			bgCtx, bgCancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer bgCancel()
 			reportTaskResult(bgCtx, client, taskID, "", "stopped by user")
@@ -438,9 +442,9 @@ func runTask(
 					tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 						"Max status transition retries reached, completing without transition", nil)
 					displaySummary := stripNextStatus(summary)
+					afterHooks()
 					reportTaskResult(ctx, client, taskID, displaySummary, "")
 					reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (invalid transition after retries)")
-					afterHooks()
 					maybeRunAgentMDHarness(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner)
 					return
 				}
@@ -460,16 +464,16 @@ func runTask(
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Task completed with status transition (turn %d)", turn),
 				map[string]string{"next_status": nextStatusID})
+			// Run after hooks before unassigning/transitioning so that hooks
+			// still observe the current status and the task remains ASSIGNED
+			// until all hooks complete.
+			logger.Info("running after hooks")
+			afterHooks()
+			logger.Info("after hooks completed")
 			logger.Info("reporting task result")
 			reportTaskResult(ctx, client, taskID, displaySummary, "")
 			logger.Info("reporting agent status IDLE")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed")
-			// Run after hooks before transitioning status so that hooks
-			// still observe the current status and the transition happens
-			// only after all hooks complete.
-			logger.Info("running after hooks")
-			afterHooks()
-			logger.Info("after hooks completed")
 			// Launch AGENT.md harness in background goroutine if enabled.
 			maybeRunAgentMDHarness(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner)
 			logger.Info("calling handleStatusTransition", "next_status", nextStatusID)
@@ -488,6 +492,7 @@ func runTask(
 			logger.Info("completed at terminal status", "turn", turn)
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Task completed at terminal status (turn %d)", turn), nil)
+			afterHooks()
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed")
 			// Launch AGENT.md harness in background goroutine if enabled.
@@ -503,9 +508,9 @@ func runTask(
 				"next_status_name", autoName, "turn", turn)
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("No NEXT_STATUS output; auto-transitioning to %s", autoName), nil)
+			afterHooks()
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (auto-transition)")
-			afterHooks()
 			maybeRunAgentMDHarness(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner)
 			if err := handleStatusTransition(ctx, taskClient, taskID, autoName, metadata, tl); err != nil {
 				logger.Error("auto status transition failed", "error", err)
@@ -526,11 +531,11 @@ func runTask(
 				logger.Warn("max user response retries reached, force-completing task", "retries", userResponseRetries-1)
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 					"Max user response retries reached, force-completing task", nil)
-				reportTaskResult(ctx, client, taskID, summary, "")
-				reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task force-completed (no NEXT_STATUS after retries)")
 				// Attempt auto-transition on force-complete so the task
 				// does not remain stuck at the current status.
 				afterHooks()
+				reportTaskResult(ctx, client, taskID, summary, "")
+				reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task force-completed (no NEXT_STATUS after retries)")
 				if err := handleStatusTransition(ctx, taskClient, taskID, "", metadata, tl); err != nil {
 					logger.Warn("auto-transition on force-complete failed", "error", err)
 					tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
@@ -550,10 +555,10 @@ func runTask(
 		}
 		if err != nil {
 			logger.Error("user response error, completing task", "error", err)
-			reportTaskResult(ctx, client, taskID, summary, "")
-			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (no user response)")
 			// Attempt auto-transition so the task does not remain stuck.
 			afterHooks()
+			reportTaskResult(ctx, client, taskID, summary, "")
+			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (no user response)")
 			if transErr := handleStatusTransition(ctx, taskClient, taskID, "", metadata, tl); transErr != nil {
 				logger.Warn("auto-transition on user response error failed", "error", transErr)
 			}

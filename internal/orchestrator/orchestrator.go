@@ -78,6 +78,16 @@ func (o *Orchestrator) handleTaskEvent(ctx context.Context, event *taskguildv1.E
 		return // no agent config for this status (terminal or manual)
 	}
 
+	// If the task is already assigned to an agent (e.g. still running hooks
+	// after a status transition triggered by that agent), skip reassignment.
+	// The running agent will unassign the task when it finishes, and the
+	// subsequent status change will re-trigger this handler.
+	if t.AssignmentStatus == task.AssignmentStatusAssigned {
+		slog.Info("orchestrator: task already assigned to agent, skipping",
+			"task_id", t.ID, "agent_id", t.AssignedAgentID)
+		return
+	}
+
 	// Set assignment status to PENDING.
 	t.AssignmentStatus = task.AssignmentStatusPending
 	t.UpdatedAt = time.Now()
