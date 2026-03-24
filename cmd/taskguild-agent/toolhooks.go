@@ -17,7 +17,7 @@ import (
 // that log tool invocations (with input and output) to the task timeline.
 // When a taskClient is provided, it also tracks plan file writes and saves
 // the plan content to task metadata when ExitPlanMode is called.
-func buildToolUseHooks(tl *taskLogger, taskID string, taskClient taskguildv1connect.TaskServiceClient) map[claudeagent.HookEvent][]*claudeagent.HookMatcher {
+func buildToolUseHooks(tl *taskLogger, taskID string, taskClient taskguildv1connect.TaskServiceClient, onModeChange func(newMode string)) map[claudeagent.HookEvent][]*claudeagent.HookMatcher {
 	// Track the most recently written plan file path across hook invocations.
 	var planFilePath string
 
@@ -27,6 +27,11 @@ func buildToolUseHooks(tl *taskLogger, taskID string, taskClient taskguildv1conn
 				Matcher: "",
 				Hooks: []claudeagent.HookCallback{
 					func(input claudeagent.HookInput, toolUseID string, ctx claudeagent.HookContext) (claudeagent.HookOutput, error) {
+						// Track permission mode changes from CLI.
+						if input.PermissionMode != "" && onModeChange != nil {
+							onModeChange(input.PermissionMode)
+						}
+
 						logToolUse(tl, taskID, input, false)
 
 						// Track plan file writes.
@@ -81,6 +86,11 @@ func buildToolUseHooks(tl *taskLogger, taskID string, taskClient taskguildv1conn
 				Matcher: "",
 				Hooks: []claudeagent.HookCallback{
 					func(input claudeagent.HookInput, toolUseID string, ctx claudeagent.HookContext) (claudeagent.HookOutput, error) {
+						// Track permission mode changes from CLI.
+						if input.PermissionMode != "" && onModeChange != nil {
+							onModeChange(input.PermissionMode)
+						}
+
 						logToolUse(tl, taskID, input, true)
 						return claudeagent.HookOutput{}, nil
 					},
@@ -129,7 +139,12 @@ func logToolUse(tl *taskLogger, taskID string, input claudeagent.HookInput, isFa
 		}
 	}
 
-	slog.Info("tool_use", "task_id", taskID, "summary", summary, "failed", isFail)
+	// Add permission mode if available.
+	if input.PermissionMode != "" {
+		metadata["claude_mode"] = input.PermissionMode
+	}
+
+	slog.Info("tool_use", "task_id", taskID, "summary", summary, "failed", isFail, "claude_mode", input.PermissionMode)
 
 	tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_TOOL_USE, level, summary, metadata)
 }
