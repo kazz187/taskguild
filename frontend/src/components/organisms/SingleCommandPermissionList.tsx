@@ -9,7 +9,7 @@ import {
 import type { SingleCommandPermission } from '@taskguild/proto/taskguild/v1/single_command_permission_pb.ts'
 import { Terminal, Plus, Trash2, Edit2, X, Check } from 'lucide-react'
 import { Button, Input, Select, Badge } from '../atoms/index.ts'
-import { Card, FormField } from '../molecules/index.ts'
+import { Card, FormField, PageHeading } from '../molecules/index.ts'
 
 type PermissionType = 'command' | 'redirect'
 
@@ -115,17 +115,11 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-500/10 rounded-lg">
-            <Terminal className="w-5 h-5 text-purple-400" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-white">Single Command Allow List</h2>
-            <p className="text-xs text-gray-500">
-              {permissions.length} rule{permissions.length !== 1 ? 's' : ''} defined
-            </p>
-          </div>
-        </div>
+        <PageHeading icon={Terminal} title="Single Command Allow List" iconColor="text-purple-400">
+          <Badge color="gray" size="xs" pill variant="outline">
+            {permissions.length}
+          </Badge>
+        </PageHeading>
         <Button
           variant="primary"
           size="sm"

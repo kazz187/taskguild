@@ -7,7 +7,7 @@ import type { Template } from '@taskguild/proto/taskguild/v1/template_pb.ts'
 import { Sparkles, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud, Layers, Copy } from 'lucide-react'
 import { Button } from '../atoms/index.ts'
 import { Input, Textarea, Select, Checkbox, Badge } from '../atoms/index.ts'
-import { Card, FormField } from '../molecules/index.ts'
+import { Card, FormField, PageHeading } from '../molecules/index.ts'
 
 const AVAILABLE_TOOLS = [
   'Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash',
@@ -184,13 +184,11 @@ export function SkillList({ projectId }: { projectId: string }) {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-purple-400" />
-          <h2 className="text-xl font-bold text-white">Skills</h2>
-          <span className="text-xs text-gray-500 bg-slate-800 rounded-full px-2 py-0.5">
+        <PageHeading icon={Sparkles} title="Skills" iconColor="text-purple-400">
+          <Badge color="gray" size="xs" pill variant="outline">
             {skills.length}
-          </span>
-        </div>
+          </Badge>
+        </PageHeading>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"

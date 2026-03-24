@@ -2,3 +2,4 @@ export { Modal, type ModalProps, type ModalHeaderProps, type ModalBodyProps, typ
 export { Card, type CardProps } from './Card.tsx'
 export { FormField, type FormFieldProps } from './FormField.tsx'
 export { DropdownMenu, type DropdownMenuProps, type DropdownMenuItemProps } from './DropdownMenu.tsx'
+export { PageHeading, type PageHeadingProps } from './PageHeading.tsx'

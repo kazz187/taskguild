@@ -12,7 +12,9 @@ import { useNotificationSound } from '@/hooks/useNotificationSound'
 import { TimelineEntry, type TimelineItem } from '@/components/organisms/TimelineEntry'
 import { PendingRequestsPanel } from '@/components/organisms/PendingRequestsPanel'
 import { shortId } from '@/lib/id'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, MessageSquare } from 'lucide-react'
+import { PageHeading } from '@/components/molecules/index.ts'
+import { Badge } from '@/components/atoms/index.ts'
 import { ConnectionIndicator } from '@/components/organisms/ConnectionIndicator'
 
 export const Route = createFileRoute('/projects/$projectId/chat')({
@@ -131,10 +133,11 @@ function ProjectChatPage() {
             <span className="sm:hidden">Back</span>
           </Link>
         </div>
-        <h1 className="text-lg md:text-xl font-bold text-white">Chat</h1>
-        <p className="text-xs text-gray-500 mt-1">
-          All interactions across {tasks.length} task{tasks.length !== 1 ? 's' : ''}
-        </p>
+        <PageHeading icon={MessageSquare} title="Chat" iconColor="text-cyan-400">
+          <Badge color="gray" size="xs" pill variant="outline">
+            {tasks.length} task{tasks.length !== 1 ? 's' : ''}
+          </Badge>
+        </PageHeading>
       </div>
 
       {/* Timeline area */}

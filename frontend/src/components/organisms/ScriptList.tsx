@@ -21,7 +21,7 @@ import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { Terminal, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud, Play, Square, CheckCircle, XCircle, StopCircle, Loader2, Layers, Copy, AlertTriangle, Server, Monitor } from 'lucide-react'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { Button, Input, Textarea, Badge } from '../atoms/index.ts'
-import { Card, FormField, Modal } from '../molecules/index.ts'
+import { Card, FormField, Modal, PageHeading } from '../molecules/index.ts'
 import { emptyForm, scriptToForm, diffTypeLabel } from './ScriptListUtils'
 import type { ScriptFormData } from './ScriptListUtils'
 import { LogOutput } from './LogOutput'
@@ -202,18 +202,16 @@ export function ScriptList({ projectId }: { projectId: string }) {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <Terminal className="w-5 h-5 text-green-400" />
-          <h2 className="text-xl font-bold text-white">Scripts</h2>
-          <span className="text-xs text-gray-500 bg-slate-800 rounded-full px-2 py-0.5">
+        <PageHeading icon={Terminal} title="Scripts" iconColor="text-green-400">
+          <Badge color="gray" size="xs" pill variant="outline">
             {scripts.length}
-          </span>
+          </Badge>
           {diffs.length > 0 && (
             <Badge color="amber" size="xs" variant="outline" pill icon={<AlertTriangle className="w-2.5 h-2.5" />}>
               {diffs.length} diff{diffs.length > 1 ? 's' : ''}
             </Badge>
           )}
-        </div>
+        </PageHeading>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"

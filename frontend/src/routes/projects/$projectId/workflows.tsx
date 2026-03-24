@@ -6,7 +6,9 @@ import type { Workflow } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { WorkflowForm } from '@/components/organisms/WorkflowForm'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { useState } from 'react'
-import { Plus, Workflow as WorkflowIcon, ArrowRight, GitBranch } from 'lucide-react'
+import { Plus, Workflow as WorkflowIcon, ArrowRight } from 'lucide-react'
+import { PageHeading } from '@/components/molecules/index.ts'
+import { Badge } from '@/components/atoms/index.ts'
 
 export const Route = createFileRoute('/projects/$projectId/workflows')({
   component: WorkflowsPage,
@@ -45,20 +47,11 @@ function WorkflowsPage() {
   return (
     <div className="p-4 md:p-8 max-w-4xl">
       <div className="flex items-center justify-between mb-4 md:mb-6">
-        <div className="min-w-0">
-          <h1 className="text-xl md:text-2xl font-bold text-white">Workflows</h1>
-          {project && (
-            <p className="text-gray-500 text-xs mt-1 flex items-center gap-1">
-              <span className="truncate">{project.name}</span>
-              {project.repositoryUrl && (
-                <>
-                  <GitBranch className="w-3 h-3 shrink-0 ml-2" />
-                  <span className="truncate font-mono">{project.repositoryUrl}</span>
-                </>
-              )}
-            </p>
-          )}
-        </div>
+        <PageHeading icon={WorkflowIcon} title="Workflows" iconColor="text-cyan-400">
+          <Badge color="gray" size="xs" pill variant="outline">
+            {workflows.length}
+          </Badge>
+        </PageHeading>
         <button
           onClick={() => setShowForm(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors shrink-0"

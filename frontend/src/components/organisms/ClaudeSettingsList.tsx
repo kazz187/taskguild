@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { getClaudeSettings, updateClaudeSettings, syncClaudeSettingsFromDir } from '@taskguild/proto/taskguild/v1/claude_settings-ClaudeSettingsService_connectquery.ts'
 import { Settings, Save, RefreshCw } from 'lucide-react'
-import { Button, Input, Checkbox } from '../atoms/index.ts'
-import { Card } from '../molecules/index.ts'
+import { Button, Input, Checkbox, Badge } from '../atoms/index.ts'
+import { Card, PageHeading } from '../molecules/index.ts'
 
 export function ClaudeSettingsList({ projectId }: { projectId: string }) {
   const { data, refetch, isLoading } = useQuery(getClaudeSettings, { projectId })
@@ -61,18 +61,13 @@ export function ClaudeSettingsList({ projectId }: { projectId: string }) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-violet-500/10 rounded-lg">
-            <Settings className="w-5 h-5 text-violet-400" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold text-white">Claude Settings</h1>
-            <p className="text-xs text-gray-500">
-              Configure .claude/settings.json for this project
-              {dirty && <span className="text-amber-400 ml-2">* unsaved changes</span>}
-            </p>
-          </div>
-        </div>
+        <PageHeading icon={Settings} title="Claude Settings" iconColor="text-violet-400">
+          {dirty && (
+            <Badge color="amber" size="xs" pill variant="outline">
+              unsaved
+            </Badge>
+          )}
+        </PageHeading>
         <div className="flex items-center gap-2">
           <Button
             variant="secondary"

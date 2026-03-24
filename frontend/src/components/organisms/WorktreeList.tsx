@@ -18,7 +18,7 @@ import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { transport } from '@/lib/transport'
 import { GitFork, GitBranch, RefreshCw, Trash2, AlertTriangle, FileText, Home, Download, CheckCircle2, XCircle, ClipboardList, Sparkles, ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
 import { Button, Badge } from '../atoms/index.ts'
-import { Card, Modal } from '../molecules/index.ts'
+import { Card, Modal, PageHeading } from '../molecules/index.ts'
 
 // --- Git pull main result hook ---
 
@@ -225,13 +225,11 @@ export function WorktreeList({ projectId }: { projectId: string }) {
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-4 md:mb-6">
-        <div className="flex items-center gap-2">
-          <GitFork className="w-5 h-5 text-cyan-400" />
-          <h2 className="text-lg md:text-xl font-bold text-white">Worktrees</h2>
+        <PageHeading icon={GitFork} title="Worktrees" iconColor="text-cyan-400">
           <Badge color="gray" size="xs" pill variant="outline">
             {worktrees.length}
           </Badge>
-        </div>
+        </PageHeading>
         <div className="flex items-center gap-2">
           <Button
             variant="secondary"
