@@ -400,11 +400,21 @@ func handleStatusTransition(
 	return nil
 }
 
-func saveSessionID(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, sessionID string) {
+func saveSessionID(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, sessionID, statusName, agentName string) {
 	logger := clog.LoggerFromContext(ctx)
+	meta := map[string]string{"session_id": sessionID}
+	if statusName != "" {
+		meta["session_id:"+statusName] = sessionID
+		if agentName != "" {
+			meta["session_agent:"+statusName] = agentName
+		}
+	}
+	if agentName != "" {
+		meta["_last_session_agent"] = agentName
+	}
 	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
 		Id:       taskID,
-		Metadata: map[string]string{"session_id": sessionID},
+		Metadata: meta,
 	}))
 	if err != nil {
 		logger.Error("failed to save session_id", "error", err)
