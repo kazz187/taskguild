@@ -40,17 +40,21 @@ type turnLog struct {
 
 // newTurnLog creates a new turn log file and writes the header.
 // If workDir is empty, logging is disabled (all methods become no-ops).
-func newTurnLog(workDir, taskID, label string) *turnLog {
+func newTurnLog(workDir, projectID, taskID, label string) *turnLog {
 	if workDir == "" {
 		return &turnLog{}
 	}
 
-	dir := taskID
-	if dir == "" {
-		dir = "_system"
+	projectDir := projectID
+	if projectDir == "" {
+		projectDir = "_system"
+	}
+	taskDir := taskID
+	if taskDir == "" {
+		taskDir = "_system"
 	}
 
-	logDir := filepath.Join(workDir, ".claude", "cmd-logs", dir)
+	logDir := filepath.Join(workDir, ".taskguild", "logs", projectDir, taskDir)
 	if err := os.MkdirAll(logDir, 0o755); err != nil {
 		slog.Warn("failed to create cmd-log directory", "dir", logDir, "error", err)
 		return &turnLog{}
@@ -80,7 +84,7 @@ func newTurnLog(workDir, taskID, label string) *turnLog {
 	}
 
 	tl := &turnLog{file: f}
-	tl.write(fmt.Sprintf("# Turn log: %s\n# Task: %s\n# Label: %s\n", ts, taskID, label))
+	tl.write(fmt.Sprintf("# Turn log: %s\n# Project: %s\n# Task: %s\n# Label: %s\n", ts, projectID, taskID, label))
 	return tl
 }
 
@@ -214,14 +218,14 @@ func runQuerySyncWithLog(
 	ctx context.Context,
 	prompt string,
 	options *claudeagent.ClaudeAgentOptions,
-	workDir, taskID, label string,
+	workDir, projectID, taskID, label string,
 ) (*claudeagent.QueryResult, error) {
 	opts := claudeagent.ClaudeAgentOptions{}
 	if options != nil {
 		opts = *options
 	}
 
-	tl := newTurnLog(workDir, taskID, label)
+	tl := newTurnLog(workDir, projectID, taskID, label)
 	defer tl.Close()
 
 	// Configure permission prompt tool name (matching RunQuery behavior).
