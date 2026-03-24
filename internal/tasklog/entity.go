@@ -3,12 +3,12 @@ package tasklog
 import "time"
 
 type TaskLog struct {
-	ID        string            `yaml:"id"`
-	ProjectID string            `yaml:"project_id"`
-	TaskID    string            `yaml:"task_id"`
-	Level     int32             `yaml:"level"`
-	Category  int32             `yaml:"category"`
-	Message   string            `yaml:"message"`
-	Metadata  map[string]string `yaml:"metadata"`
-	CreatedAt time.Time         `yaml:"created_at"`
+	ID        string            `json:"id"`
+	ProjectID string            `json:"project_id"`
+	TaskID    string            `json:"task_id"`
+	Level     int32             `json:"level"`
+	Category  int32             `json:"category"`
+	Message   string            `json:"message"`
+	Metadata  map[string]string `json:"metadata"`
+	CreatedAt time.Time         `json:"created_at"`
 }
