@@ -202,7 +202,7 @@ func runServer() {
 	agentRepo := agentrepo.NewYAMLRepository(store)
 	skillRepo := skillrepo.NewYAMLRepository(store)
 	scriptRepo := scriptrepo.NewYAMLRepository(store)
-	taskLogRepo := tasklogrepo.NewYAMLRepository(store)
+	taskLogRepo := tasklogrepo.NewJSONLRepository(env.StorageEnv.BaseDir)
 	pushSubRepo := pushsubrepo.NewYAMLRepository(store)
 	permissionRepo := permissionrepo.NewYAMLRepository(store)
 	scpRepo := scprepo.NewYAMLRepository(store)
