@@ -31,7 +31,7 @@ func TestRunTask_PlanToDevelop(t *testing.T) {
 
 	runTask(ctx, tc.agentClient, tc.taskClient, tc.interClient,
 		"agent-mgr-1", "task-1", "system instructions", metadata,
-		t.TempDir(), permCache, scpCache, qr)
+		t.TempDir(), permCache, scpCache, qr, func() bool { return false })
 
 	// Verify status transition
 	tc.taskHandler.mu.Lock()
@@ -61,7 +61,7 @@ func TestRunTask_DevelopToReview(t *testing.T) {
 
 	runTask(ctx, tc.agentClient, tc.taskClient, tc.interClient,
 		"agent-mgr-1", "task-2", "system instructions", metadata,
-		t.TempDir(), permCache, scpCache, qr)
+		t.TempDir(), permCache, scpCache, qr, func() bool { return false })
 
 	tc.taskHandler.mu.Lock()
 	defer tc.taskHandler.mu.Unlock()
@@ -91,7 +91,7 @@ func TestRunTask_FullWorkflow_PlanDevelopReview(t *testing.T) {
 	}
 	runTask(ctx1, tc.agentClient, tc.taskClient, tc.interClient,
 		"agent-mgr-1", "task-full", "instructions", metadata1,
-		workDir, permCache, scpCache, qr1)
+		workDir, permCache, scpCache, qr1, func() bool { return false })
 
 	// Phase 2: Develop -> Review
 	ctx2, cancel2 := context.WithTimeout(context.Background(), 30*time.Second)
@@ -105,7 +105,7 @@ func TestRunTask_FullWorkflow_PlanDevelopReview(t *testing.T) {
 	}
 	runTask(ctx2, tc.agentClient, tc.taskClient, tc.interClient,
 		"agent-mgr-1", "task-full", "instructions", metadata2,
-		workDir, permCache, scpCache, qr2)
+		workDir, permCache, scpCache, qr2, func() bool { return false })
 
 	// Phase 3: Review (terminal - no transitions)
 	ctx3, cancel3 := context.WithTimeout(context.Background(), 30*time.Second)
@@ -119,7 +119,7 @@ func TestRunTask_FullWorkflow_PlanDevelopReview(t *testing.T) {
 	}
 	runTask(ctx3, tc.agentClient, tc.taskClient, tc.interClient,
 		"agent-mgr-1", "task-full", "instructions", metadata3,
-		workDir, permCache, scpCache, qr3)
+		workDir, permCache, scpCache, qr3, func() bool { return false })
 
 	// Verify: exactly 2 status transitions (Plan->Develop, Develop->Review)
 	tc.taskHandler.mu.Lock()
@@ -152,7 +152,7 @@ func TestRunTask_InvalidTransitionRetry(t *testing.T) {
 
 	runTask(ctx, tc.agentClient, tc.taskClient, tc.interClient,
 		"agent-mgr-1", "task-retry", "instructions", metadata,
-		t.TempDir(), permCache, scpCache, qr)
+		t.TempDir(), permCache, scpCache, qr, func() bool { return false })
 
 	// Verify QueryRunner was called twice
 	calls := qr.getCalls()
@@ -190,7 +190,7 @@ func TestRunTask_AutoTransition_SingleTarget(t *testing.T) {
 
 	runTask(ctx, tc.agentClient, tc.taskClient, tc.interClient,
 		"agent-mgr-1", "task-auto", "instructions", metadata,
-		t.TempDir(), permCache, scpCache, qr)
+		t.TempDir(), permCache, scpCache, qr, func() bool { return false })
 
 	// Verify auto-transition to Develop
 	tc.taskHandler.mu.Lock()
@@ -221,7 +221,7 @@ func TestRunTask_TerminalStatus(t *testing.T) {
 
 	runTask(ctx, tc.agentClient, tc.taskClient, tc.interClient,
 		"agent-mgr-1", "task-terminal", "instructions", metadata,
-		t.TempDir(), permCache, scpCache, qr)
+		t.TempDir(), permCache, scpCache, qr, func() bool { return false })
 
 	// No status transitions should have been attempted
 	tc.taskHandler.mu.Lock()
@@ -267,7 +267,7 @@ NEXT_STATUS: Develop`
 
 	runTask(ctx, tc.agentClient, tc.taskClient, tc.interClient,
 		"agent-mgr-1", "task-create", "instructions", metadata,
-		t.TempDir(), permCache, scpCache, qr)
+		t.TempDir(), permCache, scpCache, qr, func() bool { return false })
 
 	// Verify CreateTask was called
 	tc.taskHandler.mu.Lock()
@@ -310,7 +310,7 @@ NEXT_STATUS: Develop`
 
 	runTask(ctx, tc.agentClient, tc.taskClient, tc.interClient,
 		"agent-mgr-1", "task-desc", "instructions", metadata,
-		t.TempDir(), permCache, scpCache, qr)
+		t.TempDir(), permCache, scpCache, qr, func() bool { return false })
 
 	// Verify UpdateTask was called with the description
 	tc.taskHandler.mu.Lock()

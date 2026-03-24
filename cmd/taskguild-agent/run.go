@@ -34,6 +34,19 @@ var scriptTracker struct {
 	reject  bool // true once SIGUSR1 is received; prevents new script starts
 }
 
+// userStoppedTasks tracks which tasks were explicitly stopped by the user
+// (via CancelTaskCommand) as opposed to system-initiated cancellations
+// (SIGINT/SIGTERM, task re-assignment). This prevents false "stopped by user"
+// reports when context is cancelled for non-user reasons.
+var userStoppedTasks struct {
+	mu      sync.Mutex
+	stopped map[string]bool
+}
+
+func init() {
+	userStoppedTasks.stopped = make(map[string]bool)
+}
+
 // safeGo launches f in a new goroutine with panic recovery using conc.WaitGroup.
 func safeGo(name string, f func()) {
 	var wg conc.WaitGroup
@@ -465,6 +478,9 @@ func runSubscribeLoop(
 					mu.Lock()
 					delete(activeTasks, tID)
 					mu.Unlock()
+					userStoppedTasks.mu.Lock()
+					delete(userStoppedTasks.stopped, tID)
+					userStoppedTasks.mu.Unlock()
 					taskCancel()
 				}()
 				defer func() {
@@ -473,8 +489,14 @@ func runSubscribeLoop(
 					}
 				}()
 
+				isUserStopped := func() bool {
+					userStoppedTasks.mu.Lock()
+					defer userStoppedTasks.mu.Unlock()
+					return userStoppedTasks.stopped[tID]
+				}
+
 				slog.Info("launching runTask goroutine", "task_id", tID)
-				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache, scpCache, subprocessQueryRunner{projectID: metadata["_project_id"]})
+				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache, scpCache, subprocessQueryRunner{projectID: metadata["_project_id"]}, isUserStopped)
 				slog.Info("runTask goroutine finished", "task_id", tID)
 			})
 
@@ -568,6 +590,10 @@ func runSubscribeLoop(
 			reason := cancelCmd.GetReason()
 			slog.Info("cancel request for task", "task_id", taskID, "reason", reason)
 
+			userStoppedTasks.mu.Lock()
+			userStoppedTasks.stopped[taskID] = true
+			userStoppedTasks.mu.Unlock()
+
 			mu.Lock()
 			if cancelFn, ok := activeTasks[taskID]; ok {
 				cancelFn()
@@ -618,6 +644,9 @@ func runSubscribeLoop(
 					mu.Lock()
 					delete(activeTasks, tID)
 					mu.Unlock()
+					userStoppedTasks.mu.Lock()
+					delete(userStoppedTasks.stopped, tID)
+					userStoppedTasks.mu.Unlock()
 					taskCancel()
 				}()
 				defer func() {
@@ -626,8 +655,14 @@ func runSubscribeLoop(
 					}
 				}()
 
+				isUserStopped := func() bool {
+					userStoppedTasks.mu.Lock()
+					defer userStoppedTasks.mu.Unlock()
+					return userStoppedTasks.stopped[tID]
+				}
+
 				slog.Info("launching runTask goroutine (assigned)", "task_id", tID)
-				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache, scpCache, subprocessQueryRunner{projectID: metadata["_project_id"]})
+				runTask(taskCtx, client, taskClient, interClient, cfg.AgentManagerID, tID, instructions, metadata, cfg.WorkDir, permCache, scpCache, subprocessQueryRunner{projectID: metadata["_project_id"]}, isUserStopped)
 				slog.Info("runTask goroutine finished (assigned)", "task_id", tID)
 			})
 
