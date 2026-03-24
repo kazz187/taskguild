@@ -23,7 +23,7 @@ func NewServer(repo Repository, taskRepo task.Repository) *Server {
 }
 
 func (s *Server) ListTaskLogs(ctx context.Context, req *connect.Request[taskguildv1.ListTaskLogsRequest]) (*connect.Response[taskguildv1.ListTaskLogsResponse], error) {
-	limit, offset := int32(50), int32(0)
+	limit, offset := int32(0), int32(0)
 	if req.Msg.Pagination != nil {
 		limit = req.Msg.Pagination.Limit
 		offset = req.Msg.Pagination.Offset
