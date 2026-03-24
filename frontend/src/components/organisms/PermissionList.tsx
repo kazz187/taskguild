@@ -3,7 +3,7 @@ import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { getPermissions, updatePermissions, syncPermissionsFromDir } from '@taskguild/proto/taskguild/v1/permission-PermissionService_connectquery.ts'
 import { Shield, Plus, X, Save, RefreshCw } from 'lucide-react'
 import { Button, Input, Select, Badge } from '../atoms/index.ts'
-import { Card } from '../molecules/index.ts'
+import { Card, PageHeading } from '../molecules/index.ts'
 
 type PermissionCategory = 'allow' | 'ask' | 'deny'
 
@@ -130,18 +130,16 @@ export function PermissionList({ projectId }: { projectId: string }) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-cyan-500/10 rounded-lg">
-            <Shield className="w-5 h-5 text-cyan-400" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold text-white">Permissions</h1>
-            <p className="text-xs text-gray-500">
-              {totalRules} rule{totalRules !== 1 ? 's' : ''} defined
-              {dirty && <span className="text-amber-400 ml-2">* unsaved changes</span>}
-            </p>
-          </div>
-        </div>
+        <PageHeading icon={Shield} title="Permissions" iconColor="text-cyan-400">
+          <Badge color="gray" size="xs" pill variant="outline">
+            {totalRules}
+          </Badge>
+          {dirty && (
+            <Badge color="amber" size="xs" pill variant="outline">
+              unsaved
+            </Badge>
+          )}
+        </PageHeading>
         <div className="flex items-center gap-2">
           <Button
             variant="secondary"

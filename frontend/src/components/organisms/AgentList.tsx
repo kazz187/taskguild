@@ -17,7 +17,7 @@ import { Bot, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud, Layers, Copy, Aler
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { Button } from '../atoms/index.ts'
 import { Input, Textarea, Select, Badge, Checkbox } from '../atoms/index.ts'
-import { Card, FormField, Modal } from '../molecules/index.ts'
+import { Card, FormField, Modal, PageHeading } from '../molecules/index.ts'
 
 const AVAILABLE_TOOLS = [
   'Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash',
@@ -318,9 +318,7 @@ export function AgentList({ projectId, editAgentId, mode }: { projectId: string;
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-4 md:mb-6">
-        <div className="flex items-center gap-2">
-          <Bot className="w-5 h-5 text-cyan-400" />
-          <h2 className="text-lg md:text-xl font-bold text-white">Agents</h2>
+        <PageHeading icon={Bot} title="Agents" iconColor="text-cyan-400">
           <Badge color="gray" size="xs" pill variant="outline">
             {agents.length}
           </Badge>
@@ -329,7 +327,7 @@ export function AgentList({ projectId, editAgentId, mode }: { projectId: string;
               {diffs.length} diff{diffs.length > 1 ? 's' : ''}
             </Badge>
           )}
-        </div>
+        </PageHeading>
         <div className="flex items-center gap-2">
           <Button
             variant="secondary"
