@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"connectrpc.com/connect"
@@ -71,7 +72,15 @@ func runTask(
 	logger := slog.Default().With("task_id", taskID)
 	ctx = clog.ContextWithLogger(ctx, logger)
 
-	logger.Info("runTask started", "agent_name", metadata["_agent_name"], "use_worktree", metadata["_use_worktree"])
+	// Track the current Claude operating mode (plan, acceptEdits, bypassPermissions, default).
+	// Initialized from metadata and updated dynamically via hook callbacks.
+	currentMode := metadata["_permission_mode"]
+	if currentMode == "" {
+		currentMode = string(claudeagent.PermissionModeDefault)
+	}
+	var modeMu sync.Mutex
+
+	logger.Info("runTask started", "agent_name", metadata["_agent_name"], "use_worktree", metadata["_use_worktree"], "claude_mode", currentMode)
 	reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "starting task")
 
 	// Initialize task logger for structured log streaming.
@@ -160,17 +169,29 @@ func runTask(
 	statusTransitionRetries := 0
 
 	for turn := 0; ; turn++ {
-		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, worktreeName, client, taskClient, ctx, taskID, agentManagerID, waiter, permCache, scpCache, tl)
+		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, worktreeName, client, taskClient, ctx, taskID, agentManagerID, waiter, permCache, scpCache, tl, func(newMode string) {
+			modeMu.Lock()
+			old := currentMode
+			currentMode = newMode
+			modeMu.Unlock()
+			if old != newMode {
+				logger.Info("claude mode changed", "old_mode", old, "new_mode", newMode)
+			}
+		})
 		// Override StderrCallback to also send to task logger.
 		opts.StderrCallback = func(line string) {
 			logger.Debug("claude-stderr", "line", line)
 			tl.LogStderr(line)
 		}
 
+		modeMu.Lock()
+		turnMode := currentMode
+		modeMu.Unlock()
+
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_START, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 			fmt.Sprintf("Turn %d started", turn),
-			map[string]string{"turn": fmt.Sprintf("%d", turn)})
-		logger.Info("starting Claude CLI", "turn", turn, "session_id", sessionID)
+			map[string]string{"turn": fmt.Sprintf("%d", turn), "claude_mode": turnMode})
+		logger.Info("starting Claude CLI", "turn", turn, "session_id", sessionID, "claude_mode", turnMode)
 		logger.Debug("Claude SDK input", "turn", turn)
 		if turn == 0 {
 			// Log the actual system prompt from opts (after buildWorkflowContext appends).
@@ -195,7 +216,11 @@ func runTask(
 
 		result, err := queryRunner.RunQuerySync(ctx, prompt, opts, workDir, taskID, fmt.Sprintf("task_turn%d", turn))
 
-		logger.Info("Claude CLI finished", "turn", turn, "has_error", err != nil)
+		modeMu.Lock()
+		endMode := currentMode
+		modeMu.Unlock()
+
+		logger.Info("Claude CLI finished", "turn", turn, "has_error", err != nil, "claude_mode", endMode)
 		if err != nil {
 			logger.Error("Claude SDK error", "turn", turn, "error", err)
 		} else if result.Result != nil {
@@ -212,11 +237,11 @@ func runTask(
 		if err != nil {
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_END, v1.TaskLogLevel_TASK_LOG_LEVEL_ERROR,
 				fmt.Sprintf("Turn %d error: %v", turn, err),
-				map[string]string{"turn": fmt.Sprintf("%d", turn)})
+				map[string]string{"turn": fmt.Sprintf("%d", turn), "claude_mode": endMode})
 		} else {
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_END, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Turn %d completed", turn),
-				map[string]string{"turn": fmt.Sprintf("%d", turn)})
+				map[string]string{"turn": fmt.Sprintf("%d", turn), "claude_mode": endMode})
 		}
 
 		// Save session ID for resume.
@@ -545,6 +570,7 @@ func buildClaudeOptions(
 	permCache *permissionCache,
 	scpCache *singleCommandPermissionCache,
 	tl *taskLogger,
+	onModeChange func(newMode string),
 ) *claudeagent.ClaudeAgentOptions {
 	logger := clog.LoggerFromContext(ctx)
 
@@ -584,7 +610,7 @@ func buildClaudeOptions(
 		StderrCallback: func(line string) {
 			logger.Debug("claude-stderr", "line", line)
 		},
-		Hooks: buildToolUseHooks(tl, taskID, taskClient),
+		Hooks: buildToolUseHooks(tl, taskID, taskClient, onModeChange),
 	}
 
 	// Use --agent flag when a named agent is assigned; otherwise fall back to --system-prompt.
