@@ -281,6 +281,7 @@ func (r *JSONLRepository) List(ctx context.Context, taskID string, taskIDs []str
 		absPath := filepath.Join(r.baseDir, fp)
 		entries, err := r.readJSONLFile(absPath, loc.projectID, loc.taskID)
 		if err != nil {
+			slog.Warn("failed to read JSONL file during List, skipping", "path", absPath, "error", err)
 			continue
 		}
 		m := make(map[string]*tasklog.TaskLog, len(entries))
