@@ -192,6 +192,14 @@ export function TaskCard({ task, onEdit, onCreateChild, isDragOverlay, transitio
         </div>
       )}
 
+      {/* Claude mode indicator */}
+      {task.metadata?.['claude_mode'] && (
+        <div className="mt-1.5 flex items-center gap-1 text-xs text-gray-500 truncate">
+          <Play className="w-3 h-3 shrink-0" />
+          <span className="truncate font-mono">{task.metadata['claude_mode']}</span>
+        </div>
+      )}
+
       {/* Worktree indicator */}
       {task.useWorktree && (
         <div className="mt-1.5 flex items-center gap-1 text-xs text-gray-500 truncate">

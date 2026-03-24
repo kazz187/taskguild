@@ -81,6 +81,7 @@ func runTask(
 	var modeMu sync.Mutex
 
 	logger.Info("runTask started", "agent_name", metadata["_agent_name"], "use_worktree", metadata["_use_worktree"], "claude_mode", currentMode)
+	saveClaudeMode(ctx, taskClient, taskID, currentMode)
 	reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "starting task")
 
 	// Initialize task logger for structured log streaming.
@@ -183,6 +184,10 @@ func runTask(
 			modeMu.Unlock()
 			if old != newMode {
 				logger.Info("claude mode changed", "old_mode", old, "new_mode", newMode)
+				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+					fmt.Sprintf("Mode changed: %s → %s", old, newMode),
+					map[string]string{"old_mode": old, "new_mode": newMode})
+				saveClaudeMode(ctx, taskClient, taskID, newMode)
 			}
 		})
 		// Override StderrCallback to also send to task logger.

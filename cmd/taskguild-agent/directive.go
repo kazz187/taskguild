@@ -424,6 +424,17 @@ func saveWorktreeName(ctx context.Context, taskClient taskguildv1connect.TaskSer
 	}
 }
 
+func saveClaudeMode(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, mode string) {
+	logger := clog.LoggerFromContext(ctx)
+	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
+		Id:       taskID,
+		Metadata: map[string]string{"claude_mode": mode},
+	}))
+	if err != nil {
+		logger.Error("failed to save claude_mode", "error", err)
+	}
+}
+
 func saveTaskDescription(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, description string) {
 	logger := clog.LoggerFromContext(ctx)
 	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
