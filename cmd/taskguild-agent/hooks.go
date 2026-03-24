@@ -124,25 +124,29 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 	}
 }
 
+// detectDefaultBranch returns the name of the default branch (main or master)
+// by checking which local branch exists. Falls back to "main" if neither exists.
+func detectDefaultBranch(ctx context.Context, workDir string) string {
+	cmd := exec.CommandContext(ctx, "git", "rev-parse", "--verify", "--quiet", "main")
+	cmd.Dir = workDir
+	if err := cmd.Run(); err == nil {
+		return "main"
+	}
+	cmd2 := exec.CommandContext(ctx, "git", "rev-parse", "--verify", "--quiet", "master")
+	cmd2.Dir = workDir
+	if err := cmd2.Run(); err == nil {
+		return "master"
+	}
+	return "main"
+}
+
 // warnIfWorktreeEmpty checks whether the current branch in workDir has any
 // commits ahead of the default branch (main/master). If not, it logs a warning
 // to the task logger so the user knows that hooks like create-pr will fail.
 // This catches the common mistake where the agent accidentally committed on
 // the main repository branch instead of the worktree branch.
 func warnIfWorktreeEmpty(ctx context.Context, workDir string, logger *slog.Logger, tl *taskLogger) {
-	// Detect default branch name.
-	defaultBranch := "main"
-	cmd := exec.CommandContext(ctx, "git", "rev-parse", "--verify", "--quiet", "main")
-	cmd.Dir = workDir
-	if err := cmd.Run(); err != nil {
-		cmd2 := exec.CommandContext(ctx, "git", "rev-parse", "--verify", "--quiet", "master")
-		cmd2.Dir = workDir
-		if err2 := cmd2.Run(); err2 != nil {
-			// Neither main nor master exist; skip the check.
-			return
-		}
-		defaultBranch = "master"
-	}
+	defaultBranch := detectDefaultBranch(ctx, workDir)
 
 	// Count commits ahead of the default branch.
 	logCmd := exec.CommandContext(ctx, "git", "log", defaultBranch+"..HEAD", "--oneline")
@@ -230,7 +234,8 @@ func slugifyASCII(s string) string {
 }
 
 // ensureWorktree creates a git worktree if the directory does not already exist.
-// It uses "git worktree add" with a new branch based on HEAD.
+// It fetches the latest default branch from origin and creates the worktree
+// from origin/<default-branch> to ensure it starts from the most recent code.
 func ensureWorktree(ctx context.Context, workDir, worktreeName, taskID string) (string, error) {
 	logger := clog.LoggerFromContext(ctx)
 
@@ -246,8 +251,27 @@ func ensureWorktree(ctx context.Context, workDir, worktreeName, taskID string) (
 		return "", fmt.Errorf("mkdir: %w", err)
 	}
 
+	// Fetch the latest default branch from origin so the worktree starts
+	// from the most recent commit rather than a potentially stale local HEAD.
+	// If fetch fails (e.g. no network), fall back to creating from local HEAD.
+	defaultBranch := detectDefaultBranch(ctx, workDir)
+	startPoint := "" // empty means HEAD (fallback)
+	fetchCmd := exec.CommandContext(ctx, "git", "fetch", "origin", defaultBranch)
+	fetchCmd.Dir = workDir
+	if out, err := fetchCmd.CombinedOutput(); err != nil {
+		logger.Warn("git fetch origin failed, creating worktree from local HEAD", "error", err, "output", string(out))
+	} else {
+		logger.Info("fetched latest default branch from origin", "branch", defaultBranch)
+		startPoint = "origin/" + defaultBranch
+	}
+
 	branchName := "worktree-" + worktreeName
-	cmd := exec.CommandContext(ctx, "git", "worktree", "add", "-b", branchName, wtDir)
+	var cmd *exec.Cmd
+	if startPoint != "" {
+		cmd = exec.CommandContext(ctx, "git", "worktree", "add", "-b", branchName, wtDir, startPoint)
+	} else {
+		cmd = exec.CommandContext(ctx, "git", "worktree", "add", "-b", branchName, wtDir)
+	}
 	cmd.Dir = workDir
 	if out, err := cmd.CombinedOutput(); err != nil {
 		// Branch may already exist from a previous run; try without -b.

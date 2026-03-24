@@ -25,10 +25,11 @@ const (
 type HookTrigger int32
 
 const (
-	HookTrigger_HOOK_TRIGGER_UNSPECIFIED             HookTrigger = 0
-	HookTrigger_HOOK_TRIGGER_BEFORE_TASK_EXECUTION   HookTrigger = 1
-	HookTrigger_HOOK_TRIGGER_AFTER_TASK_EXECUTION    HookTrigger = 2
-	HookTrigger_HOOK_TRIGGER_AFTER_WORKTREE_CREATION HookTrigger = 3
+	HookTrigger_HOOK_TRIGGER_UNSPECIFIED              HookTrigger = 0
+	HookTrigger_HOOK_TRIGGER_BEFORE_TASK_EXECUTION    HookTrigger = 1
+	HookTrigger_HOOK_TRIGGER_AFTER_TASK_EXECUTION     HookTrigger = 2
+	HookTrigger_HOOK_TRIGGER_AFTER_WORKTREE_CREATION  HookTrigger = 3
+	HookTrigger_HOOK_TRIGGER_BEFORE_WORKTREE_CREATION HookTrigger = 4
 )
 
 // Enum value maps for HookTrigger.
@@ -38,12 +39,14 @@ var (
 		1: "HOOK_TRIGGER_BEFORE_TASK_EXECUTION",
 		2: "HOOK_TRIGGER_AFTER_TASK_EXECUTION",
 		3: "HOOK_TRIGGER_AFTER_WORKTREE_CREATION",
+		4: "HOOK_TRIGGER_BEFORE_WORKTREE_CREATION",
 	}
 	HookTrigger_value = map[string]int32{
-		"HOOK_TRIGGER_UNSPECIFIED":             0,
-		"HOOK_TRIGGER_BEFORE_TASK_EXECUTION":   1,
-		"HOOK_TRIGGER_AFTER_TASK_EXECUTION":    2,
-		"HOOK_TRIGGER_AFTER_WORKTREE_CREATION": 3,
+		"HOOK_TRIGGER_UNSPECIFIED":              0,
+		"HOOK_TRIGGER_BEFORE_TASK_EXECUTION":    1,
+		"HOOK_TRIGGER_AFTER_TASK_EXECUTION":     2,
+		"HOOK_TRIGGER_AFTER_WORKTREE_CREATION":  3,
+		"HOOK_TRIGGER_BEFORE_WORKTREE_CREATION": 4,
 	}
 )
 
@@ -1230,12 +1233,13 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\bworkflow\x18\x01 \x01(\v2\x16.taskguild.v1.WorkflowR\bworkflow\"'\n" +
 	"\x15DeleteWorkflowRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x18\n" +
-	"\x16DeleteWorkflowResponse*\xa4\x01\n" +
+	"\x16DeleteWorkflowResponse*\xcf\x01\n" +
 	"\vHookTrigger\x12\x1c\n" +
 	"\x18HOOK_TRIGGER_UNSPECIFIED\x10\x00\x12&\n" +
 	"\"HOOK_TRIGGER_BEFORE_TASK_EXECUTION\x10\x01\x12%\n" +
 	"!HOOK_TRIGGER_AFTER_TASK_EXECUTION\x10\x02\x12(\n" +
-	"$HOOK_TRIGGER_AFTER_WORKTREE_CREATION\x10\x03*k\n" +
+	"$HOOK_TRIGGER_AFTER_WORKTREE_CREATION\x10\x03\x12)\n" +
+	"%HOOK_TRIGGER_BEFORE_WORKTREE_CREATION\x10\x04*k\n" +
 	"\x0eHookActionType\x12 \n" +
 	"\x1cHOOK_ACTION_TYPE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16HOOK_ACTION_TYPE_SKILL\x10\x01\x12\x1b\n" +

@@ -26,7 +26,8 @@ const (
 	HookTriggerUnspecified          HookTrigger = ""
 	HookTriggerBeforeTaskExecution  HookTrigger = "before_task_execution"
 	HookTriggerAfterTaskExecution   HookTrigger = "after_task_execution"
-	HookTriggerAfterWorktreeCreation HookTrigger = "after_worktree_creation"
+	HookTriggerAfterWorktreeCreation  HookTrigger = "after_worktree_creation"
+	HookTriggerBeforeWorktreeCreation HookTrigger = "before_worktree_creation"
 )
 
 type HookActionType string

@@ -198,6 +198,8 @@ func hookTriggerToProto(t HookTrigger) taskguildv1.HookTrigger {
 		return taskguildv1.HookTrigger_HOOK_TRIGGER_AFTER_TASK_EXECUTION
 	case HookTriggerAfterWorktreeCreation:
 		return taskguildv1.HookTrigger_HOOK_TRIGGER_AFTER_WORKTREE_CREATION
+	case HookTriggerBeforeWorktreeCreation:
+		return taskguildv1.HookTrigger_HOOK_TRIGGER_BEFORE_WORKTREE_CREATION
 	default:
 		return taskguildv1.HookTrigger_HOOK_TRIGGER_UNSPECIFIED
 	}
@@ -293,6 +295,8 @@ func hookTriggerFromProto(t taskguildv1.HookTrigger) HookTrigger {
 		return HookTriggerAfterTaskExecution
 	case taskguildv1.HookTrigger_HOOK_TRIGGER_AFTER_WORKTREE_CREATION:
 		return HookTriggerAfterWorktreeCreation
+	case taskguildv1.HookTrigger_HOOK_TRIGGER_BEFORE_WORKTREE_CREATION:
+		return HookTriggerBeforeWorktreeCreation
 	default:
 		return HookTriggerUnspecified
 	}
