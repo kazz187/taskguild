@@ -260,8 +260,7 @@ func runTask(
 		if result.Result != nil && result.Result.SessionID != "" {
 			sessionID = result.Result.SessionID
 			forkSession = false // fork done, normal resume from here
-			saveSessionID(ctx, taskClient, taskID, sessionID,
-				metadata["_current_status_name"], metadata["_agent_name"])
+			saveSessionID(ctx, taskClient, taskID, sessionID)
 		}
 
 		// Handle errors with backoff retry.
@@ -569,33 +568,8 @@ func runTask(
 }
 
 // resolveSession determines which session ID to use and whether to fork.
-// It checks per-status sessions first (for same-status retries), then falls
-// back to the global session_id and compares agents to decide on forking.
 func resolveSession(metadata map[string]string) (sessionID string, forkSession bool) {
-	currentStatus := metadata["_current_status_name"]
-	currentAgent := metadata["_agent_name"]
-
-	// 1. Check for existing session in current status (same-status retry).
-	if currentStatus != "" {
-		if sid := metadata["session_id:"+currentStatus]; sid != "" {
-			return sid, false
-		}
-	}
-
-	// 2. Check global session ID.
-	globalSID := metadata["session_id"]
-	if globalSID == "" {
-		return "", false // new task
-	}
-
-	// 3. Compare with previous agent — fork if agent changed.
-	lastAgent := metadata["_last_session_agent"]
-	if lastAgent != "" && currentAgent != "" && lastAgent != currentAgent {
-		return globalSID, true
-	}
-
-	// 4. Same agent or unknown → normal resume.
-	return globalSID, false
+	return metadata["session_id"], false
 }
 
 // buildClaudeOptions constructs ClaudeAgentOptions for each turn.
