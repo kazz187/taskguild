@@ -328,6 +328,92 @@ NEXT_STATUS: Develop`
 	assert.True(t, foundDesc, "expected a description update via UpdateTask")
 }
 
+// TestRunTask_SessionClearedOnStatusTransition verifies that when a status
+// transition occurs, the session_id is cleared so the next agent starts fresh.
+// This prevents infinite loops caused by resuming a stale session from a
+// previous status (e.g., Plan session resumed in Develop).
+func TestRunTask_SessionClearedOnStatusTransition(t *testing.T) {
+	tc := newTestClients()
+	defer tc.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	metadata := baseMetadata("Develop", `[{"name":"Review"}]`)
+	metadata["session_id"] = "old-session-from-plan"
+
+	qr := &mockQueryRunner{
+		results: []mockQueryRunnerResult{
+			{Result: makeResult("Code done.\nNEXT_STATUS: Review")},
+		},
+	}
+
+	permCache := newPermissionCache("test", tc.agentClient)
+	scpCache := newSingleCommandPermissionCache("test", tc.agentClient)
+
+	runTask(ctx, tc.agentClient, tc.taskClient, tc.interClient,
+		"agent-mgr-1", "task-session", "instructions", metadata,
+		t.TempDir(), permCache, scpCache, qr, func() bool { return false })
+
+	tc.taskHandler.mu.Lock()
+	defer tc.taskHandler.mu.Unlock()
+
+	// Verify session_id was cleared via UpdateTask RPC.
+	var sessionCleared bool
+	for _, req := range tc.taskHandler.updateTaskReqs {
+		if v, ok := req.Metadata["session_id"]; ok && v == "" {
+			sessionCleared = true
+			break
+		}
+	}
+	assert.True(t, sessionCleared, "session_id should be cleared on status transition")
+
+	// Verify status transition still happened.
+	require.Len(t, tc.taskHandler.updateTaskStatusReqs, 1)
+	assert.Equal(t, "Review", tc.taskHandler.updateTaskStatusReqs[0].StatusId)
+}
+
+// TestRunTask_SessionClearedOnAutoTransition verifies that session_id is also
+// cleared when auto-transitioning (no explicit NEXT_STATUS output).
+func TestRunTask_SessionClearedOnAutoTransition(t *testing.T) {
+	tc := newTestClients()
+	defer tc.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	metadata := baseMetadata("Plan", `[{"name":"Develop"}]`)
+	metadata["session_id"] = "stale-session"
+
+	qr := &mockQueryRunner{
+		results: []mockQueryRunnerResult{
+			{Result: makeResult("Planning complete.")},
+		},
+	}
+
+	permCache := newPermissionCache("test", tc.agentClient)
+	scpCache := newSingleCommandPermissionCache("test", tc.agentClient)
+
+	runTask(ctx, tc.agentClient, tc.taskClient, tc.interClient,
+		"agent-mgr-1", "task-auto-session", "instructions", metadata,
+		t.TempDir(), permCache, scpCache, qr, func() bool { return false })
+
+	tc.taskHandler.mu.Lock()
+	defer tc.taskHandler.mu.Unlock()
+
+	var sessionCleared bool
+	for _, req := range tc.taskHandler.updateTaskReqs {
+		if v, ok := req.Metadata["session_id"]; ok && v == "" {
+			sessionCleared = true
+			break
+		}
+	}
+	assert.True(t, sessionCleared, "session_id should be cleared on auto-transition")
+
+	require.Len(t, tc.taskHandler.updateTaskStatusReqs, 1)
+	assert.Equal(t, "Develop", tc.taskHandler.updateTaskStatusReqs[0].StatusId)
+}
+
 func TestResolveSession(t *testing.T) {
 	tests := []struct {
 		name            string
