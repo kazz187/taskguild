@@ -124,6 +124,7 @@ func maybeRunAgentMDHarness(
 	tl *taskLogger,
 	client taskguildv1connect.AgentManagerServiceClient,
 	qr QueryRunner,
+	sessionID string,
 ) {
 	if metadata["_enable_agent_md_harness"] != "true" {
 		return
@@ -148,7 +149,7 @@ func maybeRunAgentMDHarness(
 	globalHarnessTracker.launchOrReplace(agentMDPath, func(harnessCtx context.Context) {
 		// Create a dedicated taskLogger for the harness goroutine.
 		harnessTL := newTaskLogger(context.Background(), client, taskID)
-		runAgentMDHarness(harnessCtx, taskID, taskTitle, taskDescription, taskSummary, workDir, agentName, harnessTL, qr)
+		runAgentMDHarness(harnessCtx, taskID, taskTitle, taskDescription, taskSummary, workDir, agentName, harnessTL, qr, sessionID)
 	})
 }
 
@@ -164,6 +165,7 @@ func runAgentMDHarnessAndWait(
 	tl *taskLogger,
 	client taskguildv1connect.AgentManagerServiceClient,
 	qr QueryRunner,
+	sessionID string,
 ) {
 	if metadata["_enable_agent_md_harness"] != "true" {
 		return
@@ -198,7 +200,7 @@ func runAgentMDHarnessAndWait(
 	}
 
 	harnessTL := newTaskLogger(context.Background(), client, taskID)
-	runAgentMDHarness(ctx, taskID, taskTitle, taskDescription, taskSummary, workDir, agentName, harnessTL, qr)
+	runAgentMDHarness(ctx, taskID, taskTitle, taskDescription, taskSummary, workDir, agentName, harnessTL, qr, sessionID)
 }
 
 // runAgentMDHarness runs the agent MD review harness.
@@ -215,6 +217,7 @@ func runAgentMDHarness(
 	agentName string,
 	tl *taskLogger,
 	qr QueryRunner,
+	sessionID string,
 ) {
 	defer tl.Close()
 
@@ -255,6 +258,11 @@ func runAgentMDHarness(
 		Cwd:            workDir,
 		PermissionMode: claudeagent.PermissionModeBypassPermissions,
 		MaxTurns:       &maxTurns,
+	}
+	// Fork the task session so the harness inherits conversation context.
+	if sessionID != "" {
+		opts.Resume = sessionID
+		opts.ForkSession = true
 	}
 
 	result, err := qr.RunQuerySync(harnessCtx, userPrompt, opts, workDir, taskID, "harness")

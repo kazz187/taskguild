@@ -395,13 +395,15 @@ func handleStatusTransition(
 		nextStatusID = resolvedName
 	}
 
-	// Clear the session_id before transitioning so the next agent/run
-	// starts a fresh Claude session instead of resuming a stale one.
-	// Without this, a session created by a previous status (e.g. Plan/architect)
-	// would be resumed in the new status (e.g. Develop/software-engineer),
-	// causing the agent to immediately output NEXT_STATUS with the current
-	// status and creating an infinite self-transition loop.
-	saveSessionID(ctx, taskClient, taskID, "")
+	// Check whether the next status inherits this status's session.
+	// If so, keep the session_id so the next agent can fork it.
+	// Otherwise, clear it to start a fresh session.
+	if nextInherit := getStatusInheritSession(nextStatusID, metadata); nextInherit != "" {
+		logger.Info("next status inherits session, keeping session_id",
+			"next_status", nextStatusID, "inherit_from", nextInherit)
+	} else {
+		saveSessionID(ctx, taskClient, taskID, "")
+	}
 
 	_, err = taskClient.UpdateTaskStatus(ctx, connect.NewRequest(&v1.UpdateTaskStatusRequest{
 		Id:       taskID,
@@ -415,6 +417,28 @@ func handleStatusTransition(
 	tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 		fmt.Sprintf("Status transitioned to %s", nextStatusID), nil)
 	return nil
+}
+
+// getStatusInheritSession looks up the inherit_session_from value for a given
+// status name from the _workflow_statuses metadata JSON.
+func getStatusInheritSession(statusName string, metadata map[string]string) string {
+	raw := metadata["_workflow_statuses"]
+	if raw == "" {
+		return ""
+	}
+	var statuses []struct {
+		Name               string `json:"name"`
+		InheritSessionFrom string `json:"inherit_session_from"`
+	}
+	if err := json.Unmarshal([]byte(raw), &statuses); err != nil {
+		return ""
+	}
+	for _, s := range statuses {
+		if strings.EqualFold(s.Name, statusName) {
+			return s.InheritSessionFrom
+		}
+	}
+	return ""
 }
 
 func saveSessionID(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, sessionID string) {

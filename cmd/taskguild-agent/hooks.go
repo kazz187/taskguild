@@ -37,7 +37,7 @@ type hookEntry struct {
 // not block the main task.
 // If taskClient is provided, hook results containing TASK_METADATA directives
 // will be used to update the task's metadata.
-func executeHooks(ctx context.Context, taskID string, trigger string, metadata map[string]string, workDir string, taskClient taskguildv1connect.TaskServiceClient, tl *taskLogger, qr QueryRunner) {
+func executeHooks(ctx context.Context, taskID string, trigger string, metadata map[string]string, workDir string, taskClient taskguildv1connect.TaskServiceClient, tl *taskLogger, qr QueryRunner, sessionID string) {
 	logger := clog.LoggerFromContext(ctx)
 
 	hooksJSON := metadata["_hooks"]
@@ -89,6 +89,11 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 			PermissionMode: claudeagent.PermissionModeBypassPermissions,
 			MaxTurns:       &maxTurns,
 		}
+		// Fork the task session for after-execution hooks so they inherit context.
+		if isAfterTrigger(trigger) && sessionID != "" {
+			opts.Resume = sessionID
+			opts.ForkSession = true
+		}
 
 		result, err := qr.RunQuerySync(hookCtx, h.Content, opts, workDir, taskID, fmt.Sprintf("hook_%s", h.Name))
 		cancel()
@@ -122,6 +127,11 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 			applyHookMetadata(ctx, taskID, result.Result.Result, taskClient)
 		}
 	}
+}
+
+// isAfterTrigger returns true for hook triggers that run after task/worktree execution.
+func isAfterTrigger(trigger string) bool {
+	return trigger == "after_task_execution" || trigger == "after_worktree_creation"
 }
 
 // detectDefaultBranch returns the name of the default branch (main or master)

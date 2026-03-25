@@ -90,6 +90,10 @@ message WorkflowStatus {
   // permission mode for agents executing tasks in this status
   // (default, acceptEdits, dontAsk, bypassPermissions, plan)
   string permission_mode = 11;
+
+  // Name of the status whose session to inherit (fork) when entering this status.
+  // Empty means start a fresh session.
+  string inherit_session_from = 12;
 }
 
 // AgentConfig defines how an agent should behave for a specific status.

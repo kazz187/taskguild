@@ -34,6 +34,7 @@ interface StatusDraft {
   enableAgentMdHarness: boolean // default true: review AGENT.md on status exit
   agentMdHarnessExplicitlyDisabled: boolean // tracks explicit user choice
   permissionMode: string // permission mode for agents in this status
+  inheritSessionFrom: string // name of status to inherit session from (fork)
 }
 
 interface AgentConfigDraft {
@@ -67,6 +68,7 @@ function workflowToDrafts(wf: Workflow) {
       enableAgentMdHarness: s.agentMdHarnessExplicitlyDisabled ? s.enableAgentMdHarness : true,
       agentMdHarnessExplicitlyDisabled: s.agentMdHarnessExplicitlyDisabled,
       permissionMode: s.permissionMode ?? '',
+      inheritSessionFrom: s.inheritSessionFrom ?? '',
       hooks: (s.hooks ?? []).map((h) => ({
         key: genKey(),
         id: h.id,
@@ -129,11 +131,11 @@ export function WorkflowForm({
         const kClosed = genKey()
         return {
           statusDrafts: [
-            { key: kDraft, id: '', name: 'Draft', order: 0, isInitial: true, isTerminal: false, transitionsTo: [kDevelop], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '' },
-            { key: kDevelop, id: '', name: 'Develop', order: 1, isInitial: false, isTerminal: false, transitionsTo: [kReview, kDraft], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '' },
-            { key: kReview, id: '', name: 'Review', order: 2, isInitial: false, isTerminal: false, transitionsTo: [kTest], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '' },
-            { key: kTest, id: '', name: 'Test', order: 3, isInitial: false, isTerminal: false, transitionsTo: [kClosed], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '' },
-            { key: kClosed, id: '', name: 'Closed', order: 4, isInitial: false, isTerminal: true, transitionsTo: [], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '' },
+            { key: kDraft, id: '', name: 'Draft', order: 0, isInitial: true, isTerminal: false, transitionsTo: [kDevelop], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '' },
+            { key: kDevelop, id: '', name: 'Develop', order: 1, isInitial: false, isTerminal: false, transitionsTo: [kReview, kDraft], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '' },
+            { key: kReview, id: '', name: 'Review', order: 2, isInitial: false, isTerminal: false, transitionsTo: [kTest], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '' },
+            { key: kTest, id: '', name: 'Test', order: 3, isInitial: false, isTerminal: false, transitionsTo: [kClosed], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '' },
+            { key: kClosed, id: '', name: 'Closed', order: 4, isInitial: false, isTerminal: true, transitionsTo: [], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '' },
           ],
           agentDrafts: [],
         }
@@ -225,7 +227,7 @@ export function WorkflowForm({
   const addStatus = () => {
     setStatuses((prev) => [
       ...prev,
-      { key: genKey(), id: '', name: '', order: prev.length, isInitial: false, isTerminal: false, transitionsTo: [], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '' },
+      { key: genKey(), id: '', name: '', order: prev.length, isInitial: false, isTerminal: false, transitionsTo: [], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '' },
     ])
   }
 
@@ -294,6 +296,7 @@ export function WorkflowForm({
       enableAgentMdHarness: s.enableAgentMdHarness,
       agentMdHarnessExplicitlyDisabled: s.agentMdHarnessExplicitlyDisabled,
       permissionMode: s.permissionMode,
+      inheritSessionFrom: s.inheritSessionFrom,
       hooks: s.hooks
         .filter((h) => h.actionId)
         .map((h) => ({
@@ -634,6 +637,29 @@ export function WorkflowForm({
                           <option value="acceptEdits">Accept Edits (auto-approve file changes)</option>
                           <option value="plan">Plan (no tool execution, plan only)</option>
                           <option value="bypassPermissions">Bypass Permissions (auto-approve all)</option>
+                        </Select>
+                      </FormField>
+                    </div>
+                  )}
+
+                  {/* Inherit Session From */}
+                  {!s.isTerminal && (
+                    <div className="mt-2 px-1">
+                      <FormField label="Inherit Session From" labelSize="xs">
+                        <Select
+                          value={s.inheritSessionFrom}
+                          onChange={(e) => updateStatus(s.key, { inheritSessionFrom: e.target.value })}
+                          selectSize="xs"
+                          className="rounded"
+                        >
+                          <option value="">None (fresh session)</option>
+                          {statuses
+                            .filter((other) => other.key !== s.key && statuses.indexOf(other) < index)
+                            .map((other) => (
+                              <option key={other.key} value={other.name}>
+                                {other.name || '(unnamed)'}
+                              </option>
+                            ))}
                         </Select>
                       </FormField>
                     </div>

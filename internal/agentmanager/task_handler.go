@@ -683,6 +683,9 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	for _, st := range wf.Statuses {
 		if st.Name == t.StatusID {
 			enrichedMetadata["_current_status_name"] = st.Name
+			if st.InheritSessionFrom != "" {
+				enrichedMetadata["_inherit_session_from"] = st.InheritSessionFrom
+			}
 			type transitionEntry struct {
 				Name string `json:"name"`
 			}
@@ -699,14 +702,19 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		}
 	}
 
-	// Inject all workflow statuses so agents can create tasks with any status.
+	// Inject all workflow statuses so agents can create tasks with any status
+	// and so the agent runner can look up inherit_session_from for transitions.
 	{
 		type statusInfo struct {
-			Name string `json:"name"`
+			Name               string `json:"name"`
+			InheritSessionFrom string `json:"inherit_session_from,omitempty"`
 		}
 		var allStatuses []statusInfo
 		for _, st := range wf.Statuses {
-			allStatuses = append(allStatuses, statusInfo{Name: st.Name})
+			allStatuses = append(allStatuses, statusInfo{
+				Name:               st.Name,
+				InheritSessionFrom: st.InheritSessionFrom,
+			})
 		}
 		if b, err := json.Marshal(allStatuses); err == nil {
 			enrichedMetadata["_workflow_statuses"] = string(b)
