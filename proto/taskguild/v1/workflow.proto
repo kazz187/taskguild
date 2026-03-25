@@ -80,7 +80,7 @@ message WorkflowStatus {
   // hooks
   repeated StatusHook hooks = 8;
 
-  // harness: when true, a background agent reviews and updates AGENT.md
+  // harness: when true, a background agent reviews and updates agent markdown
   // with lessons learned upon status exit. Defaults to true when not set.
   bool enable_agent_md_harness = 9;
   // Explicitly tracks whether enable_agent_md_harness was set by the user.
