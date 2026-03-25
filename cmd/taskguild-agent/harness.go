@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
@@ -22,6 +23,61 @@ const (
 	// harnessMaxTurns is the maximum number of turns for the harness agent.
 	harnessMaxTurns = 10
 )
+
+// harnessTracker serialises harness runs per agent-MD file path.
+// If a new harness is requested while a previous one is still running for the
+// same agent, the previous run is cancelled and awaited before the new one
+// starts, preventing concurrent writes to the same file.
+type harnessTracker struct {
+	mu      sync.Mutex
+	running map[string]*harnessRun
+}
+
+type harnessRun struct {
+	cancel context.CancelFunc
+	done   chan struct{}
+}
+
+var globalHarnessTracker = &harnessTracker{running: make(map[string]*harnessRun)}
+
+const harnessReplaceTimeout = 30 * time.Second
+
+// launchOrReplace cancels any in-flight harness for the same agentMDPath,
+// waits for it to finish, then launches fn in a new goroutine.
+func (ht *harnessTracker) launchOrReplace(agentMDPath string, fn func(ctx context.Context)) {
+	ht.mu.Lock()
+
+	// Cancel and wait for the previous run if it exists.
+	if prev, ok := ht.running[agentMDPath]; ok {
+		prev.cancel()
+		ht.mu.Unlock()
+		// Wait outside the lock to avoid blocking other agents.
+		select {
+		case <-prev.done:
+		case <-time.After(harnessReplaceTimeout):
+		}
+		ht.mu.Lock()
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	ht.running[agentMDPath] = &harnessRun{cancel: cancel, done: done}
+	ht.mu.Unlock()
+
+	var wg conc.WaitGroup
+	wg.Go(func() {
+		defer func() {
+			close(done)
+			ht.mu.Lock()
+			// Only remove if still ours (a newer run may have replaced us).
+			if cur, ok := ht.running[agentMDPath]; ok && cur.done == done {
+				delete(ht.running, agentMDPath)
+			}
+			ht.mu.Unlock()
+		}()
+		fn(ctx)
+	})
+}
 
 // agentMDHarnessPrompt is the system prompt for the agent MD harness agent.
 const agentMDHarnessPrompt = `You are an efficiency analyst. Your job is to review the work just completed on a task and update the agent's definition file (.claude/agents/<name>.md) with knowledge that will make future tasks faster and cheaper.
@@ -87,18 +143,65 @@ func maybeRunAgentMDHarness(
 	taskTitle := metadata["_task_title"]
 	taskDescription := metadata["_task_description"]
 
-	// Create a dedicated taskLogger for the harness goroutine.
-	// This uses context.Background() so it is not tied to the parent context
-	// and will remain valid for the full lifetime of the harness execution.
-	harnessTL := newTaskLogger(context.Background(), client, taskID)
+	agentMDPath := filepath.Join(workDir, ".claude", "agents", agentName+".md")
 
-	var harnessWg conc.WaitGroup
-	harnessWg.Go(func() {
-		runAgentMDHarness(ctx, taskID, taskTitle, taskDescription, taskSummary, workDir, agentName, harnessTL, qr)
+	globalHarnessTracker.launchOrReplace(agentMDPath, func(harnessCtx context.Context) {
+		// Create a dedicated taskLogger for the harness goroutine.
+		harnessTL := newTaskLogger(context.Background(), client, taskID)
+		runAgentMDHarness(harnessCtx, taskID, taskTitle, taskDescription, taskSummary, workDir, agentName, harnessTL, qr)
 	})
 }
 
-// runAgentMDHarness runs the agent MD review harness in a background goroutine.
+// runAgentMDHarnessAndWait runs the agent MD harness synchronously, blocking
+// until it completes. This ensures the task remains ASSIGNED during the harness
+// execution, preventing the orchestrator from re-dispatching during the window.
+func runAgentMDHarnessAndWait(
+	ctx context.Context,
+	metadata map[string]string,
+	taskID string,
+	taskSummary string,
+	workDir string,
+	tl *taskLogger,
+	client taskguildv1connect.AgentManagerServiceClient,
+	qr QueryRunner,
+) {
+	if metadata["_enable_agent_md_harness"] != "true" {
+		return
+	}
+
+	agentName := metadata["_agent_name"]
+	if agentName == "" {
+		return
+	}
+
+	if tl != nil {
+		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+			fmt.Sprintf("Agent MD harness started (agent: %s)", agentName), nil)
+	}
+
+	taskTitle := metadata["_task_title"]
+	taskDescription := metadata["_task_description"]
+
+	agentMDPath := filepath.Join(workDir, ".claude", "agents", agentName+".md")
+
+	// Cancel any in-flight background harness for the same file, then run synchronously.
+	globalHarnessTracker.mu.Lock()
+	if prev, ok := globalHarnessTracker.running[agentMDPath]; ok {
+		prev.cancel()
+		globalHarnessTracker.mu.Unlock()
+		select {
+		case <-prev.done:
+		case <-time.After(harnessReplaceTimeout):
+		}
+	} else {
+		globalHarnessTracker.mu.Unlock()
+	}
+
+	harnessTL := newTaskLogger(context.Background(), client, taskID)
+	runAgentMDHarness(ctx, taskID, taskTitle, taskDescription, taskSummary, workDir, agentName, harnessTL, qr)
+}
+
+// runAgentMDHarness runs the agent MD review harness.
 // It reviews the task summary, identifies failures, and updates the agent's
 // .claude/agents/<name>.md file with lessons learned.
 // The provided taskLogger is owned by this goroutine and will be closed on exit.
@@ -141,7 +244,9 @@ func runAgentMDHarness(
 	// Build the user prompt with task context.
 	userPrompt := buildHarnessUserPrompt(taskID, taskTitle, taskDescription, taskSummary, agentMDPath)
 
-	harnessCtx, cancel := context.WithTimeout(context.Background(), harnessTimeout)
+	// Derive timeout from the passed-in context so that cancellation
+	// (e.g. from harnessTracker replacing this run) propagates correctly.
+	harnessCtx, cancel := context.WithTimeout(ctx, harnessTimeout)
 	defer cancel()
 
 	maxTurns := harnessMaxTurns

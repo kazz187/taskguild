@@ -464,18 +464,28 @@ func runTask(
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Task completed with status transition (turn %d)", turn),
 				map[string]string{"next_status": nextStatusID})
-			// Run after hooks before unassigning/transitioning so that hooks
-			// still observe the current status and the task remains ASSIGNED
-			// until all hooks complete.
-			logger.Info("running after hooks")
-			afterHooks()
-			logger.Info("after hooks completed")
+			// Skip after_task_execution hooks on self-transitions to avoid
+			// wasteful repeated hook execution (e.g. create-pr running every
+			// iteration of a Develop→Develop loop).
+			isSelfTransition := strings.EqualFold(nextStatusID, metadata["_current_status_name"])
+			if isSelfTransition {
+				logger.Info("skipping after hooks for self-transition", "status", nextStatusID)
+				afterHooksExecuted = true // prevent deferred call from running
+			} else {
+				// Run after hooks while the task remains ASSIGNED so that hooks
+				// still observe the current status.
+				logger.Info("running after hooks")
+				afterHooks()
+				logger.Info("after hooks completed")
+			}
+			// Run harness synchronously while the task is still ASSIGNED.
+			// The agent retains ownership until hooks and harness are complete.
+			runAgentMDHarnessAndWait(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner)
+			// Now unassign and transition.
 			logger.Info("reporting task result")
 			reportTaskResult(ctx, client, taskID, displaySummary, "")
 			logger.Info("reporting agent status IDLE")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed")
-			// Launch AGENT.md harness in background goroutine if enabled.
-			maybeRunAgentMDHarness(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner)
 			logger.Info("calling handleStatusTransition", "next_status", nextStatusID)
 			if err := handleStatusTransition(ctx, taskClient, taskID, nextStatusID, metadata, tl); err != nil {
 				logger.Error("status transition failed", "error", err)
@@ -493,10 +503,9 @@ func runTask(
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Task completed at terminal status (turn %d)", turn), nil)
 			afterHooks()
+			runAgentMDHarnessAndWait(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner)
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed")
-			// Launch AGENT.md harness in background goroutine if enabled.
-			maybeRunAgentMDHarness(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner)
 			return
 		}
 
@@ -508,10 +517,14 @@ func runTask(
 				"next_status_name", autoName, "turn", turn)
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("No NEXT_STATUS output; auto-transitioning to %s", autoName), nil)
-			afterHooks()
+			if strings.EqualFold(autoName, metadata["_current_status_name"]) {
+				afterHooksExecuted = true
+			} else {
+				afterHooks()
+			}
+			runAgentMDHarnessAndWait(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner)
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (auto-transition)")
-			maybeRunAgentMDHarness(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner)
 			if err := handleStatusTransition(ctx, taskClient, taskID, autoName, metadata, tl); err != nil {
 				logger.Error("auto status transition failed", "error", err)
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,

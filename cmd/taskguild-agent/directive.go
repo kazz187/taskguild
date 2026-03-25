@@ -284,17 +284,26 @@ type transitionEntry struct {
 }
 
 // parseAvailableTransitions parses the _available_transitions JSON from metadata.
+// Self-transitions (target == current status) are filtered out.
 func parseAvailableTransitions(metadata map[string]string) ([]transitionEntry, error) {
 	transitionsJSON := metadata["_available_transitions"]
 	if transitionsJSON == "" {
 		return nil, fmt.Errorf("no available transitions in metadata")
 	}
-	var transitions []transitionEntry
-	if err := json.Unmarshal([]byte(transitionsJSON), &transitions); err != nil {
+	var raw []transitionEntry
+	if err := json.Unmarshal([]byte(transitionsJSON), &raw); err != nil {
 		return nil, fmt.Errorf("failed to parse available transitions: %w", err)
 	}
+	// Filter out self-transitions.
+	currentStatus := metadata["_current_status_name"]
+	transitions := make([]transitionEntry, 0, len(raw))
+	for _, t := range raw {
+		if !strings.EqualFold(t.Name, currentStatus) {
+			transitions = append(transitions, t)
+		}
+	}
 	if len(transitions) == 0 {
-		return nil, fmt.Errorf("available transitions list is empty")
+		return nil, fmt.Errorf("available transitions list is empty (after filtering self-transitions)")
 	}
 	return transitions, nil
 }
