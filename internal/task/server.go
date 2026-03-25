@@ -25,6 +25,13 @@ type CascadeDeleter interface {
 	DeleteByTaskID(ctx context.Context, taskID string) (int, error)
 }
 
+// CascadeArchiver updates related records when a task is archived or unarchived.
+// Implemented by repositories that store data keyed by task directory path.
+type CascadeArchiver interface {
+	NotifyTaskArchived(ctx context.Context, projectID, taskID string) error
+	NotifyTaskUnarchived(ctx context.Context, projectID, taskID string) error
+}
+
 // TaskStopper sends a cancel command to the agent running a task.
 type TaskStopper interface {
 	RequestTaskStop(taskID string, assignedAgentID string) error
@@ -36,22 +43,24 @@ type TaskResumer interface {
 }
 
 type Server struct {
-	repo            Repository
-	workflowRepo    workflow.Repository
-	eventBus        *eventbus.Bus
-	cascadeDeleters []CascadeDeleter
-	stopper         TaskStopper
-	resumer         TaskResumer
+	repo             Repository
+	workflowRepo     workflow.Repository
+	eventBus         *eventbus.Bus
+	cascadeDeleters  []CascadeDeleter
+	cascadeArchivers []CascadeArchiver
+	stopper          TaskStopper
+	resumer          TaskResumer
 }
 
-func NewServer(repo Repository, workflowRepo workflow.Repository, eventBus *eventbus.Bus, stopper TaskStopper, resumer TaskResumer, cascadeDeleters ...CascadeDeleter) *Server {
+func NewServer(repo Repository, workflowRepo workflow.Repository, eventBus *eventbus.Bus, stopper TaskStopper, resumer TaskResumer, cascadeArchivers []CascadeArchiver, cascadeDeleters ...CascadeDeleter) *Server {
 	return &Server{
-		repo:            repo,
-		workflowRepo:    workflowRepo,
-		eventBus:        eventBus,
-		stopper:         stopper,
-		resumer:         resumer,
-		cascadeDeleters: cascadeDeleters,
+		repo:             repo,
+		workflowRepo:     workflowRepo,
+		eventBus:         eventBus,
+		stopper:          stopper,
+		resumer:          resumer,
+		cascadeArchivers: cascadeArchivers,
+		cascadeDeleters:  cascadeDeleters,
 	}
 }
 
@@ -466,6 +475,12 @@ func (s *Server) ArchiveTask(ctx context.Context, req *connect.Request[taskguild
 		return nil, err
 	}
 
+	for _, a := range s.cascadeArchivers {
+		if err := a.NotifyTaskArchived(ctx, t.ProjectID, t.ID); err != nil {
+			slog.Warn("cascade archive notification failed", "task_id", t.ID, "error", err)
+		}
+	}
+
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_TASK_ARCHIVED,
 		t.ID,
@@ -515,6 +530,11 @@ func (s *Server) ArchiveTerminalTasks(ctx context.Context, req *connect.Request[
 			skipped = append(skipped, toProto(t))
 			continue
 		}
+		for _, a := range s.cascadeArchivers {
+			if err := a.NotifyTaskArchived(ctx, t.ProjectID, t.ID); err != nil {
+				slog.Warn("cascade archive notification failed", "task_id", t.ID, "error", err)
+			}
+		}
 		archived = append(archived, toProto(t))
 
 		s.eventBus.PublishNew(
@@ -540,6 +560,12 @@ func (s *Server) UnarchiveTask(ctx context.Context, req *connect.Request[taskgui
 
 	if err := s.repo.Unarchive(ctx, req.Msg.Id); err != nil {
 		return nil, err
+	}
+
+	for _, a := range s.cascadeArchivers {
+		if err := a.NotifyTaskUnarchived(ctx, t.ProjectID, t.ID); err != nil {
+			slog.Warn("cascade unarchive notification failed", "task_id", t.ID, "error", err)
+		}
 	}
 
 	s.eventBus.PublishNew(
