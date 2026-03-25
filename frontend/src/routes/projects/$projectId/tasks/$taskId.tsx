@@ -438,7 +438,7 @@ function TaskDetailPage() {
           {task.description && (
             <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Description</p>
-              <p className="text-sm text-gray-300 whitespace-pre-wrap">{task.description}</p>
+              <MarkdownDescription content={task.description} />
             </div>
           )}
 
