@@ -786,7 +786,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		}
 	}
 
-	// Inject AGENT.md harness flag for the current status.
+	// Inject agent markdown harness flag for the current status.
 	// Default is enabled (true) unless explicitly disabled.
 	for _, st := range wf.Statuses {
 		if st.Name == t.StatusID {

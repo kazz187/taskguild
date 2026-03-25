@@ -31,7 +31,7 @@ interface StatusDraft {
   transitionsTo: string[] // keys
   agentId: string // reference to AgentDefinition
   hooks: HookDraft[]
-  enableAgentMdHarness: boolean // default true: review AGENT.md on status exit
+  enableAgentMdHarness: boolean // default true: review agent markdown on status exit
   agentMdHarnessExplicitlyDisabled: boolean // tracks explicit user choice
   permissionMode: string // permission mode for agents in this status
   inheritSessionFrom: string // name of status to inherit session from (fork)
@@ -665,7 +665,7 @@ export function WorkflowForm({
                     </div>
                   )}
 
-                  {/* AGENT.md Harness Toggle */}
+                  {/* Agent Markdown Harness Toggle */}
                   {!s.isTerminal && (
                     <div className="mt-2 px-1">
                       <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
@@ -676,8 +676,8 @@ export function WorkflowForm({
                             agentMdHarnessExplicitlyDisabled: !e.target.checked,
                           })}
                         />
-                        <span>AGENT.md Harness</span>
-                        <span className="text-[10px] text-gray-600">(review &amp; update AGENT.md on status exit)</span>
+                        <span>Agent Markdown Harness</span>
+                        <span className="text-[10px] text-gray-600">(review &amp; update agent markdown on status exit)</span>
                       </label>
                     </div>
                   )}

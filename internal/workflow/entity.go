@@ -57,7 +57,7 @@ type Status struct {
 	AgentID       string       `yaml:"agent_id,omitempty"`
 	Hooks         []StatusHook `yaml:"hooks,omitempty"`
 
-	// EnableAgentMDHarness controls whether a background AGENT.md review
+	// EnableAgentMDHarness controls whether a background agent markdown review
 	// harness runs when a task exits this status. Default is true (enabled).
 	EnableAgentMDHarness              bool `yaml:"enable_agent_md_harness"`
 	AgentMDHarnessExplicitlyDisabled  bool `yaml:"agent_md_harness_explicitly_disabled,omitempty"`
