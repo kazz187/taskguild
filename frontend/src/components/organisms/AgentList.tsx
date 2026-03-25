@@ -19,53 +19,7 @@ import { Button } from '../atoms/index.ts'
 import { Input, Textarea, Select, Badge, Checkbox } from '../atoms/index.ts'
 import { Card, FormField, Modal, PageHeading } from '../molecules/index.ts'
 import { AVAILABLE_TOOLS, MODEL_OPTIONS, PERMISSION_MODE_OPTIONS, MEMORY_OPTIONS } from './agentConstants.ts'
-
-interface AgentFormData {
-  name: string
-  description: string
-  prompt: string
-  tools: string[]
-  disallowedTools: string[]
-  model: string
-  permissionMode: string
-  skills: string[]
-  memory: string
-}
-
-const emptyForm: AgentFormData = {
-  name: '',
-  description: '',
-  prompt: '',
-  tools: [],
-  disallowedTools: [],
-  model: '',
-  permissionMode: '',
-  skills: [],
-  memory: '',
-}
-
-function agentToForm(a: AgentDefinition): AgentFormData {
-  return {
-    name: a.name,
-    description: a.description,
-    prompt: a.prompt,
-    tools: [...(a.tools ?? [])],
-    disallowedTools: [...(a.disallowedTools ?? [])],
-    model: a.model,
-    permissionMode: a.permissionMode,
-    skills: [...(a.skills ?? [])],
-    memory: a.memory,
-  }
-}
-
-function diffTypeLabel(dt: AgentDiffType): string {
-  switch (dt) {
-    case AgentDiffType.MODIFIED: return 'Modified'
-    case AgentDiffType.AGENT_ONLY: return 'Agent Only'
-    case AgentDiffType.SERVER_ONLY: return 'Server Only'
-    default: return 'Unknown'
-  }
-}
+import { type AgentFormData, emptyForm, agentToForm, diffTypeLabel } from './AgentListUtils.ts'
 
 export function AgentList({ projectId, editAgentId, mode }: { projectId: string; editAgentId?: string; mode?: 'create' }) {
   const navigate = useNavigate()
