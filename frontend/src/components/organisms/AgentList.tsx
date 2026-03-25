@@ -249,7 +249,7 @@ export function AgentList({ projectId, editAgentId, mode }: { projectId: string;
 
   const handleSync = () => {
     syncMut.mutate(
-      { projectId, directory: '.' },
+      { projectId },
       {
         onSuccess: () => {
           refetch()

@@ -52,7 +52,7 @@ export function ClaudeSettingsList({ projectId }: { projectId: string }) {
 
   const handleSync = () => {
     syncMut.mutate(
-      { projectId, directory: '.' },
+      { projectId },
       { onSuccess: () => refetch() },
     )
   }

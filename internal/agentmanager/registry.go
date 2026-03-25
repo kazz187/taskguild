@@ -12,6 +12,7 @@ type connection struct {
 	maxConcurrentTasks int32
 	activeTasks        int32
 	projectName        string
+	workDir            string // absolute path to the agent's project root
 	lastHeartbeat      time.Time
 	commandCh          chan *taskguildv1.AgentCommand
 }
@@ -27,7 +28,7 @@ func NewRegistry() *Registry {
 	}
 }
 
-func (r *Registry) Register(agentManagerID string, maxConcurrentTasks int32, projectName string) chan *taskguildv1.AgentCommand {
+func (r *Registry) Register(agentManagerID string, maxConcurrentTasks int32, projectName string, workDir string) chan *taskguildv1.AgentCommand {
 	ch := make(chan *taskguildv1.AgentCommand, 64)
 	r.mu.Lock()
 	// Close existing connection if re-registering.
@@ -38,6 +39,7 @@ func (r *Registry) Register(agentManagerID string, maxConcurrentTasks int32, pro
 		agentManagerID:     agentManagerID,
 		maxConcurrentTasks: maxConcurrentTasks,
 		projectName:        projectName,
+		workDir:            workDir,
 		lastHeartbeat:      time.Now(),
 		commandCh:          ch,
 	}
@@ -162,4 +164,18 @@ func (r *Registry) GetProjectName(agentManagerID string) (string, bool) {
 		return "", false
 	}
 	return conn.projectName, true
+}
+
+// GetWorkDirForProject returns the work_dir from the first connected agent
+// for the given project name. Returns ("", false) if no agent is connected
+// or none has a work_dir set.
+func (r *Registry) GetWorkDirForProject(projectName string) (string, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, conn := range r.conns {
+		if conn.projectName == projectName && conn.workDir != "" {
+			return conn.workDir, true
+		}
+	}
+	return "", false
 }

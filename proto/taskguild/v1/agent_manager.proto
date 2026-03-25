@@ -109,6 +109,9 @@ message AgentManagerSubscribeRequest {
   // agent_version is the git commit hash (short) of the agent binary.
   // The server uses this to detect version mismatches and log warnings.
   string agent_version = 5;
+  // work_dir is the absolute path to the agent's project root directory.
+  // The server uses this to resolve file paths for SyncFromDir operations.
+  string work_dir = 6;
 }
 
 message AgentCommand {
