@@ -287,7 +287,7 @@ function TaskDetailPage() {
   // Show legacy result cards only when there are no RESULT log entries (backward compat for old tasks).
   const hasResultLogs = logs.some((l) => l.category === TaskLogCategory.RESULT)
   const resultSummary = hasResultLogs ? '' : (metadata['result_summary'] ?? '')
-  const rawPlanResult = hasResultLogs ? '' : (metadata['plan_result'] ?? '')
+  const rawPlanResult = metadata['plan_result'] ?? ''
   // Handle legacy plan_result that may be stored as JSON with a "plan" field
   const planResult = (() => {
     if (!rawPlanResult) return ''
@@ -445,7 +445,7 @@ function TaskDetailPage() {
           {/* Results — chronological result logs */}
           {(() => {
             const resultLogs = logs
-              .filter((l) => l.category === TaskLogCategory.RESULT)
+              .filter((l) => l.category === TaskLogCategory.RESULT && l.metadata['result_type'] !== 'plan')
               .sort((a, b) => {
                 if (!a.createdAt || !b.createdAt) return 0
                 const diff = Number(a.createdAt.seconds) - Number(b.createdAt.seconds)
