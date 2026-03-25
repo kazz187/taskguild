@@ -103,7 +103,7 @@ func runTask(
 	// Execute before_worktree_creation hooks (runs in the main repo directory).
 	if metadata["_use_worktree"] == "true" && worktreeName != "" {
 		logger.Info("executing before_worktree_creation hooks")
-		executeHooks(ctx, taskID, "before_worktree_creation", metadata, workDir, taskClient, tl, queryRunner)
+		executeHooks(ctx, taskID, "before_worktree_creation", metadata, workDir, taskClient, tl, queryRunner, "")
 		logger.Info("before_worktree_creation hooks completed")
 	}
 
@@ -127,6 +127,9 @@ func runTask(
 		return workDir
 	}
 
+	// Resolve session early so the afterHooks closure can capture sessionID.
+	sessionID, forkSession := resolveSession(metadata)
+
 	// afterHooks runs after_task_execution hooks exactly once.
 	// It is called explicitly before status transitions and deferred as a
 	// safety-net for all other return paths so hooks always execute.
@@ -134,7 +137,7 @@ func runTask(
 	afterHooks := func() {
 		if !afterHooksExecuted {
 			afterHooksExecuted = true
-			executeHooks(ctx, taskID, "after_task_execution", metadata, resolveHookDir(), taskClient, tl, queryRunner)
+			executeHooks(ctx, taskID, "after_task_execution", metadata, resolveHookDir(), taskClient, tl, queryRunner, sessionID)
 		}
 	}
 	defer afterHooks()
@@ -157,7 +160,7 @@ func runTask(
 
 	// Execute before_task_execution hooks.
 	logger.Info("executing before_task_execution hooks")
-	executeHooks(ctx, taskID, "before_task_execution", metadata, workDir, taskClient, tl, queryRunner)
+	executeHooks(ctx, taskID, "before_task_execution", metadata, workDir, taskClient, tl, queryRunner, "")
 	logger.Info("before_task_execution hooks completed")
 
 	// Start interaction stream listener for this task.
@@ -166,8 +169,6 @@ func runTask(
 	listenerWg.Go(func() {
 		runInteractionListener(ctx, interClient, taskID, waiter)
 	})
-
-	sessionID, forkSession := resolveSession(metadata)
 	prompt := buildUserPrompt(metadata, workDir)
 	hasTransitions := metadata["_available_transitions"] != ""
 	logger.Info("task setup complete, entering turn loop", "has_session", sessionID != "", "has_transitions", hasTransitions)
@@ -383,7 +384,7 @@ func runTask(
 			wtDir := filepath.Join(workDir, ".claude", "worktrees", worktreeName)
 			if info, err := os.Stat(wtDir); err == nil && info.IsDir() {
 				worktreeHookFired = true
-				executeHooks(ctx, taskID, "after_worktree_creation", metadata, wtDir, taskClient, tl, queryRunner)
+				executeHooks(ctx, taskID, "after_worktree_creation", metadata, wtDir, taskClient, tl, queryRunner, sessionID)
 			}
 		}
 
@@ -445,7 +446,7 @@ func runTask(
 					afterHooks()
 					reportTaskResult(ctx, client, taskID, displaySummary, "")
 					reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (invalid transition after retries)")
-					maybeRunAgentMDHarness(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner)
+					maybeRunAgentMDHarness(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner, sessionID)
 					return
 				}
 
@@ -480,7 +481,7 @@ func runTask(
 			}
 			// Run harness synchronously while the task is still ASSIGNED.
 			// The agent retains ownership until hooks and harness are complete.
-			runAgentMDHarnessAndWait(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner)
+			runAgentMDHarnessAndWait(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner, sessionID)
 			// Now unassign and transition.
 			logger.Info("reporting task result")
 			reportTaskResult(ctx, client, taskID, displaySummary, "")
@@ -503,7 +504,7 @@ func runTask(
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Task completed at terminal status (turn %d)", turn), nil)
 			afterHooks()
-			runAgentMDHarnessAndWait(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner)
+			runAgentMDHarnessAndWait(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner, sessionID)
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed")
 			return
@@ -522,7 +523,7 @@ func runTask(
 			} else {
 				afterHooks()
 			}
-			runAgentMDHarnessAndWait(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner)
+			runAgentMDHarnessAndWait(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner, sessionID)
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (auto-transition)")
 			if err := handleStatusTransition(ctx, taskClient, taskID, autoName, metadata, tl); err != nil {
@@ -586,8 +587,15 @@ func runTask(
 }
 
 // resolveSession determines which session ID to use and whether to fork.
+// When _inherit_session_from is set, the session from the previous status is
+// forked rather than resumed directly. This allows the new agent to start with
+// the full conversation context while creating its own independent session.
 func resolveSession(metadata map[string]string) (sessionID string, forkSession bool) {
-	return metadata["session_id"], false
+	sid := metadata["session_id"]
+	if sid != "" && metadata["_inherit_session_from"] != "" {
+		return sid, true
+	}
+	return sid, false
 }
 
 // buildClaudeOptions constructs ClaudeAgentOptions for each turn.

@@ -47,7 +47,7 @@ func TestExecuteHooks_CreatePR(t *testing.T) {
 	tl := newTaskLogger(ctx, tc.agentClient, "task-hook-test")
 	defer tl.Close()
 
-	executeHooks(ctx, "task-hook-test", "after_task_execution", metadata, t.TempDir(), tc.taskClient, tl, qr)
+	executeHooks(ctx, "task-hook-test", "after_task_execution", metadata, t.TempDir(), tc.taskClient, tl, qr, "")
 
 	// Verify QueryRunner was called with the hook content
 	calls := qr.getCalls()
@@ -122,7 +122,7 @@ func TestExecuteHooks_MultipleHooksOrdered(t *testing.T) {
 	tl := newTaskLogger(ctx, tc.agentClient, "task-order-test")
 	defer tl.Close()
 
-	executeHooks(ctx, "task-order-test", "after_task_execution", metadata, t.TempDir(), tc.taskClient, tl, qr)
+	executeHooks(ctx, "task-order-test", "after_task_execution", metadata, t.TempDir(), tc.taskClient, tl, qr, "")
 
 	// Verify calls were made in order
 	calls := qr.getCalls()
@@ -174,7 +174,7 @@ func TestExecuteHooks_HookFailure_DoesNotBlock(t *testing.T) {
 	tl := newTaskLogger(ctx, tc.agentClient, "task-fail-test")
 	defer tl.Close()
 
-	executeHooks(ctx, "task-fail-test", "after_task_execution", metadata, t.TempDir(), tc.taskClient, tl, qr)
+	executeHooks(ctx, "task-fail-test", "after_task_execution", metadata, t.TempDir(), tc.taskClient, tl, qr, "")
 
 	// Both hooks should have been attempted
 	calls := qr.getCalls()
@@ -225,7 +225,7 @@ func TestExecuteHooks_TriggerFilter(t *testing.T) {
 	defer tl.Close()
 
 	// Only run after_task_execution hooks
-	executeHooks(ctx, "task-filter-test", "after_task_execution", metadata, t.TempDir(), tc.taskClient, tl, qr)
+	executeHooks(ctx, "task-filter-test", "after_task_execution", metadata, t.TempDir(), tc.taskClient, tl, qr, "")
 
 	// Only the after hook should have been called
 	calls := qr.getCalls()
@@ -249,7 +249,7 @@ func TestExecuteHooks_NoHooksMetadata(t *testing.T) {
 	tl := newTaskLogger(ctx, tc.agentClient, "task-no-hooks")
 	defer tl.Close()
 
-	executeHooks(ctx, "task-no-hooks", "after_task_execution", metadata, t.TempDir(), tc.taskClient, tl, qr)
+	executeHooks(ctx, "task-no-hooks", "after_task_execution", metadata, t.TempDir(), tc.taskClient, tl, qr, "")
 
 	calls := qr.getCalls()
 	assert.Empty(t, calls, "no hooks should be executed when metadata is empty")

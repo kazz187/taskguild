@@ -121,10 +121,11 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 				PermissionMode:       "plan",
 			},
 			{
-				Name:          "Develop",
-				Order:         2,
-				TransitionsTo: []string{"Review"},
-				AgentID:       swEngineerAgent.ID,
+				Name:               "Develop",
+				Order:              2,
+				TransitionsTo:      []string{"Review"},
+				AgentID:            swEngineerAgent.ID,
+				InheritSessionFrom: "Plan",
 				Hooks: []workflow.StatusHook{
 					{
 						ID:         ulid.Make().String(),

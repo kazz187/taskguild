@@ -64,6 +64,10 @@ type Status struct {
 
 	// PermissionMode for agents executing tasks in this status.
 	PermissionMode string `yaml:"permission_mode,omitempty"`
+
+	// InheritSessionFrom is the name of a previous status whose session
+	// should be forked when entering this status. Empty means fresh session.
+	InheritSessionFrom string `yaml:"inherit_session_from,omitempty"`
 }
 
 // FindAgentIDForStatus returns the agent ID configured for the given status.

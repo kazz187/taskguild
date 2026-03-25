@@ -373,8 +373,11 @@ type WorkflowStatus struct {
 	// permission mode for agents executing tasks in this status
 	// (default, acceptEdits, dontAsk, bypassPermissions, plan)
 	PermissionMode string `protobuf:"bytes,11,opt,name=permission_mode,json=permissionMode,proto3" json:"permission_mode,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Name of the status whose session to inherit (fork) when entering this status.
+	// Empty means start a fresh session.
+	InheritSessionFrom string `protobuf:"bytes,12,opt,name=inherit_session_from,json=inheritSessionFrom,proto3" json:"inherit_session_from,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *WorkflowStatus) Reset() {
@@ -481,6 +484,13 @@ func (x *WorkflowStatus) GetAgentMdHarnessExplicitlyDisabled() bool {
 func (x *WorkflowStatus) GetPermissionMode() string {
 	if x != nil {
 		return x.PermissionMode
+	}
+	return ""
+}
+
+func (x *WorkflowStatus) GetInheritSessionFrom() string {
+	if x != nil {
+		return x.InheritSessionFrom
 	}
 	return ""
 }
@@ -1170,7 +1180,7 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\x04name\x18\x05 \x01(\tR\x04name\x12=\n" +
 	"\vaction_type\x18\x06 \x01(\x0e2\x1c.taskguild.v1.HookActionTypeR\n" +
 	"actionType\x12\x1b\n" +
-	"\taction_id\x18\a \x01(\tR\bactionId\"\xb0\x03\n" +
+	"\taction_id\x18\a \x01(\tR\bactionId\"\xe2\x03\n" +
 	"\x0eWorkflowStatus\x12\x12\n" +
 	"\x02id\x18\x01 \x01(\tB\x02\x18\x01R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -1185,7 +1195,8 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\x17enable_agent_md_harness\x18\t \x01(\bR\x14enableAgentMdHarness\x12N\n" +
 	"$agent_md_harness_explicitly_disabled\x18\n" +
 	" \x01(\bR agentMdHarnessExplicitlyDisabled\x12'\n" +
-	"\x0fpermission_mode\x18\v \x01(\tR\x0epermissionMode\"\xca\x01\n" +
+	"\x0fpermission_mode\x18\v \x01(\tR\x0epermissionMode\x120\n" +
+	"\x14inherit_session_from\x18\f \x01(\tR\x12inheritSessionFrom\"\xca\x01\n" +
 	"\vAgentConfig\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
 	"\x12workflow_status_id\x18\x02 \x01(\tR\x10workflowStatusId\x12\x12\n" +
