@@ -13,13 +13,15 @@ import type { AgentDiff } from '@taskguild/proto/taskguild/v1/agent_manager_pb.t
 import { AgentDiffType, AgentResolutionChoice } from '@taskguild/proto/taskguild/v1/agent_manager_pb.ts'
 import type { Template } from '@taskguild/proto/taskguild/v1/template_pb.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
-import { Bot, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud, Layers, Copy, AlertTriangle, Server, Monitor } from 'lucide-react'
+import { Bot, Plus, RefreshCw, X, Save, Layers, AlertTriangle } from 'lucide-react'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { Button } from '../atoms/index.ts'
 import { Input, Textarea, Select, Badge, Checkbox } from '../atoms/index.ts'
-import { Card, FormField, Modal, PageHeading } from '../molecules/index.ts'
+import { Card, FormField, PageHeading } from '../molecules/index.ts'
 import { AVAILABLE_TOOLS, MODEL_OPTIONS, PERMISSION_MODE_OPTIONS, MEMORY_OPTIONS } from './agentConstants.ts'
-import { type AgentFormData, emptyForm, agentToForm, diffTypeLabel } from './AgentListUtils.ts'
+import { type AgentFormData, emptyForm, agentToForm } from './AgentListUtils.ts'
+import { AgentCard, AgentOnlyDiffCard } from './AgentCard.tsx'
+import { DiffResolutionModal } from './DiffResolutionModal.tsx'
 
 export function AgentList({ projectId, editAgentId, mode }: { projectId: string; editAgentId?: string; mode?: 'create' }) {
   const navigate = useNavigate()
@@ -497,146 +499,26 @@ export function AgentList({ projectId, editAgentId, mode }: { projectId: string;
       {isLoading && <p className="text-gray-400 text-sm">Loading agents...</p>}
 
       <div className="space-y-3">
-        {agents.map(agent => {
-          const diff = diffByAgentId.get(agent.id)
-          return (
-            <Card
-              key={agent.id}
-              className={`hover:border-slate-700 transition-colors ${diff ? 'border-amber-500/30' : ''}`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3 flex-1 min-w-0">
-                  <Bot className="w-5 h-5 text-cyan-400 mt-0.5 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3
-                        className="text-sm font-semibold text-white truncate cursor-pointer hover:text-cyan-400 transition-colors"
-                        onClick={() => openEdit(agent)}
-                      >{agent.name}</h3>
-                      {agent.isSynced && (
-                        <Badge color="blue" size="xs" pill variant="outline" icon={<Cloud className="w-2.5 h-2.5" />}>
-                          synced
-                        </Badge>
-                      )}
-                      {diff && (
-                        <Badge
-                          color="amber"
-                          size="xs"
-                          pill
-                          variant="outline"
-                          icon={<AlertTriangle className="w-2.5 h-2.5" />}
-                          className="cursor-pointer hover:bg-amber-500/20"
-                          onClick={() => setDiffDialog(diff)}
-                        >
-                          {diffTypeLabel(diff.diffType)}
-                        </Badge>
-                      )}
-                      {agent.model && (
-                        <Badge color="gray" size="xs" pill variant="outline">
-                          {agent.model}
-                        </Badge>
-                      )}
-                      {agent.memory && (
-                        <Badge color="purple" size="xs" pill variant="outline">
-                          memory: {agent.memory}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-400 mb-2">{agent.description}</p>
-                    {agent.tools?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-1">
-                        {agent.tools.map(tool => (
-                          <Badge key={tool} color="gray" size="xs">
-                            {tool}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                    {agent.disallowedTools?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-1">
-                        {agent.disallowedTools.map(tool => (
-                          <Badge key={tool} color="red" size="xs">
-                            -{tool}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                    {agent.skills?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-1">
-                        {agent.skills.map(skill => (
-                          <Badge key={skill} color="purple" size="xs">
-                            {skill}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                    {agent.prompt && (
-                      <pre className="text-[11px] text-gray-600 mt-1 truncate max-w-lg font-mono">
-                        {agent.prompt.slice(0, 120)}{agent.prompt.length > 120 ? '...' : ''}
-                      </pre>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0 ml-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    iconOnly
-                    icon={<Copy className="w-3.5 h-3.5" />}
-                    onClick={() => handleSaveAsTemplate(agent)}
-                    title="Save as Template"
-                    className="hover:text-amber-400"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    iconOnly
-                    icon={<Edit2 className="w-3.5 h-3.5" />}
-                    onClick={() => openEdit(agent)}
-                    title="Edit"
-                    className="hover:text-cyan-400"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    iconOnly
-                    icon={<Trash2 className="w-3.5 h-3.5" />}
-                    onClick={() => handleDelete(agent.id)}
-                    disabled={deleteMut.isPending}
-                    title="Delete"
-                    className="hover:text-red-400"
-                  />
-                </div>
-              </div>
-            </Card>
-          )
-        })}
+        {agents.map(agent => (
+          <AgentCard
+            key={agent.id}
+            agent={agent}
+            diff={diffByAgentId.get(agent.id)}
+            onEdit={() => openEdit(agent)}
+            onDelete={() => handleDelete(agent.id)}
+            onSaveAsTemplate={() => handleSaveAsTemplate(agent)}
+            onShowDiff={setDiffDialog}
+            isDeleting={deleteMut.isPending}
+          />
+        ))}
 
         {/* Agent-only diffs (exist on agent but not in server DB) */}
         {agentOnlyDiffs.map(diff => (
-          <Card
+          <AgentOnlyDiffCard
             key={`agent-only-${diff.filename}`}
-            className="border-amber-500/30 hover:border-amber-500/50 transition-colors cursor-pointer"
+            diff={diff}
             onClick={() => setDiffDialog(diff)}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-3 flex-1 min-w-0">
-                <Bot className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-sm font-semibold text-white truncate">{diff.agentName}</h3>
-                    <Badge color="amber" size="xs" pill variant="outline" icon={<AlertTriangle className="w-2.5 h-2.5" />}>
-                      Agent Only
-                    </Badge>
-                    <Badge color="gray" size="xs" className="font-mono">{diff.filename}</Badge>
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    This agent exists on the local agent but not in the server database. Click to resolve.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Card>
+          />
         ))}
 
         {!isLoading && agents.length === 0 && agentOnlyDiffs.length === 0 && !formMode && (
@@ -649,74 +531,13 @@ export function AgentList({ projectId, editAgentId, mode }: { projectId: string;
       </div>
 
       {/* Diff Resolution Dialog */}
-      <Modal open={!!diffDialog} onClose={() => setDiffDialog(null)} size="lg">
-        <Modal.Header onClose={() => setDiffDialog(null)}>
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-amber-400" />
-            <h3 className="text-lg font-semibold text-white">Agent Conflict</h3>
-          </div>
-        </Modal.Header>
-        <Modal.Body>
-          {diffDialog && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-gray-400">Agent:</span>
-                <span className="text-white font-medium">{diffDialog.agentName}</span>
-                <Badge color="gray" size="xs" className="font-mono">{diffDialog.filename}</Badge>
-                <Badge color="amber" size="xs" variant="outline">{diffTypeLabel(diffDialog.diffType)}</Badge>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {/* Server version */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Server className="w-4 h-4 text-blue-400" />
-                    <span className="text-sm font-medium text-blue-400">Server Version</span>
-                  </div>
-                  <pre className="text-xs text-gray-300 font-mono bg-slate-900 rounded p-3 whitespace-pre-wrap max-h-[400px] overflow-y-auto border border-slate-700">
-                    {diffDialog.serverContent || <span className="text-gray-600 italic">No server version</span>}
-                  </pre>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => handleResolveConflict(diffDialog, AgentResolutionChoice.SERVER)}
-                    disabled={resolveConflictMut.isPending || diffDialog.diffType === AgentDiffType.AGENT_ONLY}
-                    icon={<Server className="w-3.5 h-3.5" />}
-                    className="w-full bg-blue-600 hover:bg-blue-500"
-                  >
-                    {resolveConflictMut.isPending ? 'Resolving...' : 'Use Server Version'}
-                  </Button>
-                </div>
-
-                {/* Agent version */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Monitor className="w-4 h-4 text-green-400" />
-                    <span className="text-sm font-medium text-green-400">Agent Version</span>
-                  </div>
-                  <pre className="text-xs text-gray-300 font-mono bg-slate-900 rounded p-3 whitespace-pre-wrap max-h-[400px] overflow-y-auto border border-slate-700">
-                    {diffDialog.agentContent || <span className="text-gray-600 italic">No agent version</span>}
-                  </pre>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => handleResolveConflict(diffDialog, AgentResolutionChoice.AGENT)}
-                    disabled={resolveConflictMut.isPending || diffDialog.diffType === AgentDiffType.SERVER_ONLY}
-                    icon={<Monitor className="w-3.5 h-3.5" />}
-                    className="w-full bg-green-600 hover:bg-green-500"
-                  >
-                    {resolveConflictMut.isPending ? 'Resolving...' : 'Use Agent Version'}
-                  </Button>
-                </div>
-              </div>
-
-              {resolveConflictMut.error && (
-                <p className="text-red-400 text-sm">{resolveConflictMut.error.message}</p>
-              )}
-            </div>
-          )}
-        </Modal.Body>
-      </Modal>
+      <DiffResolutionModal
+        diff={diffDialog}
+        onClose={() => setDiffDialog(null)}
+        onResolve={handleResolveConflict}
+        isPending={resolveConflictMut.isPending}
+        error={resolveConflictMut.error}
+      />
 
       {/* Template Picker Dialog */}
       {templatePickerOpen && (
