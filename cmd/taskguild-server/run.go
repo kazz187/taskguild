@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	_ "net/http/pprof" // registers /debug/pprof/* handlers on DefaultServeMux
@@ -154,6 +155,25 @@ func (n *skillChangeNotifier) NotifySkillChange(projectID string) {
 	})
 }
 
+// workDirResolver implements the WorkDirResolver interface used by service
+// servers to resolve the agent's project root directory from the registry.
+type workDirResolver struct {
+	registry    *agentmanager.Registry
+	projectRepo project.Repository
+}
+
+func (r *workDirResolver) ResolveWorkDir(projectID string) (string, error) {
+	p, err := r.projectRepo.Get(context.Background(), projectID)
+	if err != nil {
+		return "", fmt.Errorf("project not found: %w", err)
+	}
+	workDir, ok := r.registry.GetWorkDirForProject(p.Name)
+	if !ok {
+		return "", fmt.Errorf("no connected agent for project %q", p.Name)
+	}
+	return workDir, nil
+}
+
 func runServer() {
 	env, err := config.LoadEnv()
 	if err != nil {
@@ -227,20 +247,24 @@ func runServer() {
 		registry:    agentManagerRegistry,
 		projectRepo: projectRepo,
 	}
-	agentServer := agent.NewServer(agentRepo, agentChangeNotifier)
+	wdResolver := &workDirResolver{
+		registry:    agentManagerRegistry,
+		projectRepo: projectRepo,
+	}
+	agentServer := agent.NewServer(agentRepo, agentChangeNotifier, wdResolver)
 	skillChangeNotifier := &skillChangeNotifier{
 		registry:    agentManagerRegistry,
 		projectRepo: projectRepo,
 	}
-	skillServer := skill.NewServer(skillRepo, skillChangeNotifier)
-	scriptServer := script.NewServer(scriptRepo, agentManagerServer, scriptBroker)
+	skillServer := skill.NewServer(skillRepo, skillChangeNotifier, wdResolver)
+	scriptServer := script.NewServer(scriptRepo, agentManagerServer, scriptBroker, wdResolver)
 	taskLogServer := tasklog.NewServer(taskLogRepo, taskRepo)
 	eventServer := event.NewServer(bus)
 	permissionChangeNotifier := &permissionChangeNotifier{
 		registry:    agentManagerRegistry,
 		projectRepo: projectRepo,
 	}
-	permissionServer := permission.NewServer(permissionRepo, permissionChangeNotifier)
+	permissionServer := permission.NewServer(permissionRepo, permissionChangeNotifier, wdResolver)
 	scpChangeNotifier := &scpChangeNotifier{
 		registry:    agentManagerRegistry,
 		projectRepo: projectRepo,
@@ -251,7 +275,7 @@ func runServer() {
 		registry:    agentManagerRegistry,
 		projectRepo: projectRepo,
 	}
-	claudeSettingsServer := claudesettings.NewServer(claudeSettingsRepo, csChangeNotifier)
+	claudeSettingsServer := claudesettings.NewServer(claudeSettingsRepo, csChangeNotifier, wdResolver)
 
 	// Setup push notification
 	vapidEnv := config.VAPIDEnvFromEnv(env)

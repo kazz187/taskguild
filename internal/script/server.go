@@ -29,14 +29,21 @@ type ExecutionRequester interface {
 	RequestScriptStop(projectID string, requestID string) error
 }
 
-type Server struct {
-	repo   Repository
-	execReq ExecutionRequester
-	broker  *ScriptExecutionBroker
+// WorkDirResolver resolves the absolute working directory for a project
+// by looking up the connected agent's work_dir.
+type WorkDirResolver interface {
+	ResolveWorkDir(projectID string) (string, error)
 }
 
-func NewServer(repo Repository, execReq ExecutionRequester, broker *ScriptExecutionBroker) *Server {
-	return &Server{repo: repo, execReq: execReq, broker: broker}
+type Server struct {
+	repo     Repository
+	execReq  ExecutionRequester
+	broker   *ScriptExecutionBroker
+	resolver WorkDirResolver
+}
+
+func NewServer(repo Repository, execReq ExecutionRequester, broker *ScriptExecutionBroker, resolver WorkDirResolver) *Server {
+	return &Server{repo: repo, execReq: execReq, broker: broker, resolver: resolver}
 }
 
 func (s *Server) CreateScript(ctx context.Context, req *connect.Request[taskguildv1.CreateScriptRequest]) (*connect.Response[taskguildv1.CreateScriptResponse], error) {
@@ -139,6 +146,13 @@ func (s *Server) DeleteScript(ctx context.Context, req *connect.Request[taskguil
 // SyncScriptsFromDir scans a directory for .claude/scripts/* files and syncs them.
 func (s *Server) SyncScriptsFromDir(ctx context.Context, req *connect.Request[taskguildv1.SyncScriptsFromDirRequest]) (*connect.Response[taskguildv1.SyncScriptsFromDirResponse], error) {
 	dir := req.Msg.Directory
+	if (dir == "" || dir == ".") && s.resolver != nil {
+		resolved, err := s.resolver.ResolveWorkDir(req.Msg.ProjectId)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("failed to resolve work directory: %w", err))
+		}
+		dir = resolved
+	}
 	if dir == "" {
 		dir = "."
 	}

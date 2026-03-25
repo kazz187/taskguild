@@ -136,7 +136,7 @@ func newTestServer() (*Server, *fakeRepository, *fakeExecutionRequester, *Script
 	repo := newFakeRepository()
 	execReq := &fakeExecutionRequester{}
 	broker := NewScriptExecutionBroker()
-	srv := NewServer(repo, execReq, broker)
+	srv := NewServer(repo, execReq, broker, nil)
 	return srv, repo, execReq, broker
 }
 

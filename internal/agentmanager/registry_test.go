@@ -8,7 +8,7 @@ import (
 
 func TestUnregisterIfMatch_MatchingChannel(t *testing.T) {
 	r := NewRegistry()
-	ch := r.Register("agent-1", 2, "proj")
+	ch := r.Register("agent-1", 2, "proj", "")
 
 	if !r.UnregisterIfMatch("agent-1", ch) {
 		t.Fatal("expected UnregisterIfMatch to return true for matching channel")
@@ -24,10 +24,10 @@ func TestUnregisterIfMatch_MismatchedChannel(t *testing.T) {
 	r := NewRegistry()
 
 	// Register handler A.
-	chA := r.Register("agent-1", 2, "proj")
+	chA := r.Register("agent-1", 2, "proj", "")
 
 	// Register handler B (same ID) — replaces A, closes chA.
-	chB := r.Register("agent-1", 2, "proj")
+	chB := r.Register("agent-1", 2, "proj", "")
 
 	// Verify chA was closed.
 	select {
@@ -63,7 +63,7 @@ func TestUnregisterIfMatch_MismatchedChannel(t *testing.T) {
 
 func TestUnregisterIfMatch_AlreadyRemoved(t *testing.T) {
 	r := NewRegistry()
-	ch := r.Register("agent-1", 2, "proj")
+	ch := r.Register("agent-1", 2, "proj", "")
 
 	// Unregister normally first.
 	r.Unregister("agent-1")
@@ -89,10 +89,10 @@ func TestRaceCondition_ConcurrentRegisterUnregister(t *testing.T) {
 	r := NewRegistry()
 
 	// Handler A registers.
-	chA := r.Register("agent-1", 2, "proj")
+	chA := r.Register("agent-1", 2, "proj", "")
 
 	// Handler B registers (reconnection) — closes chA.
-	chB := r.Register("agent-1", 2, "proj")
+	chB := r.Register("agent-1", 2, "proj", "")
 
 	// Handler A exits (channel closed) and runs deferred cleanup.
 	wasActive := r.UnregisterIfMatch("agent-1", chA)
@@ -143,5 +143,36 @@ func TestRaceCondition_ConcurrentRegisterUnregister(t *testing.T) {
 		}
 	default:
 		t.Fatal("chB read should not block")
+	}
+}
+
+func TestGetWorkDirForProject(t *testing.T) {
+	r := NewRegistry()
+
+	// No agents connected — should return false.
+	if _, ok := r.GetWorkDirForProject("proj"); ok {
+		t.Fatal("expected no work_dir when no agents are connected")
+	}
+
+	// Register agent with work_dir.
+	r.Register("agent-1", 2, "proj", "/home/user/myproject")
+
+	dir, ok := r.GetWorkDirForProject("proj")
+	if !ok {
+		t.Fatal("expected to find work_dir for connected agent")
+	}
+	if dir != "/home/user/myproject" {
+		t.Fatalf("expected /home/user/myproject, got %s", dir)
+	}
+
+	// Different project — should return false.
+	if _, ok := r.GetWorkDirForProject("other"); ok {
+		t.Fatal("expected no work_dir for different project")
+	}
+
+	// Agent with empty work_dir should be skipped.
+	r.Register("agent-2", 2, "proj2", "")
+	if _, ok := r.GetWorkDirForProject("proj2"); ok {
+		t.Fatal("expected no work_dir when agent has empty work_dir")
 	}
 }

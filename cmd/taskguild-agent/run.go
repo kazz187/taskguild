@@ -372,6 +372,7 @@ func runSubscribeLoop(
 		ProjectName:        cfg.ProjectName,
 		ActiveTaskIds:      activeTaskIDs,
 		AgentVersion:       version.Short(),
+		WorkDir:            cfg.WorkDir,
 	}))
 	if err != nil {
 		return fmt.Errorf("failed to subscribe: %w", err)

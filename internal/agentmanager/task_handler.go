@@ -53,7 +53,7 @@ func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1
 	// transient stream disconnection.
 	s.releaseAgentTasksExcept(ctx, agentManagerID, activeTaskIDs)
 
-	commandCh := s.registry.Register(agentManagerID, req.Msg.MaxConcurrentTasks, projectName)
+	commandCh := s.registry.Register(agentManagerID, req.Msg.MaxConcurrentTasks, projectName, req.Msg.WorkDir)
 	defer func() {
 		wasActive := s.registry.UnregisterIfMatch(agentManagerID, commandCh)
 		if wasActive {

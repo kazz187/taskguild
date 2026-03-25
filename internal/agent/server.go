@@ -25,13 +25,20 @@ type ChangeNotifier interface {
 	NotifyAgentChange(projectID string)
 }
 
+// WorkDirResolver resolves the absolute working directory for a project
+// by looking up the connected agent's work_dir.
+type WorkDirResolver interface {
+	ResolveWorkDir(projectID string) (string, error)
+}
+
 type Server struct {
 	repo     Repository
 	notifier ChangeNotifier
+	resolver WorkDirResolver
 }
 
-func NewServer(repo Repository, notifier ChangeNotifier) *Server {
-	return &Server{repo: repo, notifier: notifier}
+func NewServer(repo Repository, notifier ChangeNotifier, resolver WorkDirResolver) *Server {
+	return &Server{repo: repo, notifier: notifier, resolver: resolver}
 }
 
 func (s *Server) notifyChange(projectID string) {
@@ -161,6 +168,13 @@ func (s *Server) DeleteAgent(ctx context.Context, req *connect.Request[taskguild
 // SyncAgentsFromDir scans a directory for .claude/agents/*.md files and syncs them.
 func (s *Server) SyncAgentsFromDir(ctx context.Context, req *connect.Request[taskguildv1.SyncAgentsFromDirRequest]) (*connect.Response[taskguildv1.SyncAgentsFromDirResponse], error) {
 	dir := req.Msg.Directory
+	if (dir == "" || dir == ".") && s.resolver != nil {
+		resolved, err := s.resolver.ResolveWorkDir(req.Msg.ProjectId)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("failed to resolve work directory: %w", err))
+		}
+		dir = resolved
+	}
 	if dir == "" {
 		dir = "."
 	}
