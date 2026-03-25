@@ -46,7 +46,10 @@ func buildWorkflowContext(metadata map[string]string) string {
 	sb.WriteString("You are an agent in a TaskGuild workflow.\n")
 
 	if agentName := metadata["_agent_name"]; agentName != "" {
-		sb.WriteString(fmt.Sprintf("@\"%s (agent)\"\n", agentName))
+		sb.WriteString(fmt.Sprintf("\n### Agent Identity\n"))
+		sb.WriteString(fmt.Sprintf("You are executing this task as the **%s** agent.\n", agentName))
+		sb.WriteString(fmt.Sprintf("Your agent definition file (`.claude/agents/%s.md`) has been loaded as your system prompt.\n", agentName))
+		sb.WriteString("You MUST follow all instructions, role definitions, and constraints defined in that agent definition.\n")
 	}
 
 	// Workflow statuses with current marker.
