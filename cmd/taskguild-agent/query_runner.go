@@ -20,7 +20,8 @@ type QueryRunner interface {
 // subprocessQueryRunner is the production implementation that delegates to
 // runQuerySyncWithLog to launch a real Claude CLI subprocess.
 type subprocessQueryRunner struct {
-	projectID string
+	projectID  string
+	projectDir string // main project directory, used as log base
 }
 
 func (r subprocessQueryRunner) RunQuerySync(
@@ -29,5 +30,12 @@ func (r subprocessQueryRunner) RunQuerySync(
 	options *claudeagent.ClaudeAgentOptions,
 	workDir, taskID, label string,
 ) (*claudeagent.QueryResult, error) {
-	return runQuerySyncWithLog(ctx, prompt, options, workDir, r.projectID, taskID, label)
+	// Always use the main project directory for turn log output so that
+	// logs from hooks/harness running in a worktree are co-located with
+	// the task's other logs instead of scattered under the worktree.
+	logBaseDir := workDir
+	if r.projectDir != "" {
+		logBaseDir = r.projectDir
+	}
+	return runQuerySyncWithLog(ctx, prompt, options, logBaseDir, r.projectID, taskID, label)
 }
