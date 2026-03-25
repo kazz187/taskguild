@@ -242,6 +242,14 @@ func runAgent() {
 		connect.WithInterceptors(interceptor),
 	)
 
+	// Wait for the server to be ready before making any RPC calls.
+	// This is important during sentinel hot-reload restarts where the
+	// server may still be starting up.
+	if err := waitForServer(ctx, httpClient, cfg.ServerURL); err != nil {
+		slog.Error("failed waiting for server", "error", err)
+		return
+	}
+
 	// Permission cache: shared across all tasks within this agent-manager.
 	permCache := newPermissionCache(cfg.ProjectName, client)
 
@@ -710,6 +718,61 @@ func heartbeat(ctx context.Context, client taskguildv1connect.AgentManagerServic
 			if err != nil {
 				slog.Warn("heartbeat error", "error", err)
 			}
+		}
+	}
+}
+
+// waitForServer polls the server's /health endpoint until it returns 200 OK.
+// This prevents the agent from attempting RPC calls before the server is ready,
+// which is common during sentinel hot-reload restarts.
+func waitForServer(ctx context.Context, httpClient *http.Client, serverURL string) error {
+	const (
+		initialBackoff = 1 * time.Second
+		maxBackoff     = 30 * time.Second
+		requestTimeout = 5 * time.Second
+	)
+
+	healthURL := serverURL + "/health"
+	backoff := initialBackoff
+	waited := false
+
+	for {
+		reqCtx, cancel := context.WithTimeout(ctx, requestTimeout)
+		req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, healthURL, nil)
+		if err != nil {
+			cancel()
+			return fmt.Errorf("creating health request: %w", err)
+		}
+
+		resp, err := httpClient.Do(req)
+		cancel()
+
+		if err == nil {
+			resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				if waited {
+					slog.Info("server is ready")
+				}
+				return nil
+			}
+			err = fmt.Errorf("unexpected status %d", resp.StatusCode)
+		}
+
+		if !waited {
+			slog.Info("waiting for server to become ready", "url", healthURL)
+			waited = true
+		}
+		slog.Info("server not ready, retrying", "backoff", backoff, "error", err)
+
+		select {
+		case <-time.After(backoff):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+
+		backoff *= 2
+		if backoff > maxBackoff {
+			backoff = maxBackoff
 		}
 	}
 }
