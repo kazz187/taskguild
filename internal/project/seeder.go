@@ -123,7 +123,7 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 			{
 				Name:          "Develop",
 				Order:         2,
-				TransitionsTo: []string{"Develop", "Review"},
+				TransitionsTo: []string{"Review"},
 				AgentID:       swEngineerAgent.ID,
 				Hooks: []workflow.StatusHook{
 					{

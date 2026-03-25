@@ -276,6 +276,17 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *connect.Request[task
 		).ConnectError()
 	}
 
+	// Reject self-transitions (same status → same status) unconditionally.
+	// Self-transitions create infinite loops when agents repeatedly output
+	// NEXT_STATUS with the current status.
+	if currentStatus.Name == req.Msg.StatusId {
+		return nil, cerr.NewError(
+			cerr.FailedPrecondition,
+			fmt.Sprintf("self-transition from %q to %q is not allowed", currentStatus.Name, req.Msg.StatusId),
+			nil,
+		).ConnectError()
+	}
+
 	// When force is false, enforce workflow transition rules.
 	if !req.Msg.Force {
 		allowed := false

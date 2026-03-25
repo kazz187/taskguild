@@ -68,19 +68,28 @@ func buildWorkflowContext(metadata map[string]string) string {
 		}
 	}
 
-	// Available transitions.
+	// Available transitions (self-transitions filtered out).
 	if transitionsJSON := metadata["_available_transitions"]; transitionsJSON != "" {
 		type transitionEntry struct {
 			Name string `json:"name"`
 		}
-		var transitions []transitionEntry
-		if err := json.Unmarshal([]byte(transitionsJSON), &transitions); err == nil && len(transitions) > 0 {
-			sb.WriteString("\n### Status Transition\n")
-			sb.WriteString("When your work is complete, output on the last line:\n")
-			sb.WriteString("`NEXT_STATUS: <status>`\n")
-			sb.WriteString("Available next statuses:\n")
-			for _, t := range transitions {
-				sb.WriteString(fmt.Sprintf("- %s\n", t.Name))
+		var raw []transitionEntry
+		currentName := metadata["_current_status_name"]
+		if err := json.Unmarshal([]byte(transitionsJSON), &raw); err == nil {
+			var transitions []transitionEntry
+			for _, t := range raw {
+				if !strings.EqualFold(t.Name, currentName) {
+					transitions = append(transitions, t)
+				}
+			}
+			if len(transitions) > 0 {
+				sb.WriteString("\n### Status Transition\n")
+				sb.WriteString("When your work is complete, output on the last line:\n")
+				sb.WriteString("`NEXT_STATUS: <status>`\n")
+				sb.WriteString("Available next statuses:\n")
+				for _, t := range transitions {
+					sb.WriteString(fmt.Sprintf("- %s\n", t.Name))
+				}
 			}
 		}
 	}

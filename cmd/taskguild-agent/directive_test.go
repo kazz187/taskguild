@@ -221,6 +221,96 @@ func TestValidateAndResolveTransition(t *testing.T) {
 	}
 }
 
+func TestParseAvailableTransitions_FiltersSelfTransitions(t *testing.T) {
+	tests := []struct {
+		name       string
+		metadata   map[string]string
+		wantNames  []string
+		wantErr    bool
+	}{
+		{
+			name: "filters out current status",
+			metadata: map[string]string{
+				"_available_transitions": `[{"name":"Develop"},{"name":"Review"}]`,
+				"_current_status_name":   "Develop",
+			},
+			wantNames: []string{"Review"},
+		},
+		{
+			name: "case-insensitive filter",
+			metadata: map[string]string{
+				"_available_transitions": `[{"name":"develop"},{"name":"Review"}]`,
+				"_current_status_name":   "Develop",
+			},
+			wantNames: []string{"Review"},
+		},
+		{
+			name: "error when only self-transition remains",
+			metadata: map[string]string{
+				"_available_transitions": `[{"name":"Develop"}]`,
+				"_current_status_name":   "Develop",
+			},
+			wantErr: true,
+		},
+		{
+			name: "no current status set — no filtering",
+			metadata: map[string]string{
+				"_available_transitions": `[{"name":"Develop"},{"name":"Review"}]`,
+			},
+			wantNames: []string{"Develop", "Review"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transitions, err := parseAvailableTransitions(tt.metadata)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			var gotNames []string
+			for _, tr := range transitions {
+				gotNames = append(gotNames, tr.Name)
+			}
+			if len(gotNames) != len(tt.wantNames) {
+				t.Fatalf("got %v, want %v", gotNames, tt.wantNames)
+			}
+			for i, name := range gotNames {
+				if name != tt.wantNames[i] {
+					t.Errorf("got[%d] = %q, want %q", i, name, tt.wantNames[i])
+				}
+			}
+		})
+	}
+}
+
+func TestValidateAndResolveTransition_RejectsSelfTransition(t *testing.T) {
+	metadata := map[string]string{
+		"_available_transitions": `[{"name":"Develop"},{"name":"Review"}]`,
+		"_current_status_name":   "Develop",
+	}
+
+	// Self-transition should be rejected (Develop filtered out).
+	_, err := validateAndResolveTransition("Develop", metadata)
+	if !errors.Is(err, errInvalidTransition) {
+		t.Errorf("expected errInvalidTransition for self-transition, got %v", err)
+	}
+
+	// Valid transition should pass.
+	name, err := validateAndResolveTransition("Review", metadata)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if name != "Review" {
+		t.Errorf("got %q, want %q", name, "Review")
+	}
+}
+
 func TestBuildTransitionRetryPrompt(t *testing.T) {
 	t.Run("with valid transitions", func(t *testing.T) {
 		metadata := map[string]string{
