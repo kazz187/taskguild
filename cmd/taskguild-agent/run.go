@@ -386,7 +386,6 @@ func runSubscribeLoop(
 	lastReceive.Store(time.Now().UnixNano())
 
 	watchdogDone := make(chan struct{})
-	defer close(watchdogDone)
 	var watchdogWg conc.WaitGroup
 	watchdogWg.Go(func() {
 		ticker := time.NewTicker(30 * time.Second)
@@ -406,7 +405,10 @@ func runSubscribeLoop(
 			}
 		}
 	})
-	defer watchdogWg.Wait()
+	defer func() {
+		close(watchdogDone)
+		watchdogWg.Wait()
+	}()
 
 	for stream.Receive() {
 		lastReceive.Store(time.Now().UnixNano())

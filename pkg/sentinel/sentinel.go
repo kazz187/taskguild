@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -46,6 +47,7 @@ const (
 type Sentinel struct {
 	binaryPath string
 	childArgs  []string // extra arguments appended after "run"
+	hashMu     sync.RWMutex         // protects lastHash
 	lastHash   [sha256.Size]byte
 	backoff    time.Duration
 	stopCh     chan struct{} // closed when sentinel should exit
@@ -117,12 +119,13 @@ func Run(extraArgs ...string) {
 	}
 
 	// Compute initial SHA256 hash of the binary.
-	s.lastHash, err = HashFile(binaryPath)
+	initialHash, err := HashFile(binaryPath)
 	if err != nil {
 		slog.Error("failed to hash binary", "error", err)
 		os.Exit(1)
 	}
-	slog.Info("initial binary hash computed", "hash", fmt.Sprintf("%x", s.lastHash[:8]))
+	s.lastHash = initialHash
+	slog.Info("initial binary hash computed", "hash", fmt.Sprintf("%x", initialHash[:8]))
 
 	// Set up OS signal handler.
 	sigCh := make(chan os.Signal, 1)
@@ -212,8 +215,10 @@ func (s *Sentinel) mainLoop(sigCh <-chan os.Signal, updateCh <-chan struct{}) {
 			}
 			// Refresh the hash for the new binary.
 			if h, err := HashFile(s.binaryPath); err == nil {
+				s.hashMu.Lock()
 				s.lastHash = h
-				slog.Info("new binary hash", "hash", fmt.Sprintf("%x", s.lastHash[:8]))
+				s.hashMu.Unlock()
+				slog.Info("new binary hash", "hash", fmt.Sprintf("%x", h[:8]))
 			}
 			s.backoff = InitialBackoff
 
@@ -350,9 +355,12 @@ func (s *Sentinel) watchBinary(updateCh chan<- struct{}) {
 					slog.Error("failed to hash binary after event", "error", err)
 					return
 				}
-				if newHash != s.lastHash {
+				s.hashMu.RLock()
+				currentHash := s.lastHash
+				s.hashMu.RUnlock()
+				if newHash != currentHash {
 					slog.Info("binary checksum changed",
-						"old_hash", fmt.Sprintf("%x", s.lastHash[:8]),
+						"old_hash", fmt.Sprintf("%x", currentHash[:8]),
 						"new_hash", fmt.Sprintf("%x", newHash[:8]))
 					// Non-blocking send.
 					select {
