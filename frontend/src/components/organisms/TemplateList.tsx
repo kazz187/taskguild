@@ -5,34 +5,7 @@ import type { Template } from '@taskguild/proto/taskguild/v1/template_pb.ts'
 import { Layers, Plus, Trash2, Edit2, X, Save, Bot, Sparkles, Terminal } from 'lucide-react'
 import { Button, Input, Textarea, Select, Checkbox, Badge } from '../atoms/index.ts'
 import { Card, FormField } from '../molecules/index.ts'
-
-const AVAILABLE_TOOLS = [
-  'Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash',
-  'WebSearch', 'WebFetch', 'Task', 'NotebookEdit',
-]
-
-const MODEL_OPTIONS = [
-  { value: '', label: 'Inherit (default)' },
-  { value: 'sonnet', label: 'Sonnet' },
-  { value: 'opus', label: 'Opus' },
-  { value: 'haiku', label: 'Haiku' },
-]
-
-const PERMISSION_MODE_OPTIONS = [
-  { value: '', label: 'None (inherit)' },
-  { value: 'default', label: 'Default (ask for permission)' },
-  { value: 'acceptEdits', label: 'Accept Edits' },
-  { value: 'dontAsk', label: "Don't Ask (auto-deny unpermitted)" },
-  { value: 'bypassPermissions', label: 'Bypass Permissions' },
-  { value: 'plan', label: 'Plan (read-only exploration)' },
-]
-
-const MEMORY_OPTIONS = [
-  { value: '', label: 'None' },
-  { value: 'user', label: 'User (~/.claude/agent-memory/)' },
-  { value: 'project', label: 'Project (.claude/agent-memory/)' },
-  { value: 'local', label: 'Local (.claude/agent-memory-local/)' },
-]
+import { AVAILABLE_TOOLS, MODEL_OPTIONS, PERMISSION_MODE_OPTIONS, MEMORY_OPTIONS } from './agentConstants.ts'
 
 const CONTEXT_OPTIONS = [
   { value: '', label: 'Inline (default)' },
