@@ -42,6 +42,28 @@ var globalHarnessTracker = &harnessTracker{running: make(map[string]*harnessRun)
 
 const harnessReplaceTimeout = 30 * time.Second
 
+// resolveClaudeCwd returns the directory Claude CLI should use as CWD.
+// When forking a session created inside a worktree, the CWD must match
+// the worktree directory; otherwise the CLI cannot locate the session
+// and the transport closes immediately.
+func resolveClaudeCwd(workDir string, metadata map[string]string, sessionID string) string {
+	if sessionID == "" {
+		return workDir
+	}
+	if metadata["_use_worktree"] != "true" {
+		return workDir
+	}
+	wt := metadata["worktree"]
+	if wt == "" {
+		return workDir
+	}
+	wtDir := filepath.Join(workDir, ".claude", "worktrees", wt)
+	if info, err := os.Stat(wtDir); err == nil && info.IsDir() {
+		return wtDir
+	}
+	return workDir
+}
+
 // launchOrReplace cancels any in-flight harness for the same agentMDPath,
 // waits for it to finish, then launches fn in a new goroutine.
 func (ht *harnessTracker) launchOrReplace(agentMDPath string, fn func(ctx context.Context)) {
@@ -146,10 +168,12 @@ func maybeRunAgentMDHarness(
 
 	agentMDPath := filepath.Join(workDir, ".claude", "agents", agentName+".md")
 
+	claudeCwd := resolveClaudeCwd(workDir, metadata, sessionID)
+
 	globalHarnessTracker.launchOrReplace(agentMDPath, func(harnessCtx context.Context) {
 		// Create a dedicated taskLogger for the harness goroutine.
 		harnessTL := newTaskLogger(context.Background(), client, taskID)
-		runAgentMDHarness(harnessCtx, taskID, taskTitle, taskDescription, taskSummary, workDir, agentName, harnessTL, qr, sessionID)
+		runAgentMDHarness(harnessCtx, taskID, taskTitle, taskDescription, taskSummary, workDir, claudeCwd, agentName, harnessTL, qr, sessionID)
 	})
 }
 
@@ -199,8 +223,10 @@ func runAgentMDHarnessAndWait(
 		globalHarnessTracker.mu.Unlock()
 	}
 
+	claudeCwd := resolveClaudeCwd(workDir, metadata, sessionID)
+
 	harnessTL := newTaskLogger(context.Background(), client, taskID)
-	runAgentMDHarness(ctx, taskID, taskTitle, taskDescription, taskSummary, workDir, agentName, harnessTL, qr, sessionID)
+	runAgentMDHarness(ctx, taskID, taskTitle, taskDescription, taskSummary, workDir, claudeCwd, agentName, harnessTL, qr, sessionID)
 }
 
 // runAgentMDHarness runs the agent MD review harness.
@@ -214,6 +240,7 @@ func runAgentMDHarness(
 	taskDescription string,
 	taskSummary string,
 	workDir string,
+	claudeCwd string,
 	agentName string,
 	tl *taskLogger,
 	qr QueryRunner,
@@ -255,7 +282,7 @@ func runAgentMDHarness(
 	maxTurns := harnessMaxTurns
 	opts := &claudeagent.ClaudeAgentOptions{
 		SystemPrompt:   agentMDHarnessPrompt,
-		Cwd:            workDir,
+		Cwd:            claudeCwd,
 		PermissionMode: claudeagent.PermissionModeBypassPermissions,
 		MaxTurns:       &maxTurns,
 	}
