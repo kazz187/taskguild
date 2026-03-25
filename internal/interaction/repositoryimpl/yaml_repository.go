@@ -31,6 +31,21 @@ var knownSubdirs = map[string]bool{
 type entityLocation struct {
 	projectID string
 	taskID    string
+	archived  bool
+}
+
+func (loc entityLocation) interactionPath(id string) string {
+	if loc.archived {
+		return fmt.Sprintf("%s/%s/archived/%s/interactions/%s.yaml", projectsPrefix, loc.projectID, loc.taskID, id)
+	}
+	return fmt.Sprintf("%s/%s/%s/interactions/%s.yaml", projectsPrefix, loc.projectID, loc.taskID, id)
+}
+
+func (loc entityLocation) interactionPrefix() string {
+	if loc.archived {
+		return fmt.Sprintf("%s/%s/archived/%s/interactions", projectsPrefix, loc.projectID, loc.taskID)
+	}
+	return fmt.Sprintf("%s/%s/%s/interactions", projectsPrefix, loc.projectID, loc.taskID)
 }
 
 // YAMLRepository implements interaction.Repository using YAML files on Storage.
@@ -47,14 +62,6 @@ type YAMLRepository struct {
 
 func NewYAMLRepository(s storage.Storage) *YAMLRepository {
 	return &YAMLRepository{storage: s}
-}
-
-func interactionPath(projectID, taskID, id string) string {
-	return fmt.Sprintf("%s/%s/%s/interactions/%s.yaml", projectsPrefix, projectID, taskID, id)
-}
-
-func interactionPrefix(projectID, taskID string) string {
-	return fmt.Sprintf("%s/%s/%s/interactions", projectsPrefix, projectID, taskID)
 }
 
 func pathToID(p string) string {
@@ -96,9 +103,15 @@ func extractField(data []byte, field string) string {
 	return strings.TrimSpace(string(data[start:end]))
 }
 
+type scannedTask struct {
+	projectID string
+	taskID    string
+	archived  bool
+}
+
 // scanTaskDirs returns all task directory paths (active + archived) for a project.
-func (r *YAMLRepository) scanTaskDirs(ctx context.Context, pid string) []struct{ projectID, taskID string } {
-	var result []struct{ projectID, taskID string }
+func (r *YAMLRepository) scanTaskDirs(ctx context.Context, pid string) []scannedTask {
+	var result []scannedTask
 
 	projectDir := fmt.Sprintf("%s/%s", projectsPrefix, pid)
 	subdirs, err := r.storage.ListDirs(ctx, projectDir)
@@ -115,10 +128,10 @@ func (r *YAMLRepository) scanTaskDirs(ctx context.Context, pid string) []struct{
 			}
 			for _, ad := range archivedDirs {
 				tid := filepath.Base(ad)
-				result = append(result, struct{ projectID, taskID string }{pid, tid})
+				result = append(result, scannedTask{pid, tid, true})
 			}
 		} else if !knownSubdirs[name] {
-			result = append(result, struct{ projectID, taskID string }{pid, name})
+			result = append(result, scannedTask{pid, name, false})
 		}
 	}
 	return result
@@ -142,7 +155,8 @@ func (r *YAMLRepository) ensureIndex(ctx context.Context) {
 			pid := filepath.Base(pd)
 			taskDirs := r.scanTaskDirs(ctx, pid)
 			for _, td := range taskDirs {
-				prefix := interactionPrefix(td.projectID, td.taskID)
+				loc := entityLocation{projectID: td.projectID, taskID: td.taskID, archived: td.archived}
+				prefix := loc.interactionPrefix()
 				files, err := r.storage.List(ctx, prefix)
 				if err != nil {
 					continue
@@ -153,7 +167,7 @@ func (r *YAMLRepository) ensureIndex(ctx context.Context) {
 						continue
 					}
 
-					r.locationIndex[id] = entityLocation{projectID: td.projectID, taskID: td.taskID}
+					r.locationIndex[id] = loc
 					r.taskIndex[td.taskID] = append(r.taskIndex[td.taskID], id)
 					r.allIDs = append(r.allIDs, id)
 
@@ -257,7 +271,8 @@ func (r *YAMLRepository) Create(ctx context.Context, i *interaction.Interaction)
 	if err != nil {
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal interaction: %w", err))
 	}
-	if err := r.storage.Write(ctx, interactionPath(i.ProjectID, i.TaskID, i.ID), data); err != nil {
+	loc := entityLocation{projectID: i.ProjectID, taskID: i.TaskID}
+	if err := r.storage.Write(ctx, loc.interactionPath(i.ID), data); err != nil {
 		return cerr.WrapStorageWriteError("interaction", err)
 	}
 	r.addToIndex(i)
@@ -274,7 +289,7 @@ func (r *YAMLRepository) Get(ctx context.Context, id string) (*interaction.Inter
 		return nil, cerr.NewError(cerr.NotFound, "interaction not found", nil)
 	}
 
-	data, err := r.storage.Read(ctx, interactionPath(loc.projectID, loc.taskID, id))
+	data, err := r.storage.Read(ctx, loc.interactionPath(id))
 	if err != nil {
 		return nil, cerr.WrapStorageReadError("interaction", err)
 	}
@@ -322,7 +337,7 @@ func (r *YAMLRepository) List(ctx context.Context, taskID string, taskIDs []stri
 		if !ok {
 			continue
 		}
-		data, err := r.storage.Read(ctx, interactionPath(loc.projectID, loc.taskID, id))
+		data, err := r.storage.Read(ctx, loc.interactionPath(id))
 		if err != nil {
 			continue
 		}
@@ -349,7 +364,7 @@ func (r *YAMLRepository) Update(ctx context.Context, i *interaction.Interaction)
 	if err != nil {
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal interaction: %w", err))
 	}
-	if err := r.storage.Write(ctx, interactionPath(loc.projectID, loc.taskID, i.ID), data); err != nil {
+	if err := r.storage.Write(ctx, loc.interactionPath(i.ID), data); err != nil {
 		return cerr.WrapStorageWriteError("interaction", err)
 	}
 	r.updateTokenIndex(i)
@@ -388,7 +403,7 @@ func (r *YAMLRepository) DeleteByTaskID(ctx context.Context, taskID string) (int
 		if !ok {
 			continue
 		}
-		if err := r.storage.Delete(ctx, interactionPath(loc.projectID, loc.taskID, id)); err != nil {
+		if err := r.storage.Delete(ctx, loc.interactionPath(id)); err != nil {
 			return count, cerr.WrapStorageDeleteError("interaction", err)
 		}
 		r.removeFromIndex(id, taskID)
@@ -417,4 +432,36 @@ func (r *YAMLRepository) ExpirePendingByTask(ctx context.Context, taskID string)
 		count++
 	}
 	return count, nil
+}
+
+// NotifyTaskArchived updates the in-memory index so that interactions for the
+// given task resolve to the archived path.
+func (r *YAMLRepository) NotifyTaskArchived(ctx context.Context, projectID, taskID string) error {
+	r.ensureIndex(ctx)
+	r.indexMu.Lock()
+	defer r.indexMu.Unlock()
+
+	for _, id := range r.taskIndex[taskID] {
+		if loc, ok := r.locationIndex[id]; ok {
+			loc.archived = true
+			r.locationIndex[id] = loc
+		}
+	}
+	return nil
+}
+
+// NotifyTaskUnarchived updates the in-memory index so that interactions for the
+// given task resolve to the active path.
+func (r *YAMLRepository) NotifyTaskUnarchived(ctx context.Context, projectID, taskID string) error {
+	r.ensureIndex(ctx)
+	r.indexMu.Lock()
+	defer r.indexMu.Unlock()
+
+	for _, id := range r.taskIndex[taskID] {
+		if loc, ok := r.locationIndex[id]; ok {
+			loc.archived = false
+			r.locationIndex[id] = loc
+		}
+	}
+	return nil
 }
