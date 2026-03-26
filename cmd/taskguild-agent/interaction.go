@@ -525,6 +525,12 @@ func handlePermissionRequest(
 			{Label: "Always Allow Command", Value: "always_allow_command", Description: "Allow and create rules for individual commands"},
 			{Label: "Deny", Value: "deny", Description: "Deny this tool use"},
 		}
+	} else if editTools[toolName] {
+		options = []*v1.InteractionOption{
+			{Label: "Allow", Value: "allow", Description: "Allow this tool use"},
+			{Label: "Always Allow", Value: "always_allow", Description: "Always allow this tool"},
+			{Label: "Deny", Value: "deny", Description: "Deny this tool use"},
+		}
 	} else {
 		options = []*v1.InteractionOption{
 			{Label: "Allow", Value: "allow", Description: "Allow this tool use"},
@@ -579,6 +585,14 @@ func handlePermissionRequest(
 		switch responseStr {
 		case "allow":
 			logger.Info("permission granted", "tool", toolName)
+			return claudeagent.PermissionResultAllow{}, nil
+		case "always_allow":
+			logger.Info("permission granted (always allow)", "tool", toolName)
+			if permCache != nil {
+				updates := buildPermissionUpdate(toolName, input, toolCtx.Suggestions)
+				rules := extractRuleStrings(updates)
+				go permCache.AddAndSync(ctx, rules)
+			}
 			return claudeagent.PermissionResultAllow{}, nil
 		default:
 			logger.Info("permission denied", "tool", toolName)

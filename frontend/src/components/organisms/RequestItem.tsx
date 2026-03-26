@@ -82,12 +82,12 @@ function buildPatternRows(meta: BashPermissionMetadata): PatternRow[] {
   return rows
 }
 
-function getPermissionShortcutLabel(value: string, isBash: boolean): string | null {
+function getPermissionShortcutLabel(value: string, _isBash: boolean): string | null {
   switch (value) {
     case 'allow':
       return 'y'
     case 'always_allow':
-      return isBash ? null : null // hide for both bash and non-bash
+      return 'a'
     case 'always_allow_command':
       return 'a'
     case 'deny':
@@ -228,7 +228,7 @@ export function RequestItem({
   // Only filter out legacy "always_allow" if present.
   const displayOptions = useMemo(() => {
     if (!isPending) return interaction.options
-    return interaction.options.filter((opt) => opt.value !== 'always_allow')
+    return interaction.options
   }, [interaction.options, isPending])
 
   // Handle respond with special logic for always_allow_command

@@ -93,16 +93,14 @@ function buildDefaultAlwaysAllowResponse(meta: BashPermissionMeta): string {
  *   y = allow, a = always_allow_command, n = deny
  *
  * For non-Bash permission requests:
- *   y = allow, n = deny
- *
- * The old Y (shift+y) = always_allow shortcut is removed.
+ *   y = allow, a = always_allow (edit tools only), n = deny
  */
 function getPermissionShortcutValue(key: string, isBash: boolean): string | null {
   switch (key) {
     case 'y':
       return 'allow'
     case 'a':
-      return isBash ? 'always_allow_command' : null
+      return isBash ? 'always_allow_command' : 'always_allow'
     case 'n':
       return 'deny'
     default:
@@ -271,13 +269,12 @@ export function useRequestKeyboard({
           const value = getPermissionShortcutValue(e.key, isBash)
           if (!value) return
 
-          // For 'y' and 'n', verify the option exists in the interaction
-          // For 'a' (always_allow_command), it's a synthetic option not in the original list
-          if (value !== 'always_allow_command') {
-            if (!selected.options.some((opt) => opt.value === value)) return
-          } else {
-            // always_allow_command is only available for bash
+          // For always_allow_command, it's a synthetic option for bash only
+          if (value === 'always_allow_command') {
             if (!isBash || !bashMeta) return
+          } else {
+            // For allow, deny, always_allow — verify the option exists in the interaction
+            if (!selected.options.some((opt) => opt.value === value)) return
           }
 
           e.preventDefault()

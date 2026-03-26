@@ -78,9 +78,11 @@ func (m *mockAgentManagerClient) ReportAgentStatus(_ context.Context, _ *connect
 	return connect.NewResponse(&v1.ReportAgentStatusResponse{}), nil
 }
 
-func (m *mockAgentManagerClient) SyncPermissions(_ context.Context, _ *connect.Request[v1.SyncPermissionsRequest]) (*connect.Response[v1.SyncPermissionsResponse], error) {
+func (m *mockAgentManagerClient) SyncPermissions(_ context.Context, req *connect.Request[v1.SyncPermissionsRequest]) (*connect.Response[v1.SyncPermissionsResponse], error) {
 	return connect.NewResponse(&v1.SyncPermissionsResponse{
-		Permissions: &v1.PermissionSet{},
+		Permissions: &v1.PermissionSet{
+			Allow: req.Msg.GetLocalAllow(),
+		},
 	}), nil
 }
 
@@ -254,15 +256,18 @@ func TestHandlePermissionRequest_NonBashToolOptions(t *testing.T) {
 
 	inter := mock.interactions[0]
 
-	// Non-Bash tools should have 2 options: Allow and Deny.
-	if len(inter.Options) != 2 {
-		t.Errorf("expected 2 options for non-Bash tool, got %d", len(inter.Options))
+	// Edit tools (Write) should have 3 options: Allow, Always Allow, and Deny.
+	if len(inter.Options) != 3 {
+		t.Errorf("expected 3 options for edit tool, got %d", len(inter.Options))
 	}
 	if inter.Options[0].Value != "allow" {
 		t.Errorf("expected first option 'allow', got %q", inter.Options[0].Value)
 	}
-	if inter.Options[1].Value != "deny" {
-		t.Errorf("expected second option 'deny', got %q", inter.Options[1].Value)
+	if inter.Options[1].Value != "always_allow" {
+		t.Errorf("expected second option 'always_allow', got %q", inter.Options[1].Value)
+	}
+	if inter.Options[2].Value != "deny" {
+		t.Errorf("expected third option 'deny', got %q", inter.Options[2].Value)
 	}
 
 	// Should have no metadata.
@@ -472,5 +477,57 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_WithRedirects(t *testing.T) 
 	}
 	if mock.addedPermissions[1].Type != "redirect" {
 		t.Errorf("expected second permission type 'redirect', got %q", mock.addedPermissions[1].Type)
+	}
+}
+
+func TestHandlePermissionRequest_AlwaysAllowEdit(t *testing.T) {
+	mock := &mockAgentManagerClient{}
+	permCache := newPermissionCache("test-project", mock)
+
+	ctx := context.Background()
+	waiter := newInteractionWaiter()
+
+	resultCh := make(chan claudeagent.PermissionResult, 1)
+	errCh := make(chan error, 1)
+	var wg conc.WaitGroup
+	wg.Go(func() {
+		result, err := handlePermissionRequest(
+			ctx, mock, "task-1", "agent-1",
+			"Edit", map[string]any{"file_path": "/tmp/test.txt"},
+			waiter, claudeagent.PermissionModeDefault,
+			claudeagent.ToolPermissionContext{},
+			permCache, nil,
+		)
+		resultCh <- result
+		errCh <- err
+	})
+
+	time.Sleep(50 * time.Millisecond)
+
+	if len(mock.interactions) != 1 {
+		t.Fatalf("expected 1 interaction, got %d", len(mock.interactions))
+	}
+
+	// Simulate "always_allow" response.
+	waiter.Deliver(&v1.Interaction{
+		Id:       "test-interaction-id",
+		Status:   v1.InteractionStatus_INTERACTION_STATUS_RESPONDED,
+		Response: "always_allow",
+	})
+
+	result := <-resultCh
+	if err := <-errCh; err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, ok := result.(claudeagent.PermissionResultAllow); !ok {
+		t.Fatalf("expected PermissionResultAllow, got %T", result)
+	}
+
+	// Wait briefly for async AddAndSync goroutine.
+	time.Sleep(100 * time.Millisecond)
+
+	// After always_allow, the permission cache should auto-allow the same tool.
+	if !permCache.Check("Edit", map[string]any{"file_path": "/tmp/other.txt"}) {
+		t.Error("expected Edit to be auto-allowed after always_allow, but cache check returned false")
 	}
 }
