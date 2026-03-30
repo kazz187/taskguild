@@ -36,7 +36,8 @@ func buildToolUseHooks(
 		claudeagent.HookEventPreToolUse: {
 			{
 				Matcher: "",
-				Hooks: []claudeagent.HookCallback{
+				Timeout: 300, // 5 minutes – must be long enough for the user to review and approve/reject the plan.
+				Hooks:   []claudeagent.HookCallback{
 					func(input claudeagent.HookInput, toolUseID string, hookCtx claudeagent.HookContext) (claudeagent.HookOutput, error) {
 						if input.ToolName != "ExitPlanMode" {
 							return claudeagent.HookOutput{}, nil

@@ -368,6 +368,110 @@ func TestRunTask_SessionPerStatusOnTransition(t *testing.T) {
 	assert.Equal(t, "Review", tc.taskHandler.updateTaskStatusReqs[0].StatusId)
 }
 
+// TestRunTask_PlanMode_AutoTransitionBlocked verifies that when the agent is
+// in plan mode and does not output NEXT_STATUS, the auto-transition is
+// suppressed (the system waits for user input instead of auto-transitioning).
+func TestRunTask_PlanMode_AutoTransitionBlocked(t *testing.T) {
+	tc := newTestClients()
+	defer tc.Close()
+
+	// Use a short timeout — the task should block waiting for user input
+	// and then be cancelled by context.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	metadata := baseMetadata("Plan", `[{"name":"Develop"}]`)
+	metadata["_permission_mode"] = "plan"
+
+	qr := &mockQueryRunner{
+		results: []mockQueryRunnerResult{
+			// Agent finishes without NEXT_STATUS (e.g. ExitPlanMode was
+			// blocked or the hook timed out on the CLI side).
+			{Result: makeResult("I've completed the planning phase.")},
+		},
+	}
+
+	permCache := newPermissionCache("test", tc.agentClient)
+	scpCache := newSingleCommandPermissionCache("test", tc.agentClient)
+
+	runTask(ctx, tc.agentClient, tc.taskClient, tc.interClient,
+		"agent-mgr-1", "task-plan-block", "instructions", metadata,
+		t.TempDir(), permCache, scpCache, qr, func() bool { return false })
+
+	// In plan mode, auto-transition must NOT fire.
+	tc.taskHandler.mu.Lock()
+	defer tc.taskHandler.mu.Unlock()
+	assert.Empty(t, tc.taskHandler.updateTaskStatusReqs,
+		"no status transition expected in plan mode without explicit NEXT_STATUS")
+}
+
+// TestRunTask_NonPlanMode_AutoTransitionUnchanged verifies that auto-transition
+// still works normally for non-plan-mode statuses with a single target.
+func TestRunTask_NonPlanMode_AutoTransitionUnchanged(t *testing.T) {
+	tc := newTestClients()
+	defer tc.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	metadata := baseMetadata("Plan", `[{"name":"Develop"}]`)
+	// No _permission_mode set (or explicitly not "plan")
+	metadata["_permission_mode"] = "default"
+
+	qr := &mockQueryRunner{
+		results: []mockQueryRunnerResult{
+			{Result: makeResult("I've completed the planning phase.")},
+		},
+	}
+
+	permCache := newPermissionCache("test", tc.agentClient)
+	scpCache := newSingleCommandPermissionCache("test", tc.agentClient)
+
+	runTask(ctx, tc.agentClient, tc.taskClient, tc.interClient,
+		"agent-mgr-1", "task-auto-default", "instructions", metadata,
+		t.TempDir(), permCache, scpCache, qr, func() bool { return false })
+
+	// Non-plan mode: auto-transition should fire.
+	tc.taskHandler.mu.Lock()
+	defer tc.taskHandler.mu.Unlock()
+	require.Len(t, tc.taskHandler.updateTaskStatusReqs, 1)
+	assert.Equal(t, "Develop", tc.taskHandler.updateTaskStatusReqs[0].StatusId)
+}
+
+// TestRunTask_PlanMode_ExplicitNextStatusAllowed verifies that when the agent
+// is in plan mode and explicitly outputs NEXT_STATUS, the transition proceeds.
+// This covers the case where the ExitPlanMode hook was approved and the agent
+// then outputs NEXT_STATUS.
+func TestRunTask_PlanMode_ExplicitNextStatusAllowed(t *testing.T) {
+	tc := newTestClients()
+	defer tc.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	metadata := baseMetadata("Plan", `[{"name":"Develop"}]`)
+	metadata["_permission_mode"] = "plan"
+
+	qr := &mockQueryRunner{
+		results: []mockQueryRunnerResult{
+			{Result: makeResult("Plan approved.\nNEXT_STATUS: Develop")},
+		},
+	}
+
+	permCache := newPermissionCache("test", tc.agentClient)
+	scpCache := newSingleCommandPermissionCache("test", tc.agentClient)
+
+	runTask(ctx, tc.agentClient, tc.taskClient, tc.interClient,
+		"agent-mgr-1", "task-plan-explicit", "instructions", metadata,
+		t.TempDir(), permCache, scpCache, qr, func() bool { return false })
+
+	// Explicit NEXT_STATUS should be honored even in plan mode.
+	tc.taskHandler.mu.Lock()
+	defer tc.taskHandler.mu.Unlock()
+	require.Len(t, tc.taskHandler.updateTaskStatusReqs, 1)
+	assert.Equal(t, "Develop", tc.taskHandler.updateTaskStatusReqs[0].StatusId)
+}
+
 func TestResolveSession(t *testing.T) {
 	tests := []struct {
 		name          string

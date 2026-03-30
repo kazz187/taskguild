@@ -526,7 +526,14 @@ func runTask(
 
 		// No NEXT_STATUS output but transitions exist — try auto-transition
 		// if exactly one transition is available.
-		if transitions, err := parseAvailableTransitions(metadata); err == nil && len(transitions) == 1 {
+		// In plan mode, skip auto-transition so that the user has a chance to
+		// approve or reject the plan via ExitPlanMode before moving on.
+		isPlanMode := metadata["_permission_mode"] == string(claudeagent.PermissionModePlan)
+		if isPlanMode {
+			logger.Info("plan mode active, skipping auto-transition", "turn", turn)
+			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+				"Plan mode: skipping auto-transition, waiting for user input", nil)
+		} else if transitions, err := parseAvailableTransitions(metadata); err == nil && len(transitions) == 1 {
 			autoName := transitions[0].Name
 			logger.Info("no NEXT_STATUS output, auto-transitioning (single transition available)",
 				"next_status_name", autoName, "turn", turn)
@@ -561,13 +568,17 @@ func runTask(
 					"Max user response retries reached, force-completing task", nil)
 				// Attempt auto-transition on force-complete so the task
 				// does not remain stuck at the current status.
+				// In plan mode, do NOT auto-transition — the plan must be
+				// explicitly approved via ExitPlanMode.
 				afterHooks()
 				reportTaskResult(ctx, client, taskID, summary, "")
 				reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task force-completed (no NEXT_STATUS after retries)")
-				if err := handleStatusTransition(ctx, taskClient, taskID, "", metadata, tl); err != nil {
-					logger.Warn("auto-transition on force-complete failed", "error", err)
-					tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
-						fmt.Sprintf("Auto-transition on force-complete failed: %v", err), nil)
+				if !isPlanMode {
+					if err := handleStatusTransition(ctx, taskClient, taskID, "", metadata, tl); err != nil {
+						logger.Warn("auto-transition on force-complete failed", "error", err)
+						tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
+							fmt.Sprintf("Auto-transition on force-complete failed: %v", err), nil)
+					}
 				}
 				return
 			}
@@ -584,11 +595,15 @@ func runTask(
 		if err != nil {
 			logger.Error("user response error, completing task", "error", err)
 			// Attempt auto-transition so the task does not remain stuck.
+			// In plan mode, do NOT auto-transition — the plan must be
+			// explicitly approved via ExitPlanMode.
 			afterHooks()
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (no user response)")
-			if transErr := handleStatusTransition(ctx, taskClient, taskID, "", metadata, tl); transErr != nil {
-				logger.Warn("auto-transition on user response error failed", "error", transErr)
+			if !isPlanMode {
+				if transErr := handleStatusTransition(ctx, taskClient, taskID, "", metadata, tl); transErr != nil {
+					logger.Warn("auto-transition on user response error failed", "error", transErr)
+				}
 			}
 			return
 		}
