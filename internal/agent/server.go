@@ -327,11 +327,58 @@ func parseAgentMDFile(filePath string) (*parsedAgent, error) {
 	}
 
 	// Parse frontmatter as simple key: value pairs.
-	// Also supports YAML list format (  - item) for list fields like skills.
+	// Also supports YAML list format (  - item) for list fields like skills,
+	// and YAML block scalar indicators (| and >) for multi-line string values.
 	var currentListKey string
+	var blockScalarKey string
+	var blockScalarLines []string
+	var blockIndent int
+
+	assignAgentBlockScalar := func(key string, lines []string) {
+		value := strings.TrimRight(strings.Join(lines, "\n"), "\n ")
+		switch key {
+		case "name":
+			result.Name = value
+		case "description":
+			result.Description = value
+		case "model":
+			result.Model = value
+		case "permissionMode":
+			result.PermissionMode = value
+		case "memory":
+			result.Memory = value
+		}
+	}
+
 	for _, line := range frontmatterLines {
-		// Check for YAML list item (e.g. "  - skill-name").
 		trimmed := strings.TrimSpace(line)
+
+		// If collecting a block scalar, check if this line continues it.
+		if blockScalarKey != "" {
+			if len(line) > 0 && (line[0] == ' ' || line[0] == '\t') {
+				// Indented line: part of the block scalar.
+				if len(blockScalarLines) == 0 {
+					blockIndent = len(line) - len(strings.TrimLeft(line, " \t"))
+				}
+				stripped := line
+				if len(line) >= blockIndent {
+					stripped = line[blockIndent:]
+				}
+				blockScalarLines = append(blockScalarLines, stripped)
+				continue
+			}
+			if trimmed == "" {
+				// Blank line within block scalar.
+				blockScalarLines = append(blockScalarLines, "")
+				continue
+			}
+			// Non-indented line: finalize block scalar and fall through.
+			assignAgentBlockScalar(blockScalarKey, blockScalarLines)
+			blockScalarKey = ""
+			blockScalarLines = nil
+		}
+
+		// Check for YAML list item (e.g. "  - skill-name").
 		if strings.HasPrefix(trimmed, "- ") && currentListKey != "" {
 			item := strings.TrimSpace(strings.TrimPrefix(trimmed, "- "))
 			if item != "" {
@@ -351,6 +398,14 @@ func parseAgentMDFile(filePath string) (*parsedAgent, error) {
 			key := strings.TrimSpace(line[:idx])
 			value := strings.TrimSpace(line[idx+1:])
 			currentListKey = "" // Reset list context.
+
+			// Detect block scalar indicator.
+			if value == "|" || value == ">" {
+				blockScalarKey = key
+				blockScalarLines = nil
+				blockIndent = 0
+				continue
+			}
 
 			switch key {
 			case "name":
@@ -401,6 +456,11 @@ func parseAgentMDFile(filePath string) (*parsedAgent, error) {
 				result.Memory = value
 			}
 		}
+	}
+
+	// Finalize any trailing block scalar.
+	if blockScalarKey != "" {
+		assignAgentBlockScalar(blockScalarKey, blockScalarLines)
 	}
 
 	// The body is the system prompt.

@@ -92,7 +92,7 @@ func buildAgentMDContent(ag *v1.AgentDefinition) string {
 		sb.WriteString(fmt.Sprintf("name: %s\n", ag.GetName()))
 	}
 	if ag.GetDescription() != "" {
-		sb.WriteString(fmt.Sprintf("description: %s\n", ag.GetDescription()))
+		writeYAMLStringField(&sb, "description", ag.GetDescription())
 	}
 	if len(ag.GetTools()) > 0 {
 		sb.WriteString(fmt.Sprintf("tools: %s\n", strings.Join(ag.GetTools(), ", ")))
@@ -125,6 +125,23 @@ func buildAgentMDContent(ag *v1.AgentDefinition) string {
 	}
 
 	return sb.String()
+}
+
+// writeYAMLStringField writes a YAML key-value pair to the builder.
+// If the value contains newlines, it uses YAML block scalar (|) notation.
+func writeYAMLStringField(sb *strings.Builder, key, value string) {
+	if strings.Contains(value, "\n") {
+		sb.WriteString(fmt.Sprintf("%s: |\n", key))
+		for _, line := range strings.Split(value, "\n") {
+			if line == "" {
+				sb.WriteString("\n")
+			} else {
+				sb.WriteString(fmt.Sprintf("  %s\n", line))
+			}
+		}
+	} else {
+		sb.WriteString(fmt.Sprintf("%s: %s\n", key, value))
+	}
 }
 
 // cleanupStaleAgentFiles removes .md files from the agents directory
