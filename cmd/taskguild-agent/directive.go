@@ -160,6 +160,9 @@ func createTaskFromDirective(
 	if targetStatus != "" {
 		if parentSessionID := metadata["session_id_"+targetStatus]; parentSessionID != "" {
 			taskMeta["session_id"] = parentSessionID
+			// Mark for fork so the subtask creates its own independent session
+			// instead of directly resuming the parent's session.
+			taskMeta["_fork_session"] = "true"
 		}
 	}
 

@@ -602,12 +602,15 @@ func runTask(
 }
 
 // resolveSession determines which session ID to use and whether to fork.
-// When _inherit_session_from is set, the session from the previous status is
-// forked rather than resumed directly. This allows the new agent to start with
-// the full conversation context while creating its own independent session.
+// Fork is triggered when:
+//   - _inherit_session_from is set (status transition with session inheritance), or
+//   - _fork_session is set (subtask inheriting parent's session)
+//
+// This ensures inherited sessions always create independent forks rather than
+// directly resuming the parent's session (which could cause conflicts).
 func resolveSession(metadata map[string]string) (sessionID string, forkSession bool) {
 	sid := metadata["session_id"]
-	if sid != "" && metadata["_inherit_session_from"] != "" {
+	if sid != "" && (metadata["_inherit_session_from"] != "" || metadata["_fork_session"] == "true") {
 		return sid, true
 	}
 	return sid, false
