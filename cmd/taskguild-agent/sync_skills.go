@@ -99,7 +99,7 @@ func buildSkillMDContent(sk *v1.SkillDefinition) string {
 		sb.WriteString(fmt.Sprintf("name: %s\n", sk.GetName()))
 	}
 	if sk.GetDescription() != "" {
-		sb.WriteString(fmt.Sprintf("description: %s\n", sk.GetDescription()))
+		writeYAMLStringField(&sb, "description", sk.GetDescription())
 	}
 	if sk.GetDisableModelInvocation() {
 		sb.WriteString("disable-model-invocation: true\n")

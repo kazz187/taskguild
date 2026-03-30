@@ -323,11 +323,60 @@ func parseSkillMDFile(filePath string, dirName string) (*parsedSkill, error) {
 	}
 
 	// Parse frontmatter as simple key: value pairs.
-	// Also supports YAML list format (  - item) for list fields like allowed-tools.
+	// Also supports YAML list format (  - item) for list fields like allowed-tools,
+	// and YAML block scalar indicators (| and >) for multi-line string values.
 	var currentListKey string
+	var blockScalarKey string
+	var blockScalarLines []string
+	var blockIndent int
+
+	assignSkillBlockScalar := func(key string, lines []string) {
+		value := strings.TrimRight(strings.Join(lines, "\n"), "\n ")
+		switch key {
+		case "name":
+			result.Name = value
+		case "description":
+			result.Description = value
+		case "model":
+			result.Model = value
+		case "context":
+			result.Context = value
+		case "agent":
+			result.Agent = value
+		case "argument-hint":
+			result.ArgumentHint = value
+		}
+	}
+
 	for _, line := range frontmatterLines {
-		// Check for YAML list item (e.g. "  - Read").
 		trimmed := strings.TrimSpace(line)
+
+		// If collecting a block scalar, check if this line continues it.
+		if blockScalarKey != "" {
+			if len(line) > 0 && (line[0] == ' ' || line[0] == '\t') {
+				// Indented line: part of the block scalar.
+				if len(blockScalarLines) == 0 {
+					blockIndent = len(line) - len(strings.TrimLeft(line, " \t"))
+				}
+				stripped := line
+				if len(line) >= blockIndent {
+					stripped = line[blockIndent:]
+				}
+				blockScalarLines = append(blockScalarLines, stripped)
+				continue
+			}
+			if trimmed == "" {
+				// Blank line within block scalar.
+				blockScalarLines = append(blockScalarLines, "")
+				continue
+			}
+			// Non-indented line: finalize block scalar and fall through.
+			assignSkillBlockScalar(blockScalarKey, blockScalarLines)
+			blockScalarKey = ""
+			blockScalarLines = nil
+		}
+
+		// Check for YAML list item (e.g. "  - Read").
 		if strings.HasPrefix(trimmed, "- ") && currentListKey != "" {
 			item := strings.TrimSpace(strings.TrimPrefix(trimmed, "- "))
 			if item != "" {
@@ -343,6 +392,14 @@ func parseSkillMDFile(filePath string, dirName string) (*parsedSkill, error) {
 			key := strings.TrimSpace(line[:idx])
 			value := strings.TrimSpace(line[idx+1:])
 			currentListKey = "" // Reset list context.
+
+			// Detect block scalar indicator.
+			if value == "|" || value == ">" {
+				blockScalarKey = key
+				blockScalarLines = nil
+				blockIndent = 0
+				continue
+			}
 
 			switch key {
 			case "name":
@@ -375,6 +432,11 @@ func parseSkillMDFile(filePath string, dirName string) (*parsedSkill, error) {
 				result.ArgumentHint = value
 			}
 		}
+	}
+
+	// Finalize any trailing block scalar.
+	if blockScalarKey != "" {
+		assignSkillBlockScalar(blockScalarKey, blockScalarLines)
 	}
 
 	// The body is the skill content.
