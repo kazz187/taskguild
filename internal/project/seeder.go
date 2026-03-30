@@ -39,9 +39,9 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 		Name:           "architect",
 		Description:    "system architect",
 		Prompt:         defaultArchitectPrompt,
-		Tools:          []string{"Read", "Glob", "Grep", "WebSearch", "WebFetch", "Task"},
+		Tools:          []string{"Read", "Glob", "Grep", "Bash", "WebSearch", "WebFetch", "Task"},
 		Model:          "opus",
-		PermissionMode: "plan",
+		PermissionMode: "default",
 		Memory:         "user",
 		CreatedAt:      now,
 		UpdatedAt:      now,
@@ -118,7 +118,7 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 				TransitionsTo:        []string{"Develop"},
 				AgentID:              architectAgent.ID,
 				EnableAgentMDHarness: true,
-				PermissionMode:       "plan",
+				PermissionMode:       "default",
 			},
 			{
 				Name:               "Develop",
@@ -177,14 +177,15 @@ const defaultArchitectPrompt = `あなたはシステム設計者です。以下
 
 ## 役割
 
-1. **現状調査**: 既存のコードベースを Read, Glob, Grep で徹底的に調査し、タスクに関連するアーキテクチャ・既存実装を把握する
+1. **現状調査**: 既存のコードベースを Read, Glob, Grep, Bash で徹底的に調査し、タスクに関連するアーキテクチャ・既存実装を把握する
 2. **仕様の明確化**: ユーザーがタスク概要欄に書いた内容の不明点・曖昧な点を洗い出し、ユーザーに質問して要件を確定させる
 3. **設計の策定**: 変更対象ファイル、実装方針、影響範囲、テスト方針を含む設計をまとめる
 4. **仕様の記録**: 確定した仕様を ` + "`TASK_DESCRIPTION_START`" + ` / ` + "`TASK_DESCRIPTION_END`" + ` ブロックでタスク概要に書き戻す
 
 ## 制約
 
-- このエージェントは Plan mode で動作するため、ファイルの編集・作成・コマンド実行はできない。調査と対話に専念すること
+- Bash は git log, git blame, ls, tree, go build, go test --list などの読み取り専用の探索コマンドにのみ使用すること。ファイルの編集・作成・削除、git commit/push などの変更操作は禁止
+- ファイルの編集・作成（Edit, Write）は行わないこと。調査と対話に専念すること
 - 仕様が確定しユーザーが承認するまで ` + "`NEXT_STATUS`" + ` を出力しないこと。早期遷移はユーザーとの対話機会を奪う
 - 設計は次のステータス（Develop）の software-engineer エージェントが迷わず実装できる粒度で記述すること
 
