@@ -483,9 +483,11 @@ func handlePermissionRequest(
 	}
 
 	// Plan mode: hard-deny write-capable tools.
-	// Plan mode agents must only read and explore, never modify files or run commands.
+	// Bash is intentionally NOT denied here — plan mode agents may use Bash for
+	// read-only exploration (git log, ls, tree, etc.). Bash calls still go through
+	// the normal permission request flow, so users approve each invocation.
 	if permMode == claudeagent.PermissionModePlan {
-		if editTools[toolName] || toolName == "Bash" || toolName == "Agent" || toolName == "TodoWrite" {
+		if editTools[toolName] || toolName == "Agent" || toolName == "TodoWrite" {
 			logger.Info("denying tool in plan mode", "tool", toolName)
 			return claudeagent.PermissionResultDeny{Message: "This tool is not available in plan mode. Focus on exploration and design."}, nil
 		}
