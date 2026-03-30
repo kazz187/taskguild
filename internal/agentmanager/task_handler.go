@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"sync"
 	"time"
 
 	"connectrpc.com/connect"
@@ -570,11 +571,14 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	var t *task.Task
 
 	// Worktree concurrency control: if the task has a named worktree,
-	// hold worktreeClaimMu to atomically check occupancy and claim.
+	// hold a per-project+worktree mutex to atomically check occupancy and claim.
 	if worktreeName := taskForCheck.Metadata["worktree"]; worktreeName != "" {
-		s.worktreeClaimMu.Lock()
+		muKey := taskForCheck.ProjectID + "\x00" + worktreeName
+		muVal, _ := s.worktreeClaimMu.LoadOrStore(muKey, &sync.Mutex{})
+		mu := muVal.(*sync.Mutex)
+		mu.Lock()
 		if occupied, occupantID := s.isWorktreeOccupied(ctx, taskForCheck.ProjectID, worktreeName, taskForCheck.ID); occupied {
-			s.worktreeClaimMu.Unlock()
+			mu.Unlock()
 			slog.Info("worktree occupied, rejecting claim",
 				"task_id", taskForCheck.ID,
 				"worktree", worktreeName,
@@ -585,7 +589,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 			}), nil
 		}
 		t, err = s.taskRepo.Claim(ctx, req.Msg.TaskId, req.Msg.AgentManagerId)
-		s.worktreeClaimMu.Unlock()
+		mu.Unlock()
 	} else {
 		t, err = s.taskRepo.Claim(ctx, req.Msg.TaskId, req.Msg.AgentManagerId)
 	}

@@ -39,15 +39,9 @@ export function ChildTaskCreateModal({
 
   const isParentAgentRunning = parentTask.assignmentStatus === TaskAssignmentStatus.ASSIGNED
 
-  // Find per-status session ID from parent metadata (session_id_{StatusName})
-  const parentSessionEntry = useMemo(() => {
-    const meta = parentTask.metadata ?? {}
-    const entries = Object.entries(meta)
-      .filter(([k, v]) => k.startsWith('session_id_') && v)
-    return entries.length > 0 ? entries[entries.length - 1] : null
-  }, [parentTask.metadata])
-  const parentSessionId = parentSessionEntry?.[1] ?? ''
-  const parentSessionKey = parentSessionEntry?.[0] ?? ''
+  // Use the parent's current status to look up the correct per-status session ID.
+  const parentSessionKey = parentTask.statusId ? `session_id_${parentTask.statusId}` : ''
+  const parentSessionId = parentSessionKey ? (parentTask.metadata?.[parentSessionKey] ?? '') : ''
 
   // Query cached worktree list
   const { data: wtData, refetch: refetchWorktrees } = useQuery(getWorktreeList, { projectId }, {
