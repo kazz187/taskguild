@@ -160,6 +160,9 @@ func createTaskFromDirective(
 	if targetStatus != "" {
 		if parentSessionID := metadata["session_id_"+targetStatus]; parentSessionID != "" {
 			taskMeta["session_id"] = parentSessionID
+			// Mark for fork so the subtask creates its own independent session
+			// instead of directly resuming the parent's session.
+			taskMeta["_fork_session"] = "true"
 		}
 	}
 
@@ -456,9 +459,13 @@ func getStatusInheritSession(statusName string, metadata map[string]string) stri
 func saveSessionID(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, sessionID string, metadata map[string]string) {
 	logger := clog.LoggerFromContext(ctx)
 	meta := map[string]string{"session_id": sessionID}
-	// Also store per-status session ID so subtasks can inherit it.
-	if statusName := metadata["_current_status_name"]; statusName != "" {
-		meta["session_id_"+statusName] = sessionID
+	// Store per-status session ID only when saving (not clearing).
+	// When clearing (sessionID == ""), we must NOT overwrite the per-status key
+	// because it needs to survive status transitions for subtask inheritance.
+	if sessionID != "" {
+		if statusName := metadata["_current_status_name"]; statusName != "" {
+			meta["session_id_"+statusName] = sessionID
+		}
 	}
 	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
 		Id:       taskID,
