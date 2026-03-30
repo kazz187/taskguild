@@ -76,7 +76,7 @@ export function TaskCreateModal({ projectId, workflowId, defaultUseWorktree, onC
             placeholder="Task title..."
           />
         </div>
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors shrink-0 mt-1 p-1">
+        <button tabIndex={-1} onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors shrink-0 mt-1 p-1">
           <X className="w-5 h-5" />
         </button>
       </div>
