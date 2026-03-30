@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import type { ReactNode, MouseEvent } from 'react'
 import { X } from 'lucide-react'
 
@@ -35,6 +36,15 @@ export function Modal({
   closeOnBackdrop = true,
   children,
 }: ModalProps) {
+  useEffect(() => {
+    if (!open) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [open, onClose])
+
   if (!open) return null
 
   const handleBackdropClick = (e: MouseEvent) => {
