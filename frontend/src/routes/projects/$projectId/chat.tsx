@@ -4,7 +4,9 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { listTasks } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import { listInteractions, respondToInteraction, expireInteraction } from '@taskguild/proto/taskguild/v1/interaction-InteractionService_connectquery.ts'
+import { listTaskLogs } from '@taskguild/proto/taskguild/v1/task_log-TaskLogService_connectquery.ts'
 import { InteractionStatus, InteractionType } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
+import { TaskLogCategory } from '@taskguild/proto/taskguild/v1/task_log_pb.ts'
 import { getProject } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
@@ -29,6 +31,11 @@ function ProjectChatPage() {
   const { data: projectData } = useQuery(getProject, { id: projectId })
   const { data: tasksData, refetch: refetchTasks } = useQuery(listTasks, { projectId })
   const { data: interactionsData, refetch: refetchInteractions } = useQuery(listInteractions, { projectId, pagination: { limit: 0 } })
+  const { data: logsData, refetch: refetchLogs } = useQuery(listTaskLogs, {
+    taskId: '',
+    projectId,
+    pagination: { limit: 200 },
+  })
 
   const respondMut = useMutation(respondToInteraction)
   const expireMut = useMutation(expireInteraction)
@@ -36,6 +43,7 @@ function ProjectChatPage() {
   const project = projectData?.project
   const tasks = tasksData?.tasks ?? []
   const interactions = interactionsData?.interactions ?? []
+  const logs = logsData?.logs ?? []
 
   // Build task title map
   const taskMap = useMemo(() => {
@@ -49,22 +57,47 @@ function ProjectChatPage() {
         if (!m.has(id)) m.set(id, title)
       }
     }
+    // Supplement from listTaskLogs response (includes archived tasks)
+    if (logsData?.taskTitles) {
+      for (const [id, title] of Object.entries(logsData.taskTitles)) {
+        if (!m.has(id)) m.set(id, title)
+      }
+    }
     return m
-  }, [tasks, interactionsData?.taskTitles])
+  }, [tasks, interactionsData?.taskTitles, logsData?.taskTitles])
 
-  // Wrap interactions as TimelineItems
-  const timelineItems = useMemo<TimelineItem[]>(
-    () => interactions.map((interaction): TimelineItem => ({ kind: 'interaction', interaction })),
-    [interactions],
+  // Filter logs to only RESULT category (avoid noise from TOOL_USE, STDERR, etc.)
+  const filteredLogs = useMemo(
+    () => logs.filter((l) => l.category === TaskLogCategory.RESULT),
+    [logs],
   )
+
+  // Merge interactions + filtered logs into unified timeline sorted by createdAt
+  const timelineItems = useMemo<TimelineItem[]>(() => {
+    const items: TimelineItem[] = [
+      ...interactions.map((interaction): TimelineItem => ({ kind: 'interaction', interaction })),
+      ...filteredLogs.map((log): TimelineItem => ({ kind: 'log', log })),
+    ]
+    items.sort((a, b) => {
+      const tsA = a.kind === 'interaction' ? a.interaction.createdAt : a.log.createdAt
+      const tsB = b.kind === 'interaction' ? b.interaction.createdAt : b.log.createdAt
+      if (!tsA || !tsB) return 0
+      const diff = Number(tsA.seconds) - Number(tsB.seconds)
+      if (diff !== 0) return diff
+      return tsA.nanos - tsB.nanos
+    })
+    return items
+  }, [interactions, filteredLogs])
 
   const onEvent = useCallback(() => {
     refetchTasks()
     refetchInteractions()
-  }, [refetchTasks, refetchInteractions])
+    refetchLogs()
+  }, [refetchTasks, refetchInteractions, refetchLogs])
 
   const eventTypes = useMemo(() => [
     EventType.TASK_CREATED, EventType.TASK_UPDATED, EventType.INTERACTION_CREATED, EventType.INTERACTION_RESPONDED,
+    EventType.TASK_LOG,
   ], [])
 
   const { connectionStatus, reconnect } = useEventSubscription(eventTypes, projectId, onEvent)
@@ -85,7 +118,7 @@ function ProjectChatPage() {
   // Play notification sound when new pending requests arrive
   useNotificationSound(pendingRequestCount)
 
-  // Auto-scroll to bottom when new interactions arrive
+  // Auto-scroll to bottom when new items arrive
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -153,15 +186,16 @@ function ProjectChatPage() {
             <p className="text-gray-500 text-sm text-center py-12">No interactions yet.</p>
           )}
           {timelineItems.map((item, idx) => {
-            if (item.kind !== 'interaction') return null
             const prev = idx > 0 ? timelineItems[idx - 1] : null
-            const taskId = item.interaction.taskId
-            const prevTaskId = prev?.kind === 'interaction' ? prev.interaction.taskId : null
+            const taskId = item.kind === 'interaction' ? item.interaction.taskId : item.log.taskId
+            const prevTaskId = prev
+              ? (prev.kind === 'interaction' ? prev.interaction.taskId : prev.log.taskId)
+              : null
             const showTaskLabel = taskId !== prevTaskId
             const taskTitle = taskMap.get(taskId) || shortId(taskId)
 
             return (
-              <div key={`i-${item.interaction.id}`}>
+              <div key={item.kind === 'interaction' ? `i-${item.interaction.id}` : `l-${item.log.id}`}>
                 {showTaskLabel && (
                   <div className="flex items-center gap-2 pt-3 pb-1">
                     <Link

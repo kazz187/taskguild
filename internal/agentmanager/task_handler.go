@@ -313,16 +313,10 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 	}
 
 	// If the task is already unassigned (e.g. stopped by user via StopTask),
-	// just update metadata without triggering retry logic.
+	// just emit the result log without triggering retry logic.
 	if t.AssignmentStatus == task.AssignmentStatusUnassigned && t.AssignedAgentID == "" {
 		if t.Metadata == nil {
 			t.Metadata = make(map[string]string)
-		}
-		if req.Msg.Summary != "" {
-			t.Metadata["result_summary"] = req.Msg.Summary
-		}
-		if req.Msg.ErrorMessage != "" {
-			t.Metadata["result_error"] = req.Msg.ErrorMessage
 		}
 		delete(t.Metadata, "_stopped_by_user")
 		t.UpdatedAt = time.Now()
@@ -342,15 +336,8 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 		t.Metadata = make(map[string]string)
 	}
 
-	// Store result summary/error in metadata.
-	if req.Msg.Summary != "" {
-		t.Metadata["result_summary"] = req.Msg.Summary
-	}
-	if req.Msg.ErrorMessage != "" {
-		t.Metadata["result_error"] = req.Msg.ErrorMessage
-	}
-
-	// Emit a chronological RESULT log entry so results are not lost on status transitions.
+	// Emit a chronological RESULT log entry (append-only).
+	// Result data is no longer stored in metadata to avoid overwrites.
 	s.emitResultLog(ctx, t, req.Msg.Summary, req.Msg.ErrorMessage)
 
 	eventMeta := map[string]string{
@@ -800,6 +787,31 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 				enrichedMetadata["_enable_agent_md_harness"] = "false"
 			}
 			break
+		}
+	}
+
+	// Fetch RESULT logs for this task to provide history to the agent.
+	if logs, _, err := s.taskLogRepo.List(ctx, t.ID, nil, 0, 0); err == nil {
+		type resultEntry struct {
+			ResultType string `json:"result_type"`
+			Text       string `json:"text"`
+			CreatedAt  string `json:"created_at"`
+		}
+		var history []resultEntry
+		for _, l := range logs {
+			if l.Category != int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_RESULT) {
+				continue
+			}
+			history = append(history, resultEntry{
+				ResultType: l.Metadata["result_type"],
+				Text:       l.Metadata["full_text"],
+				CreatedAt:  l.CreatedAt.Format(time.RFC3339),
+			})
+		}
+		if len(history) > 0 {
+			if b, err := json.Marshal(history); err == nil {
+				enrichedMetadata["_result_history"] = string(b)
+			}
 		}
 	}
 

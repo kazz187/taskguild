@@ -6,6 +6,14 @@ import (
 	"strings"
 )
 
+// resultHistoryEntry represents a single entry in the task result history
+// passed via _result_history metadata.
+type resultHistoryEntry struct {
+	ResultType string `json:"result_type"`
+	Text       string `json:"text"`
+	CreatedAt  string `json:"created_at"`
+}
+
 // buildUserPrompt constructs the user prompt from enriched metadata.
 // Keeps only the task content and current status — all boilerplate instructions
 // live in the system prompt (buildWorkflowContext).
@@ -28,6 +36,17 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 	}
 	if description != "" {
 		sb.WriteString(fmt.Sprintf("\n%s\n", description))
+	}
+
+	// Append result history from previous statuses so the agent has full context.
+	if historyJSON := metadata["_result_history"]; historyJSON != "" {
+		var history []resultHistoryEntry
+		if json.Unmarshal([]byte(historyJSON), &history) == nil && len(history) > 0 {
+			sb.WriteString("\n## Previous Results\n")
+			for _, h := range history {
+				sb.WriteString(fmt.Sprintf("### %s (%s)\n%s\n\n", h.ResultType, h.CreatedAt, h.Text))
+			}
+		}
 	}
 
 	return sb.String()

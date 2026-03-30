@@ -151,6 +151,18 @@ func createTaskFromDirective(
 		taskMeta["worktree"] = directive.Worktree
 	}
 
+	// If the subtask targets the same status as the parent, inherit the
+	// parent's session ID so the subtask can fork it for context continuity.
+	targetStatus := statusID
+	if targetStatus == "" {
+		targetStatus = metadata["_current_status_name"]
+	}
+	if targetStatus != "" {
+		if parentSessionID := metadata["session_id_"+targetStatus]; parentSessionID != "" {
+			taskMeta["session_id"] = parentSessionID
+		}
+	}
+
 	req := &v1.CreateTaskRequest{
 		ProjectId:   projectID,
 		WorkflowId:  workflowID,
@@ -402,7 +414,7 @@ func handleStatusTransition(
 		logger.Info("next status inherits session, keeping session_id",
 			"next_status", nextStatusID, "inherit_from", nextInherit)
 	} else {
-		saveSessionID(ctx, taskClient, taskID, "")
+		saveSessionID(ctx, taskClient, taskID, "", metadata)
 	}
 
 	_, err = taskClient.UpdateTaskStatus(ctx, connect.NewRequest(&v1.UpdateTaskStatusRequest{
@@ -441,11 +453,16 @@ func getStatusInheritSession(statusName string, metadata map[string]string) stri
 	return ""
 }
 
-func saveSessionID(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, sessionID string) {
+func saveSessionID(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, sessionID string, metadata map[string]string) {
 	logger := clog.LoggerFromContext(ctx)
+	meta := map[string]string{"session_id": sessionID}
+	// Also store per-status session ID so subtasks can inherit it.
+	if statusName := metadata["_current_status_name"]; statusName != "" {
+		meta["session_id_"+statusName] = sessionID
+	}
 	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
 		Id:       taskID,
-		Metadata: map[string]string{"session_id": sessionID},
+		Metadata: meta,
 	}))
 	if err != nil {
 		logger.Error("failed to save session_id", "error", err)
@@ -489,19 +506,9 @@ func saveTaskDescription(ctx context.Context, taskClient taskguildv1connect.Task
 	}
 }
 
-func savePlanResult(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, content string, tl *taskLogger) {
+func savePlanResult(ctx context.Context, taskID, content string, tl *taskLogger) {
 	logger := clog.LoggerFromContext(ctx)
-	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
-		Id:       taskID,
-		Metadata: map[string]string{"plan_result": content},
-	}))
-	if err != nil {
-		logger.Error("failed to save plan_result", "error", err)
-	} else {
-		logger.Info("plan_result saved", "content_length", len(content))
-	}
-
-	// Emit a chronological RESULT log so plan results are preserved across status transitions.
+	// Plan results are stored only as append-only RESULT logs (no metadata overwrite).
 	if tl != nil {
 		preview := content
 		if len(preview) > 200 {
@@ -513,5 +520,6 @@ func savePlanResult(ctx context.Context, taskClient taskguildv1connect.TaskServi
 				"full_text":   content,
 				"result_type": "plan",
 			})
+		logger.Info("plan_result saved as log", "content_length", len(content))
 	}
 }
