@@ -39,6 +39,11 @@ type Server struct {
 	// scriptBroker manages streaming script execution output.
 	scriptBroker *script.ScriptExecutionBroker
 
+	// worktreeClaimMu serialises ClaimTask calls per project+worktree pair,
+	// ensuring only one task per worktree can be ASSIGNED at a time.
+	// Key: "projectID\x00worktreeName" → value: *sync.Mutex
+	worktreeClaimMu sync.Map
+
 	// worktreeCache stores the latest worktree list per project_id,
 	// populated by ReportWorktreeList and read by GetWorktreeList.
 	worktreeMu    sync.RWMutex

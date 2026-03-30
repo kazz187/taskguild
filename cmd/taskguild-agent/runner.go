@@ -128,7 +128,7 @@ func runTask(
 	}
 
 	// Resolve session early so the afterHooks closure can capture sessionID.
-	sessionID, forkSession := resolveSession(metadata)
+	sessionID := resolveSession(metadata)
 
 	// afterHooks runs after_task_execution hooks exactly once.
 	// It is called explicitly before status transitions and deferred as a
@@ -182,7 +182,7 @@ func runTask(
 	statusTransitionRetries := 0
 
 	for turn := 0; ; turn++ {
-		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, forkSession, worktreeName, client, taskClient, interClient, ctx, taskID, agentManagerID, waiter, permCache, scpCache, tl, func(newMode string) {
+		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, worktreeName, client, taskClient, interClient, ctx, taskID, agentManagerID, waiter, permCache, scpCache, tl, func(newMode string) {
 			modeMu.Lock()
 			old := currentMode
 			currentMode = newMode
@@ -264,7 +264,6 @@ func runTask(
 		// Save session ID for resume.
 		if result.Result != nil && result.Result.SessionID != "" {
 			sessionID = result.Result.SessionID
-			forkSession = false // fork done, normal resume from here
 			saveSessionID(ctx, taskClient, taskID, sessionID, metadata)
 			// Keep local metadata in sync for subtask session inheritance.
 			if statusName := metadata["_current_status_name"]; statusName != "" {
@@ -601,19 +600,30 @@ func runTask(
 	}
 }
 
-// resolveSession determines which session ID to use and whether to fork.
-// Fork is triggered when:
-//   - _inherit_session_from is set (status transition with session inheritance), or
-//   - _fork_session is set (subtask inheriting parent's session)
+// resolveSession determines which session ID to use for resume.
+// Sessions are always directly resumed (never forked). Only hooks and harness
+// fork sessions independently via their own opts.ForkSession = true.
 //
-// This ensures inherited sessions always create independent forks rather than
-// directly resuming the parent's session (which could cause conflicts).
-func resolveSession(metadata map[string]string) (sessionID string, forkSession bool) {
-	sid := metadata["session_id"]
-	if sid != "" && (metadata["_inherit_session_from"] != "" || metadata["_fork_session"] == "true") {
-		return sid, true
+// Resolution order:
+//  1. _inherit_session_from → look up session_id_{inheritedStatus}
+//  2. _current_status_name → look up session_id_{currentStatus} (turn 1+ or subtask)
+//  3. No session found → fresh session
+func resolveSession(metadata map[string]string) string {
+	// 1. Inherit from a previous status (e.g., Develop inheriting from Plan).
+	if inheritFrom := metadata["_inherit_session_from"]; inheritFrom != "" {
+		if sid := metadata["session_id_"+inheritFrom]; sid != "" {
+			return sid
+		}
 	}
-	return sid, false
+
+	// 2. Same status resume (turn 1+) or subtask inheriting parent's session.
+	if statusName := metadata["_current_status_name"]; statusName != "" {
+		if sid := metadata["session_id_"+statusName]; sid != "" {
+			return sid
+		}
+	}
+
+	return ""
 }
 
 // buildClaudeOptions constructs ClaudeAgentOptions for each turn.
@@ -622,7 +632,6 @@ func buildClaudeOptions(
 	workDir string,
 	metadata map[string]string,
 	sessionID string,
-	forkSession bool,
 	worktreeName string,
 	client taskguildv1connect.AgentManagerServiceClient,
 	taskClient taskguildv1connect.TaskServiceClient,
@@ -693,9 +702,6 @@ func buildClaudeOptions(
 
 	if sessionID != "" {
 		opts.Resume = sessionID
-		if forkSession {
-			opts.ForkSession = true
-		}
 	}
 
 	// Set --worktree flag whenever worktree is enabled. This ensures Claude CLI

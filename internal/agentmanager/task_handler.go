@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"sync"
 	"time"
 
 	"connectrpc.com/connect"
@@ -427,6 +428,12 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 		t.ID, "", eventMeta,
 	)
 
+	// If this task had a worktree, re-broadcast any PENDING tasks waiting
+	// for the same worktree so they can be claimed now.
+	if worktreeName := t.Metadata["worktree"]; worktreeName != "" {
+		s.rebroadcastWorktreeWaiters(ctx, t.ProjectID, worktreeName, t.ID)
+	}
+
 	return connect.NewResponse(&taskguildv1.ReportTaskResultResponse{}), nil
 }
 
@@ -555,7 +562,38 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		return nil, cerr.NewError(cerr.InvalidArgument, "task_id and agent_manager_id are required", nil).ConnectError()
 	}
 
-	t, err := s.taskRepo.Claim(ctx, req.Msg.TaskId, req.Msg.AgentManagerId)
+	// Pre-read the task to check worktree occupancy before claiming.
+	taskForCheck, err := s.taskRepo.Get(ctx, req.Msg.TaskId)
+	if err != nil {
+		return nil, cerr.ExtractConnectError(ctx, err)
+	}
+
+	var t *task.Task
+
+	// Worktree concurrency control: if the task has a named worktree,
+	// hold a per-project+worktree mutex to atomically check occupancy and claim.
+	if worktreeName := taskForCheck.Metadata["worktree"]; worktreeName != "" {
+		muKey := taskForCheck.ProjectID + "\x00" + worktreeName
+		muVal, _ := s.worktreeClaimMu.LoadOrStore(muKey, &sync.Mutex{})
+		mu := muVal.(*sync.Mutex)
+		mu.Lock()
+		if occupied, occupantID := s.isWorktreeOccupied(ctx, taskForCheck.ProjectID, worktreeName, taskForCheck.ID); occupied {
+			mu.Unlock()
+			slog.Info("worktree occupied, rejecting claim",
+				"task_id", taskForCheck.ID,
+				"worktree", worktreeName,
+				"occupant_task_id", occupantID,
+			)
+			return connect.NewResponse(&taskguildv1.ClaimTaskResponse{
+				Success: false,
+			}), nil
+		}
+		t, err = s.taskRepo.Claim(ctx, req.Msg.TaskId, req.Msg.AgentManagerId)
+		mu.Unlock()
+	} else {
+		t, err = s.taskRepo.Claim(ctx, req.Msg.TaskId, req.Msg.AgentManagerId)
+	}
+
 	if err != nil {
 		if cerr.IsCode(err, cerr.FailedPrecondition) {
 			return connect.NewResponse(&taskguildv1.ClaimTaskResponse{
@@ -840,6 +878,71 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		AgentConfigId: agentConfigID,
 		Metadata:      enrichedMetadata,
 	}), nil
+}
+
+// isWorktreeOccupied checks whether any other ASSIGNED task in the same project
+// is using the given worktree name.
+func (s *Server) isWorktreeOccupied(ctx context.Context, projectID, worktreeName, excludeTaskID string) (bool, string) {
+	tasks, _, err := s.taskRepo.List(ctx, projectID, "", "", 0, 0)
+	if err != nil {
+		return false, ""
+	}
+	for _, t := range tasks {
+		if t.ID == excludeTaskID {
+			continue
+		}
+		if t.Metadata["worktree"] != worktreeName {
+			continue
+		}
+		if t.AssignmentStatus == task.AssignmentStatusAssigned {
+			return true, t.ID
+		}
+	}
+	return false, ""
+}
+
+// rebroadcastWorktreeWaiters sends TaskAvailableCommand for any PENDING tasks
+// that share the same worktree as the just-completed task, so they can be
+// claimed now that the worktree is free.
+func (s *Server) rebroadcastWorktreeWaiters(ctx context.Context, projectID, worktreeName, completedTaskID string) {
+	tasks, _, err := s.taskRepo.List(ctx, projectID, "", "", 0, 0)
+	if err != nil {
+		return
+	}
+
+	var projectName string
+	if p, pErr := s.projectRepo.Get(ctx, projectID); pErr == nil {
+		projectName = p.Name
+	}
+
+	for _, t := range tasks {
+		if t.ID == completedTaskID || t.AssignmentStatus != task.AssignmentStatusPending {
+			continue
+		}
+		if t.Metadata["worktree"] != worktreeName {
+			continue
+		}
+		wf, wfErr := s.workflowRepo.Get(ctx, t.WorkflowID)
+		if wfErr != nil {
+			continue
+		}
+		agentConfigID := wf.FindAgentIDForStatus(t.StatusID)
+		s.registry.BroadcastCommandToProject(projectName, &taskguildv1.AgentCommand{
+			Command: &taskguildv1.AgentCommand_TaskAvailable{
+				TaskAvailable: &taskguildv1.TaskAvailableCommand{
+					TaskId:        t.ID,
+					AgentConfigId: agentConfigID,
+					Title:         t.Title,
+					Metadata:      t.Metadata,
+				},
+			},
+		})
+		slog.Info("rebroadcast worktree waiter",
+			"task_id", t.ID,
+			"worktree", worktreeName,
+			"freed_by", completedTaskID,
+		)
+	}
 }
 
 // RequestTaskStop sends a CancelTaskCommand to the agent running the given task.

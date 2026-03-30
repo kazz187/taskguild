@@ -328,11 +328,10 @@ NEXT_STATUS: Develop`
 	assert.True(t, foundDesc, "expected a description update via UpdateTask")
 }
 
-// TestRunTask_SessionClearedOnStatusTransition verifies that when a status
-// transition occurs, the session_id is cleared so the next agent starts fresh.
-// This prevents infinite loops caused by resuming a stale session from a
-// previous status (e.g., Plan session resumed in Develop).
-func TestRunTask_SessionClearedOnStatusTransition(t *testing.T) {
+// TestRunTask_SessionPerStatusOnTransition verifies that per-status session IDs
+// are preserved across status transitions (session_id_{StatusName} keys are
+// never cleared).
+func TestRunTask_SessionPerStatusOnTransition(t *testing.T) {
 	tc := newTestClients()
 	defer tc.Close()
 
@@ -340,7 +339,7 @@ func TestRunTask_SessionClearedOnStatusTransition(t *testing.T) {
 	defer cancel()
 
 	metadata := baseMetadata("Develop", `[{"name":"Review"}]`)
-	metadata["session_id"] = "old-session-from-plan"
+	metadata["session_id_Plan"] = "plan-session-id"
 
 	qr := &mockQueryRunner{
 		results: []mockQueryRunnerResult{
@@ -358,90 +357,69 @@ func TestRunTask_SessionClearedOnStatusTransition(t *testing.T) {
 	tc.taskHandler.mu.Lock()
 	defer tc.taskHandler.mu.Unlock()
 
-	// Verify session_id was cleared via UpdateTask RPC.
-	var sessionCleared bool
+	// Verify global session_id is NOT written (only per-status keys).
 	for _, req := range tc.taskHandler.updateTaskReqs {
-		if v, ok := req.Metadata["session_id"]; ok && v == "" {
-			sessionCleared = true
-			break
-		}
+		_, hasGlobal := req.Metadata["session_id"]
+		assert.False(t, hasGlobal, "global session_id should not be written")
 	}
-	assert.True(t, sessionCleared, "session_id should be cleared on status transition")
 
 	// Verify status transition still happened.
 	require.Len(t, tc.taskHandler.updateTaskStatusReqs, 1)
 	assert.Equal(t, "Review", tc.taskHandler.updateTaskStatusReqs[0].StatusId)
 }
 
-// TestRunTask_SessionClearedOnAutoTransition verifies that session_id is also
-// cleared when auto-transitioning (no explicit NEXT_STATUS output).
-func TestRunTask_SessionClearedOnAutoTransition(t *testing.T) {
-	tc := newTestClients()
-	defer tc.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	metadata := baseMetadata("Plan", `[{"name":"Develop"}]`)
-	metadata["session_id"] = "stale-session"
-
-	qr := &mockQueryRunner{
-		results: []mockQueryRunnerResult{
-			{Result: makeResult("Planning complete.")},
-		},
-	}
-
-	permCache := newPermissionCache("test", tc.agentClient)
-	scpCache := newSingleCommandPermissionCache("test", tc.agentClient)
-
-	runTask(ctx, tc.agentClient, tc.taskClient, tc.interClient,
-		"agent-mgr-1", "task-auto-session", "instructions", metadata,
-		t.TempDir(), permCache, scpCache, qr, func() bool { return false })
-
-	tc.taskHandler.mu.Lock()
-	defer tc.taskHandler.mu.Unlock()
-
-	var sessionCleared bool
-	for _, req := range tc.taskHandler.updateTaskReqs {
-		if v, ok := req.Metadata["session_id"]; ok && v == "" {
-			sessionCleared = true
-			break
-		}
-	}
-	assert.True(t, sessionCleared, "session_id should be cleared on auto-transition")
-
-	require.Len(t, tc.taskHandler.updateTaskStatusReqs, 1)
-	assert.Equal(t, "Develop", tc.taskHandler.updateTaskStatusReqs[0].StatusId)
-}
-
 func TestResolveSession(t *testing.T) {
 	tests := []struct {
-		name            string
-		metadata        map[string]string
-		wantSessionID   string
-		wantForkSession bool
+		name          string
+		metadata      map[string]string
+		wantSessionID string
 	}{
 		{
-			name:            "new task, no session",
-			metadata:        map[string]string{},
-			wantSessionID:   "",
-			wantForkSession: false,
+			name:          "new task, no session",
+			metadata:      map[string]string{},
+			wantSessionID: "",
 		},
 		{
-			name: "has global session",
+			name: "per-status session resume",
 			metadata: map[string]string{
-				"session_id": "global-sess",
+				"_current_status_name": "Develop",
+				"session_id_Develop":   "dev-sess",
 			},
-			wantSessionID:   "global-sess",
-			wantForkSession: false,
+			wantSessionID: "dev-sess",
+		},
+		{
+			name: "inherit from previous status",
+			metadata: map[string]string{
+				"_current_status_name":  "Develop",
+				"_inherit_session_from": "Plan",
+				"session_id_Plan":       "plan-sess",
+			},
+			wantSessionID: "plan-sess",
+		},
+		{
+			name: "subtask inherits parent session",
+			metadata: map[string]string{
+				"_current_status_name": "Develop",
+				"session_id_Develop":   "parent-dev-sess",
+			},
+			wantSessionID: "parent-dev-sess",
+		},
+		{
+			name: "inherit takes priority over per-status",
+			metadata: map[string]string{
+				"_current_status_name":  "Develop",
+				"_inherit_session_from": "Plan",
+				"session_id_Plan":       "plan-sess",
+				"session_id_Develop":    "dev-sess",
+			},
+			wantSessionID: "plan-sess",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sessionID, forkSession := resolveSession(tt.metadata)
+			sessionID := resolveSession(tt.metadata)
 			assert.Equal(t, tt.wantSessionID, sessionID)
-			assert.Equal(t, tt.wantForkSession, forkSession)
 		})
 	}
 }
