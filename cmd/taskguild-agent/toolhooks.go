@@ -8,20 +8,44 @@ import (
 	"os"
 	"strings"
 
+	"connectrpc.com/connect"
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
 
-// buildToolUseHooks creates PostToolUse and PostToolUseFail hook matchers
+// buildToolUseHooks creates PreToolUse, PostToolUse and PostToolUseFail hook matchers
 // that log tool invocations (with input and output) to the task timeline.
-// When a taskClient is provided, it also tracks plan file writes and saves
-// the plan content to task metadata when ExitPlanMode is called.
-func buildToolUseHooks(tl *taskLogger, taskID string, taskClient taskguildv1connect.TaskServiceClient, onModeChange func(newMode string)) map[claudeagent.HookEvent][]*claudeagent.HookMatcher {
+// It also tracks plan file writes and saves the plan content as a RESULT log
+// when ExitPlanMode is called.
+// The PreToolUse hook intercepts ExitPlanMode to require user approval before
+// the plan is accepted and the agent exits plan mode.
+func buildToolUseHooks(
+	tl *taskLogger,
+	taskID string,
+	onModeChange func(newMode string),
+	client taskguildv1connect.AgentManagerServiceClient,
+	interClient taskguildv1connect.InteractionServiceClient,
+	agentManagerID string,
+	waiter *interactionWaiter,
+) map[claudeagent.HookEvent][]*claudeagent.HookMatcher {
 	// Track the most recently written plan file path across hook invocations.
 	var planFilePath string
 
 	return map[claudeagent.HookEvent][]*claudeagent.HookMatcher{
+		claudeagent.HookEventPreToolUse: {
+			{
+				Matcher: "",
+				Hooks: []claudeagent.HookCallback{
+					func(input claudeagent.HookInput, toolUseID string, hookCtx claudeagent.HookContext) (claudeagent.HookOutput, error) {
+						if input.ToolName != "ExitPlanMode" {
+							return claudeagent.HookOutput{}, nil
+						}
+						return handleExitPlanModeApproval(hookCtx.Signal, input, client, interClient, taskID, agentManagerID, waiter, planFilePath)
+					},
+				},
+			},
+		},
 		claudeagent.HookEventPostToolUse: {
 			{
 				Matcher: "",
@@ -44,7 +68,7 @@ func buildToolUseHooks(tl *taskLogger, taskID string, taskClient taskguildv1conn
 						}
 
 						// Save plan result when ExitPlanMode is called.
-						if input.ToolName == "ExitPlanMode" && taskClient != nil {
+						if input.ToolName == "ExitPlanMode" && tl != nil {
 							var planContent string
 							if input.ToolResponse != nil {
 								if s, ok := input.ToolResponse.(string); ok {
@@ -72,7 +96,7 @@ func buildToolUseHooks(tl *taskLogger, taskID string, taskClient taskguildv1conn
 								}
 							}
 							if planContent != "" {
-								savePlanResult(context.Background(), taskClient, taskID, planContent, tl)
+								savePlanResult(context.Background(), taskID, planContent, tl)
 							}
 						}
 
@@ -225,4 +249,126 @@ func truncateLines(s string, maxLines int) string {
 		return s
 	}
 	return strings.Join(lines[:maxLines], "\n") + "\n..."
+}
+
+// handleExitPlanModeApproval intercepts ExitPlanMode via a PreToolUse hook.
+// It reads the plan content from the tool input or the plan file, creates an
+// interaction asking the user to approve or provide feedback, and blocks the
+// tool if the user does not approve.
+func handleExitPlanModeApproval(
+	ctx context.Context,
+	input claudeagent.HookInput,
+	client taskguildv1connect.AgentManagerServiceClient,
+	interClient taskguildv1connect.InteractionServiceClient,
+	taskID string,
+	agentManagerID string,
+	waiter *interactionWaiter,
+	planFilePath string,
+) (claudeagent.HookOutput, error) {
+	logger := slog.Default().With("task_id", taskID)
+
+	// Extract plan content from ExitPlanMode input or the tracked plan file.
+	planContent := extractPlanContent(input.ToolInput, planFilePath)
+	if planContent == "" {
+		// No plan content available — allow ExitPlanMode without approval.
+		logger.Warn("ExitPlanMode called but no plan content found, allowing without approval")
+		return claudeagent.HookOutput{}, nil
+	}
+
+	// Create an interaction for user approval.
+	resp, err := client.CreateInteraction(ctx, connect.NewRequest(&v1.CreateInteractionRequest{
+		TaskId:      taskID,
+		AgentId:     agentManagerID,
+		Type:        v1.InteractionType_INTERACTION_TYPE_QUESTION,
+		Title:       "Plan review",
+		Description: planContent,
+		Options: []*v1.InteractionOption{
+			{Label: "Approve", Value: "approve", Description: "Approve the plan and proceed"},
+			{Label: "Reject", Value: "reject", Description: "Reject the plan with feedback"},
+		},
+	}))
+	if err != nil {
+		logger.Error("failed to create plan approval interaction", "error", err)
+		// On failure, allow ExitPlanMode to proceed rather than blocking indefinitely.
+		return claudeagent.HookOutput{}, nil
+	}
+
+	interactionID := resp.Msg.GetInteraction().GetId()
+	logger.Info("waiting for plan approval", "interaction_id", interactionID)
+
+	ch := waiter.Register(interactionID)
+	defer waiter.Unregister(interactionID)
+
+	select {
+	case <-ctx.Done():
+		return claudeagent.HookOutput{
+			Decision: "block",
+			Reason:   "context cancelled while waiting for plan approval",
+		}, nil
+	case inter := <-ch:
+		if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
+			logger.Info("plan approval expired, blocking ExitPlanMode")
+			return claudeagent.HookOutput{
+				Decision: "block",
+				Reason:   "Plan approval expired. Please revise the plan and try again.",
+			}, nil
+		}
+
+		responseStr := inter.GetResponse()
+		logger.Info("plan approval response", "response", responseStr)
+
+		if responseStr == "approve" {
+			return claudeagent.HookOutput{}, nil
+		}
+
+		// Any other response is treated as rejection with feedback.
+		feedback := responseStr
+		if feedback == "reject" {
+			feedback = "The user rejected the plan. Please ask the user for feedback and revise the plan."
+		}
+
+		return claudeagent.HookOutput{
+			Decision: "block",
+			Reason:   fmt.Sprintf("Plan not approved. User feedback: %s", feedback),
+		}, nil
+
+	case msg := <-waiter.UserMessages():
+		// User sent a free-form message — treat as feedback and block.
+		logger.Info("user sent message during plan approval", "message_id", msg.GetId())
+		if _, expErr := interClient.ExpireInteraction(ctx, connect.NewRequest(&v1.ExpireInteractionRequest{
+			Id: interactionID,
+		})); expErr != nil {
+			logger.Error("failed to expire plan approval interaction", "error", expErr)
+		}
+
+		return claudeagent.HookOutput{
+			Decision: "block",
+			Reason:   fmt.Sprintf("Plan not approved. User feedback: %s", msg.GetTitle()),
+		}, nil
+	}
+}
+
+// extractPlanContent reads the plan content from ExitPlanMode tool input or
+// falls back to reading the tracked plan file.
+func extractPlanContent(toolInput map[string]any, planFilePath string) string {
+	// ExitPlanMode's plan field contains the plan content directly.
+	if plan, ok := toolInput["plan"].(string); ok && plan != "" {
+		return plan
+	}
+
+	// Check planFilePath from tool input.
+	if fp, ok := toolInput["planFilePath"].(string); ok && fp != "" {
+		if content, err := os.ReadFile(fp); err == nil && len(content) > 0 {
+			return string(content)
+		}
+	}
+
+	// Fallback: read from the tracked plan file written by a prior Write tool call.
+	if planFilePath != "" {
+		if content, err := os.ReadFile(planFilePath); err == nil && len(content) > 0 {
+			return string(content)
+		}
+	}
+
+	return ""
 }

@@ -284,23 +284,6 @@ function TaskDetailPage() {
   }
 
   const metadata = task.metadata ?? {}
-  // Show legacy result cards only when there are no RESULT log entries (backward compat for old tasks).
-  const hasResultLogs = logs.some((l) => l.category === TaskLogCategory.RESULT)
-  const resultSummary = hasResultLogs ? '' : (metadata['result_summary'] ?? '')
-  const rawPlanResult = metadata['plan_result'] ?? ''
-  // Handle legacy plan_result that may be stored as JSON with a "plan" field
-  const planResult = (() => {
-    if (!rawPlanResult) return ''
-    try {
-      const parsed = JSON.parse(rawPlanResult)
-      if (typeof parsed === 'object' && parsed !== null && typeof parsed.plan === 'string') {
-        return parsed.plan
-      }
-    } catch {
-      // Not JSON, use as-is (already markdown)
-    }
-    return rawPlanResult
-  })()
   const metadataEntries = Object.entries(metadata).filter(([key, v]) => v && key !== 'result_summary' && key !== 'result_status' && key !== 'result_error' && key !== 'plan_result')
 
   return (
@@ -442,10 +425,10 @@ function TaskDetailPage() {
             </div>
           )}
 
-          {/* Results — chronological result logs */}
+          {/* Results — all RESULT logs in chronological order (description, plan, summary, error) */}
           {(() => {
             const resultLogs = logs
-              .filter((l) => l.category === TaskLogCategory.RESULT && l.metadata['result_type'] !== 'plan')
+              .filter((l) => l.category === TaskLogCategory.RESULT)
               .sort((a, b) => {
                 if (!a.createdAt || !b.createdAt) return 0
                 const diff = Number(a.createdAt.seconds) - Number(b.createdAt.seconds)
@@ -462,10 +445,12 @@ function TaskDetailPage() {
                     const borderColor =
                       resultType === 'error' ? 'border-red-500/30' :
                       resultType === 'plan' ? 'border-blue-500/30' :
+                      resultType === 'description' ? 'border-cyan-500/30' :
                       'border-green-500/30'
                     const labelColor =
                       resultType === 'error' ? 'text-red-400' :
                       resultType === 'plan' ? 'text-blue-400' :
+                      resultType === 'description' ? 'text-cyan-400' :
                       'text-green-400'
                     return (
                       <div key={log.id} className={`border-l-2 ${borderColor} pl-3 py-1`}>
@@ -485,22 +470,6 @@ function TaskDetailPage() {
               </div>
             )
           })()}
-
-          {/* Plan Result */}
-          {planResult && (
-            <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Plan Result</p>
-              <MarkdownDescription content={planResult} className="text-sm text-gray-300" />
-            </div>
-          )}
-
-          {/* Result Summary */}
-          {resultSummary && (
-            <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Result Summary</p>
-              <MarkdownDescription content={resultSummary} className="text-sm text-gray-300" />
-            </div>
-          )}
 
           {/* Metadata */}
           {metadataEntries.length > 0 && (

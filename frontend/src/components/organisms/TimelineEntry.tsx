@@ -365,6 +365,7 @@ function ResultDetail({ metadata }: { metadata: Record<string, string> }) {
   const borderColor =
     resultType === 'error' ? 'border-red-500/30' :
     resultType === 'plan' ? 'border-blue-500/30' :
+    resultType === 'description' ? 'border-cyan-500/30' :
     'border-green-500/30'
 
   return (
