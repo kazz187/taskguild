@@ -98,6 +98,12 @@ func buildToolUseHooks(
 							if planContent != "" {
 								savePlanResult(context.Background(), taskID, planContent, tl)
 							}
+
+							// Stop the turn after ExitPlanMode succeeds to prevent the
+							// agent from continuing in non-plan mode and implementing code.
+							return claudeagent.HookOutput{
+								StopReason: "Plan completed",
+							}, nil
 						}
 
 						return claudeagent.HookOutput{}, nil

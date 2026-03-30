@@ -482,6 +482,15 @@ func handlePermissionRequest(
 		return claudeagent.PermissionResultAllow{}, nil
 	}
 
+	// Plan mode: hard-deny write-capable tools.
+	// Plan mode agents must only read and explore, never modify files or run commands.
+	if permMode == claudeagent.PermissionModePlan {
+		if editTools[toolName] || toolName == "Bash" || toolName == "Agent" || toolName == "TodoWrite" {
+			logger.Info("denying tool in plan mode", "tool", toolName)
+			return claudeagent.PermissionResultDeny{Message: "This tool is not available in plan mode. Focus on exploration and design."}, nil
+		}
+	}
+
 	// Edit tools: allowed in acceptEdits mode
 	if editTools[toolName] && permMode == claudeagent.PermissionModeAcceptEdits {
 		logger.Debug("auto-allowing edit tool (acceptEdits)", "tool", toolName)
