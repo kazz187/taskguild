@@ -180,16 +180,8 @@ func (s *Server) UpdateTask(ctx context.Context, req *connect.Request[taskguildv
 	if req.Msg.Title != "" {
 		t.Title = req.Msg.Title
 	}
-	// Check and remove the _no_desc_log flag before metadata merge.
-	skipDescLog := false
-	if req.Msg.Metadata != nil {
-		if _, ok := req.Msg.Metadata["_no_desc_log"]; ok {
-			skipDescLog = true
-			delete(req.Msg.Metadata, "_no_desc_log")
-		}
-	}
 	if req.Msg.Description != "" && req.Msg.Description != t.Description {
-		if !skipDescLog && s.descLogger != nil && t.Description != "" {
+		if s.descLogger != nil && t.Description != "" {
 			if err := s.descLogger.LogDescriptionChange(ctx, t.ProjectID, t.ID, t.Description); err != nil {
 				slog.Warn("failed to log description change", "task_id", t.ID, "error", err)
 			}

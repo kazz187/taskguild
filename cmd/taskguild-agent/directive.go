@@ -473,7 +473,6 @@ func saveTaskDescription(ctx context.Context, taskClient taskguildv1connect.Task
 	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
 		Id:          taskID,
 		Description: description,
-		Metadata:    map[string]string{"_no_desc_log": "true"},
 	}))
 	if err != nil {
 		logger.Error("failed to save task description", "error", err)
