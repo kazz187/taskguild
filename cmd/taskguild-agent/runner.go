@@ -182,7 +182,7 @@ func runTask(
 	statusTransitionRetries := 0
 
 	for turn := 0; ; turn++ {
-		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, forkSession, worktreeName, client, taskClient, ctx, taskID, agentManagerID, waiter, permCache, scpCache, tl, func(newMode string) {
+		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, forkSession, worktreeName, client, taskClient, interClient, ctx, taskID, agentManagerID, waiter, permCache, scpCache, tl, func(newMode string) {
 			modeMu.Lock()
 			old := currentMode
 			currentMode = newMode
@@ -265,7 +265,11 @@ func runTask(
 		if result.Result != nil && result.Result.SessionID != "" {
 			sessionID = result.Result.SessionID
 			forkSession = false // fork done, normal resume from here
-			saveSessionID(ctx, taskClient, taskID, sessionID)
+			saveSessionID(ctx, taskClient, taskID, sessionID, metadata)
+			// Keep local metadata in sync for subtask session inheritance.
+			if statusName := metadata["_current_status_name"]; statusName != "" {
+				metadata["session_id_"+statusName] = sessionID
+			}
 		}
 
 		// Handle errors with backoff retry.
@@ -357,6 +361,17 @@ func runTask(
 					map[string]string{
 						"directive_type": "TASK_DESCRIPTION",
 						"turn":           fmt.Sprintf("%d", turn),
+					})
+				// Emit a RESULT log so description updates appear in the chronological results timeline.
+				descPreview := newDesc
+				if len(descPreview) > 200 {
+					descPreview = descPreview[:200] + "..."
+				}
+				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_RESULT, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
+					descPreview,
+					map[string]string{
+						"full_text":   newDesc,
+						"result_type": "description",
 					})
 			}
 		}
@@ -608,6 +623,7 @@ func buildClaudeOptions(
 	worktreeName string,
 	client taskguildv1connect.AgentManagerServiceClient,
 	taskClient taskguildv1connect.TaskServiceClient,
+	interClient taskguildv1connect.InteractionServiceClient,
 	ctx context.Context,
 	taskID string,
 	agentManagerID string,
@@ -655,7 +671,7 @@ func buildClaudeOptions(
 		StderrCallback: func(line string) {
 			logger.Debug("claude-stderr", "line", line)
 		},
-		Hooks: buildToolUseHooks(tl, taskID, taskClient, onModeChange),
+		Hooks: buildToolUseHooks(tl, taskID, onModeChange, client, interClient, agentManagerID, waiter),
 	}
 
 	// Use --agent flag when a named agent is assigned; otherwise fall back to --system-prompt.
