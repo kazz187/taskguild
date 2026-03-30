@@ -41,7 +41,7 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 		Prompt:         defaultArchitectPrompt,
 		Tools:          []string{"Read", "Glob", "Grep", "Bash", "WebSearch", "WebFetch", "Task"},
 		Model:          "opus",
-		PermissionMode: "default",
+		PermissionMode: "plan",
 		Memory:         "user",
 		CreatedAt:      now,
 		UpdatedAt:      now,
@@ -118,7 +118,7 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 				TransitionsTo:        []string{"Develop"},
 				AgentID:              architectAgent.ID,
 				EnableAgentMDHarness: true,
-				PermissionMode:       "default",
+				PermissionMode:       "plan",
 			},
 			{
 				Name:               "Develop",
@@ -184,8 +184,8 @@ const defaultArchitectPrompt = `あなたはシステム設計者です。以下
 
 ## 制約
 
-- Bash は git log, git blame, ls, tree, go build, go test --list などの読み取り専用の探索コマンドにのみ使用すること。ファイルの編集・作成・削除、git commit/push などの変更操作は禁止
-- ファイルの編集・作成（Edit, Write）は行わないこと。調査と対話に専念すること
+- このエージェントは Plan mode で動作する。Bash は git log, git blame, ls, tree, go build, go test --list などの読み取り専用の探索コマンドにのみ使用すること。ファイルの編集・作成・削除、git commit/push などの変更操作は禁止
+- ファイルの編集・作成（Edit, Write）は Plan mode の plan file 以外には行わないこと。調査と対話に専念すること
 - 仕様が確定しユーザーが承認するまで ` + "`NEXT_STATUS`" + ` を出力しないこと。早期遷移はユーザーとの対話機会を奪う
 - 設計は次のステータス（Develop）の software-engineer エージェントが迷わず実装できる粒度で記述すること
 
