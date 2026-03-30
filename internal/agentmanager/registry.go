@@ -166,6 +166,20 @@ func (r *Registry) GetProjectName(agentManagerID string) (string, bool) {
 	return conn.projectName, true
 }
 
+// HasConnectedAgentForProject returns true if at least one agent-manager is
+// connected for the given project name. Agents with an empty projectName
+// (legacy) are also considered matching.
+func (r *Registry) HasConnectedAgentForProject(projectName string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, conn := range r.conns {
+		if conn.projectName == "" || conn.projectName == projectName {
+			return true
+		}
+	}
+	return false
+}
+
 // GetWorkDirForProject returns the work_dir from the first connected agent
 // for the given project name. Returns ("", false) if no agent is connected
 // or none has a work_dir set.

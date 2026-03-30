@@ -5,8 +5,9 @@ import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { TaskAssignmentStatus } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { Bot, Clock, GitBranch, Loader, Pencil, ArrowRight, AlertTriangle, CopyPlus, ArrowUpRight, Layers, Square, Play } from 'lucide-react'
 import { shortId } from '@/lib/id'
-import { Badge } from '../atoms/index.ts'
+import { Badge, Tooltip } from '../atoms/index.ts'
 import { DropdownMenu } from '../molecules/index.ts'
+import { pendingReasonText } from '@/lib/pendingReason'
 
 interface TransitionTarget {
   id: string
@@ -216,9 +217,11 @@ export function TaskCard({ task, onEdit, onCreateChild, isDragOverlay, transitio
               {shortId(task.assignedAgentId)}
             </Badge>
           ) : task.assignmentStatus === TaskAssignmentStatus.PENDING ? (
-            <Badge color="yellow" variant="outline" pill icon={<Loader className="w-3 h-3" />}>
-              Pending
-            </Badge>
+            <Tooltip content={pendingReasonText(task.metadata)}>
+              <Badge color="yellow" variant="outline" pill icon={<Loader className="w-3 h-3 animate-spin" />}>
+                Pending
+              </Badge>
+            </Tooltip>
           ) : (
             <span className="inline-flex items-center gap-1 text-xs text-gray-500">
               <Clock className="w-3 h-3" />

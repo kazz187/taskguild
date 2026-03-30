@@ -301,6 +301,7 @@ func (r *YAMLRepository) Claim(ctx context.Context, taskID, agentID string) (*ta
 	t.AssignmentStatus = task.AssignmentStatusAssigned
 	t.AssignedAgentID = agentID
 	t.UpdatedAt = time.Now()
+	task.ClearPendingReason(t.Metadata)
 
 	if err := r.Update(ctx, t); err != nil {
 		return nil, err
