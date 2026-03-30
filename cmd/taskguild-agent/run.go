@@ -828,21 +828,20 @@ func handleListWorktrees(ctx context.Context, client taskguildv1connect.AgentMan
 		statusCmd := exec.CommandContext(ctx, "git", "status", "--porcelain")
 		statusCmd.Dir = wtDir
 		if out, err := statusCmd.Output(); err == nil {
-			lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+			lines := strings.Split(strings.TrimRight(string(out), "\n"), "\n")
 			for _, line := range lines {
-				line = strings.TrimSpace(line)
-				if line == "" {
+				// git status --porcelain format: "XY filename" (filename starts at position 3)
+				// Do not TrimSpace: the leading space is part of the status code format
+				// and trimming shifts the offset, corrupting the filename (e.g. ".claude/" → "claude/").
+				if len(line) < 4 {
 					continue
 				}
-				// git status --porcelain format: "XY filename" (filename starts at position 3)
-				if len(line) > 3 {
-					filePath := line[3:]
-					if isClaudeInternalPath(filePath) {
-						continue
-					}
-					changedFiles = append(changedFiles, filePath)
-					hasChanges = true
+				filePath := line[3:]
+				if isClaudeInternalPath(filePath) {
+					continue
 				}
+				changedFiles = append(changedFiles, filePath)
+				hasChanges = true
 			}
 		}
 
@@ -900,15 +899,16 @@ func handleDeleteWorktree(ctx context.Context, client taskguildv1connect.AgentMa
 		statusCmd := exec.CommandContext(ctx, "git", "status", "--porcelain")
 		statusCmd.Dir = wtDir
 		if out, err := statusCmd.Output(); err == nil {
-			raw := strings.TrimSpace(string(out))
+			raw := strings.TrimRight(string(out), "\n")
 			if raw != "" {
 				hasNonClaudeChanges := false
 				for _, line := range strings.Split(raw, "\n") {
-					line = strings.TrimSpace(line)
-					if line == "" {
+					// Do not TrimSpace: the leading space is part of the porcelain status code format
+					// and trimming shifts the offset, corrupting the filename (e.g. ".claude/" → "claude/").
+					if len(line) < 4 {
 						continue
 					}
-					if len(line) > 3 && isClaudeInternalPath(line[3:]) {
+					if isClaudeInternalPath(line[3:]) {
 						hasClaudeOnlyChanges = true
 						continue
 					}
