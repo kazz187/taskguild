@@ -151,15 +151,14 @@ func createTaskFromDirective(
 		taskMeta["worktree"] = directive.Worktree
 	}
 
-	// If the subtask targets the same status as the parent, inherit the
-	// parent's session ID so the subtask can fork it for context continuity.
+	// Pass the parent's per-status session ID so the subtask can resume it.
 	targetStatus := statusID
 	if targetStatus == "" {
 		targetStatus = metadata["_current_status_name"]
 	}
 	if targetStatus != "" {
 		if parentSessionID := metadata["session_id_"+targetStatus]; parentSessionID != "" {
-			taskMeta["session_id"] = parentSessionID
+			taskMeta["session_id_"+targetStatus] = parentSessionID
 		}
 	}
 
@@ -407,15 +406,8 @@ func handleStatusTransition(
 		nextStatusID = resolvedName
 	}
 
-	// Check whether the next status inherits this status's session.
-	// If so, keep the session_id so the next agent can fork it.
-	// Otherwise, clear it to start a fresh session.
-	if nextInherit := getStatusInheritSession(nextStatusID, metadata); nextInherit != "" {
-		logger.Info("next status inherits session, keeping session_id",
-			"next_status", nextStatusID, "inherit_from", nextInherit)
-	} else {
-		saveSessionID(ctx, taskClient, taskID, "", metadata)
-	}
+	// Per-status session IDs (session_id_{StatusName}) are never cleared.
+	// They survive all transitions for subtask inheritance and session resume.
 
 	_, err = taskClient.UpdateTaskStatus(ctx, connect.NewRequest(&v1.UpdateTaskStatusRequest{
 		Id:       taskID,
@@ -431,38 +423,21 @@ func handleStatusTransition(
 	return nil
 }
 
-// getStatusInheritSession looks up the inherit_session_from value for a given
-// status name from the _workflow_statuses metadata JSON.
-func getStatusInheritSession(statusName string, metadata map[string]string) string {
-	raw := metadata["_workflow_statuses"]
-	if raw == "" {
-		return ""
-	}
-	var statuses []struct {
-		Name               string `json:"name"`
-		InheritSessionFrom string `json:"inherit_session_from"`
-	}
-	if err := json.Unmarshal([]byte(raw), &statuses); err != nil {
-		return ""
-	}
-	for _, s := range statuses {
-		if strings.EqualFold(s.Name, statusName) {
-			return s.InheritSessionFrom
-		}
-	}
-	return ""
-}
-
+// saveSessionID persists the session ID under a per-status key (session_id_{StatusName}).
+// The global "session_id" key is no longer used. Per-status keys survive all
+// transitions and are used for session resume and subtask inheritance.
 func saveSessionID(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, sessionID string, metadata map[string]string) {
-	logger := clog.LoggerFromContext(ctx)
-	meta := map[string]string{"session_id": sessionID}
-	// Also store per-status session ID so subtasks can inherit it.
-	if statusName := metadata["_current_status_name"]; statusName != "" {
-		meta["session_id_"+statusName] = sessionID
+	if sessionID == "" {
+		return // nothing to save; per-status keys are never cleared
 	}
+	statusName := metadata["_current_status_name"]
+	if statusName == "" {
+		return
+	}
+	logger := clog.LoggerFromContext(ctx)
 	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
 		Id:       taskID,
-		Metadata: meta,
+		Metadata: map[string]string{"session_id_" + statusName: sessionID},
 	}))
 	if err != nil {
 		logger.Error("failed to save session_id", "error", err)

@@ -32,13 +32,22 @@ export function ChildTaskCreateModal({
   const [description, setDescription] = useState(parentRef)
   const [useWorktree, setUseWorktree] = useState(parentTask.useWorktree ?? false)
   const [selectedWorktree, setSelectedWorktree] = useState(parentTask.metadata?.['worktree'] ?? '')
-  const [forkSession, setForkSession] = useState(false)
+  const [inheritSession, setInheritSession] = useState(false)
 
   const createMut = useMutation(createTask)
   const requestWtMut = useMutation(requestWorktreeList)
 
   const isParentAgentRunning = parentTask.assignmentStatus === TaskAssignmentStatus.ASSIGNED
-  const parentSessionId = parentTask.metadata?.['session_id'] ?? ''
+
+  // Find per-status session ID from parent metadata (session_id_{StatusName})
+  const parentSessionEntry = useMemo(() => {
+    const meta = parentTask.metadata ?? {}
+    const entries = Object.entries(meta)
+      .filter(([k, v]) => k.startsWith('session_id_') && v)
+    return entries.length > 0 ? entries[entries.length - 1] : null
+  }, [parentTask.metadata])
+  const parentSessionId = parentSessionEntry?.[1] ?? ''
+  const parentSessionKey = parentSessionEntry?.[0] ?? ''
 
   // Query cached worktree list
   const { data: wtData, refetch: refetchWorktrees } = useQuery(getWorktreeList, { projectId }, {
@@ -69,8 +78,8 @@ export function ChildTaskCreateModal({
     if (selectedWorktree && useWorktree) {
       metadata['worktree'] = selectedWorktree
     }
-    if (forkSession && parentSessionId) {
-      metadata['session_id'] = parentSessionId
+    if (inheritSession && parentSessionId && parentSessionKey) {
+      metadata[parentSessionKey] = parentSessionId
     }
     createMut.mutate(
       {
@@ -131,25 +140,25 @@ export function ChildTaskCreateModal({
           placeholder="Add description..."
         />
 
-        {/* Fork session option */}
+        {/* Inherit session option */}
         <div>
           <Checkbox
-            label="Fork Session (inherit parent's conversation context)"
-            checked={forkSession}
-            onChange={(e) => setForkSession(e.target.checked)}
+            label="Inherit Session (resume parent's conversation context)"
+            checked={inheritSession}
+            onChange={(e) => setInheritSession(e.target.checked)}
             disabled={!parentSessionId}
           />
           {!parentSessionId && (
             <p className="ml-6 mt-0.5 text-[11px] text-gray-600">
-              No session available to fork (parent has not been run yet)
+              No session available (parent has not been run yet)
             </p>
           )}
-          {forkSession && isParentAgentRunning && (
+          {inheritSession && isParentAgentRunning && (
             <div className="ml-6 mt-1.5 flex items-start gap-1.5 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-2.5 py-1.5">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>
-                Parent agent is currently running. Forking an active session may cause unexpected behavior
-                if both tasks resume the same session simultaneously.
+                Parent agent is currently running. Resuming an active session may cause unexpected behavior
+                if both tasks use the same session simultaneously.
               </span>
             </div>
           )}
