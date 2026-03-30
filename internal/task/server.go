@@ -189,8 +189,8 @@ func (s *Server) UpdateTask(ctx context.Context, req *connect.Request[taskguildv
 		}
 	}
 	if req.Msg.Description != "" && req.Msg.Description != t.Description {
-		if !skipDescLog && s.descLogger != nil {
-			if err := s.descLogger.LogDescriptionChange(ctx, t.ProjectID, t.ID, req.Msg.Description); err != nil {
+		if !skipDescLog && s.descLogger != nil && t.Description != "" {
+			if err := s.descLogger.LogDescriptionChange(ctx, t.ProjectID, t.ID, t.Description); err != nil {
 				slog.Warn("failed to log description change", "task_id", t.ID, "error", err)
 			}
 		}
