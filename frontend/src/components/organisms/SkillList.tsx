@@ -1,37 +1,17 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { listSkills, createSkill, updateSkill, deleteSkill, syncSkillsFromDir } from '@taskguild/proto/taskguild/v1/skill-SkillService_connectquery.ts'
-import { saveAsTemplate, listTemplates } from '@taskguild/proto/taskguild/v1/template-TemplateService_connectquery.ts'
 import type { SkillDefinition } from '@taskguild/proto/taskguild/v1/skill_pb.ts'
 import type { Template } from '@taskguild/proto/taskguild/v1/template_pb.ts'
-import { Sparkles, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud, Layers, Copy } from 'lucide-react'
+import { Sparkles, Plus, Trash2, Edit2, X, Save, Cloud, Layers, Copy } from 'lucide-react'
 import { Button } from '../atoms/index.ts'
-import { Input, Textarea, Select, Checkbox, Badge } from '../atoms/index.ts'
-import { Card, FormField, PageHeading } from '../molecules/index.ts'
-
-const AVAILABLE_TOOLS = [
-  'Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash',
-  'WebSearch', 'WebFetch', 'Task', 'NotebookEdit',
-]
-
-const MODEL_OPTIONS = [
-  { value: '', label: 'Inherit (default)' },
-  { value: 'sonnet', label: 'Sonnet' },
-  { value: 'opus', label: 'Opus' },
-  { value: 'haiku', label: 'Haiku' },
-]
-
-const CONTEXT_OPTIONS = [
-  { value: '', label: 'Inline (default)' },
-  { value: 'fork', label: 'Fork (run in sub-agent)' },
-]
-
-const AGENT_OPTIONS = [
-  { value: '', label: 'general-purpose (default)' },
-  { value: 'Explore', label: 'Explore' },
-  { value: 'Plan', label: 'Plan' },
-  { value: 'general-purpose', label: 'General Purpose' },
-]
+import { Input, Textarea, Select, Checkbox, Badge, MutationError } from '../atoms/index.ts'
+import { Card, FormField, PageHeading, EmptyState, SyncButton } from '../molecules/index.ts'
+import { AVAILABLE_TOOLS, MODEL_OPTIONS, CONTEXT_OPTIONS, AGENT_OPTIONS } from '@/lib/constants.ts'
+import { toggleArrayItem } from '@/lib/arrays.ts'
+import { useTemplateIntegration } from '@/hooks/useTemplateIntegration.ts'
+import { SaveAsTemplateDialog } from './SaveAsTemplateDialog.tsx'
+import { TemplatePickerDialog } from './TemplatePickerDialog.tsx'
 
 interface SkillFormData {
   name: string
@@ -80,19 +60,14 @@ export function SkillList({ projectId }: { projectId: string }) {
   const updateMut = useMutation(updateSkill)
   const deleteMut = useMutation(deleteSkill)
   const syncMut = useMutation(syncSkillsFromDir)
-  const saveTemplateMut = useMutation(saveAsTemplate)
-  const { data: templatesData, refetch: refetchTemplates } = useQuery(listTemplates, { entityType: 'skill' })
 
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<SkillFormData>(emptyForm)
 
-  // Template dialog state
-  const [saveTemplateDialog, setSaveTemplateDialog] = useState<{ skillId: string; name: string; description: string } | null>(null)
-  const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
+  const { saveDialog, setSaveDialog, openSaveDialog, closeSaveDialog, pickerOpen, openPicker, closePicker } = useTemplateIntegration()
 
   const skills = data?.skills ?? []
-  const skillTemplates = templatesData?.templates ?? []
 
   const openCreate = () => {
     setFormMode('create')
@@ -112,21 +87,9 @@ export function SkillList({ projectId }: { projectId: string }) {
     setForm(emptyForm)
   }
 
-  const handleSaveAsTemplate = (skill: SkillDefinition) => {
-    setSaveTemplateDialog({ skillId: skill.id, name: skill.name, description: skill.description })
-  }
-
-  const handleSaveTemplateSubmit = () => {
-    if (!saveTemplateDialog) return
-    saveTemplateMut.mutate(
-      { entityType: 'skill', entityId: saveTemplateDialog.skillId, templateName: saveTemplateDialog.name, templateDescription: saveTemplateDialog.description },
-      { onSuccess: () => { setSaveTemplateDialog(null); refetchTemplates() } },
-    )
-  }
-
   const handleCreateFromTemplate = (tmpl: Template) => {
     if (!tmpl.skillConfig) return
-    setTemplatePickerOpen(false)
+    closePicker()
     setFormMode('create')
     setEditingId(null)
     setForm({
@@ -171,12 +134,7 @@ export function SkillList({ projectId }: { projectId: string }) {
   }
 
   const toggleAllowedTool = (tool: string) => {
-    setForm(prev => ({
-      ...prev,
-      allowedTools: prev.allowedTools.includes(tool)
-        ? prev.allowedTools.filter(t => t !== tool)
-        : [...prev.allowedTools, tool],
-    }))
+    setForm(prev => ({ ...prev, allowedTools: toggleArrayItem(prev.allowedTools, tool) }))
   }
 
   const mutation = formMode === 'create' ? createMut : updateMut
@@ -190,21 +148,15 @@ export function SkillList({ projectId }: { projectId: string }) {
           </Badge>
         </PageHeading>
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
+          <SyncButton
             onClick={handleSync}
-            disabled={syncMut.isPending}
-            icon={<RefreshCw className={`w-4 h-4 ${syncMut.isPending ? 'animate-spin' : ''}`} />}
+            isPending={syncMut.isPending}
             title="Sync skills from .claude/skills/ directory"
-            className="border border-slate-700 hover:border-slate-600"
-          >
-            Sync from Repo
-          </Button>
+          />
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { refetchTemplates(); setTemplatePickerOpen(true) }}
+            onClick={openPicker}
             icon={<Layers className="w-4 h-4" />}
             title="Create skill from template"
             className="border border-slate-700 hover:border-slate-600"
@@ -373,9 +325,7 @@ export function SkillList({ projectId }: { projectId: string }) {
               </div>
             </div>
 
-            {mutation.error && (
-              <p className="text-red-400 text-sm mt-3">{mutation.error.message}</p>
-            )}
+            <MutationError error={mutation.error} />
 
             <div className="flex justify-end gap-2 mt-4">
               <Button
@@ -471,7 +421,7 @@ export function SkillList({ projectId }: { projectId: string }) {
                   variant="ghost"
                   size="sm"
                   iconOnly
-                  onClick={() => handleSaveAsTemplate(skill)}
+                  onClick={() => openSaveDialog(skill)}
                   title="Save as Template"
                   className="hover:text-amber-400"
                   icon={<Copy className="w-3.5 h-3.5" />}
@@ -501,78 +451,32 @@ export function SkillList({ projectId }: { projectId: string }) {
         ))}
 
         {!isLoading && skills.length === 0 && !formMode && (
-          <div className="text-center py-12 text-gray-500">
-            <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No skills defined yet.</p>
-            <p className="text-xs mt-1">Create skills or sync from your repository's .claude/skills/ directory.</p>
-          </div>
+          <EmptyState
+            icon={Sparkles}
+            message="No skills defined yet."
+            hint="Create skills or sync from your repository's .claude/skills/ directory."
+          />
         )}
       </div>
 
       {/* Template Picker Dialog */}
-      {templatePickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setTemplatePickerOpen(false)}>
-          <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-md w-full mx-4 max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Select Skill Template</h3>
-              <button onClick={() => setTemplatePickerOpen(false)} className="text-gray-500 hover:text-gray-300"><X className="w-5 h-5" /></button>
-            </div>
-            {skillTemplates.length === 0 ? (
-              <p className="text-gray-500 text-sm text-center py-6">No skill templates available.</p>
-            ) : (
-              <div className="space-y-2">
-                {skillTemplates.map(tmpl => (
-                  <button key={tmpl.id} onClick={() => handleCreateFromTemplate(tmpl)} className="w-full text-left p-3 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Sparkles className="w-4 h-4 text-purple-400" />
-                      <span className="text-sm font-medium text-white">{tmpl.name}</span>
-                    </div>
-                    {tmpl.description && <p className="text-xs text-gray-400 ml-6">{tmpl.description}</p>}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <TemplatePickerDialog
+        open={pickerOpen}
+        entityType="skill"
+        entityLabel="Skill"
+        icon={Sparkles}
+        iconColor="text-purple-400"
+        onSelect={handleCreateFromTemplate}
+        onClose={closePicker}
+      />
 
       {/* Save as Template Dialog */}
-      {saveTemplateDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setSaveTemplateDialog(null)}>
-          <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Save as Template</h3>
-              <button onClick={() => setSaveTemplateDialog(null)} className="text-gray-500 hover:text-gray-300"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="space-y-3">
-              <FormField label="Template Name">
-                <Input type="text" value={saveTemplateDialog.name}
-                  onChange={e => setSaveTemplateDialog(prev => prev ? { ...prev, name: e.target.value } : null)}
-                  className="focus:border-amber-500" />
-              </FormField>
-              <FormField label="Template Description">
-                <Input type="text" value={saveTemplateDialog.description}
-                  onChange={e => setSaveTemplateDialog(prev => prev ? { ...prev, description: e.target.value } : null)}
-                  className="focus:border-amber-500" />
-              </FormField>
-            </div>
-            {saveTemplateMut.error && <p className="text-red-400 text-sm mt-3">{saveTemplateMut.error.message}</p>}
-            {saveTemplateMut.isSuccess && <p className="text-green-400 text-sm mt-3">Template saved successfully!</p>}
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="secondary" size="sm" onClick={() => setSaveTemplateDialog(null)}>Cancel</Button>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={handleSaveTemplateSubmit}
-                disabled={saveTemplateMut.isPending || !saveTemplateDialog.name}
-                icon={<Save className="w-3.5 h-3.5" />}
-              >
-                {saveTemplateMut.isPending ? 'Saving...' : 'Save Template'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SaveAsTemplateDialog
+        dialog={saveDialog}
+        setDialog={setSaveDialog}
+        entityType="skill"
+        onSaved={closeSaveDialog}
+      />
     </div>
   )
 }

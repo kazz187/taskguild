@@ -3,8 +3,9 @@ import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { listTemplates, createTemplate, updateTemplate, deleteTemplate } from '@taskguild/proto/taskguild/v1/template-TemplateService_connectquery.ts'
 import type { Template } from '@taskguild/proto/taskguild/v1/template_pb.ts'
 import { Layers, Plus, X, Save } from 'lucide-react'
-import { Button, Input } from '../atoms/index.ts'
-import { Card, FormField } from '../molecules/index.ts'
+import { Button, Input, MutationError } from '../atoms/index.ts'
+import { Card, FormField, EmptyState } from '../molecules/index.ts'
+import { toggleArrayItem } from '@/lib/arrays.ts'
 import type { EntityType, TemplateFormData } from './TemplateListTypes.ts'
 import { TABS, emptyTemplateForm, templateToForm } from './TemplateListTypes.ts'
 import { TemplateCard } from './TemplateCard.tsx'
@@ -89,24 +90,14 @@ export function TemplateList() {
   const toggleTool = (tool: string) => {
     setForm(prev => ({
       ...prev,
-      agentConfig: {
-        ...prev.agentConfig,
-        tools: prev.agentConfig.tools.includes(tool)
-          ? prev.agentConfig.tools.filter(t => t !== tool)
-          : [...prev.agentConfig.tools, tool],
-      },
+      agentConfig: { ...prev.agentConfig, tools: toggleArrayItem(prev.agentConfig.tools, tool) },
     }))
   }
 
   const toggleDisallowedTool = (tool: string) => {
     setForm(prev => ({
       ...prev,
-      agentConfig: {
-        ...prev.agentConfig,
-        disallowedTools: prev.agentConfig.disallowedTools.includes(tool)
-          ? prev.agentConfig.disallowedTools.filter(t => t !== tool)
-          : [...prev.agentConfig.disallowedTools, tool],
-      },
+      agentConfig: { ...prev.agentConfig, disallowedTools: toggleArrayItem(prev.agentConfig.disallowedTools, tool) },
     }))
   }
 
@@ -131,12 +122,7 @@ export function TemplateList() {
   const toggleAllowedTool = (tool: string) => {
     setForm(prev => ({
       ...prev,
-      skillConfig: {
-        ...prev.skillConfig,
-        allowedTools: prev.skillConfig.allowedTools.includes(tool)
-          ? prev.skillConfig.allowedTools.filter(t => t !== tool)
-          : [...prev.skillConfig.allowedTools, tool],
-      },
+      skillConfig: { ...prev.skillConfig, allowedTools: toggleArrayItem(prev.skillConfig.allowedTools, tool) },
     }))
   }
 
@@ -226,9 +212,7 @@ export function TemplateList() {
               {activeTab === 'script' && <ScriptConfigForm form={form} setForm={setForm} />}
             </div>
 
-            {mutation.error && (
-              <p className="text-red-400 text-sm mt-3">{mutation.error.message}</p>
-            )}
+            <MutationError error={mutation.error} />
 
             <div className="flex justify-end gap-2 mt-4">
               <Button type="button" variant="secondary" size="sm" onClick={closeForm}>
@@ -263,11 +247,11 @@ export function TemplateList() {
         ))}
 
         {!isLoading && templates.length === 0 && !formMode && (
-          <div className="text-center py-12 text-gray-500">
-            <Layers className="w-8 h-8 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No {activeTabInfo.label.toLowerCase()} templates yet.</p>
-            <p className="text-xs mt-1">Save entities as templates or create one from scratch.</p>
-          </div>
+          <EmptyState
+            icon={Layers}
+            message={`No ${activeTabInfo.label.toLowerCase()} templates yet.`}
+            hint="Save entities as templates or create one from scratch."
+          />
         )}
       </div>
     </div>
