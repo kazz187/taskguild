@@ -42,6 +42,11 @@ type TaskResumer interface {
 	RequestTaskResume(ctx context.Context, t *Task) error
 }
 
+// DescriptionLogger records a snapshot when a task's description changes.
+type DescriptionLogger interface {
+	LogDescriptionChange(ctx context.Context, projectID, taskID, newDescription string) error
+}
+
 type Server struct {
 	repo             Repository
 	workflowRepo     workflow.Repository
@@ -50,9 +55,10 @@ type Server struct {
 	cascadeArchivers []CascadeArchiver
 	stopper          TaskStopper
 	resumer          TaskResumer
+	descLogger       DescriptionLogger
 }
 
-func NewServer(repo Repository, workflowRepo workflow.Repository, eventBus *eventbus.Bus, stopper TaskStopper, resumer TaskResumer, cascadeArchivers []CascadeArchiver, cascadeDeleters ...CascadeDeleter) *Server {
+func NewServer(repo Repository, workflowRepo workflow.Repository, eventBus *eventbus.Bus, stopper TaskStopper, resumer TaskResumer, cascadeArchivers []CascadeArchiver, descLogger DescriptionLogger, cascadeDeleters ...CascadeDeleter) *Server {
 	return &Server{
 		repo:             repo,
 		workflowRepo:     workflowRepo,
@@ -60,6 +66,7 @@ func NewServer(repo Repository, workflowRepo workflow.Repository, eventBus *even
 		stopper:          stopper,
 		resumer:          resumer,
 		cascadeArchivers: cascadeArchivers,
+		descLogger:       descLogger,
 		cascadeDeleters:  cascadeDeleters,
 	}
 }
@@ -173,7 +180,20 @@ func (s *Server) UpdateTask(ctx context.Context, req *connect.Request[taskguildv
 	if req.Msg.Title != "" {
 		t.Title = req.Msg.Title
 	}
-	if req.Msg.Description != "" {
+	// Check and remove the _no_desc_log flag before metadata merge.
+	skipDescLog := false
+	if req.Msg.Metadata != nil {
+		if _, ok := req.Msg.Metadata["_no_desc_log"]; ok {
+			skipDescLog = true
+			delete(req.Msg.Metadata, "_no_desc_log")
+		}
+	}
+	if req.Msg.Description != "" && req.Msg.Description != t.Description {
+		if !skipDescLog && s.descLogger != nil {
+			if err := s.descLogger.LogDescriptionChange(ctx, t.ProjectID, t.ID, req.Msg.Description); err != nil {
+				slog.Warn("failed to log description change", "task_id", t.ID, "error", err)
+			}
+		}
 		t.Description = req.Msg.Description
 	}
 	if req.Msg.Metadata != nil {

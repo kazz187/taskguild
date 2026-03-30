@@ -19,6 +19,7 @@ import { ForceTransitionDialog } from '@/components/organisms/ForceTransitionDia
 import { shortId } from '@/lib/id'
 import { InputBar } from '@/components/organisms/InputBar'
 import { MarkdownDescription } from '@/components/organisms/MarkdownDescription'
+import { DescriptionHistory } from '@/components/organisms/DescriptionHistory'
 import { TimelineEntry, type TimelineItem } from '@/components/organisms/TimelineEntry'
 import { PendingRequestsPanel } from '@/components/organisms/PendingRequestsPanel'
 import { ConnectionIndicator } from '@/components/organisms/ConnectionIndicator'
@@ -123,6 +124,20 @@ function TaskDetailPage() {
 
   // Fetch task logs
   const { logs } = useTaskLogs(taskId, projectId)
+
+  // Description version history
+  const [showDescHistory, setShowDescHistory] = useState(false)
+  const descriptionLogs = useMemo(
+    () =>
+      logs
+        .filter((l) => l.category === TaskLogCategory.RESULT && l.metadata['result_type'] === 'description')
+        .sort((a, b) => {
+          if (!a.createdAt || !b.createdAt) return 0
+          const diff = Number(b.createdAt.seconds) - Number(a.createdAt.seconds)
+          return diff !== 0 ? diff : b.createdAt.nanos - a.createdAt.nanos
+        }),
+    [logs],
+  )
 
   // Merge interactions + logs into a sorted timeline
   const timelineItems = useMemo<TimelineItem[]>(() => {
@@ -420,8 +435,27 @@ function TaskDetailPage() {
           {/* Description card */}
           {task.description && (
             <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 md:p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Description</p>
-              <MarkdownDescription content={task.description} />
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Description</p>
+                {descriptionLogs.length > 0 && (
+                  <button
+                    onClick={() => setShowDescHistory(!showDescHistory)}
+                    className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+                  >
+                    <Clock className="w-3 h-3" />
+                    {descriptionLogs.length} version{descriptionLogs.length !== 1 ? 's' : ''}
+                  </button>
+                )}
+              </div>
+              {showDescHistory ? (
+                <DescriptionHistory
+                  versions={descriptionLogs}
+                  currentDescription={task.description}
+                  onClose={() => setShowDescHistory(false)}
+                />
+              ) : (
+                <MarkdownDescription content={task.description} />
+              )}
             </div>
           )}
 
