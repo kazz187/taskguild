@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { X, Save } from 'lucide-react'
-import { Button, Input, Textarea, Select, Badge } from '../atoms/index.ts'
+import { Button, Input, Textarea, Select, Badge, MutationError } from '../atoms/index.ts'
 import { Card, FormField } from '../molecules/index.ts'
-import { AVAILABLE_TOOLS, MODEL_OPTIONS, PERMISSION_MODE_OPTIONS, MEMORY_OPTIONS } from './agentConstants.ts'
+import { AVAILABLE_TOOLS, MODEL_OPTIONS, PERMISSION_MODE_OPTIONS, MEMORY_OPTIONS } from '@/lib/constants.ts'
+import { toggleArrayItem } from '@/lib/arrays.ts'
 import type { AgentFormData } from './AgentListUtils.ts'
 
 export function AgentFormModal({ formMode, form, setForm, onSubmit, onClose, isPending, error }: {
@@ -17,21 +18,11 @@ export function AgentFormModal({ formMode, form, setForm, onSubmit, onClose, isP
   const [skillInput, setSkillInput] = useState('')
 
   const toggleTool = (tool: string) => {
-    setForm(prev => ({
-      ...prev,
-      tools: prev.tools.includes(tool)
-        ? prev.tools.filter(t => t !== tool)
-        : [...prev.tools, tool],
-    }))
+    setForm(prev => ({ ...prev, tools: toggleArrayItem(prev.tools, tool) }))
   }
 
   const toggleDisallowedTool = (tool: string) => {
-    setForm(prev => ({
-      ...prev,
-      disallowedTools: prev.disallowedTools.includes(tool)
-        ? prev.disallowedTools.filter(t => t !== tool)
-        : [...prev.disallowedTools, tool],
-    }))
+    setForm(prev => ({ ...prev, disallowedTools: toggleArrayItem(prev.disallowedTools, tool) }))
   }
 
   const addSkill = () => {
@@ -214,9 +205,7 @@ export function AgentFormModal({ formMode, form, setForm, onSubmit, onClose, isP
           </FormField>
         </div>
 
-        {error && (
-          <p className="text-red-400 text-sm mt-3">{error.message}</p>
-        )}
+        <MutationError error={error} />
 
         <div className="flex justify-end gap-2 mt-4">
           <Button

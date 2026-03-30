@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { getClaudeSettings, updateClaudeSettings, syncClaudeSettingsFromDir } from '@taskguild/proto/taskguild/v1/claude_settings-ClaudeSettingsService_connectquery.ts'
-import { Settings, Save, RefreshCw } from 'lucide-react'
+import { Settings, Save } from 'lucide-react'
 import { Button, Input, Checkbox, Badge } from '../atoms/index.ts'
-import { Card, PageHeading } from '../molecules/index.ts'
+import { Card, PageHeading, SyncButton } from '../molecules/index.ts'
 
 export function ClaudeSettingsList({ projectId }: { projectId: string }) {
   const { data, refetch, isLoading } = useQuery(getClaudeSettings, { projectId })
@@ -69,18 +69,11 @@ export function ClaudeSettingsList({ projectId }: { projectId: string }) {
           )}
         </PageHeading>
         <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<RefreshCw className={`w-4 h-4 ${syncMut.isPending ? 'animate-spin' : ''}`} />}
+          <SyncButton
             onClick={handleSync}
-            disabled={syncMut.isPending}
+            isPending={syncMut.isPending}
             title="Sync settings from .claude/settings.json"
-            className="border border-slate-700 hover:border-slate-600"
-          >
-            <span className="hidden sm:inline">Sync from Repo</span>
-            <span className="sm:hidden">Sync</span>
-          </Button>
+          />
           <Button
             variant="primary"
             size="md"

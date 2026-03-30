@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { getPermissions, updatePermissions, syncPermissionsFromDir } from '@taskguild/proto/taskguild/v1/permission-PermissionService_connectquery.ts'
-import { Shield, Plus, X, Save, RefreshCw } from 'lucide-react'
+import { Shield, Plus, X, Save } from 'lucide-react'
 import { Button, Input, Select, Badge } from '../atoms/index.ts'
-import { Card, PageHeading } from '../molecules/index.ts'
+import { Card, PageHeading, EmptyState, SyncButton } from '../molecules/index.ts'
 
 type PermissionCategory = 'allow' | 'ask' | 'deny'
 
@@ -141,18 +141,11 @@ export function PermissionList({ projectId }: { projectId: string }) {
           )}
         </PageHeading>
         <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<RefreshCw className={`w-4 h-4 ${syncMut.isPending ? 'animate-spin' : ''}`} />}
+          <SyncButton
             onClick={handleSync}
-            disabled={syncMut.isPending}
+            isPending={syncMut.isPending}
             title="Sync permissions from .claude/settings.json"
-            className="border border-slate-700 hover:border-slate-600"
-          >
-            <span className="hidden sm:inline">Sync from Repo</span>
-            <span className="sm:hidden">Sync</span>
-          </Button>
+          />
           <Button
             variant="primary"
             size="md"
@@ -300,13 +293,11 @@ export function PermissionList({ projectId }: { projectId: string }) {
 
       {/* Empty State */}
       {!isLoading && totalRules === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          <Shield className="w-8 h-8 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">No permission rules defined yet.</p>
-          <p className="text-xs mt-1 text-gray-600">
-            Add rules above to control which tools and commands are allowed, require confirmation, or are denied.
-          </p>
-        </div>
+        <EmptyState
+          icon={Shield}
+          message="No permission rules defined yet."
+          hint="Add rules above to control which tools and commands are allowed, require confirmation, or are denied."
+        />
       )}
     </div>
   )

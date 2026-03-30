@@ -8,8 +8,8 @@ import {
 } from '@taskguild/proto/taskguild/v1/single_command_permission-SingleCommandPermissionService_connectquery.ts'
 import type { SingleCommandPermission } from '@taskguild/proto/taskguild/v1/single_command_permission_pb.ts'
 import { Terminal, Plus, Trash2, Edit2, X, Check } from 'lucide-react'
-import { Button, Input, Select, Badge } from '../atoms/index.ts'
-import { Card, FormField, PageHeading } from '../molecules/index.ts'
+import { Button, Input, Select, Badge, MutationError } from '../atoms/index.ts'
+import { Card, FormField, PageHeading, EmptyState } from '../molecules/index.ts'
 
 type PermissionType = 'command' | 'redirect'
 
@@ -182,9 +182,7 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
             {validationError && !editingId && (
               <p className="text-red-400 text-xs mt-2">{validationError}</p>
             )}
-            {createMut.error && (
-              <p className="text-red-400 text-xs mt-2">{createMut.error.message}</p>
-            )}
+            <MutationError error={createMut.error} className="text-xs" />
 
             <div className="flex justify-end gap-2 mt-3">
               <Button
@@ -254,9 +252,7 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
                   {validationError && editingId && (
                     <p className="text-red-400 text-xs mt-2">{validationError}</p>
                   )}
-                  {updateMut.error && (
-                    <p className="text-red-400 text-xs mt-2">{updateMut.error.message}</p>
-                  )}
+                  <MutationError error={updateMut.error} className="text-xs" />
                   <div className="flex justify-end gap-2 mt-3">
                     <Button
                       variant="secondary"
@@ -331,13 +327,11 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
 
       {/* Empty State */}
       {!isLoading && permissions.length === 0 && !showAddForm && (
-        <div className="text-center py-8 text-gray-500">
-          <Terminal className="w-8 h-8 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">No single command permission rules defined yet.</p>
-          <p className="text-xs mt-1 text-gray-600">
-            Add wildcard-based rules to allow specific shell commands without confirmation.
-          </p>
-        </div>
+        <EmptyState
+          icon={Terminal}
+          message="No single command permission rules defined yet."
+          hint="Add wildcard-based rules to allow specific shell commands without confirmation."
+        />
       )}
     </div>
   )

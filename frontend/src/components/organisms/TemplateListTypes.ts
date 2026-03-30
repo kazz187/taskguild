@@ -1,19 +1,8 @@
 import type { Template } from '@taskguild/proto/taskguild/v1/template_pb.ts'
 import { Bot, Sparkles, Terminal } from 'lucide-react'
+export { CONTEXT_OPTIONS, AGENT_OPTIONS } from '@/lib/constants.ts'
 
 export type EntityType = 'agent' | 'skill' | 'script'
-
-export const CONTEXT_OPTIONS = [
-  { value: '', label: 'Inline (default)' },
-  { value: 'fork', label: 'Fork (run in sub-agent)' },
-]
-
-export const AGENT_OPTIONS = [
-  { value: '', label: 'general-purpose (default)' },
-  { value: 'Explore', label: 'Explore' },
-  { value: 'Plan', label: 'Plan' },
-  { value: 'general-purpose', label: 'General Purpose' },
-]
 
 export const TABS: { type: EntityType; label: string; icon: typeof Bot; color: string }[] = [
   { type: 'agent', label: 'Agents', icon: Bot, color: 'cyan' },

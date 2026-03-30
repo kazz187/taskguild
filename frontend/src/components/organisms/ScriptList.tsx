@@ -7,7 +7,6 @@ import {
   deleteScript,
   syncScriptsFromDir,
 } from '@taskguild/proto/taskguild/v1/script-ScriptService_connectquery.ts'
-import { saveAsTemplate, listTemplates } from '@taskguild/proto/taskguild/v1/template-TemplateService_connectquery.ts'
 import {
   requestScriptComparison,
   getScriptComparison,
@@ -18,14 +17,17 @@ import type { ScriptDiff } from '@taskguild/proto/taskguild/v1/agent_manager_pb.
 import { ScriptDiffType, ScriptResolutionChoice } from '@taskguild/proto/taskguild/v1/agent_manager_pb.ts'
 import type { Template } from '@taskguild/proto/taskguild/v1/template_pb.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
-import { Terminal, Plus, Trash2, Edit2, RefreshCw, X, Save, Cloud, Play, Square, CheckCircle, XCircle, StopCircle, Loader2, Layers, Copy, AlertTriangle, Server, Monitor } from 'lucide-react'
+import { Terminal, Plus, Trash2, Edit2, X, Save, Cloud, Play, Square, CheckCircle, XCircle, StopCircle, Loader2, Layers, Copy, AlertTriangle, Server, Monitor } from 'lucide-react'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
-import { Button, Input, Textarea, Badge } from '../atoms/index.ts'
-import { Card, FormField, Modal, PageHeading } from '../molecules/index.ts'
+import { useTemplateIntegration } from '@/hooks/useTemplateIntegration.ts'
+import { Button, Input, Textarea, Badge, MutationError } from '../atoms/index.ts'
+import { Card, FormField, Modal, PageHeading, EmptyState, SyncButton } from '../molecules/index.ts'
 import { emptyForm, scriptToForm, diffTypeLabel } from './ScriptListUtils'
 import type { ScriptFormData } from './ScriptListUtils'
 import { LogOutput } from './LogOutput'
 import { useScriptExecution } from './useScriptExecution'
+import { SaveAsTemplateDialog } from './SaveAsTemplateDialog.tsx'
+import { TemplatePickerDialog } from './TemplatePickerDialog.tsx'
 
 export function ScriptList({ projectId }: { projectId: string }) {
   const { data, refetch, isLoading } = useQuery(listScripts, { projectId })
@@ -33,8 +35,6 @@ export function ScriptList({ projectId }: { projectId: string }) {
   const updateMut = useMutation(updateScript)
   const deleteMut = useMutation(deleteScript)
   const syncMut = useMutation(syncScriptsFromDir)
-  const saveTemplateMut = useMutation(saveAsTemplate)
-  const { data: templatesData, refetch: refetchTemplates } = useQuery(listTemplates, { entityType: 'script' })
 
   // Script comparison
   const requestComparisonMut = useMutation(requestScriptComparison)
@@ -45,9 +45,8 @@ export function ScriptList({ projectId }: { projectId: string }) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<ScriptFormData>(emptyForm)
 
-  // Template dialog state
-  const [saveTemplateDialog, setSaveTemplateDialog] = useState<{ scriptId: string; name: string; description: string } | null>(null)
-  const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
+  // Template integration
+  const { saveDialog, setSaveDialog, openSaveDialog, pickerOpen, openPicker, closePicker } = useTemplateIntegration()
 
   // Diff resolution dialog state
   const [diffDialog, setDiffDialog] = useState<ScriptDiff | null>(null)
@@ -58,7 +57,6 @@ export function ScriptList({ projectId }: { projectId: string }) {
   const { executionResults, doExecute, handleStop, clearResult, stopMut } = useScriptExecution(projectId)
 
   const scripts = data?.scripts ?? []
-  const scriptTemplates = templatesData?.templates ?? []
   const diffs = comparisonData?.diffs ?? []
 
   // Build a lookup map for diffs by script_id and filename.
@@ -130,21 +128,9 @@ export function ScriptList({ projectId }: { projectId: string }) {
     )
   }
 
-  const handleSaveAsTemplate = (script: ScriptDefinition) => {
-    setSaveTemplateDialog({ scriptId: script.id, name: script.name, description: script.description })
-  }
-
-  const handleSaveTemplateSubmit = () => {
-    if (!saveTemplateDialog) return
-    saveTemplateMut.mutate(
-      { entityType: 'script', entityId: saveTemplateDialog.scriptId, templateName: saveTemplateDialog.name, templateDescription: saveTemplateDialog.description },
-      { onSuccess: () => { setSaveTemplateDialog(null); refetchTemplates() } },
-    )
-  }
-
   const handleCreateFromTemplate = (tmpl: Template) => {
     if (!tmpl.scriptConfig) return
-    setTemplatePickerOpen(false)
+    closePicker()
     setFormMode('create')
     setEditingId(null)
     setForm({
@@ -213,21 +199,15 @@ export function ScriptList({ projectId }: { projectId: string }) {
           )}
         </PageHeading>
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
+          <SyncButton
             onClick={handleSync}
-            disabled={syncMut.isPending || requestComparisonMut.isPending}
-            icon={<RefreshCw className={`w-4 h-4 ${(syncMut.isPending || requestComparisonMut.isPending) ? 'animate-spin' : ''}`} />}
+            isPending={syncMut.isPending || requestComparisonMut.isPending}
             title="Sync scripts from .claude/scripts/ directory"
-            className="border border-slate-700 hover:border-slate-600"
-          >
-            Sync from Repo
-          </Button>
+          />
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { refetchTemplates(); setTemplatePickerOpen(true) }}
+            onClick={openPicker}
             icon={<Layers className="w-4 h-4" />}
             title="Create script from template"
             className="border border-slate-700 hover:border-slate-600"
@@ -317,9 +297,7 @@ export function ScriptList({ projectId }: { projectId: string }) {
               </FormField>
             </div>
 
-            {mutation.error && (
-              <p className="text-red-400 text-sm mt-3">{mutation.error.message}</p>
-            )}
+            <MutationError error={mutation.error} />
 
             <div className="flex justify-end gap-2 mt-4">
               <Button
@@ -425,7 +403,7 @@ export function ScriptList({ projectId }: { projectId: string }) {
                     variant="ghost"
                     size="sm"
                     iconOnly
-                    onClick={() => handleSaveAsTemplate(script)}
+                    onClick={() => openSaveDialog(script)}
                     title="Save as Template"
                     className="hover:text-amber-400"
                     icon={<Copy className="w-3.5 h-3.5" />}
@@ -559,11 +537,11 @@ export function ScriptList({ projectId }: { projectId: string }) {
         ))}
 
         {!isLoading && scripts.length === 0 && agentOnlyDiffs.length === 0 && !formMode && (
-          <div className="text-center py-12 text-gray-500">
-            <Terminal className="w-8 h-8 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No scripts defined yet.</p>
-            <p className="text-xs mt-1">Create scripts or sync from your repository's .claude/scripts/ directory.</p>
-          </div>
+          <EmptyState
+            icon={Terminal}
+            message="No scripts defined yet."
+            hint="Create scripts or sync from your repository's .claude/scripts/ directory."
+          />
         )}
       </div>
 
@@ -635,70 +613,30 @@ export function ScriptList({ projectId }: { projectId: string }) {
                 </div>
               </div>
 
-              {resolveConflictMut.error && (
-                <p className="text-red-400 text-sm">{resolveConflictMut.error.message}</p>
-              )}
+              <MutationError error={resolveConflictMut.error} />
             </div>
           )}
         </Modal.Body>
       </Modal>
 
       {/* Template Picker Dialog */}
-      <Modal open={templatePickerOpen} onClose={() => setTemplatePickerOpen(false)} size="sm">
-        <Modal.Header onClose={() => setTemplatePickerOpen(false)}>
-          <h3 className="text-lg font-semibold text-white">Select Script Template</h3>
-        </Modal.Header>
-        <Modal.Body>
-          {scriptTemplates.length === 0 ? (
-            <p className="text-gray-500 text-sm text-center py-6">No script templates available.</p>
-          ) : (
-            <div className="space-y-2">
-              {scriptTemplates.map(tmpl => (
-                <button key={tmpl.id} onClick={() => handleCreateFromTemplate(tmpl)} className="w-full text-left p-3 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Terminal className="w-4 h-4 text-green-400" />
-                    <span className="text-sm font-medium text-white">{tmpl.name}</span>
-                  </div>
-                  {tmpl.description && <p className="text-xs text-gray-400 ml-6">{tmpl.description}</p>}
-                </button>
-              ))}
-            </div>
-          )}
-        </Modal.Body>
-      </Modal>
+      <TemplatePickerDialog
+        open={pickerOpen}
+        entityType="script"
+        entityLabel="Script"
+        icon={Terminal}
+        iconColor="text-green-400"
+        onSelect={handleCreateFromTemplate}
+        onClose={closePicker}
+      />
 
       {/* Save as Template Dialog */}
-      <Modal open={!!saveTemplateDialog} onClose={() => setSaveTemplateDialog(null)} size="sm">
-        <Modal.Header onClose={() => setSaveTemplateDialog(null)}>
-          <h3 className="text-lg font-semibold text-white">Save as Template</h3>
-        </Modal.Header>
-        <Modal.Body>
-          <FormField label="Template Name">
-            <Input type="text" value={saveTemplateDialog?.name ?? ''}
-              onChange={e => setSaveTemplateDialog(prev => prev ? { ...prev, name: e.target.value } : null)}
-              className="focus:border-amber-500" />
-          </FormField>
-          <FormField label="Template Description">
-            <Input type="text" value={saveTemplateDialog?.description ?? ''}
-              onChange={e => setSaveTemplateDialog(prev => prev ? { ...prev, description: e.target.value } : null)}
-              className="focus:border-amber-500" />
-          </FormField>
-          {saveTemplateMut.error && <p className="text-red-400 text-sm mt-3">{saveTemplateMut.error.message}</p>}
-          {saveTemplateMut.isSuccess && <p className="text-green-400 text-sm mt-3">Template saved successfully!</p>}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" size="sm" onClick={() => setSaveTemplateDialog(null)}>Cancel</Button>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={handleSaveTemplateSubmit}
-            disabled={saveTemplateMut.isPending || !saveTemplateDialog?.name}
-            icon={<Save className="w-3.5 h-3.5" />}
-          >
-            {saveTemplateMut.isPending ? 'Saving...' : 'Save Template'}
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      <SaveAsTemplateDialog
+        dialog={saveDialog}
+        setDialog={setSaveDialog}
+        entityType="script"
+        onSaved={() => {}}
+      />
     </div>
   )
 }
