@@ -9,7 +9,8 @@ import {
   CheckCircle, ClipboardCheck,
 } from 'lucide-react'
 import { formatTime } from './InputBar.tsx'
-import { Badge } from '../atoms/index.ts'
+import { Badge, AsciiArtPopover } from '../atoms/index.ts'
+import { isAsciiArt } from '../../lib/asciiArt.ts'
 import { WorktreePath } from '../atoms/WorktreePath.tsx'
 import { MarkdownDescription } from './MarkdownDescription.tsx'
 
@@ -140,6 +141,7 @@ function InteractionExpandedContent({ interaction }: { interaction: Interaction 
           <div className="bg-slate-900/50 rounded px-2 py-1 space-y-0.5">
             {interaction.options.map((opt) => {
               const isSelected = isResponded && interaction.response === opt.value
+              const hasArt = opt.description ? isAsciiArt(opt.description) : false
               return (
                 <div
                   key={opt.value}
@@ -148,9 +150,14 @@ function InteractionExpandedContent({ interaction }: { interaction: Interaction 
                   }`}
                 >
                   {isSelected && <CheckCircle className="w-3 h-3 shrink-0 mt-0.5" />}
-                  <span className={isSelected ? 'font-medium' : ''}>
+                  <span className={`${isSelected ? 'font-medium' : ''} flex items-center gap-1`}>
                     {opt.label}
-                    {opt.description && (
+                    {hasArt && (
+                      <AsciiArtPopover content={opt.description}>
+                        <FileText className="w-3 h-3 text-gray-500 hover:text-blue-400 cursor-help inline-block" />
+                      </AsciiArtPopover>
+                    )}
+                    {opt.description && !hasArt && (
                       <span className="text-gray-500 ml-1">— {opt.description}</span>
                     )}
                   </span>

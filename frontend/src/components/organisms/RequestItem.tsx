@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { InteractionType, InteractionStatus } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import type { Interaction } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
-import { Shield, MessageSquare, Bell, CheckCircle, X, Check, XCircle } from 'lucide-react'
+import { Shield, MessageSquare, Bell, CheckCircle, X, Check, XCircle, FileText } from 'lucide-react'
 import { formatTime } from './InputBar.tsx'
 import { MarkdownDescription } from './MarkdownDescription.tsx'
-import { Button, Input, Checkbox } from '../atoms/index.ts'
+import { Button, Input, Checkbox, AsciiArtPopover } from '../atoms/index.ts'
+import { isAsciiArt } from '../../lib/asciiArt.ts'
 
 // --- Bash Permission Metadata Types ---
 
@@ -317,24 +318,32 @@ export function RequestItem({
       {isPending && displayOptions.length > 0 && (
         interaction.type === InteractionType.QUESTION ? (
           <div className="flex flex-col gap-1.5 mt-2 ml-6">
-            {interaction.options.map((opt, idx) => (
-              <button
-                key={opt.value}
-                onClick={(e) => { e.stopPropagation(); onRespond(interaction.id, opt.value) }}
-                disabled={isRespondPending}
-                className="flex flex-col items-start gap-0.5 px-3 py-2 text-left bg-slate-700/60 border border-slate-600 rounded-lg hover:border-blue-500/50 hover:bg-slate-700 transition-colors disabled:opacity-50"
-              >
-                <span className="text-xs font-medium text-gray-200">
-                  {showHints && (
-                    <span className="text-cyan-400 font-mono mr-1">{idx + 1}.</span>
+            {interaction.options.map((opt, idx) => {
+              const hasArt = opt.description ? isAsciiArt(opt.description) : false
+              return (
+                <button
+                  key={opt.value}
+                  onClick={(e) => { e.stopPropagation(); onRespond(interaction.id, opt.value) }}
+                  disabled={isRespondPending}
+                  className="flex flex-col items-start gap-0.5 px-3 py-2 text-left bg-slate-700/60 border border-slate-600 rounded-lg hover:border-blue-500/50 hover:bg-slate-700 transition-colors disabled:opacity-50"
+                >
+                  <span className="text-xs font-medium text-gray-200 flex items-center gap-1">
+                    {showHints && (
+                      <span className="text-cyan-400 font-mono mr-1">{idx + 1}.</span>
+                    )}
+                    {opt.label}
+                    {hasArt && (
+                      <AsciiArtPopover content={opt.description}>
+                        <FileText className="w-3 h-3 text-gray-500 hover:text-blue-400 shrink-0" />
+                      </AsciiArtPopover>
+                    )}
+                  </span>
+                  {opt.description && !hasArt && (
+                    <span className="text-[11px] text-gray-400">{opt.description}</span>
                   )}
-                  {opt.label}
-                </span>
-                {opt.description && (
-                  <span className="text-[11px] text-gray-400">{opt.description}</span>
-                )}
-              </button>
-            ))}
+                </button>
+              )
+            })}
           </div>
         ) : (
           <div className="flex gap-2 flex-wrap mt-2 ml-6">
