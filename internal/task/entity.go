@@ -10,6 +10,26 @@ const (
 	AssignmentStatusAssigned   AssignmentStatus = "assigned"
 )
 
+// Pending reason metadata keys and values.
+const (
+	MetaPendingReason          = "_pending_reason"
+	MetaPendingBlockerTaskID   = "_pending_blocker_task_id"
+	MetaPendingBlockerTaskTitle = "_pending_blocker_task_title"
+	MetaPendingRetryAfter      = "_pending_retry_after"
+
+	PendingReasonWorktreeOccupied = "worktree_occupied"
+	PendingReasonWaitingAgent     = "waiting_agent"
+	PendingReasonRetryBackoff     = "retry_backoff"
+)
+
+// ClearPendingReason removes all pending-reason metadata keys from the map.
+func ClearPendingReason(metadata map[string]string) {
+	delete(metadata, MetaPendingReason)
+	delete(metadata, MetaPendingBlockerTaskID)
+	delete(metadata, MetaPendingBlockerTaskTitle)
+	delete(metadata, MetaPendingRetryAfter)
+}
+
 type Task struct {
 	ID               string            `yaml:"id"`
 	ProjectID        string            `yaml:"project_id"`

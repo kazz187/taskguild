@@ -354,6 +354,7 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 			)
 			delete(t.Metadata, "_stopped_by_user")
 			delete(t.Metadata, retryMetadataKey)
+			task.ClearPendingReason(t.Metadata)
 			t.AssignmentStatus = task.AssignmentStatusUnassigned
 
 			if err := s.taskRepo.Update(ctx, t); err != nil {
@@ -380,12 +381,16 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 			t.Metadata[retryMetadataKey] = strconv.Itoa(retryCount)
 			t.AssignmentStatus = task.AssignmentStatusPending
 
+			// Calculate exponential backoff: 30s, 1m, 2m, 4m, 8m
+			delay := retryBaseDelay * time.Duration(1<<uint(retryCount-1))
+
+			task.ClearPendingReason(t.Metadata)
+			t.Metadata[task.MetaPendingReason] = task.PendingReasonRetryBackoff
+			t.Metadata[task.MetaPendingRetryAfter] = time.Now().Add(delay).Format(time.RFC3339)
+
 			if err := s.taskRepo.Update(ctx, t); err != nil {
 				return nil, err
 			}
-
-			// Calculate exponential backoff: 30s, 1m, 2m, 4m, 8m
-			delay := retryBaseDelay * time.Duration(1<<uint(retryCount-1))
 
 			slog.Info("scheduling task retry",
 				"task_id", t.ID,
@@ -413,10 +418,12 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 			"retry_count", retryCount,
 		)
 		t.AssignmentStatus = task.AssignmentStatusUnassigned
+		task.ClearPendingReason(t.Metadata)
 	} else {
 		// Task succeeded — reset retry count and set UNASSIGNED.
 		delete(t.Metadata, retryMetadataKey)
 		t.AssignmentStatus = task.AssignmentStatusUnassigned
+		task.ClearPendingReason(t.Metadata)
 	}
 
 	if err := s.taskRepo.Update(ctx, t); err != nil {
@@ -577,7 +584,17 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		muVal, _ := s.worktreeClaimMu.LoadOrStore(muKey, &sync.Mutex{})
 		mu := muVal.(*sync.Mutex)
 		mu.Lock()
-		if occupied, occupantID := s.isWorktreeOccupied(ctx, taskForCheck.ProjectID, worktreeName, taskForCheck.ID); occupied {
+		if occupied, occupantID, occupantTitle := s.isWorktreeOccupied(ctx, taskForCheck.ProjectID, worktreeName, taskForCheck.ID); occupied {
+			// Update task metadata with pending reason for UI display.
+			if taskForCheck.Metadata == nil {
+				taskForCheck.Metadata = make(map[string]string)
+			}
+			task.ClearPendingReason(taskForCheck.Metadata)
+			taskForCheck.Metadata[task.MetaPendingReason] = task.PendingReasonWorktreeOccupied
+			taskForCheck.Metadata[task.MetaPendingBlockerTaskID] = occupantID
+			taskForCheck.Metadata[task.MetaPendingBlockerTaskTitle] = occupantTitle
+			taskForCheck.UpdatedAt = time.Now()
+			_ = s.taskRepo.Update(ctx, taskForCheck)
 			mu.Unlock()
 			slog.Info("worktree occupied, rejecting claim",
 				"task_id", taskForCheck.ID,
@@ -881,11 +898,11 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 }
 
 // isWorktreeOccupied checks whether any other ASSIGNED task in the same project
-// is using the given worktree name.
-func (s *Server) isWorktreeOccupied(ctx context.Context, projectID, worktreeName, excludeTaskID string) (bool, string) {
+// is using the given worktree name. Returns the occupant's ID and title.
+func (s *Server) isWorktreeOccupied(ctx context.Context, projectID, worktreeName, excludeTaskID string) (bool, string, string) {
 	tasks, _, err := s.taskRepo.List(ctx, projectID, "", "", 0, 0)
 	if err != nil {
-		return false, ""
+		return false, "", ""
 	}
 	for _, t := range tasks {
 		if t.ID == excludeTaskID {
@@ -895,10 +912,10 @@ func (s *Server) isWorktreeOccupied(ctx context.Context, projectID, worktreeName
 			continue
 		}
 		if t.AssignmentStatus == task.AssignmentStatusAssigned {
-			return true, t.ID
+			return true, t.ID, t.Title
 		}
 	}
-	return false, ""
+	return false, "", ""
 }
 
 // rebroadcastWorktreeWaiters sends TaskAvailableCommand for any PENDING tasks
@@ -921,6 +938,12 @@ func (s *Server) rebroadcastWorktreeWaiters(ctx context.Context, projectID, work
 		}
 		if t.Metadata["worktree"] != worktreeName {
 			continue
+		}
+		// Clear the worktree_occupied pending reason since worktree is now free.
+		if t.Metadata[task.MetaPendingReason] == task.PendingReasonWorktreeOccupied {
+			task.ClearPendingReason(t.Metadata)
+			t.UpdatedAt = time.Now()
+			_ = s.taskRepo.Update(ctx, t)
 		}
 		wf, wfErr := s.workflowRepo.Get(ctx, t.WorkflowID)
 		if wfErr != nil {
@@ -970,9 +993,10 @@ func (s *Server) RequestTaskStop(taskID string, assignedAgentID string) error {
 func (s *Server) RequestTaskResume(ctx context.Context, t *task.Task) error {
 	t.AssignmentStatus = task.AssignmentStatusPending
 	t.UpdatedAt = time.Now()
-	if err := s.taskRepo.Update(ctx, t); err != nil {
-		return err
+	if t.Metadata == nil {
+		t.Metadata = make(map[string]string)
 	}
+	task.ClearPendingReason(t.Metadata)
 
 	wf, err := s.workflowRepo.Get(ctx, t.WorkflowID)
 	if err != nil {
@@ -986,6 +1010,21 @@ func (s *Server) RequestTaskResume(ctx context.Context, t *task.Task) error {
 	var projectName string
 	if p, pErr := s.projectRepo.Get(ctx, t.ProjectID); pErr == nil {
 		projectName = p.Name
+	}
+
+	// Set pending reason based on current state.
+	if !s.registry.HasConnectedAgentForProject(projectName) {
+		t.Metadata[task.MetaPendingReason] = task.PendingReasonWaitingAgent
+	} else if worktreeName := t.Metadata["worktree"]; worktreeName != "" {
+		if occupied, occupantID, occupantTitle := s.isWorktreeOccupied(ctx, t.ProjectID, worktreeName, t.ID); occupied {
+			t.Metadata[task.MetaPendingReason] = task.PendingReasonWorktreeOccupied
+			t.Metadata[task.MetaPendingBlockerTaskID] = occupantID
+			t.Metadata[task.MetaPendingBlockerTaskTitle] = occupantTitle
+		}
+	}
+
+	if err := s.taskRepo.Update(ctx, t); err != nil {
+		return err
 	}
 
 	s.registry.BroadcastCommandToProject(projectName, &taskguildv1.AgentCommand{

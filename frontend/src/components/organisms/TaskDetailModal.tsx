@@ -10,7 +10,8 @@ import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { X, Bot, Clock, GitBranch, Loader, Trash2, ArrowRight, AlertTriangle, RefreshCw, CopyPlus, ArrowUpRight, Layers } from 'lucide-react'
 import { ForceTransitionDialog } from './ForceTransitionDialog'
 import { shortId } from '@/lib/id'
-import { Button, Input, Textarea, Select, Checkbox, Badge } from '../atoms/index.ts'
+import { Button, Input, Textarea, Select, Checkbox, Badge, Tooltip } from '../atoms/index.ts'
+import { pendingReasonText } from '@/lib/pendingReason'
 import { Modal, Card } from '../molecules/index.ts'
 
 const TASK_DETAIL_EVENT_TYPES = [
@@ -303,9 +304,11 @@ export function TaskDetailModal({
               {shortId(task.assignedAgentId)}
             </Badge>
           ) : task.assignmentStatus === TaskAssignmentStatus.PENDING ? (
-            <Badge color="yellow" variant="outline" pill icon={<Loader className="w-3 h-3" />}>
-              Pending claim
-            </Badge>
+            <Tooltip content={pendingReasonText(task.metadata)}>
+              <Badge color="yellow" variant="outline" pill icon={<Loader className="w-3 h-3 animate-spin" />}>
+                Pending
+              </Badge>
+            </Tooltip>
           ) : (
             <span className="inline-flex items-center gap-1 text-xs text-gray-500">
               <Clock className="w-3 h-3" />

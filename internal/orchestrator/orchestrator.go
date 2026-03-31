@@ -91,10 +91,10 @@ func (o *Orchestrator) handleTaskEvent(ctx context.Context, event *taskguildv1.E
 	// Set assignment status to PENDING.
 	t.AssignmentStatus = task.AssignmentStatusPending
 	t.UpdatedAt = time.Now()
-	if err := o.taskRepo.Update(ctx, t); err != nil {
-		slog.Error("orchestrator: failed to update task assignment status", "task_id", t.ID, "error", err)
-		return
+	if t.Metadata == nil {
+		t.Metadata = make(map[string]string)
 	}
+	task.ClearPendingReason(t.Metadata)
 
 	// Resolve project name for filtered broadcast.
 	var projectName string
@@ -102,6 +102,14 @@ func (o *Orchestrator) handleTaskEvent(ctx context.Context, event *taskguildv1.E
 		projectName = p.Name
 	} else {
 		slog.Error("orchestrator: failed to get project", "project_id", t.ProjectID, "error", err)
+	}
+
+	// Determine pending reason.
+	o.setPendingReason(ctx, t, projectName)
+
+	if err := o.taskRepo.Update(ctx, t); err != nil {
+		slog.Error("orchestrator: failed to update task assignment status", "task_id", t.ID, "error", err)
+		return
 	}
 
 	// Broadcast TaskAvailableCommand to matching agent-managers.
@@ -173,14 +181,18 @@ func (o *Orchestrator) handleInteractionCreated(ctx context.Context, event *task
 
 	t.AssignmentStatus = task.AssignmentStatusPending
 	t.UpdatedAt = time.Now()
-	if err := o.taskRepo.Update(ctx, t); err != nil {
-		slog.Error("orchestrator: failed to update task for comment-triggered launch", "task_id", t.ID, "error", err)
-		return
-	}
+	task.ClearPendingReason(t.Metadata)
 
 	var projectName string
 	if p, err := o.projectRepo.Get(ctx, t.ProjectID); err == nil {
 		projectName = p.Name
+	}
+
+	o.setPendingReason(ctx, t, projectName)
+
+	if err := o.taskRepo.Update(ctx, t); err != nil {
+		slog.Error("orchestrator: failed to update task for comment-triggered launch", "task_id", t.ID, "error", err)
+		return
 	}
 
 	cmd := &taskguildv1.AgentCommand{
@@ -200,5 +212,36 @@ func (o *Orchestrator) handleInteractionCreated(ctx context.Context, event *task
 		"agent_config_id", agentConfigID,
 		"project_name", projectName,
 	)
+}
+
+// setPendingReason computes why a task is pending and stores the reason in metadata.
+func (o *Orchestrator) setPendingReason(ctx context.Context, t *task.Task, projectName string) {
+	// Check if any agent is connected for this project.
+	if !o.registry.HasConnectedAgentForProject(projectName) {
+		t.Metadata[task.MetaPendingReason] = task.PendingReasonWaitingAgent
+		return
+	}
+
+	// Check worktree occupancy.
+	if worktreeName := t.Metadata["worktree"]; worktreeName != "" {
+		tasks, _, err := o.taskRepo.List(ctx, t.ProjectID, "", "", 0, 0)
+		if err != nil {
+			return
+		}
+		for _, other := range tasks {
+			if other.ID == t.ID {
+				continue
+			}
+			if other.Metadata["worktree"] != worktreeName {
+				continue
+			}
+			if other.AssignmentStatus == task.AssignmentStatusAssigned {
+				t.Metadata[task.MetaPendingReason] = task.PendingReasonWorktreeOccupied
+				t.Metadata[task.MetaPendingBlockerTaskID] = other.ID
+				t.Metadata[task.MetaPendingBlockerTaskTitle] = other.Title
+				return
+			}
+		}
+	}
 }
 
