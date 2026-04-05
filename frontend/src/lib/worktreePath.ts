@@ -1,7 +1,7 @@
 // Worktree path shortening utilities.
 // Detects paths like ".../.claude/worktrees/{name}/..." and shortens to "$worktree/...".
 
-const WORKTREE_PATTERN = /(?:\/[^/]+)*\/\.claude\/worktrees\/[^/]+\//
+const WORKTREE_PATTERN = /(?:\/[^/]+)*\/\.claude\/worktrees\/[^/]+\/?/
 
 /**
  * Shorten a single file path that starts with a worktree root.
@@ -12,7 +12,9 @@ export function shortenWorktreePath(path: string): { shortened: string; worktree
   if (!match) return { shortened: path, worktreePrefix: null }
   const prefix = match[0]
   const rest = path.slice(prefix.length)
-  return { shortened: `$worktree/${rest}`, worktreePrefix: prefix.replace(/\/$/, '') }
+  const cleanPrefix = prefix.replace(/\/$/, '')
+  if (!rest) return { shortened: '$worktree', worktreePrefix: cleanPrefix }
+  return { shortened: `$worktree/${rest}`, worktreePrefix: cleanPrefix }
 }
 
 /**
@@ -23,7 +25,7 @@ export type TextSegment =
   | { kind: 'text'; value: string }
   | { kind: 'worktree'; shortened: string; fullPath: string }
 
-const WORKTREE_PATH_IN_TEXT = /((?:\/[^/\s]+)*\/\.claude\/worktrees\/[^/\s]+\/[^\s]*)/g
+const WORKTREE_PATH_IN_TEXT = /((?:\/[^/\s]+)*\/\.claude\/worktrees\/[^/\s]+(?:\/[^\s]*)?)/g
 
 export function parseWorktreePaths(text: string): TextSegment[] {
   const segments: TextSegment[] = []
