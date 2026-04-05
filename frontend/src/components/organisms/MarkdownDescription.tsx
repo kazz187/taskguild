@@ -1,3 +1,5 @@
+import { parseWorktreePaths } from '../../lib/worktreePath.ts'
+
 type Segment =
   | { type: 'code'; language: string; content: string }
   | { type: 'text'; content: string }
@@ -48,6 +50,22 @@ function parse(raw: string): Segment[] {
   return segments
 }
 
+/** Render worktree path segments with $worktree shorthand and hover tooltip. */
+function renderWorktreeSegments(text: string, keyPrefix: string): React.ReactNode {
+  const segments = parseWorktreePaths(text)
+  if (segments.length === 1 && segments[0].kind === 'text') return text
+  return segments.map((seg, i) =>
+    seg.kind === 'text' ? (
+      <span key={`${keyPrefix}-${i}`}>{seg.value}</span>
+    ) : (
+      <span key={`${keyPrefix}-${i}`} title={seg.fullPath} className="cursor-pointer">
+        <span className="text-cyan-500/70">$worktree</span>
+        {seg.shortened.slice('$worktree'.length)}
+      </span>
+    ),
+  )
+}
+
 /** Render inline markdown: **bold**, `code`, and [link](url). */
 function renderInline(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = []
@@ -57,14 +75,28 @@ function renderInline(text: string): React.ReactNode[] {
 
   while ((match = re.exec(text)) !== null) {
     if (match.index > last) {
-      parts.push(text.slice(last, match.index))
+      parts.push(renderWorktreeSegments(text.slice(last, match.index), `pre-${match.index}`))
     }
     if (match[2] !== undefined) {
       parts.push(<strong key={match.index} className="text-gray-200 font-semibold">{match[2]}</strong>)
     } else if (match[3] !== undefined) {
+      const codeContent = match[3]
+      const codeSegments = parseWorktreePaths(codeContent)
+      const hasWorktree = codeSegments.some(s => s.kind === 'worktree')
       parts.push(
         <code key={match.index} className="bg-slate-800 text-cyan-300 px-1 py-0.5 rounded text-[11px]">
-          {match[3]}
+          {hasWorktree
+            ? codeSegments.map((seg, si) =>
+                seg.kind === 'text' ? (
+                  <span key={si}>{seg.value}</span>
+                ) : (
+                  <span key={si} title={seg.fullPath} className="cursor-pointer">
+                    <span className="text-cyan-500/70">$worktree</span>
+                    {seg.shortened.slice('$worktree'.length)}
+                  </span>
+                ),
+              )
+            : codeContent}
         </code>,
       )
     } else if (match[4] !== undefined && match[5] !== undefined) {
@@ -77,7 +109,7 @@ function renderInline(text: string): React.ReactNode[] {
     last = match.index + match[0].length
   }
   if (last < text.length) {
-    parts.push(text.slice(last))
+    parts.push(renderWorktreeSegments(text.slice(last), 'tail'))
   }
   return parts
 }
@@ -519,21 +551,38 @@ function isKeywordPosition(word: string): boolean {
          word === 'do' || word === 'in'
 }
 
+function WorktreeAwareToken({ token }: { token: BashToken }) {
+  const className = bashTokenStyles[token.type]
+  const segments = parseWorktreePaths(token.value)
+  const hasWorktree = segments.some(s => s.kind === 'worktree')
+
+  if (!hasWorktree) {
+    return className ? <span className={className}>{token.value}</span> : <span>{token.value}</span>
+  }
+
+  return (
+    <span className={className || undefined}>
+      {segments.map((seg, i) =>
+        seg.kind === 'text' ? (
+          <span key={i}>{seg.value}</span>
+        ) : (
+          <span key={i} title={seg.fullPath} className="cursor-pointer">
+            <span className="text-cyan-500/70">$worktree</span>
+            {seg.shortened.slice('$worktree'.length)}
+          </span>
+        ),
+      )}
+    </span>
+  )
+}
+
 function BashLine({ line }: { line: string }) {
   const tokens = tokenizeBashLine(line)
   return (
     <>
-      {tokens.map((token, i) => {
-        const className = bashTokenStyles[token.type]
-        if (!className) {
-          return <span key={i}>{token.value}</span>
-        }
-        return (
-          <span key={i} className={className}>
-            {token.value}
-          </span>
-        )
-      })}
+      {tokens.map((token, i) => (
+        <WorktreeAwareToken key={i} token={token} />
+      ))}
     </>
   )
 }
@@ -559,7 +608,7 @@ function CodeBlock({ language, content }: { language: string; content: string })
                   <BashLine line={line} />
                 </span>
               ))
-            : content}
+            : renderWorktreeSegments(content, 'code')}
       </code>
     </pre>
   )
