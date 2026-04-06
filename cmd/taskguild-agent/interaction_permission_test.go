@@ -43,7 +43,6 @@ func (m *mockAgentManagerClient) AddSingleCommandPermission(_ context.Context, r
 			Id:      "perm-" + req.Msg.GetPattern(),
 			Pattern: req.Msg.GetPattern(),
 			Type:    req.Msg.GetType(),
-			Label:   req.Msg.GetLabel(),
 		},
 	}), nil
 }
@@ -306,7 +305,7 @@ func TestHandlePermissionRequest_AlwaysAllowCommand(t *testing.T) {
 	aacResp := alwaysAllowCommandResponse{
 		Action: "always_allow_command",
 		Rules: []alwaysAllowCommandResponseRule{
-			{Pattern: "npm test", Type: "command", Label: "npm test"},
+			{Pattern: "npm test", Type: "command"},
 		},
 	}
 	respBytes, _ := json.Marshal(aacResp)
@@ -441,8 +440,8 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_WithRedirects(t *testing.T) 
 	aacResp := alwaysAllowCommandResponse{
 		Action: "always_allow_command",
 		Rules: []alwaysAllowCommandResponseRule{
-			{Pattern: "echo *", Type: "command", Label: "echo hello"},
-			{Pattern: "/dev/null", Type: "redirect", Label: "/dev/null"},
+			{Pattern: "echo *", Type: "command"},
+			{Pattern: "/dev/null", Type: "redirect"},
 		},
 	}
 	respBytes, _ := json.Marshal(aacResp)
