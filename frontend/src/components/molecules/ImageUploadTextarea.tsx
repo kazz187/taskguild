@@ -1,6 +1,6 @@
-import { useState, useRef, useCallback, useEffect, type DragEvent, type ChangeEvent } from 'react'
-import { useMutation, useQuery } from '@connectrpc/connect-query'
-import { uploadTaskImage, listTaskImages, getTaskImage } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
+import { useState, useRef, useCallback, type DragEvent, type ChangeEvent } from 'react'
+import { useMutation } from '@connectrpc/connect-query'
+import { uploadTaskImage } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import { ImagePlus, X, Loader } from 'lucide-react'
 import { Textarea } from '../atoms/index.ts'
 
@@ -45,23 +45,8 @@ export function ImageUploadTextarea({
   const dragCounterRef = useRef(0)
   const uploadMut = useMutation(uploadTaskImage)
 
-  // Fetch existing images when taskId is available
-  const { data: imagesData } = useQuery(listTaskImages, { taskId: taskId ?? '' }, {
-    enabled: !!taskId,
-  })
-
   // Track uploaded image previews (for edit mode)
   const [uploadedPreviews, setUploadedPreviews] = useState<Map<string, string>>(new Map())
-
-  // Load previews for existing images
-  useEffect(() => {
-    if (!taskId || !imagesData?.images?.length) return
-
-    const loadPreviews = async () => {
-      // We'll load previews lazily when needed
-    }
-    loadPreviews()
-  }, [taskId, imagesData])
 
   const getNextImageNum = useCallback((): number => {
     // Find the highest [Image#N] reference in the text

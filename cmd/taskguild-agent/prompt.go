@@ -108,9 +108,8 @@ func buildUserPromptWithImages(ctx context.Context, metadata map[string]string, 
 			}
 		}
 
-		// Check if this image exists.
+		// Check if this image exists and fetch it.
 		if _, exists := imageMap[imageID]; exists {
-			// Fetch image data.
 			imgResp, err := taskClient.GetTaskImage(ctx, connect.NewRequest(&v1.GetTaskImageRequest{
 				TaskId:  taskID,
 				ImageId: imageID,
@@ -124,7 +123,19 @@ func buildUserPromptWithImages(ctx context.Context, metadata map[string]string, 
 						"data":       base64.StdEncoding.EncodeToString(imgResp.Msg.Data),
 					},
 				})
+			} else {
+				// Keep the reference as text if fetch fails.
+				blocks = append(blocks, map[string]any{
+					"type": "text",
+					"text": textPrompt[fullStart:fullEnd],
+				})
 			}
+		} else {
+			// Image not found — keep the reference as text.
+			blocks = append(blocks, map[string]any{
+				"type": "text",
+				"text": textPrompt[fullStart:fullEnd],
+			})
 		}
 
 		lastEnd = fullEnd

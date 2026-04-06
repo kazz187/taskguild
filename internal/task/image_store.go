@@ -154,8 +154,12 @@ func (s *storageImageStore) List(ctx context.Context, projectID, taskID string) 
 }
 
 func (s *storageImageStore) Delete(ctx context.Context, projectID, taskID, imageID string) error {
-	// Delete both data and meta files. Ignore individual errors.
-	_ = s.store.Delete(ctx, imageDataPath(projectID, taskID, imageID))
-	_ = s.store.Delete(ctx, imageMetaPath(projectID, taskID, imageID))
-	return nil
+	var firstErr error
+	if err := s.store.Delete(ctx, imageDataPath(projectID, taskID, imageID)); err != nil {
+		firstErr = fmt.Errorf("delete image data: %w", err)
+	}
+	if err := s.store.Delete(ctx, imageMetaPath(projectID, taskID, imageID)); err != nil && firstErr == nil {
+		firstErr = fmt.Errorf("delete image meta: %w", err)
+	}
+	return firstErr
 }
