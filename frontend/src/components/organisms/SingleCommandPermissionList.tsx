@@ -16,13 +16,11 @@ type PermissionType = 'command' | 'redirect'
 interface FormData {
   pattern: string
   type: PermissionType
-  label: string
 }
 
 const emptyForm: FormData = {
   pattern: '',
   type: 'command',
-  label: '',
 }
 
 export function SingleCommandPermissionList({ projectId }: { projectId: string }) {
@@ -61,7 +59,7 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
     }
     setValidationError(null)
     createMut.mutate(
-      { projectId, pattern: form.pattern, type: form.type, label: form.label },
+      { projectId, pattern: form.pattern, type: form.type },
       {
         onSuccess: () => {
           setForm(emptyForm)
@@ -74,7 +72,7 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
 
   const openEdit = (p: SingleCommandPermission) => {
     setEditingId(p.id)
-    setEditForm({ pattern: p.pattern, type: p.type as PermissionType, label: p.label })
+    setEditForm({ pattern: p.pattern, type: p.type as PermissionType })
     setValidationError(null)
   }
 
@@ -96,7 +94,7 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
     }
     setValidationError(null)
     updateMut.mutate(
-      { id, pattern: editForm.pattern, type: editForm.type, label: editForm.label },
+      { id, pattern: editForm.pattern, type: editForm.type },
       {
         onSuccess: () => {
           cancelEdit()
@@ -147,7 +145,7 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
                 icon={<X className="w-4 h-4" />}
               />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormField label="Pattern *" hint="Wildcard pattern (e.g. git status, git *, npm test *)">
                 <Input
                   type="text"
@@ -167,15 +165,6 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
                   <option value="command">command</option>
                   <option value="redirect">redirect</option>
                 </Select>
-              </FormField>
-              <FormField label="Label" hint="Human-readable description">
-                <Input
-                  type="text"
-                  value={form.label}
-                  onChange={e => setForm(prev => ({ ...prev, label: e.target.value }))}
-                  placeholder="e.g. git status"
-                  className="focus:border-purple-500"
-                />
               </FormField>
             </div>
 
@@ -219,7 +208,7 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
               {editingId === perm.id ? (
                 /* Inline Edit Mode */
                 <div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <FormField label="Pattern *">
                       <Input
                         type="text"
@@ -238,15 +227,6 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
                         <option value="command">command</option>
                         <option value="redirect">redirect</option>
                       </Select>
-                    </FormField>
-                    <FormField label="Label">
-                      <Input
-                        type="text"
-                        value={editForm.label}
-                        onChange={e => setEditForm(prev => ({ ...prev, label: e.target.value }))}
-                        placeholder="e.g. git status"
-                        className="focus:border-purple-500"
-                      />
                     </FormField>
                   </div>
                   {validationError && editingId && (
@@ -292,9 +272,6 @@ export function SingleCommandPermissionList({ projectId }: { projectId: string }
                           {perm.type}
                         </Badge>
                       </div>
-                      {perm.label && (
-                        <p className="text-xs text-gray-400 mt-0.5">{perm.label}</p>
-                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0 ml-2">

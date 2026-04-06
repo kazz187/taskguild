@@ -42,7 +42,6 @@ func (s *Server) ListSingleCommandPermissions(ctx context.Context, req *connect.
 			ProjectId: p.ProjectID,
 			Pattern:   p.Pattern,
 			Type:      p.Type,
-			Label:     p.Label,
 			CreatedAt: timestamppb.New(p.CreatedAt),
 		})
 	}
@@ -53,9 +52,9 @@ func (s *Server) ListSingleCommandPermissions(ctx context.Context, req *connect.
 }
 
 // AddSingleCommandPermission adds a new wildcard permission rule from an agent.
-// If a rule with the same pattern+type already exists in the project, the
-// existing rule is updated (label overwrite) and any extra duplicates are
-// removed. This makes the operation idempotent and cleans up legacy duplicates.
+// If a rule with the same pattern+type already exists in the project, any extra
+// duplicates are removed. This makes the operation idempotent and cleans up
+// legacy duplicates.
 func (s *Server) AddSingleCommandPermission(ctx context.Context, req *connect.Request[taskguildv1.AddSingleCommandPermissionRequest]) (*connect.Response[taskguildv1.AddSingleCommandPermissionResponse], error) {
 	projectName := req.Msg.ProjectName
 	if projectName == "" {
@@ -77,12 +76,8 @@ func (s *Server) AddSingleCommandPermission(ctx context.Context, req *connect.Re
 	var p *scp.SingleCommandPermission
 
 	if len(existing) > 0 {
-		// Keep the oldest entry and update its label.
+		// Keep the oldest entry.
 		p = existing[0]
-		p.Label = req.Msg.Label
-		if err := s.scpRepo.Update(ctx, p); err != nil {
-			return nil, fmt.Errorf("failed to update single command permission: %w", err)
-		}
 
 		// Remove extra duplicates (index 1+).
 		for _, dup := range existing[1:] {
@@ -95,7 +90,6 @@ func (s *Server) AddSingleCommandPermission(ctx context.Context, req *connect.Re
 			ProjectID: proj.ID,
 			Pattern:   req.Msg.Pattern,
 			Type:      req.Msg.Type,
-			Label:     req.Msg.Label,
 			CreatedAt: time.Now(),
 		}
 		if err := s.scpRepo.Create(ctx, p); err != nil {
@@ -109,7 +103,6 @@ func (s *Server) AddSingleCommandPermission(ctx context.Context, req *connect.Re
 			ProjectId: p.ProjectID,
 			Pattern:   p.Pattern,
 			Type:      p.Type,
-			Label:     p.Label,
 			CreatedAt: timestamppb.New(p.CreatedAt),
 		},
 	}), nil

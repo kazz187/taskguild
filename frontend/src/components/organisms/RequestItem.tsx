@@ -34,7 +34,6 @@ interface BashPermissionMetadata {
 interface PatternRow {
   key: string
   type: 'command' | 'redirect'
-  label: string
   matched: boolean
   pattern: string
   checked: boolean
@@ -61,7 +60,6 @@ function buildPatternRows(meta: BashPermissionMetadata): PatternRow[] {
     rows.push({
       key: `cmd-${i}`,
       type: 'command',
-      label: cmd.command,
       matched: cmd.matched,
       pattern: cmd.matched ? (cmd.matched_pattern ?? cmd.command) : (cmd.suggested_pattern ?? cmd.command),
       checked: !cmd.matched,
@@ -73,7 +71,6 @@ function buildPatternRows(meta: BashPermissionMetadata): PatternRow[] {
     rows.push({
       key: `redir-${i}`,
       type: 'redirect',
-      label: `${redir.operator} ${redir.path}`,
       matched: redir.matched,
       pattern: redir.matched ? (redir.matched_pattern ?? redir.path) : (redir.suggested_pattern ?? redir.path),
       checked: !redir.matched,
@@ -105,7 +102,6 @@ function buildAlwaysAllowCommandResponse(rows: PatternRow[]): string {
     .map((r) => ({
       pattern: r.pattern,
       type: r.type === 'command' ? 'command' : 'redirect',
-      label: r.label,
     }))
 
   return JSON.stringify({
@@ -152,11 +148,10 @@ function BashPatternEditor({
             className="shrink-0"
           />
 
-          {/* Command label */}
-          <span className="text-[11px] text-gray-400 shrink-0 min-w-0 max-w-[120px] truncate font-mono" title={row.label}>
-            {row.type === 'redirect' && <span className="text-amber-400 mr-1">redir</span>}
-            {row.label}
-          </span>
+          {/* Type badge */}
+          {row.type === 'redirect' && (
+            <span className="text-[11px] text-amber-400 shrink-0 font-mono">redir</span>
+          )}
 
           {/* Editable pattern */}
           <input

@@ -364,7 +364,7 @@ type WorkflowStatus struct {
 	AgentId       string   `protobuf:"bytes,7,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`                   // ID of the AgentDefinition assigned to this status
 	// hooks
 	Hooks []*StatusHook `protobuf:"bytes,8,rep,name=hooks,proto3" json:"hooks,omitempty"`
-	// harness: when true, a background agent reviews and updates AGENT.md
+	// harness: when true, a background agent reviews and updates agent markdown
 	// with lessons learned upon status exit. Defaults to true when not set.
 	EnableAgentMdHarness bool `protobuf:"varint,9,opt,name=enable_agent_md_harness,json=enableAgentMdHarness,proto3" json:"enable_agent_md_harness,omitempty"`
 	// Explicitly tracks whether enable_agent_md_harness was set by the user.
