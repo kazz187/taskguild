@@ -737,8 +737,10 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 					Name: targetName,
 				})
 			}
-			if b, err := json.Marshal(transitions); err == nil {
-				enrichedMetadata["_available_transitions"] = string(b)
+			if len(transitions) > 0 {
+				if b, err := json.Marshal(transitions); err == nil {
+					enrichedMetadata["_available_transitions"] = string(b)
+				}
 			}
 			break
 		}
