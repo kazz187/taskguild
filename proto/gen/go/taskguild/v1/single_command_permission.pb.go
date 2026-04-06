@@ -29,7 +29,6 @@ type SingleCommandPermission struct {
 	ProjectId     string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	Pattern       string                 `protobuf:"bytes,3,opt,name=pattern,proto3" json:"pattern,omitempty"` // regex pattern (e.g. "^git\\s+status$")
 	Type          string                 `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`       // "command" or "redirect"
-	Label         string                 `protobuf:"bytes,5,opt,name=label,proto3" json:"label,omitempty"`     // human-readable label (e.g. "git status")
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -89,13 +88,6 @@ func (x *SingleCommandPermission) GetPattern() string {
 func (x *SingleCommandPermission) GetType() string {
 	if x != nil {
 		return x.Type
-	}
-	return ""
-}
-
-func (x *SingleCommandPermission) GetLabel() string {
-	if x != nil {
-		return x.Label
 	}
 	return ""
 }
@@ -200,7 +192,6 @@ type CreateSingleCommandPermissionRequest struct {
 	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	Pattern       string                 `protobuf:"bytes,2,opt,name=pattern,proto3" json:"pattern,omitempty"`
 	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
-	Label         string                 `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -256,13 +247,6 @@ func (x *CreateSingleCommandPermissionRequest) GetType() string {
 	return ""
 }
 
-func (x *CreateSingleCommandPermissionRequest) GetLabel() string {
-	if x != nil {
-		return x.Label
-	}
-	return ""
-}
-
 type CreateSingleCommandPermissionResponse struct {
 	state         protoimpl.MessageState   `protogen:"open.v1"`
 	Permission    *SingleCommandPermission `protobuf:"bytes,1,opt,name=permission,proto3" json:"permission,omitempty"`
@@ -312,7 +296,6 @@ type UpdateSingleCommandPermissionRequest struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Pattern       string                 `protobuf:"bytes,2,opt,name=pattern,proto3" json:"pattern,omitempty"`
 	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
-	Label         string                 `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -364,13 +347,6 @@ func (x *UpdateSingleCommandPermissionRequest) GetPattern() string {
 func (x *UpdateSingleCommandPermissionRequest) GetType() string {
 	if x != nil {
 		return x.Type
-	}
-	return ""
-}
-
-func (x *UpdateSingleCommandPermissionRequest) GetLabel() string {
-	if x != nil {
-		return x.Label
 	}
 	return ""
 }
@@ -503,36 +479,33 @@ var File_taskguild_v1_single_command_permission_proto protoreflect.FileDescripto
 
 const file_taskguild_v1_single_command_permission_proto_rawDesc = "" +
 	"\n" +
-	",taskguild/v1/single_command_permission.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc7\x01\n" +
+	",taskguild/v1/single_command_permission.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb7\x01\n" +
 	"\x17SingleCommandPermission\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x02 \x01(\tR\tprojectId\x12\x18\n" +
 	"\apattern\x18\x03 \x01(\tR\apattern\x12\x12\n" +
-	"\x04type\x18\x04 \x01(\tR\x04type\x12\x14\n" +
-	"\x05label\x18\x05 \x01(\tR\x05label\x129\n" +
+	"\x04type\x18\x04 \x01(\tR\x04type\x129\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"D\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAtJ\x04\b\x05\x10\x06\"D\n" +
 	"#ListSingleCommandPermissionsRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\"o\n" +
 	"$ListSingleCommandPermissionsResponse\x12G\n" +
-	"\vpermissions\x18\x01 \x03(\v2%.taskguild.v1.SingleCommandPermissionR\vpermissions\"\x89\x01\n" +
+	"\vpermissions\x18\x01 \x03(\v2%.taskguild.v1.SingleCommandPermissionR\vpermissions\"y\n" +
 	"$CreateSingleCommandPermissionRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x18\n" +
 	"\apattern\x18\x02 \x01(\tR\apattern\x12\x12\n" +
-	"\x04type\x18\x03 \x01(\tR\x04type\x12\x14\n" +
-	"\x05label\x18\x04 \x01(\tR\x05label\"n\n" +
+	"\x04type\x18\x03 \x01(\tR\x04typeJ\x04\b\x04\x10\x05\"n\n" +
 	"%CreateSingleCommandPermissionResponse\x12E\n" +
 	"\n" +
 	"permission\x18\x01 \x01(\v2%.taskguild.v1.SingleCommandPermissionR\n" +
-	"permission\"z\n" +
+	"permission\"j\n" +
 	"$UpdateSingleCommandPermissionRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\apattern\x18\x02 \x01(\tR\apattern\x12\x12\n" +
-	"\x04type\x18\x03 \x01(\tR\x04type\x12\x14\n" +
-	"\x05label\x18\x04 \x01(\tR\x05label\"n\n" +
+	"\x04type\x18\x03 \x01(\tR\x04typeJ\x04\b\x04\x10\x05\"n\n" +
 	"%UpdateSingleCommandPermissionResponse\x12E\n" +
 	"\n" +
 	"permission\x18\x01 \x01(\v2%.taskguild.v1.SingleCommandPermissionR\n" +

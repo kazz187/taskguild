@@ -84,9 +84,9 @@ func (s *Server) ListSingleCommandPermissions(
 }
 
 // CreateSingleCommandPermission adds a new wildcard permission rule.
-// If a rule with the same pattern+type already exists in the project, the
-// existing rule is updated (label overwrite) and any extra duplicates are
-// removed. This makes the operation idempotent and cleans up legacy duplicates.
+// If a rule with the same pattern+type already exists in the project, any extra
+// duplicates are removed. This makes the operation idempotent and cleans up
+// legacy duplicates.
 func (s *Server) CreateSingleCommandPermission(
 	ctx context.Context,
 	req *connect.Request[taskguildv1.CreateSingleCommandPermissionRequest],
@@ -110,12 +110,8 @@ func (s *Server) CreateSingleCommandPermission(
 	var p *SingleCommandPermission
 
 	if len(existing) > 0 {
-		// Keep the oldest entry and update its label.
+		// Keep the oldest entry.
 		p = existing[0]
-		p.Label = req.Msg.Label
-		if err := s.repo.Update(ctx, p); err != nil {
-			return nil, err
-		}
 
 		// Remove extra duplicates (index 1+).
 		for _, dup := range existing[1:] {
@@ -128,7 +124,6 @@ func (s *Server) CreateSingleCommandPermission(
 			ProjectID: req.Msg.ProjectId,
 			Pattern:   req.Msg.Pattern,
 			Type:      req.Msg.Type,
-			Label:     req.Msg.Label,
 			CreatedAt: time.Now(),
 		}
 		if err := s.repo.Create(ctx, p); err != nil {
@@ -165,7 +160,6 @@ func (s *Server) UpdateSingleCommandPermission(
 
 	existing.Pattern = req.Msg.Pattern
 	existing.Type = req.Msg.Type
-	existing.Label = req.Msg.Label
 
 	if err := s.repo.Update(ctx, existing); err != nil {
 		return nil, err
@@ -204,7 +198,6 @@ func toProto(p *SingleCommandPermission) *taskguildv1.SingleCommandPermission {
 		ProjectId: p.ProjectID,
 		Pattern:   p.Pattern,
 		Type:      p.Type,
-		Label:     p.Label,
 		CreatedAt: timestamppb.New(p.CreatedAt),
 	}
 }

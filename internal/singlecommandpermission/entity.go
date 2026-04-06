@@ -10,7 +10,6 @@ type SingleCommandPermission struct {
 	ProjectID string    `yaml:"project_id"`
 	Pattern   string    `yaml:"pattern"`    // wildcard pattern (e.g. "git status" or "git *")
 	Type      string    `yaml:"type"`       // "command" or "redirect"
-	Label     string    `yaml:"label"`      // human-readable label (e.g. "git status")
 	CreatedAt time.Time `yaml:"created_at"`
 }
 

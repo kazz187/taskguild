@@ -5396,7 +5396,6 @@ type AddSingleCommandPermissionRequest struct {
 	ProjectName   string                 `protobuf:"bytes,1,opt,name=project_name,json=projectName,proto3" json:"project_name,omitempty"`
 	Pattern       string                 `protobuf:"bytes,2,opt,name=pattern,proto3" json:"pattern,omitempty"`
 	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"` // "command" or "redirect"
-	Label         string                 `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5448,13 +5447,6 @@ func (x *AddSingleCommandPermissionRequest) GetPattern() string {
 func (x *AddSingleCommandPermissionRequest) GetType() string {
 	if x != nil {
 		return x.Type
-	}
-	return ""
-}
-
-func (x *AddSingleCommandPermissionRequest) GetLabel() string {
-	if x != nil {
-		return x.Label
 	}
 	return ""
 }
@@ -6004,12 +5996,11 @@ const file_taskguild_v1_agent_manager_proto_rawDesc = "" +
 	"(ListSingleCommandPermissionsAgentRequest\x12!\n" +
 	"\fproject_name\x18\x01 \x01(\tR\vprojectName\"t\n" +
 	")ListSingleCommandPermissionsAgentResponse\x12G\n" +
-	"\vpermissions\x18\x01 \x03(\v2%.taskguild.v1.SingleCommandPermissionR\vpermissions\"\x8a\x01\n" +
+	"\vpermissions\x18\x01 \x03(\v2%.taskguild.v1.SingleCommandPermissionR\vpermissions\"z\n" +
 	"!AddSingleCommandPermissionRequest\x12!\n" +
 	"\fproject_name\x18\x01 \x01(\tR\vprojectName\x12\x18\n" +
 	"\apattern\x18\x02 \x01(\tR\apattern\x12\x12\n" +
-	"\x04type\x18\x03 \x01(\tR\x04type\x12\x14\n" +
-	"\x05label\x18\x04 \x01(\tR\x05label\"k\n" +
+	"\x04type\x18\x03 \x01(\tR\x04typeJ\x04\b\x04\x10\x05\"k\n" +
 	"\"AddSingleCommandPermissionResponse\x12E\n" +
 	"\n" +
 	"permission\x18\x01 \x01(\v2%.taskguild.v1.SingleCommandPermissionR\n" +

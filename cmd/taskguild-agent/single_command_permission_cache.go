@@ -40,7 +40,6 @@ type compiledPattern struct {
 	raw   string
 	regex *regexp.Regexp
 	ptype string // "command" or "redirect"
-	label string
 }
 
 // singleCommandPermissionCache maintains an in-memory cache of wildcard-based
@@ -78,7 +77,6 @@ func (c *singleCommandPermissionCache) Update(perms []*v1.SingleCommandPermissio
 			raw:   p.Pattern,
 			regex: re,
 			ptype: p.Type,
-			label: p.Label,
 		})
 	}
 	c.patterns = compiled

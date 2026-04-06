@@ -214,7 +214,7 @@ export type WorkflowStatus = Message<"taskguild.v1.WorkflowStatus"> & {
   hooks: StatusHook[];
 
   /**
-   * harness: when true, a background agent reviews and updates AGENT.md
+   * harness: when true, a background agent reviews and updates agent markdown
    * with lessons learned upon status exit. Defaults to true when not set.
    *
    * @generated from field: bool enable_agent_md_harness = 9;

@@ -597,7 +597,6 @@ type alwaysAllowCommandResponse struct {
 type alwaysAllowCommandResponseRule struct {
 	Pattern string `json:"pattern"`
 	Type    string `json:"type"`
-	Label   string `json:"label"`
 }
 
 // handleAlwaysAllowCommand processes the "always_allow_command" response by
@@ -623,7 +622,6 @@ func handleAlwaysAllowCommand(
 			ProjectName: scpCache.projectName,
 			Pattern:     rule.Pattern,
 			Type:        ruleType,
-			Label:       rule.Label,
 		}))
 		if err != nil {
 			logger.Error("failed to add single command permission", "pattern", rule.Pattern, "error", err)

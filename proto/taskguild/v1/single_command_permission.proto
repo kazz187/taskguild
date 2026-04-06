@@ -27,7 +27,7 @@ message SingleCommandPermission {
   string project_id = 2;
   string pattern = 3;        // regex pattern (e.g. "^git\\s+status$")
   string type = 4;            // "command" or "redirect"
-  string label = 5;           // human-readable label (e.g. "git status")
+  reserved 5;
   google.protobuf.Timestamp created_at = 6;
 }
 
@@ -42,7 +42,7 @@ message CreateSingleCommandPermissionRequest {
   string project_id = 1;
   string pattern = 2;
   string type = 3;
-  string label = 4;
+  reserved 4;
 }
 message CreateSingleCommandPermissionResponse {
   SingleCommandPermission permission = 1;
@@ -52,7 +52,7 @@ message UpdateSingleCommandPermissionRequest {
   string id = 1;
   string pattern = 2;
   string type = 3;
-  string label = 4;
+  reserved 4;
 }
 message UpdateSingleCommandPermissionResponse {
   SingleCommandPermission permission = 1;
