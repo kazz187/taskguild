@@ -1,9 +1,17 @@
 package main
 
 import (
+	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
+
+	"connectrpc.com/connect"
+
+	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
+	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
 
 // resultHistoryEntry represents a single entry in the task result history
@@ -50,6 +58,106 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 	}
 
 	return sb.String()
+}
+
+var imageRefPattern = regexp.MustCompile(`\[Image#(\d+)\]`)
+
+// buildUserPromptWithImages builds the user prompt, replacing [Image#N] references
+// with actual image content blocks for the Claude API.
+// Returns string if no images, or []map[string]any if images are present.
+func buildUserPromptWithImages(ctx context.Context, metadata map[string]string, workDir string, taskClient taskguildv1connect.TaskServiceClient, taskID string) (any, error) {
+	textPrompt := buildUserPrompt(metadata, workDir)
+
+	// Find all [Image#N] references in the description.
+	matches := imageRefPattern.FindAllStringIndex(textPrompt, -1)
+	if len(matches) == 0 {
+		return textPrompt, nil
+	}
+
+	// Fetch all images for this task.
+	listResp, err := taskClient.ListTaskImages(ctx, connect.NewRequest(&v1.ListTaskImagesRequest{
+		TaskId: taskID,
+	}))
+	if err != nil {
+		return nil, fmt.Errorf("list task images: %w", err)
+	}
+
+	// Build a map of image ID -> image proto for quick lookup.
+	imageMap := make(map[string]*v1.TaskImage)
+	for _, img := range listResp.Msg.Images {
+		imageMap[img.Id] = img
+	}
+
+	// Split the text by [Image#N] references and interleave with image blocks.
+	var blocks []map[string]any
+	lastEnd := 0
+
+	for _, match := range imageRefPattern.FindAllStringSubmatchIndex(textPrompt, -1) {
+		// match[0:1] = full match start/end, match[2:3] = capture group (number)
+		fullStart, fullEnd := match[0], match[1]
+		imageID := textPrompt[match[2]:match[3]]
+
+		// Add text before this image reference.
+		if fullStart > lastEnd {
+			textBefore := textPrompt[lastEnd:fullStart]
+			if strings.TrimSpace(textBefore) != "" {
+				blocks = append(blocks, map[string]any{
+					"type": "text",
+					"text": textBefore,
+				})
+			}
+		}
+
+		// Check if this image exists and fetch it.
+		if _, exists := imageMap[imageID]; exists {
+			imgResp, err := taskClient.GetTaskImage(ctx, connect.NewRequest(&v1.GetTaskImageRequest{
+				TaskId:  taskID,
+				ImageId: imageID,
+			}))
+			if err == nil {
+				blocks = append(blocks, map[string]any{
+					"type": "image",
+					"source": map[string]any{
+						"type":       "base64",
+						"media_type": imgResp.Msg.Image.MediaType,
+						"data":       base64.StdEncoding.EncodeToString(imgResp.Msg.Data),
+					},
+				})
+			} else {
+				// Keep the reference as text if fetch fails.
+				blocks = append(blocks, map[string]any{
+					"type": "text",
+					"text": textPrompt[fullStart:fullEnd],
+				})
+			}
+		} else {
+			// Image not found — keep the reference as text.
+			blocks = append(blocks, map[string]any{
+				"type": "text",
+				"text": textPrompt[fullStart:fullEnd],
+			})
+		}
+
+		lastEnd = fullEnd
+	}
+
+	// Add remaining text after the last image reference.
+	if lastEnd < len(textPrompt) {
+		remaining := textPrompt[lastEnd:]
+		if strings.TrimSpace(remaining) != "" {
+			blocks = append(blocks, map[string]any{
+				"type": "text",
+				"text": remaining,
+			})
+		}
+	}
+
+	// If no image blocks were actually added, fall back to plain text.
+	if len(blocks) == 0 {
+		return textPrompt, nil
+	}
+
+	return blocks, nil
 }
 
 // buildWorkflowContext builds the workflow context block for the system prompt

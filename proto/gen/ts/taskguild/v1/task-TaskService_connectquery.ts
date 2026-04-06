@@ -67,3 +67,25 @@ export const unarchiveTask = TaskService.method.unarchiveTask;
  * @generated from rpc taskguild.v1.TaskService.ListArchivedTasks
  */
 export const listArchivedTasks = TaskService.method.listArchivedTasks;
+
+/**
+ * Task image operations
+ *
+ * @generated from rpc taskguild.v1.TaskService.UploadTaskImage
+ */
+export const uploadTaskImage = TaskService.method.uploadTaskImage;
+
+/**
+ * @generated from rpc taskguild.v1.TaskService.GetTaskImage
+ */
+export const getTaskImage = TaskService.method.getTaskImage;
+
+/**
+ * @generated from rpc taskguild.v1.TaskService.ListTaskImages
+ */
+export const listTaskImages = TaskService.method.listTaskImages;
+
+/**
+ * @generated from rpc taskguild.v1.TaskService.DeleteTaskImage
+ */
+export const deleteTaskImage = TaskService.method.deleteTaskImage;

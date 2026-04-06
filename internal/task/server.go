@@ -56,6 +56,7 @@ type Server struct {
 	stopper          TaskStopper
 	resumer          TaskResumer
 	descLogger       DescriptionLogger
+	imageStore       ImageStore
 }
 
 func NewServer(repo Repository, workflowRepo workflow.Repository, eventBus *eventbus.Bus, stopper TaskStopper, resumer TaskResumer, cascadeArchivers []CascadeArchiver, descLogger DescriptionLogger, cascadeDeleters ...CascadeDeleter) *Server {
@@ -69,6 +70,11 @@ func NewServer(repo Repository, workflowRepo workflow.Repository, eventBus *even
 		descLogger:       descLogger,
 		cascadeDeleters:  cascadeDeleters,
 	}
+}
+
+// SetImageStore sets the image store for the server. Must be called before handling image RPCs.
+func (s *Server) SetImageStore(store ImageStore) {
+	s.imageStore = store
 }
 
 func (s *Server) CreateTask(ctx context.Context, req *connect.Request[taskguildv1.CreateTaskRequest]) (*connect.Response[taskguildv1.CreateTaskResponse], error) {

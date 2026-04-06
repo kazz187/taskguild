@@ -5,3 +5,4 @@ export { DropdownMenu, type DropdownMenuProps, type DropdownMenuItemProps } from
 export { PageHeading, type PageHeadingProps } from './PageHeading.tsx'
 export { EmptyState, type EmptyStateProps } from './EmptyState.tsx'
 export { SyncButton, type SyncButtonProps } from './SyncButton.tsx'
+export { ImageUploadTextarea, type ImageUploadTextareaProps, type PendingImage } from './ImageUploadTextarea.tsx'

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useMutation, useQuery } from '@connectrpc/connect-query'
-import { createTask } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
+import { createTask, uploadTaskImage } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import { requestWorktreeList, getWorktreeList } from '@taskguild/proto/taskguild/v1/agent_manager-AgentManagerService_connectquery.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
@@ -8,8 +8,8 @@ import { TaskAssignmentStatus } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { X, GitBranch, RefreshCw, AlertTriangle, ArrowUpRight } from 'lucide-react'
 import { shortId } from '@/lib/id'
-import { Button, Input, Textarea, Select, Checkbox, Badge } from '../atoms/index.ts'
-import { Modal, Card } from '../molecules/index.ts'
+import { Button, Input, Select, Checkbox, Badge } from '../atoms/index.ts'
+import { Modal, Card, ImageUploadTextarea, type PendingImage } from '../molecules/index.ts'
 
 interface ChildTaskCreateModalProps {
   parentTask: Task
@@ -33,8 +33,10 @@ export function ChildTaskCreateModal({
   const [useWorktree, setUseWorktree] = useState(parentTask.useWorktree ?? false)
   const [selectedWorktree, setSelectedWorktree] = useState(parentTask.metadata?.['worktree'] ?? '')
   const [inheritSession, setInheritSession] = useState(false)
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([])
 
   const createMut = useMutation(createTask)
+  const uploadMut = useMutation(uploadTaskImage)
   const requestWtMut = useMutation(requestWorktreeList)
 
   const isParentAgentRunning = parentTask.assignmentStatus === TaskAssignmentStatus.ASSIGNED
@@ -64,7 +66,7 @@ export function ChildTaskCreateModal({
 
   const worktrees = wtData?.worktrees ?? []
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!title.trim()) return
     const metadata: Record<string, string> = {
       source_task_id: parentTask.id,
@@ -75,22 +77,41 @@ export function ChildTaskCreateModal({
     if (inheritSession && parentSessionId && parentSessionKey) {
       metadata[parentSessionKey] = parentSessionId
     }
-    createMut.mutate(
-      {
+    try {
+      const res = await createMut.mutateAsync({
         projectId,
         workflowId,
         title: title.trim(),
         description,
         metadata,
         useWorktree,
-      },
-      {
-        onSuccess: (res) => {
-          onCreated(res.task?.id ?? '')
-          onClose()
-        },
-      },
-    )
+      })
+
+      // Upload pending images after task creation
+      if (res.task && pendingImages.length > 0) {
+        const taskId = res.task.id
+        for (const img of pendingImages) {
+          try {
+            const arrayBuffer = await img.file.arrayBuffer()
+            const data = new Uint8Array(arrayBuffer)
+            await uploadMut.mutateAsync({
+              taskId,
+              filename: img.file.name,
+              mediaType: img.file.type,
+              data,
+            })
+          } catch (err) {
+            console.error('Failed to upload pending image:', err)
+          }
+        }
+        pendingImages.forEach(img => URL.revokeObjectURL(img.previewUrl))
+      }
+
+      onCreated(res.task?.id ?? '')
+      onClose()
+    } catch {
+      // error handled by mutation state
+    }
   }
 
   return (
@@ -127,9 +148,11 @@ export function ChildTaskCreateModal({
           </div>
         </Card>
 
-        <Textarea
+        <ImageUploadTextarea
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={setDescription}
+          pendingImages={pendingImages}
+          onPendingImagesChange={setPendingImages}
           textareaSize="md"
           placeholder="Add description..."
         />

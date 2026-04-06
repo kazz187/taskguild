@@ -454,7 +454,7 @@ function TaskDetailPage() {
                   onClose={() => setShowDescHistory(false)}
                 />
               ) : (
-                <MarkdownDescription content={task.description} />
+                <MarkdownDescription content={task.description} taskId={task.id} />
               )}
             </div>
           )}

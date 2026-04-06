@@ -17,7 +17,7 @@ import (
 // ---------------------------------------------------------------------------
 
 type mockQueryRunnerCall struct {
-	Prompt  string
+	Prompt  any
 	Label   string
 	TaskID  string
 	WorkDir string
@@ -38,7 +38,7 @@ type mockQueryRunner struct {
 
 func (m *mockQueryRunner) RunQuerySync(
 	ctx context.Context,
-	prompt string,
+	prompt any,
 	options *claudeagent.ClaudeAgentOptions,
 	workDir, taskID, label string,
 ) (*claudeagent.QueryResult, error) {

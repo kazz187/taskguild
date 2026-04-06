@@ -1,4 +1,42 @@
+import { useState, useEffect } from 'react'
+import { useQuery } from '@connectrpc/connect-query'
+import { getTaskImage } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import { parseWorktreePaths } from '../../lib/worktreePath.ts'
+
+/** Inline image component that fetches and displays an image by task ID and image number. */
+function ImageRefInline({ imageNum, taskId }: { imageNum: string; taskId?: string }) {
+  const { data } = useQuery(getTaskImage, { taskId: taskId ?? '', imageId: imageNum }, {
+    enabled: !!taskId,
+  })
+  const [objectUrl, setObjectUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (data?.data && data.image?.mediaType) {
+      const blob = new Blob([data.data], { type: data.image.mediaType })
+      const url = URL.createObjectURL(blob)
+      setObjectUrl(url)
+      return () => URL.revokeObjectURL(url)
+    }
+  }, [data])
+
+  if (!taskId) {
+    return <span className="text-cyan-400 text-[10px] bg-slate-800 px-1 rounded">[Image#{imageNum}]</span>
+  }
+
+  if (!objectUrl) {
+    return <span className="text-gray-600 text-[10px]">[Image#{imageNum}]</span>
+  }
+
+  return (
+    <span className="inline-block my-1">
+      <img
+        src={objectUrl}
+        alt={`Image #${imageNum}`}
+        className="max-w-xs max-h-48 rounded border border-slate-700"
+      />
+    </span>
+  )
+}
 
 type Segment =
   | { type: 'code'; language: string; content: string }
@@ -66,10 +104,10 @@ function renderWorktreeSegments(text: string, keyPrefix: string): React.ReactNod
   )
 }
 
-/** Render inline markdown: **bold**, `code`, and [link](url). */
-function renderInline(text: string): React.ReactNode[] {
+/** Render inline markdown: **bold**, `code`, [link](url), and [Image#N]. */
+function renderInline(text: string, taskId?: string): React.ReactNode[] {
   const parts: React.ReactNode[] = []
-  const re = /(\*\*(.+?)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\))/g
+  const re = /(\*\*(.+?)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)|\[Image#(\d+)\])/g
   let last = 0
   let match: RegExpExecArray | null
 
@@ -104,6 +142,11 @@ function renderInline(text: string): React.ReactNode[] {
         <a key={match.index} href={match[5]} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 underline">
           {match[4]}
         </a>,
+      )
+    } else if (match[6] !== undefined) {
+      // [Image#N] reference
+      parts.push(
+        <ImageRefInline key={match.index} imageNum={match[6]} taskId={taskId} />,
       )
     }
     last = match.index + match[0].length
@@ -223,7 +266,7 @@ function parseBlocks(text: string): BlockElement[] {
 
 /* ─── Block renderers ─── */
 
-function HeaderBlock({ level, content }: { level: number; content: string }) {
+function HeaderBlock({ level, content, taskId }: { level: number; content: string; taskId?: string }) {
   const styles: Record<number, string> = {
     1: 'text-base font-bold text-gray-200 mt-3 mb-1.5',
     2: 'text-sm font-bold text-gray-200 mt-2.5 mb-1',
@@ -233,36 +276,36 @@ function HeaderBlock({ level, content }: { level: number; content: string }) {
     6: 'text-xs font-medium text-gray-400 mt-1 mb-0.5',
   }
   const cn = styles[level] ?? styles[3]
-  return <div className={cn}>{renderInline(content)}</div>
+  return <div className={cn}>{renderInline(content, taskId)}</div>
 }
 
-function UnorderedListBlock({ items }: { items: string[] }) {
+function UnorderedListBlock({ items, taskId }: { items: string[]; taskId?: string }) {
   return (
     <ul className="list-disc list-inside space-y-0.5 my-1 ml-2">
       {items.map((item, i) => (
-        <li key={i}>{renderInline(item)}</li>
+        <li key={i}>{renderInline(item, taskId)}</li>
       ))}
     </ul>
   )
 }
 
-function OrderedListBlock({ items }: { items: string[] }) {
+function OrderedListBlock({ items, taskId }: { items: string[]; taskId?: string }) {
   return (
     <ol className="list-decimal list-inside space-y-0.5 my-1 ml-2">
       {items.map((item, i) => (
-        <li key={i}>{renderInline(item)}</li>
+        <li key={i}>{renderInline(item, taskId)}</li>
       ))}
     </ol>
   )
 }
 
-function BlockquoteBlock({ lines }: { lines: string[] }) {
+function BlockquoteBlock({ lines, taskId }: { lines: string[]; taskId?: string }) {
   return (
     <blockquote className="border-l-2 border-slate-600 pl-3 my-1.5 text-gray-500 italic">
       {lines.map((line, i) => (
         <span key={i}>
           {i > 0 && '\n'}
-          {renderInline(line)}
+          {renderInline(line, taskId)}
         </span>
       ))}
     </blockquote>
@@ -273,37 +316,37 @@ function HorizontalRule() {
   return <hr className="border-slate-700 my-2" />
 }
 
-function ParagraphBlock({ lines }: { lines: string[] }) {
+function ParagraphBlock({ lines, taskId }: { lines: string[]; taskId?: string }) {
   return (
     <div className="whitespace-pre-wrap my-0.5">
       {lines.map((line, j) => (
         <span key={j}>
           {j > 0 && '\n'}
-          {renderInline(line)}
+          {renderInline(line, taskId)}
         </span>
       ))}
     </div>
   )
 }
 
-function TextSegment({ content }: { content: string }) {
+function TextSegment({ content, taskId }: { content: string; taskId?: string }) {
   const blocks = parseBlocks(content)
   return (
     <>
       {blocks.map((block, i) => {
         switch (block.type) {
           case 'header':
-            return <HeaderBlock key={i} level={block.level} content={block.content} />
+            return <HeaderBlock key={i} level={block.level} content={block.content} taskId={taskId} />
           case 'ul':
-            return <UnorderedListBlock key={i} items={block.items} />
+            return <UnorderedListBlock key={i} items={block.items} taskId={taskId} />
           case 'ol':
-            return <OrderedListBlock key={i} items={block.items} />
+            return <OrderedListBlock key={i} items={block.items} taskId={taskId} />
           case 'blockquote':
-            return <BlockquoteBlock key={i} lines={block.lines} />
+            return <BlockquoteBlock key={i} lines={block.lines} taskId={taskId} />
           case 'hr':
             return <HorizontalRule key={i} />
           case 'paragraph':
-            return <ParagraphBlock key={i} lines={block.lines} />
+            return <ParagraphBlock key={i} lines={block.lines} taskId={taskId} />
         }
       })}
     </>
@@ -619,9 +662,11 @@ function CodeBlock({ language, content }: { language: string; content: string })
 export function MarkdownDescription({
   content,
   className = '',
+  taskId,
 }: {
   content: string
   className?: string
+  taskId?: string
 }) {
   const segments = parse(content)
 
@@ -631,7 +676,7 @@ export function MarkdownDescription({
         if (seg.type === 'code') {
           return <CodeBlock key={i} language={seg.language} content={seg.content} />
         }
-        return <TextSegment key={i} content={seg.content} />
+        return <TextSegment key={i} content={seg.content} taskId={taskId} />
       })}
     </div>
   )

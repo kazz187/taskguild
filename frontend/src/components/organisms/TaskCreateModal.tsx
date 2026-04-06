@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useMutation, useQuery } from '@connectrpc/connect-query'
-import { createTask } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
+import { createTask, uploadTaskImage } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import { requestWorktreeList, getWorktreeList } from '@taskguild/proto/taskguild/v1/agent_manager-AgentManagerService_connectquery.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { X, GitBranch, RefreshCw } from 'lucide-react'
-import { Button, Input, Textarea, Select, Checkbox } from '../atoms/index.ts'
-import { Modal } from '../molecules/index.ts'
+import { Button, Input, Select, Checkbox } from '../atoms/index.ts'
+import { Modal, ImageUploadTextarea, type PendingImage } from '../molecules/index.ts'
 
 interface TaskCreateModalProps {
   projectId: string
@@ -21,7 +21,9 @@ export function TaskCreateModal({ projectId, workflowId, defaultUseWorktree, onC
   const [description, setDescription] = useState('')
   const [useWorktree, setUseWorktree] = useState(defaultUseWorktree ?? false)
   const [selectedWorktree, setSelectedWorktree] = useState('')
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([])
   const createMut = useMutation(createTask)
+  const uploadMut = useMutation(uploadTaskImage)
   const requestWtMut = useMutation(requestWorktreeList)
 
   // Query cached worktree list
@@ -45,21 +47,44 @@ export function TaskCreateModal({ projectId, workflowId, defaultUseWorktree, onC
 
   const worktrees = wtData?.worktrees ?? []
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!title.trim()) return
     const metadata: Record<string, string> = {}
     if (selectedWorktree) {
       metadata['worktree'] = selectedWorktree
     }
-    createMut.mutate(
-      { projectId, workflowId, title: title.trim(), description, metadata, useWorktree },
-      {
-        onSuccess: () => {
-          onCreated()
-          onClose()
-        },
-      },
-    )
+
+    try {
+      const resp = await createMut.mutateAsync(
+        { projectId, workflowId, title: title.trim(), description, metadata, useWorktree },
+      )
+
+      // Upload pending images after task creation
+      if (resp.task && pendingImages.length > 0) {
+        const taskId = resp.task.id
+        for (const img of pendingImages) {
+          try {
+            const arrayBuffer = await img.file.arrayBuffer()
+            const data = new Uint8Array(arrayBuffer)
+            await uploadMut.mutateAsync({
+              taskId,
+              filename: img.file.name,
+              mediaType: img.file.type,
+              data,
+            })
+          } catch (err) {
+            console.error('Failed to upload pending image:', err)
+          }
+        }
+        // Clean up preview URLs
+        pendingImages.forEach(img => URL.revokeObjectURL(img.previewUrl))
+      }
+
+      onCreated()
+      onClose()
+    } catch {
+      // createMut error state will show via isPending
+    }
   }
 
   return (
@@ -83,9 +108,11 @@ export function TaskCreateModal({ projectId, workflowId, defaultUseWorktree, onC
 
       {/* Body */}
       <Modal.Body>
-        <Textarea
+        <ImageUploadTextarea
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={setDescription}
+          pendingImages={pendingImages}
+          onPendingImagesChange={setPendingImages}
           textareaSize="md"
           placeholder="Add description..."
         />
@@ -134,9 +161,9 @@ export function TaskCreateModal({ projectId, workflowId, defaultUseWorktree, onC
             variant="primary"
             size="sm"
             onClick={handleCreate}
-            disabled={createMut.isPending || !title.trim()}
+            disabled={createMut.isPending || uploadMut.isPending || !title.trim()}
           >
-            {createMut.isPending ? 'Creating...' : 'Create'}
+            {createMut.isPending || uploadMut.isPending ? 'Creating...' : 'Create'}
           </Button>
         </div>
       </Modal.Body>
