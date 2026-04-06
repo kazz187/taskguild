@@ -26,7 +26,7 @@ type userInputMsg struct {
 
 type userInputBody struct {
 	Role    string `json:"role"`
-	Content string `json:"content"`
+	Content any    `json:"content"` // string or []map[string]any for image content blocks
 }
 
 // turnLog writes log entries to a single file per turn in real-time.
@@ -216,7 +216,7 @@ func (tl *turnLog) LogResult(result *claudeagent.ResultMessage, queryErr error) 
 // result to a single file per turn in real-time.
 func runQuerySyncWithLog(
 	ctx context.Context,
-	prompt string,
+	prompt any, // string or []map[string]any for image content blocks
 	options *claudeagent.ClaudeAgentOptions,
 	workDir, projectID, taskID, label string,
 ) (*claudeagent.QueryResult, error) {

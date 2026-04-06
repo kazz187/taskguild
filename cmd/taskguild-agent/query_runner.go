@@ -11,7 +11,7 @@ import (
 type QueryRunner interface {
 	RunQuerySync(
 		ctx context.Context,
-		prompt string,
+		prompt any, // string or []map[string]any for image content blocks
 		options *claudeagent.ClaudeAgentOptions,
 		workDir, taskID, label string,
 	) (*claudeagent.QueryResult, error)
@@ -26,7 +26,7 @@ type subprocessQueryRunner struct {
 
 func (r subprocessQueryRunner) RunQuerySync(
 	ctx context.Context,
-	prompt string,
+	prompt any,
 	options *claudeagent.ClaudeAgentOptions,
 	workDir, taskID, label string,
 ) (*claudeagent.QueryResult, error) {

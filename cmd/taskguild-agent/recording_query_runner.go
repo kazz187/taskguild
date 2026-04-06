@@ -12,7 +12,7 @@ import (
 
 // RecordedEntry represents a single recorded QueryRunner call and its result.
 type RecordedEntry struct {
-	Prompt    string `json:"prompt"`
+	Prompt    any    `json:"prompt"` // string or []map[string]any for image content blocks
 	Label     string `json:"label"`
 	TaskID    string `json:"task_id"`
 	Result    string `json:"result"`
@@ -31,7 +31,7 @@ type RecordingQueryRunner struct {
 // RunQuerySync delegates to the inner QueryRunner and records the call.
 func (r *RecordingQueryRunner) RunQuerySync(
 	ctx context.Context,
-	prompt string,
+	prompt any,
 	options *claudeagent.ClaudeAgentOptions,
 	workDir, taskID, label string,
 ) (*claudeagent.QueryResult, error) {
@@ -108,7 +108,7 @@ func LoadReplayQueryRunner(path string) (*ReplayQueryRunner, error) {
 // RunQuerySync returns the next recorded entry as a QueryResult.
 func (r *ReplayQueryRunner) RunQuerySync(
 	ctx context.Context,
-	prompt string,
+	prompt any,
 	options *claudeagent.ClaudeAgentOptions,
 	workDir, taskID, label string,
 ) (*claudeagent.QueryResult, error) {

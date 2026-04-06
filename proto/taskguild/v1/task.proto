@@ -29,6 +29,12 @@ service TaskService {
   rpc ArchiveTerminalTasks(ArchiveTerminalTasksRequest) returns (ArchiveTerminalTasksResponse);
   rpc UnarchiveTask(UnarchiveTaskRequest) returns (UnarchiveTaskResponse);
   rpc ListArchivedTasks(ListArchivedTasksRequest) returns (ListArchivedTasksResponse);
+
+  // Task image operations
+  rpc UploadTaskImage(UploadTaskImageRequest) returns (UploadTaskImageResponse);
+  rpc GetTaskImage(GetTaskImageRequest) returns (GetTaskImageResponse);
+  rpc ListTaskImages(ListTaskImagesRequest) returns (ListTaskImagesResponse);
+  rpc DeleteTaskImage(DeleteTaskImageRequest) returns (DeleteTaskImageResponse);
 }
 
 message Task {
@@ -186,3 +192,45 @@ message ListArchivedTasksResponse {
   repeated Task tasks = 1;
   PaginationResponse pagination = 2;
 }
+
+// Task image operations
+
+message TaskImage {
+  string id = 1;
+  string filename = 2;
+  string media_type = 3;
+  int64 size_bytes = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message UploadTaskImageRequest {
+  string task_id = 1;
+  string filename = 2;
+  string media_type = 3;
+  bytes data = 4;
+}
+message UploadTaskImageResponse {
+  TaskImage image = 1;
+}
+
+message GetTaskImageRequest {
+  string task_id = 1;
+  string image_id = 2;
+}
+message GetTaskImageResponse {
+  TaskImage image = 1;
+  bytes data = 2;
+}
+
+message ListTaskImagesRequest {
+  string task_id = 1;
+}
+message ListTaskImagesResponse {
+  repeated TaskImage images = 1;
+}
+
+message DeleteTaskImageRequest {
+  string task_id = 1;
+  string image_id = 2;
+}
+message DeleteTaskImageResponse {}

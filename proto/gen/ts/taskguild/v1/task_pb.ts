@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file taskguild/v1/task.proto.
  */
 export const file_taskguild_v1_task: GenFile = /*@__PURE__*/
-  fileDesc("Chd0YXNrZ3VpbGQvdjEvdGFzay5wcm90bxIMdGFza2d1aWxkLnYxIr4DCgRUYXNrEgoKAmlkGAEgASgJEhIKCnByb2plY3RfaWQYAiABKAkSEwoLd29ya2Zsb3dfaWQYAyABKAkSDQoFdGl0bGUYBCABKAkSEwoLZGVzY3JpcHRpb24YBSABKAkSEQoJc3RhdHVzX2lkGAYgASgJEj0KEWFzc2lnbm1lbnRfc3RhdHVzGAcgASgOMiIudGFza2d1aWxkLnYxLlRhc2tBc3NpZ25tZW50U3RhdHVzEhkKEWFzc2lnbmVkX2FnZW50X2lkGAggASgJEhQKDHVzZV93b3JrdHJlZRgJIAEoCBIyCghtZXRhZGF0YRgLIAMoCzIgLnRhc2tndWlsZC52MS5UYXNrLk1ldGFkYXRhRW50cnkSLgoKY3JlYXRlZF9hdBgMIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBSgQIChALUg9wZXJtaXNzaW9uX21vZGUipQIKEUNyZWF0ZVRhc2tSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSEwoLd29ya2Zsb3dfaWQYAiABKAkSDQoFdGl0bGUYAyABKAkSEwoLZGVzY3JpcHRpb24YBCABKAkSFAoMdXNlX3dvcmt0cmVlGAUgASgIEj8KCG1ldGFkYXRhGAcgAygLMi0udGFza2d1aWxkLnYxLkNyZWF0ZVRhc2tSZXF1ZXN0Lk1ldGFkYXRhRW50cnkSFgoJc3RhdHVzX2lkGAggASgJSACIAQEaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBQgwKCl9zdGF0dXNfaWRKBAgGEAdSD3Blcm1pc3Npb25fbW9kZSI2ChJDcmVhdGVUYXNrUmVzcG9uc2USIAoEdGFzaxgBIAEoCzISLnRhc2tndWlsZC52MS5UYXNrIhwKDkdldFRhc2tSZXF1ZXN0EgoKAmlkGAEgASgJIjMKD0dldFRhc2tSZXNwb25zZRIgCgR0YXNrGAEgASgLMhIudGFza2d1aWxkLnYxLlRhc2sigwEKEExpc3RUYXNrc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRITCgt3b3JrZmxvd19pZBgCIAEoCRIRCglzdGF0dXNfaWQYAyABKAkSMwoKcGFnaW5hdGlvbhgEIAEoCzIfLnRhc2tndWlsZC52MS5QYWdpbmF0aW9uUmVxdWVzdCJsChFMaXN0VGFza3NSZXNwb25zZRIhCgV0YXNrcxgBIAMoCzISLnRhc2tndWlsZC52MS5UYXNrEjQKCnBhZ2luYXRpb24YAiABKAsyIC50YXNrZ3VpbGQudjEuUGFnaW5hdGlvblJlc3BvbnNlIvgBChFVcGRhdGVUYXNrUmVxdWVzdBIKCgJpZBgBIAEoCRINCgV0aXRsZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIZCgx1c2Vfd29ya3RyZWUYBCABKAhIAIgBARI/CghtZXRhZGF0YRgGIAMoCzItLnRhc2tndWlsZC52MS5VcGRhdGVUYXNrUmVxdWVzdC5NZXRhZGF0YUVudHJ5Gi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AUIPCg1fdXNlX3dvcmt0cmVlSgQIBRAGUg9wZXJtaXNzaW9uX21vZGUiNgoSVXBkYXRlVGFza1Jlc3BvbnNlEiAKBHRhc2sYASABKAsyEi50YXNrZ3VpbGQudjEuVGFzayIfChFEZWxldGVUYXNrUmVxdWVzdBIKCgJpZBgBIAEoCSIUChJEZWxldGVUYXNrUmVzcG9uc2UiRwoXVXBkYXRlVGFza1N0YXR1c1JlcXVlc3QSCgoCaWQYASABKAkSEQoJc3RhdHVzX2lkGAIgASgJEg0KBWZvcmNlGAMgASgIIjwKGFVwZGF0ZVRhc2tTdGF0dXNSZXNwb25zZRIgCgR0YXNrGAEgASgLMhIudGFza2d1aWxkLnYxLlRhc2siHQoPU3RvcFRhc2tSZXF1ZXN0EgoKAmlkGAEgASgJIjQKEFN0b3BUYXNrUmVzcG9uc2USIAoEdGFzaxgBIAEoCzISLnRhc2tndWlsZC52MS5UYXNrIh8KEVJlc3VtZVRhc2tSZXF1ZXN0EgoKAmlkGAEgASgJIjYKElJlc3VtZVRhc2tSZXNwb25zZRIgCgR0YXNrGAEgASgLMhIudGFza2d1aWxkLnYxLlRhc2siIAoSQXJjaGl2ZVRhc2tSZXF1ZXN0EgoKAmlkGAEgASgJIjcKE0FyY2hpdmVUYXNrUmVzcG9uc2USIAoEdGFzaxgBIAEoCzISLnRhc2tndWlsZC52MS5UYXNrIkYKG0FyY2hpdmVUZXJtaW5hbFRhc2tzUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhMKC3dvcmtmbG93X2lkGAIgASgJInUKHEFyY2hpdmVUZXJtaW5hbFRhc2tzUmVzcG9uc2USKgoOYXJjaGl2ZWRfdGFza3MYASADKAsyEi50YXNrZ3VpbGQudjEuVGFzaxIpCg1za2lwcGVkX3Rhc2tzGAIgAygLMhIudGFza2d1aWxkLnYxLlRhc2siIgoUVW5hcmNoaXZlVGFza1JlcXVlc3QSCgoCaWQYASABKAkiOQoVVW5hcmNoaXZlVGFza1Jlc3BvbnNlEiAKBHRhc2sYASABKAsyEi50YXNrZ3VpbGQudjEuVGFzayJ4ChhMaXN0QXJjaGl2ZWRUYXNrc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRITCgt3b3JrZmxvd19pZBgCIAEoCRIzCgpwYWdpbmF0aW9uGAMgASgLMh8udGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXF1ZXN0InQKGUxpc3RBcmNoaXZlZFRhc2tzUmVzcG9uc2USIQoFdGFza3MYASADKAsyEi50YXNrZ3VpbGQudjEuVGFzaxI0CgpwYWdpbmF0aW9uGAIgASgLMiAudGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXNwb25zZSquAQoUVGFza0Fzc2lnbm1lbnRTdGF0dXMSJgoiVEFTS19BU1NJR05NRU5UX1NUQVRVU19VTlNQRUNJRklFRBAAEiUKIVRBU0tfQVNTSUdOTUVOVF9TVEFUVVNfVU5BU1NJR05FRBABEiIKHlRBU0tfQVNTSUdOTUVOVF9TVEFUVVNfUEVORElORxACEiMKH1RBU0tfQVNTSUdOTUVOVF9TVEFUVVNfQVNTSUdORUQQAzKYCAoLVGFza1NlcnZpY2USTwoKQ3JlYXRlVGFzaxIfLnRhc2tndWlsZC52MS5DcmVhdGVUYXNrUmVxdWVzdBogLnRhc2tndWlsZC52MS5DcmVhdGVUYXNrUmVzcG9uc2USRgoHR2V0VGFzaxIcLnRhc2tndWlsZC52MS5HZXRUYXNrUmVxdWVzdBodLnRhc2tndWlsZC52MS5HZXRUYXNrUmVzcG9uc2USTAoJTGlzdFRhc2tzEh4udGFza2d1aWxkLnYxLkxpc3RUYXNrc1JlcXVlc3QaHy50YXNrZ3VpbGQudjEuTGlzdFRhc2tzUmVzcG9uc2USTwoKVXBkYXRlVGFzaxIfLnRhc2tndWlsZC52MS5VcGRhdGVUYXNrUmVxdWVzdBogLnRhc2tndWlsZC52MS5VcGRhdGVUYXNrUmVzcG9uc2USTwoKRGVsZXRlVGFzaxIfLnRhc2tndWlsZC52MS5EZWxldGVUYXNrUmVxdWVzdBogLnRhc2tndWlsZC52MS5EZWxldGVUYXNrUmVzcG9uc2USYQoQVXBkYXRlVGFza1N0YXR1cxIlLnRhc2tndWlsZC52MS5VcGRhdGVUYXNrU3RhdHVzUmVxdWVzdBomLnRhc2tndWlsZC52MS5VcGRhdGVUYXNrU3RhdHVzUmVzcG9uc2USSQoIU3RvcFRhc2sSHS50YXNrZ3VpbGQudjEuU3RvcFRhc2tSZXF1ZXN0Gh4udGFza2d1aWxkLnYxLlN0b3BUYXNrUmVzcG9uc2USTwoKUmVzdW1lVGFzaxIfLnRhc2tndWlsZC52MS5SZXN1bWVUYXNrUmVxdWVzdBogLnRhc2tndWlsZC52MS5SZXN1bWVUYXNrUmVzcG9uc2USUgoLQXJjaGl2ZVRhc2sSIC50YXNrZ3VpbGQudjEuQXJjaGl2ZVRhc2tSZXF1ZXN0GiEudGFza2d1aWxkLnYxLkFyY2hpdmVUYXNrUmVzcG9uc2USbQoUQXJjaGl2ZVRlcm1pbmFsVGFza3MSKS50YXNrZ3VpbGQudjEuQXJjaGl2ZVRlcm1pbmFsVGFza3NSZXF1ZXN0GioudGFza2d1aWxkLnYxLkFyY2hpdmVUZXJtaW5hbFRhc2tzUmVzcG9uc2USWAoNVW5hcmNoaXZlVGFzaxIiLnRhc2tndWlsZC52MS5VbmFyY2hpdmVUYXNrUmVxdWVzdBojLnRhc2tndWlsZC52MS5VbmFyY2hpdmVUYXNrUmVzcG9uc2USZAoRTGlzdEFyY2hpdmVkVGFza3MSJi50YXNrZ3VpbGQudjEuTGlzdEFyY2hpdmVkVGFza3NSZXF1ZXN0GicudGFza2d1aWxkLnYxLkxpc3RBcmNoaXZlZFRhc2tzUmVzcG9uc2VCsgEKEGNvbS50YXNrZ3VpbGQudjFCCVRhc2tQcm90b1ABWkJnaXRodWIuY29tL2thenoxODcvdGFza2d1aWxkL3Byb3RvL2dlbi9nby90YXNrZ3VpbGQvdjE7dGFza2d1aWxkdjGiAgNUWFiqAgxUYXNrZ3VpbGQuVjHKAgxUYXNrZ3VpbGRcVjHiAhhUYXNrZ3VpbGRcVjFcR1BCTWV0YWRhdGHqAg1UYXNrZ3VpbGQ6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_taskguild_v1_common]);
+  fileDesc("Chd0YXNrZ3VpbGQvdjEvdGFzay5wcm90bxIMdGFza2d1aWxkLnYxIr4DCgRUYXNrEgoKAmlkGAEgASgJEhIKCnByb2plY3RfaWQYAiABKAkSEwoLd29ya2Zsb3dfaWQYAyABKAkSDQoFdGl0bGUYBCABKAkSEwoLZGVzY3JpcHRpb24YBSABKAkSEQoJc3RhdHVzX2lkGAYgASgJEj0KEWFzc2lnbm1lbnRfc3RhdHVzGAcgASgOMiIudGFza2d1aWxkLnYxLlRhc2tBc3NpZ25tZW50U3RhdHVzEhkKEWFzc2lnbmVkX2FnZW50X2lkGAggASgJEhQKDHVzZV93b3JrdHJlZRgJIAEoCBIyCghtZXRhZGF0YRgLIAMoCzIgLnRhc2tndWlsZC52MS5UYXNrLk1ldGFkYXRhRW50cnkSLgoKY3JlYXRlZF9hdBgMIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKdXBkYXRlZF9hdBgNIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBSgQIChALUg9wZXJtaXNzaW9uX21vZGUipQIKEUNyZWF0ZVRhc2tSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSEwoLd29ya2Zsb3dfaWQYAiABKAkSDQoFdGl0bGUYAyABKAkSEwoLZGVzY3JpcHRpb24YBCABKAkSFAoMdXNlX3dvcmt0cmVlGAUgASgIEj8KCG1ldGFkYXRhGAcgAygLMi0udGFza2d1aWxkLnYxLkNyZWF0ZVRhc2tSZXF1ZXN0Lk1ldGFkYXRhRW50cnkSFgoJc3RhdHVzX2lkGAggASgJSACIAQEaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBQgwKCl9zdGF0dXNfaWRKBAgGEAdSD3Blcm1pc3Npb25fbW9kZSI2ChJDcmVhdGVUYXNrUmVzcG9uc2USIAoEdGFzaxgBIAEoCzISLnRhc2tndWlsZC52MS5UYXNrIhwKDkdldFRhc2tSZXF1ZXN0EgoKAmlkGAEgASgJIjMKD0dldFRhc2tSZXNwb25zZRIgCgR0YXNrGAEgASgLMhIudGFza2d1aWxkLnYxLlRhc2sigwEKEExpc3RUYXNrc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRITCgt3b3JrZmxvd19pZBgCIAEoCRIRCglzdGF0dXNfaWQYAyABKAkSMwoKcGFnaW5hdGlvbhgEIAEoCzIfLnRhc2tndWlsZC52MS5QYWdpbmF0aW9uUmVxdWVzdCJsChFMaXN0VGFza3NSZXNwb25zZRIhCgV0YXNrcxgBIAMoCzISLnRhc2tndWlsZC52MS5UYXNrEjQKCnBhZ2luYXRpb24YAiABKAsyIC50YXNrZ3VpbGQudjEuUGFnaW5hdGlvblJlc3BvbnNlIvgBChFVcGRhdGVUYXNrUmVxdWVzdBIKCgJpZBgBIAEoCRINCgV0aXRsZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIZCgx1c2Vfd29ya3RyZWUYBCABKAhIAIgBARI/CghtZXRhZGF0YRgGIAMoCzItLnRhc2tndWlsZC52MS5VcGRhdGVUYXNrUmVxdWVzdC5NZXRhZGF0YUVudHJ5Gi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AUIPCg1fdXNlX3dvcmt0cmVlSgQIBRAGUg9wZXJtaXNzaW9uX21vZGUiNgoSVXBkYXRlVGFza1Jlc3BvbnNlEiAKBHRhc2sYASABKAsyEi50YXNrZ3VpbGQudjEuVGFzayIfChFEZWxldGVUYXNrUmVxdWVzdBIKCgJpZBgBIAEoCSIUChJEZWxldGVUYXNrUmVzcG9uc2UiRwoXVXBkYXRlVGFza1N0YXR1c1JlcXVlc3QSCgoCaWQYASABKAkSEQoJc3RhdHVzX2lkGAIgASgJEg0KBWZvcmNlGAMgASgIIjwKGFVwZGF0ZVRhc2tTdGF0dXNSZXNwb25zZRIgCgR0YXNrGAEgASgLMhIudGFza2d1aWxkLnYxLlRhc2siHQoPU3RvcFRhc2tSZXF1ZXN0EgoKAmlkGAEgASgJIjQKEFN0b3BUYXNrUmVzcG9uc2USIAoEdGFzaxgBIAEoCzISLnRhc2tndWlsZC52MS5UYXNrIh8KEVJlc3VtZVRhc2tSZXF1ZXN0EgoKAmlkGAEgASgJIjYKElJlc3VtZVRhc2tSZXNwb25zZRIgCgR0YXNrGAEgASgLMhIudGFza2d1aWxkLnYxLlRhc2siIAoSQXJjaGl2ZVRhc2tSZXF1ZXN0EgoKAmlkGAEgASgJIjcKE0FyY2hpdmVUYXNrUmVzcG9uc2USIAoEdGFzaxgBIAEoCzISLnRhc2tndWlsZC52MS5UYXNrIkYKG0FyY2hpdmVUZXJtaW5hbFRhc2tzUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhMKC3dvcmtmbG93X2lkGAIgASgJInUKHEFyY2hpdmVUZXJtaW5hbFRhc2tzUmVzcG9uc2USKgoOYXJjaGl2ZWRfdGFza3MYASADKAsyEi50YXNrZ3VpbGQudjEuVGFzaxIpCg1za2lwcGVkX3Rhc2tzGAIgAygLMhIudGFza2d1aWxkLnYxLlRhc2siIgoUVW5hcmNoaXZlVGFza1JlcXVlc3QSCgoCaWQYASABKAkiOQoVVW5hcmNoaXZlVGFza1Jlc3BvbnNlEiAKBHRhc2sYASABKAsyEi50YXNrZ3VpbGQudjEuVGFzayJ4ChhMaXN0QXJjaGl2ZWRUYXNrc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRITCgt3b3JrZmxvd19pZBgCIAEoCRIzCgpwYWdpbmF0aW9uGAMgASgLMh8udGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXF1ZXN0InQKGUxpc3RBcmNoaXZlZFRhc2tzUmVzcG9uc2USIQoFdGFza3MYASADKAsyEi50YXNrZ3VpbGQudjEuVGFzaxI0CgpwYWdpbmF0aW9uGAIgASgLMiAudGFza2d1aWxkLnYxLlBhZ2luYXRpb25SZXNwb25zZSKBAQoJVGFza0ltYWdlEgoKAmlkGAEgASgJEhAKCGZpbGVuYW1lGAIgASgJEhIKCm1lZGlhX3R5cGUYAyABKAkSEgoKc2l6ZV9ieXRlcxgEIAEoAxIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJdChZVcGxvYWRUYXNrSW1hZ2VSZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkSEAoIZmlsZW5hbWUYAiABKAkSEgoKbWVkaWFfdHlwZRgDIAEoCRIMCgRkYXRhGAQgASgMIkEKF1VwbG9hZFRhc2tJbWFnZVJlc3BvbnNlEiYKBWltYWdlGAEgASgLMhcudGFza2d1aWxkLnYxLlRhc2tJbWFnZSI4ChNHZXRUYXNrSW1hZ2VSZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkSEAoIaW1hZ2VfaWQYAiABKAkiTAoUR2V0VGFza0ltYWdlUmVzcG9uc2USJgoFaW1hZ2UYASABKAsyFy50YXNrZ3VpbGQudjEuVGFza0ltYWdlEgwKBGRhdGEYAiABKAwiKAoVTGlzdFRhc2tJbWFnZXNSZXF1ZXN0Eg8KB3Rhc2tfaWQYASABKAkiQQoWTGlzdFRhc2tJbWFnZXNSZXNwb25zZRInCgZpbWFnZXMYASADKAsyFy50YXNrZ3VpbGQudjEuVGFza0ltYWdlIjsKFkRlbGV0ZVRhc2tJbWFnZVJlcXVlc3QSDwoHdGFza19pZBgBIAEoCRIQCghpbWFnZV9pZBgCIAEoCSIZChdEZWxldGVUYXNrSW1hZ2VSZXNwb25zZSquAQoUVGFza0Fzc2lnbm1lbnRTdGF0dXMSJgoiVEFTS19BU1NJR05NRU5UX1NUQVRVU19VTlNQRUNJRklFRBAAEiUKIVRBU0tfQVNTSUdOTUVOVF9TVEFUVVNfVU5BU1NJR05FRBABEiIKHlRBU0tfQVNTSUdOTUVOVF9TVEFUVVNfUEVORElORxACEiMKH1RBU0tfQVNTSUdOTUVOVF9TVEFUVVNfQVNTSUdORUQQAzKMCwoLVGFza1NlcnZpY2USTwoKQ3JlYXRlVGFzaxIfLnRhc2tndWlsZC52MS5DcmVhdGVUYXNrUmVxdWVzdBogLnRhc2tndWlsZC52MS5DcmVhdGVUYXNrUmVzcG9uc2USRgoHR2V0VGFzaxIcLnRhc2tndWlsZC52MS5HZXRUYXNrUmVxdWVzdBodLnRhc2tndWlsZC52MS5HZXRUYXNrUmVzcG9uc2USTAoJTGlzdFRhc2tzEh4udGFza2d1aWxkLnYxLkxpc3RUYXNrc1JlcXVlc3QaHy50YXNrZ3VpbGQudjEuTGlzdFRhc2tzUmVzcG9uc2USTwoKVXBkYXRlVGFzaxIfLnRhc2tndWlsZC52MS5VcGRhdGVUYXNrUmVxdWVzdBogLnRhc2tndWlsZC52MS5VcGRhdGVUYXNrUmVzcG9uc2USTwoKRGVsZXRlVGFzaxIfLnRhc2tndWlsZC52MS5EZWxldGVUYXNrUmVxdWVzdBogLnRhc2tndWlsZC52MS5EZWxldGVUYXNrUmVzcG9uc2USYQoQVXBkYXRlVGFza1N0YXR1cxIlLnRhc2tndWlsZC52MS5VcGRhdGVUYXNrU3RhdHVzUmVxdWVzdBomLnRhc2tndWlsZC52MS5VcGRhdGVUYXNrU3RhdHVzUmVzcG9uc2USSQoIU3RvcFRhc2sSHS50YXNrZ3VpbGQudjEuU3RvcFRhc2tSZXF1ZXN0Gh4udGFza2d1aWxkLnYxLlN0b3BUYXNrUmVzcG9uc2USTwoKUmVzdW1lVGFzaxIfLnRhc2tndWlsZC52MS5SZXN1bWVUYXNrUmVxdWVzdBogLnRhc2tndWlsZC52MS5SZXN1bWVUYXNrUmVzcG9uc2USUgoLQXJjaGl2ZVRhc2sSIC50YXNrZ3VpbGQudjEuQXJjaGl2ZVRhc2tSZXF1ZXN0GiEudGFza2d1aWxkLnYxLkFyY2hpdmVUYXNrUmVzcG9uc2USbQoUQXJjaGl2ZVRlcm1pbmFsVGFza3MSKS50YXNrZ3VpbGQudjEuQXJjaGl2ZVRlcm1pbmFsVGFza3NSZXF1ZXN0GioudGFza2d1aWxkLnYxLkFyY2hpdmVUZXJtaW5hbFRhc2tzUmVzcG9uc2USWAoNVW5hcmNoaXZlVGFzaxIiLnRhc2tndWlsZC52MS5VbmFyY2hpdmVUYXNrUmVxdWVzdBojLnRhc2tndWlsZC52MS5VbmFyY2hpdmVUYXNrUmVzcG9uc2USZAoRTGlzdEFyY2hpdmVkVGFza3MSJi50YXNrZ3VpbGQudjEuTGlzdEFyY2hpdmVkVGFza3NSZXF1ZXN0GicudGFza2d1aWxkLnYxLkxpc3RBcmNoaXZlZFRhc2tzUmVzcG9uc2USXgoPVXBsb2FkVGFza0ltYWdlEiQudGFza2d1aWxkLnYxLlVwbG9hZFRhc2tJbWFnZVJlcXVlc3QaJS50YXNrZ3VpbGQudjEuVXBsb2FkVGFza0ltYWdlUmVzcG9uc2USVQoMR2V0VGFza0ltYWdlEiEudGFza2d1aWxkLnYxLkdldFRhc2tJbWFnZVJlcXVlc3QaIi50YXNrZ3VpbGQudjEuR2V0VGFza0ltYWdlUmVzcG9uc2USWwoOTGlzdFRhc2tJbWFnZXMSIy50YXNrZ3VpbGQudjEuTGlzdFRhc2tJbWFnZXNSZXF1ZXN0GiQudGFza2d1aWxkLnYxLkxpc3RUYXNrSW1hZ2VzUmVzcG9uc2USXgoPRGVsZXRlVGFza0ltYWdlEiQudGFza2d1aWxkLnYxLkRlbGV0ZVRhc2tJbWFnZVJlcXVlc3QaJS50YXNrZ3VpbGQudjEuRGVsZXRlVGFza0ltYWdlUmVzcG9uc2VCsgEKEGNvbS50YXNrZ3VpbGQudjFCCVRhc2tQcm90b1ABWkJnaXRodWIuY29tL2thenoxODcvdGFza2d1aWxkL3Byb3RvL2dlbi9nby90YXNrZ3VpbGQvdjE7dGFza2d1aWxkdjGiAgNUWFiqAgxUYXNrZ3VpbGQuVjHKAgxUYXNrZ3VpbGRcVjHiAhhUYXNrZ3VpbGRcVjFcR1BCTWV0YWRhdGHqAg1UYXNrZ3VpbGQ6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_taskguild_v1_common]);
 
 /**
  * @generated from message taskguild.v1.Task
@@ -637,6 +637,205 @@ export const ListArchivedTasksResponseSchema: GenMessage<ListArchivedTasksRespon
   messageDesc(file_taskguild_v1_task, 24);
 
 /**
+ * @generated from message taskguild.v1.TaskImage
+ */
+export type TaskImage = Message<"taskguild.v1.TaskImage"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string filename = 2;
+   */
+  filename: string;
+
+  /**
+   * @generated from field: string media_type = 3;
+   */
+  mediaType: string;
+
+  /**
+   * @generated from field: int64 size_bytes = 4;
+   */
+  sizeBytes: bigint;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 5;
+   */
+  createdAt?: Timestamp;
+};
+
+/**
+ * Describes the message taskguild.v1.TaskImage.
+ * Use `create(TaskImageSchema)` to create a new message.
+ */
+export const TaskImageSchema: GenMessage<TaskImage> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_task, 25);
+
+/**
+ * @generated from message taskguild.v1.UploadTaskImageRequest
+ */
+export type UploadTaskImageRequest = Message<"taskguild.v1.UploadTaskImageRequest"> & {
+  /**
+   * @generated from field: string task_id = 1;
+   */
+  taskId: string;
+
+  /**
+   * @generated from field: string filename = 2;
+   */
+  filename: string;
+
+  /**
+   * @generated from field: string media_type = 3;
+   */
+  mediaType: string;
+
+  /**
+   * @generated from field: bytes data = 4;
+   */
+  data: Uint8Array;
+};
+
+/**
+ * Describes the message taskguild.v1.UploadTaskImageRequest.
+ * Use `create(UploadTaskImageRequestSchema)` to create a new message.
+ */
+export const UploadTaskImageRequestSchema: GenMessage<UploadTaskImageRequest> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_task, 26);
+
+/**
+ * @generated from message taskguild.v1.UploadTaskImageResponse
+ */
+export type UploadTaskImageResponse = Message<"taskguild.v1.UploadTaskImageResponse"> & {
+  /**
+   * @generated from field: taskguild.v1.TaskImage image = 1;
+   */
+  image?: TaskImage;
+};
+
+/**
+ * Describes the message taskguild.v1.UploadTaskImageResponse.
+ * Use `create(UploadTaskImageResponseSchema)` to create a new message.
+ */
+export const UploadTaskImageResponseSchema: GenMessage<UploadTaskImageResponse> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_task, 27);
+
+/**
+ * @generated from message taskguild.v1.GetTaskImageRequest
+ */
+export type GetTaskImageRequest = Message<"taskguild.v1.GetTaskImageRequest"> & {
+  /**
+   * @generated from field: string task_id = 1;
+   */
+  taskId: string;
+
+  /**
+   * @generated from field: string image_id = 2;
+   */
+  imageId: string;
+};
+
+/**
+ * Describes the message taskguild.v1.GetTaskImageRequest.
+ * Use `create(GetTaskImageRequestSchema)` to create a new message.
+ */
+export const GetTaskImageRequestSchema: GenMessage<GetTaskImageRequest> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_task, 28);
+
+/**
+ * @generated from message taskguild.v1.GetTaskImageResponse
+ */
+export type GetTaskImageResponse = Message<"taskguild.v1.GetTaskImageResponse"> & {
+  /**
+   * @generated from field: taskguild.v1.TaskImage image = 1;
+   */
+  image?: TaskImage;
+
+  /**
+   * @generated from field: bytes data = 2;
+   */
+  data: Uint8Array;
+};
+
+/**
+ * Describes the message taskguild.v1.GetTaskImageResponse.
+ * Use `create(GetTaskImageResponseSchema)` to create a new message.
+ */
+export const GetTaskImageResponseSchema: GenMessage<GetTaskImageResponse> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_task, 29);
+
+/**
+ * @generated from message taskguild.v1.ListTaskImagesRequest
+ */
+export type ListTaskImagesRequest = Message<"taskguild.v1.ListTaskImagesRequest"> & {
+  /**
+   * @generated from field: string task_id = 1;
+   */
+  taskId: string;
+};
+
+/**
+ * Describes the message taskguild.v1.ListTaskImagesRequest.
+ * Use `create(ListTaskImagesRequestSchema)` to create a new message.
+ */
+export const ListTaskImagesRequestSchema: GenMessage<ListTaskImagesRequest> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_task, 30);
+
+/**
+ * @generated from message taskguild.v1.ListTaskImagesResponse
+ */
+export type ListTaskImagesResponse = Message<"taskguild.v1.ListTaskImagesResponse"> & {
+  /**
+   * @generated from field: repeated taskguild.v1.TaskImage images = 1;
+   */
+  images: TaskImage[];
+};
+
+/**
+ * Describes the message taskguild.v1.ListTaskImagesResponse.
+ * Use `create(ListTaskImagesResponseSchema)` to create a new message.
+ */
+export const ListTaskImagesResponseSchema: GenMessage<ListTaskImagesResponse> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_task, 31);
+
+/**
+ * @generated from message taskguild.v1.DeleteTaskImageRequest
+ */
+export type DeleteTaskImageRequest = Message<"taskguild.v1.DeleteTaskImageRequest"> & {
+  /**
+   * @generated from field: string task_id = 1;
+   */
+  taskId: string;
+
+  /**
+   * @generated from field: string image_id = 2;
+   */
+  imageId: string;
+};
+
+/**
+ * Describes the message taskguild.v1.DeleteTaskImageRequest.
+ * Use `create(DeleteTaskImageRequestSchema)` to create a new message.
+ */
+export const DeleteTaskImageRequestSchema: GenMessage<DeleteTaskImageRequest> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_task, 32);
+
+/**
+ * @generated from message taskguild.v1.DeleteTaskImageResponse
+ */
+export type DeleteTaskImageResponse = Message<"taskguild.v1.DeleteTaskImageResponse"> & {
+};
+
+/**
+ * Describes the message taskguild.v1.DeleteTaskImageResponse.
+ * Use `create(DeleteTaskImageResponseSchema)` to create a new message.
+ */
+export const DeleteTaskImageResponseSchema: GenMessage<DeleteTaskImageResponse> = /*@__PURE__*/
+  messageDesc(file_taskguild_v1_task, 33);
+
+/**
  * @generated from enum taskguild.v1.TaskAssignmentStatus
  */
 export enum TaskAssignmentStatus {
@@ -770,6 +969,40 @@ export const TaskService: GenService<{
     methodKind: "unary";
     input: typeof ListArchivedTasksRequestSchema;
     output: typeof ListArchivedTasksResponseSchema;
+  },
+  /**
+   * Task image operations
+   *
+   * @generated from rpc taskguild.v1.TaskService.UploadTaskImage
+   */
+  uploadTaskImage: {
+    methodKind: "unary";
+    input: typeof UploadTaskImageRequestSchema;
+    output: typeof UploadTaskImageResponseSchema;
+  },
+  /**
+   * @generated from rpc taskguild.v1.TaskService.GetTaskImage
+   */
+  getTaskImage: {
+    methodKind: "unary";
+    input: typeof GetTaskImageRequestSchema;
+    output: typeof GetTaskImageResponseSchema;
+  },
+  /**
+   * @generated from rpc taskguild.v1.TaskService.ListTaskImages
+   */
+  listTaskImages: {
+    methodKind: "unary";
+    input: typeof ListTaskImagesRequestSchema;
+    output: typeof ListTaskImagesResponseSchema;
+  },
+  /**
+   * @generated from rpc taskguild.v1.TaskService.DeleteTaskImage
+   */
+  deleteTaskImage: {
+    methodKind: "unary";
+    input: typeof DeleteTaskImageRequestSchema;
+    output: typeof DeleteTaskImageResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_taskguild_v1_task, 0);

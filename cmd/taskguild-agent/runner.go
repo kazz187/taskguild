@@ -169,7 +169,11 @@ func runTask(
 	listenerWg.Go(func() {
 		runInteractionListener(ctx, interClient, taskID, waiter)
 	})
-	prompt := buildUserPrompt(metadata, workDir)
+	prompt, err := buildUserPromptWithImages(ctx, metadata, workDir, taskClient, taskID)
+	if err != nil {
+		logger.Error("failed to build prompt with images, falling back to text-only", "error", err)
+		prompt = buildUserPrompt(metadata, workDir)
+	}
 	hasTransitions := metadata["_available_transitions"] != ""
 	logger.Info("task setup complete, entering turn loop", "has_session", sessionID != "", "has_transitions", hasTransitions)
 

@@ -61,6 +61,18 @@ const (
 	// TaskServiceListArchivedTasksProcedure is the fully-qualified name of the TaskService's
 	// ListArchivedTasks RPC.
 	TaskServiceListArchivedTasksProcedure = "/taskguild.v1.TaskService/ListArchivedTasks"
+	// TaskServiceUploadTaskImageProcedure is the fully-qualified name of the TaskService's
+	// UploadTaskImage RPC.
+	TaskServiceUploadTaskImageProcedure = "/taskguild.v1.TaskService/UploadTaskImage"
+	// TaskServiceGetTaskImageProcedure is the fully-qualified name of the TaskService's GetTaskImage
+	// RPC.
+	TaskServiceGetTaskImageProcedure = "/taskguild.v1.TaskService/GetTaskImage"
+	// TaskServiceListTaskImagesProcedure is the fully-qualified name of the TaskService's
+	// ListTaskImages RPC.
+	TaskServiceListTaskImagesProcedure = "/taskguild.v1.TaskService/ListTaskImages"
+	// TaskServiceDeleteTaskImageProcedure is the fully-qualified name of the TaskService's
+	// DeleteTaskImage RPC.
+	TaskServiceDeleteTaskImageProcedure = "/taskguild.v1.TaskService/DeleteTaskImage"
 )
 
 // TaskServiceClient is a client for the taskguild.v1.TaskService service.
@@ -79,6 +91,11 @@ type TaskServiceClient interface {
 	ArchiveTerminalTasks(context.Context, *connect.Request[v1.ArchiveTerminalTasksRequest]) (*connect.Response[v1.ArchiveTerminalTasksResponse], error)
 	UnarchiveTask(context.Context, *connect.Request[v1.UnarchiveTaskRequest]) (*connect.Response[v1.UnarchiveTaskResponse], error)
 	ListArchivedTasks(context.Context, *connect.Request[v1.ListArchivedTasksRequest]) (*connect.Response[v1.ListArchivedTasksResponse], error)
+	// Task image operations
+	UploadTaskImage(context.Context, *connect.Request[v1.UploadTaskImageRequest]) (*connect.Response[v1.UploadTaskImageResponse], error)
+	GetTaskImage(context.Context, *connect.Request[v1.GetTaskImageRequest]) (*connect.Response[v1.GetTaskImageResponse], error)
+	ListTaskImages(context.Context, *connect.Request[v1.ListTaskImagesRequest]) (*connect.Response[v1.ListTaskImagesResponse], error)
+	DeleteTaskImage(context.Context, *connect.Request[v1.DeleteTaskImageRequest]) (*connect.Response[v1.DeleteTaskImageResponse], error)
 }
 
 // NewTaskServiceClient constructs a client for the taskguild.v1.TaskService service. By default, it
@@ -164,6 +181,30 @@ func NewTaskServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(taskServiceMethods.ByName("ListArchivedTasks")),
 			connect.WithClientOptions(opts...),
 		),
+		uploadTaskImage: connect.NewClient[v1.UploadTaskImageRequest, v1.UploadTaskImageResponse](
+			httpClient,
+			baseURL+TaskServiceUploadTaskImageProcedure,
+			connect.WithSchema(taskServiceMethods.ByName("UploadTaskImage")),
+			connect.WithClientOptions(opts...),
+		),
+		getTaskImage: connect.NewClient[v1.GetTaskImageRequest, v1.GetTaskImageResponse](
+			httpClient,
+			baseURL+TaskServiceGetTaskImageProcedure,
+			connect.WithSchema(taskServiceMethods.ByName("GetTaskImage")),
+			connect.WithClientOptions(opts...),
+		),
+		listTaskImages: connect.NewClient[v1.ListTaskImagesRequest, v1.ListTaskImagesResponse](
+			httpClient,
+			baseURL+TaskServiceListTaskImagesProcedure,
+			connect.WithSchema(taskServiceMethods.ByName("ListTaskImages")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteTaskImage: connect.NewClient[v1.DeleteTaskImageRequest, v1.DeleteTaskImageResponse](
+			httpClient,
+			baseURL+TaskServiceDeleteTaskImageProcedure,
+			connect.WithSchema(taskServiceMethods.ByName("DeleteTaskImage")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -181,6 +222,10 @@ type taskServiceClient struct {
 	archiveTerminalTasks *connect.Client[v1.ArchiveTerminalTasksRequest, v1.ArchiveTerminalTasksResponse]
 	unarchiveTask        *connect.Client[v1.UnarchiveTaskRequest, v1.UnarchiveTaskResponse]
 	listArchivedTasks    *connect.Client[v1.ListArchivedTasksRequest, v1.ListArchivedTasksResponse]
+	uploadTaskImage      *connect.Client[v1.UploadTaskImageRequest, v1.UploadTaskImageResponse]
+	getTaskImage         *connect.Client[v1.GetTaskImageRequest, v1.GetTaskImageResponse]
+	listTaskImages       *connect.Client[v1.ListTaskImagesRequest, v1.ListTaskImagesResponse]
+	deleteTaskImage      *connect.Client[v1.DeleteTaskImageRequest, v1.DeleteTaskImageResponse]
 }
 
 // CreateTask calls taskguild.v1.TaskService.CreateTask.
@@ -243,6 +288,26 @@ func (c *taskServiceClient) ListArchivedTasks(ctx context.Context, req *connect.
 	return c.listArchivedTasks.CallUnary(ctx, req)
 }
 
+// UploadTaskImage calls taskguild.v1.TaskService.UploadTaskImage.
+func (c *taskServiceClient) UploadTaskImage(ctx context.Context, req *connect.Request[v1.UploadTaskImageRequest]) (*connect.Response[v1.UploadTaskImageResponse], error) {
+	return c.uploadTaskImage.CallUnary(ctx, req)
+}
+
+// GetTaskImage calls taskguild.v1.TaskService.GetTaskImage.
+func (c *taskServiceClient) GetTaskImage(ctx context.Context, req *connect.Request[v1.GetTaskImageRequest]) (*connect.Response[v1.GetTaskImageResponse], error) {
+	return c.getTaskImage.CallUnary(ctx, req)
+}
+
+// ListTaskImages calls taskguild.v1.TaskService.ListTaskImages.
+func (c *taskServiceClient) ListTaskImages(ctx context.Context, req *connect.Request[v1.ListTaskImagesRequest]) (*connect.Response[v1.ListTaskImagesResponse], error) {
+	return c.listTaskImages.CallUnary(ctx, req)
+}
+
+// DeleteTaskImage calls taskguild.v1.TaskService.DeleteTaskImage.
+func (c *taskServiceClient) DeleteTaskImage(ctx context.Context, req *connect.Request[v1.DeleteTaskImageRequest]) (*connect.Response[v1.DeleteTaskImageResponse], error) {
+	return c.deleteTaskImage.CallUnary(ctx, req)
+}
+
 // TaskServiceHandler is an implementation of the taskguild.v1.TaskService service.
 type TaskServiceHandler interface {
 	CreateTask(context.Context, *connect.Request[v1.CreateTaskRequest]) (*connect.Response[v1.CreateTaskResponse], error)
@@ -259,6 +324,11 @@ type TaskServiceHandler interface {
 	ArchiveTerminalTasks(context.Context, *connect.Request[v1.ArchiveTerminalTasksRequest]) (*connect.Response[v1.ArchiveTerminalTasksResponse], error)
 	UnarchiveTask(context.Context, *connect.Request[v1.UnarchiveTaskRequest]) (*connect.Response[v1.UnarchiveTaskResponse], error)
 	ListArchivedTasks(context.Context, *connect.Request[v1.ListArchivedTasksRequest]) (*connect.Response[v1.ListArchivedTasksResponse], error)
+	// Task image operations
+	UploadTaskImage(context.Context, *connect.Request[v1.UploadTaskImageRequest]) (*connect.Response[v1.UploadTaskImageResponse], error)
+	GetTaskImage(context.Context, *connect.Request[v1.GetTaskImageRequest]) (*connect.Response[v1.GetTaskImageResponse], error)
+	ListTaskImages(context.Context, *connect.Request[v1.ListTaskImagesRequest]) (*connect.Response[v1.ListTaskImagesResponse], error)
+	DeleteTaskImage(context.Context, *connect.Request[v1.DeleteTaskImageRequest]) (*connect.Response[v1.DeleteTaskImageResponse], error)
 }
 
 // NewTaskServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -340,6 +410,30 @@ func NewTaskServiceHandler(svc TaskServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(taskServiceMethods.ByName("ListArchivedTasks")),
 		connect.WithHandlerOptions(opts...),
 	)
+	taskServiceUploadTaskImageHandler := connect.NewUnaryHandler(
+		TaskServiceUploadTaskImageProcedure,
+		svc.UploadTaskImage,
+		connect.WithSchema(taskServiceMethods.ByName("UploadTaskImage")),
+		connect.WithHandlerOptions(opts...),
+	)
+	taskServiceGetTaskImageHandler := connect.NewUnaryHandler(
+		TaskServiceGetTaskImageProcedure,
+		svc.GetTaskImage,
+		connect.WithSchema(taskServiceMethods.ByName("GetTaskImage")),
+		connect.WithHandlerOptions(opts...),
+	)
+	taskServiceListTaskImagesHandler := connect.NewUnaryHandler(
+		TaskServiceListTaskImagesProcedure,
+		svc.ListTaskImages,
+		connect.WithSchema(taskServiceMethods.ByName("ListTaskImages")),
+		connect.WithHandlerOptions(opts...),
+	)
+	taskServiceDeleteTaskImageHandler := connect.NewUnaryHandler(
+		TaskServiceDeleteTaskImageProcedure,
+		svc.DeleteTaskImage,
+		connect.WithSchema(taskServiceMethods.ByName("DeleteTaskImage")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/taskguild.v1.TaskService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case TaskServiceCreateTaskProcedure:
@@ -366,6 +460,14 @@ func NewTaskServiceHandler(svc TaskServiceHandler, opts ...connect.HandlerOption
 			taskServiceUnarchiveTaskHandler.ServeHTTP(w, r)
 		case TaskServiceListArchivedTasksProcedure:
 			taskServiceListArchivedTasksHandler.ServeHTTP(w, r)
+		case TaskServiceUploadTaskImageProcedure:
+			taskServiceUploadTaskImageHandler.ServeHTTP(w, r)
+		case TaskServiceGetTaskImageProcedure:
+			taskServiceGetTaskImageHandler.ServeHTTP(w, r)
+		case TaskServiceListTaskImagesProcedure:
+			taskServiceListTaskImagesHandler.ServeHTTP(w, r)
+		case TaskServiceDeleteTaskImageProcedure:
+			taskServiceDeleteTaskImageHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -421,4 +523,20 @@ func (UnimplementedTaskServiceHandler) UnarchiveTask(context.Context, *connect.R
 
 func (UnimplementedTaskServiceHandler) ListArchivedTasks(context.Context, *connect.Request[v1.ListArchivedTasksRequest]) (*connect.Response[v1.ListArchivedTasksResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.ListArchivedTasks is not implemented"))
+}
+
+func (UnimplementedTaskServiceHandler) UploadTaskImage(context.Context, *connect.Request[v1.UploadTaskImageRequest]) (*connect.Response[v1.UploadTaskImageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.UploadTaskImage is not implemented"))
+}
+
+func (UnimplementedTaskServiceHandler) GetTaskImage(context.Context, *connect.Request[v1.GetTaskImageRequest]) (*connect.Response[v1.GetTaskImageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.GetTaskImage is not implemented"))
+}
+
+func (UnimplementedTaskServiceHandler) ListTaskImages(context.Context, *connect.Request[v1.ListTaskImagesRequest]) (*connect.Response[v1.ListTaskImagesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.ListTaskImages is not implemented"))
+}
+
+func (UnimplementedTaskServiceHandler) DeleteTaskImage(context.Context, *connect.Request[v1.DeleteTaskImageRequest]) (*connect.Response[v1.DeleteTaskImageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskService.DeleteTaskImage is not implemented"))
 }

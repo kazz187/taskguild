@@ -1438,6 +1438,474 @@ func (x *ListArchivedTasksResponse) GetPagination() *PaginationResponse {
 	return nil
 }
 
+type TaskImage struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Filename      string                 `protobuf:"bytes,2,opt,name=filename,proto3" json:"filename,omitempty"`
+	MediaType     string                 `protobuf:"bytes,3,opt,name=media_type,json=mediaType,proto3" json:"media_type,omitempty"`
+	SizeBytes     int64                  `protobuf:"varint,4,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TaskImage) Reset() {
+	*x = TaskImage{}
+	mi := &file_taskguild_v1_task_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TaskImage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TaskImage) ProtoMessage() {}
+
+func (x *TaskImage) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_task_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TaskImage.ProtoReflect.Descriptor instead.
+func (*TaskImage) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_task_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *TaskImage) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TaskImage) GetFilename() string {
+	if x != nil {
+		return x.Filename
+	}
+	return ""
+}
+
+func (x *TaskImage) GetMediaType() string {
+	if x != nil {
+		return x.MediaType
+	}
+	return ""
+}
+
+func (x *TaskImage) GetSizeBytes() int64 {
+	if x != nil {
+		return x.SizeBytes
+	}
+	return 0
+}
+
+func (x *TaskImage) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+type UploadTaskImageRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	Filename      string                 `protobuf:"bytes,2,opt,name=filename,proto3" json:"filename,omitempty"`
+	MediaType     string                 `protobuf:"bytes,3,opt,name=media_type,json=mediaType,proto3" json:"media_type,omitempty"`
+	Data          []byte                 `protobuf:"bytes,4,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UploadTaskImageRequest) Reset() {
+	*x = UploadTaskImageRequest{}
+	mi := &file_taskguild_v1_task_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UploadTaskImageRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UploadTaskImageRequest) ProtoMessage() {}
+
+func (x *UploadTaskImageRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_task_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UploadTaskImageRequest.ProtoReflect.Descriptor instead.
+func (*UploadTaskImageRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_task_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *UploadTaskImageRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+func (x *UploadTaskImageRequest) GetFilename() string {
+	if x != nil {
+		return x.Filename
+	}
+	return ""
+}
+
+func (x *UploadTaskImageRequest) GetMediaType() string {
+	if x != nil {
+		return x.MediaType
+	}
+	return ""
+}
+
+func (x *UploadTaskImageRequest) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+type UploadTaskImageResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Image         *TaskImage             `protobuf:"bytes,1,opt,name=image,proto3" json:"image,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UploadTaskImageResponse) Reset() {
+	*x = UploadTaskImageResponse{}
+	mi := &file_taskguild_v1_task_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UploadTaskImageResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UploadTaskImageResponse) ProtoMessage() {}
+
+func (x *UploadTaskImageResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_task_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UploadTaskImageResponse.ProtoReflect.Descriptor instead.
+func (*UploadTaskImageResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_task_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *UploadTaskImageResponse) GetImage() *TaskImage {
+	if x != nil {
+		return x.Image
+	}
+	return nil
+}
+
+type GetTaskImageRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	ImageId       string                 `protobuf:"bytes,2,opt,name=image_id,json=imageId,proto3" json:"image_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTaskImageRequest) Reset() {
+	*x = GetTaskImageRequest{}
+	mi := &file_taskguild_v1_task_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTaskImageRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTaskImageRequest) ProtoMessage() {}
+
+func (x *GetTaskImageRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_task_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTaskImageRequest.ProtoReflect.Descriptor instead.
+func (*GetTaskImageRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_task_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *GetTaskImageRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+func (x *GetTaskImageRequest) GetImageId() string {
+	if x != nil {
+		return x.ImageId
+	}
+	return ""
+}
+
+type GetTaskImageResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Image         *TaskImage             `protobuf:"bytes,1,opt,name=image,proto3" json:"image,omitempty"`
+	Data          []byte                 `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTaskImageResponse) Reset() {
+	*x = GetTaskImageResponse{}
+	mi := &file_taskguild_v1_task_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTaskImageResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTaskImageResponse) ProtoMessage() {}
+
+func (x *GetTaskImageResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_task_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTaskImageResponse.ProtoReflect.Descriptor instead.
+func (*GetTaskImageResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_task_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *GetTaskImageResponse) GetImage() *TaskImage {
+	if x != nil {
+		return x.Image
+	}
+	return nil
+}
+
+func (x *GetTaskImageResponse) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+type ListTaskImagesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTaskImagesRequest) Reset() {
+	*x = ListTaskImagesRequest{}
+	mi := &file_taskguild_v1_task_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTaskImagesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTaskImagesRequest) ProtoMessage() {}
+
+func (x *ListTaskImagesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_task_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTaskImagesRequest.ProtoReflect.Descriptor instead.
+func (*ListTaskImagesRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_task_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *ListTaskImagesRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+type ListTaskImagesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Images        []*TaskImage           `protobuf:"bytes,1,rep,name=images,proto3" json:"images,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTaskImagesResponse) Reset() {
+	*x = ListTaskImagesResponse{}
+	mi := &file_taskguild_v1_task_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTaskImagesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTaskImagesResponse) ProtoMessage() {}
+
+func (x *ListTaskImagesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_task_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTaskImagesResponse.ProtoReflect.Descriptor instead.
+func (*ListTaskImagesResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_task_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *ListTaskImagesResponse) GetImages() []*TaskImage {
+	if x != nil {
+		return x.Images
+	}
+	return nil
+}
+
+type DeleteTaskImageRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	ImageId       string                 `protobuf:"bytes,2,opt,name=image_id,json=imageId,proto3" json:"image_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteTaskImageRequest) Reset() {
+	*x = DeleteTaskImageRequest{}
+	mi := &file_taskguild_v1_task_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteTaskImageRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteTaskImageRequest) ProtoMessage() {}
+
+func (x *DeleteTaskImageRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_task_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteTaskImageRequest.ProtoReflect.Descriptor instead.
+func (*DeleteTaskImageRequest) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_task_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *DeleteTaskImageRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+func (x *DeleteTaskImageRequest) GetImageId() string {
+	if x != nil {
+		return x.ImageId
+	}
+	return ""
+}
+
+type DeleteTaskImageResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteTaskImageResponse) Reset() {
+	*x = DeleteTaskImageResponse{}
+	mi := &file_taskguild_v1_task_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteTaskImageResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteTaskImageResponse) ProtoMessage() {}
+
+func (x *DeleteTaskImageResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_taskguild_v1_task_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteTaskImageResponse.ProtoReflect.Descriptor instead.
+func (*DeleteTaskImageResponse) Descriptor() ([]byte, []int) {
+	return file_taskguild_v1_task_proto_rawDescGZIP(), []int{33}
+}
+
 var File_taskguild_v1_task_proto protoreflect.FileDescriptor
 
 const file_taskguild_v1_task_proto_rawDesc = "" +
@@ -1556,12 +2024,43 @@ const file_taskguild_v1_task_proto_rawDesc = "" +
 	"\x05tasks\x18\x01 \x03(\v2\x12.taskguild.v1.TaskR\x05tasks\x12@\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2 .taskguild.v1.PaginationResponseR\n" +
-	"pagination*\xae\x01\n" +
+	"pagination\"\xb0\x01\n" +
+	"\tTaskImage\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x1d\n" +
+	"\n" +
+	"media_type\x18\x03 \x01(\tR\tmediaType\x12\x1d\n" +
+	"\n" +
+	"size_bytes\x18\x04 \x01(\x03R\tsizeBytes\x129\n" +
+	"\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\x80\x01\n" +
+	"\x16UploadTaskImageRequest\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x1a\n" +
+	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x1d\n" +
+	"\n" +
+	"media_type\x18\x03 \x01(\tR\tmediaType\x12\x12\n" +
+	"\x04data\x18\x04 \x01(\fR\x04data\"H\n" +
+	"\x17UploadTaskImageResponse\x12-\n" +
+	"\x05image\x18\x01 \x01(\v2\x17.taskguild.v1.TaskImageR\x05image\"I\n" +
+	"\x13GetTaskImageRequest\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x19\n" +
+	"\bimage_id\x18\x02 \x01(\tR\aimageId\"Y\n" +
+	"\x14GetTaskImageResponse\x12-\n" +
+	"\x05image\x18\x01 \x01(\v2\x17.taskguild.v1.TaskImageR\x05image\x12\x12\n" +
+	"\x04data\x18\x02 \x01(\fR\x04data\"0\n" +
+	"\x15ListTaskImagesRequest\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\"I\n" +
+	"\x16ListTaskImagesResponse\x12/\n" +
+	"\x06images\x18\x01 \x03(\v2\x17.taskguild.v1.TaskImageR\x06images\"L\n" +
+	"\x16DeleteTaskImageRequest\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x19\n" +
+	"\bimage_id\x18\x02 \x01(\tR\aimageId\"\x19\n" +
+	"\x17DeleteTaskImageResponse*\xae\x01\n" +
 	"\x14TaskAssignmentStatus\x12&\n" +
 	"\"TASK_ASSIGNMENT_STATUS_UNSPECIFIED\x10\x00\x12%\n" +
 	"!TASK_ASSIGNMENT_STATUS_UNASSIGNED\x10\x01\x12\"\n" +
 	"\x1eTASK_ASSIGNMENT_STATUS_PENDING\x10\x02\x12#\n" +
-	"\x1fTASK_ASSIGNMENT_STATUS_ASSIGNED\x10\x032\x98\b\n" +
+	"\x1fTASK_ASSIGNMENT_STATUS_ASSIGNED\x10\x032\x8c\v\n" +
 	"\vTaskService\x12O\n" +
 	"\n" +
 	"CreateTask\x12\x1f.taskguild.v1.CreateTaskRequest\x1a .taskguild.v1.CreateTaskResponse\x12F\n" +
@@ -1578,7 +2077,11 @@ const file_taskguild_v1_task_proto_rawDesc = "" +
 	"\vArchiveTask\x12 .taskguild.v1.ArchiveTaskRequest\x1a!.taskguild.v1.ArchiveTaskResponse\x12m\n" +
 	"\x14ArchiveTerminalTasks\x12).taskguild.v1.ArchiveTerminalTasksRequest\x1a*.taskguild.v1.ArchiveTerminalTasksResponse\x12X\n" +
 	"\rUnarchiveTask\x12\".taskguild.v1.UnarchiveTaskRequest\x1a#.taskguild.v1.UnarchiveTaskResponse\x12d\n" +
-	"\x11ListArchivedTasks\x12&.taskguild.v1.ListArchivedTasksRequest\x1a'.taskguild.v1.ListArchivedTasksResponseB\xb2\x01\n" +
+	"\x11ListArchivedTasks\x12&.taskguild.v1.ListArchivedTasksRequest\x1a'.taskguild.v1.ListArchivedTasksResponse\x12^\n" +
+	"\x0fUploadTaskImage\x12$.taskguild.v1.UploadTaskImageRequest\x1a%.taskguild.v1.UploadTaskImageResponse\x12U\n" +
+	"\fGetTaskImage\x12!.taskguild.v1.GetTaskImageRequest\x1a\".taskguild.v1.GetTaskImageResponse\x12[\n" +
+	"\x0eListTaskImages\x12#.taskguild.v1.ListTaskImagesRequest\x1a$.taskguild.v1.ListTaskImagesResponse\x12^\n" +
+	"\x0fDeleteTaskImage\x12$.taskguild.v1.DeleteTaskImageRequest\x1a%.taskguild.v1.DeleteTaskImageResponseB\xb2\x01\n" +
 	"\x10com.taskguild.v1B\tTaskProtoP\x01ZBgithub.com/kazz187/taskguild/proto/gen/go/taskguild/v1;taskguildv1\xa2\x02\x03TXX\xaa\x02\fTaskguild.V1\xca\x02\fTaskguild\\V1\xe2\x02\x18Taskguild\\V1\\GPBMetadata\xea\x02\rTaskguild::V1b\x06proto3"
 
 var (
@@ -1594,7 +2097,7 @@ func file_taskguild_v1_task_proto_rawDescGZIP() []byte {
 }
 
 var file_taskguild_v1_task_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_taskguild_v1_task_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
+var file_taskguild_v1_task_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
 var file_taskguild_v1_task_proto_goTypes = []any{
 	(TaskAssignmentStatus)(0),            // 0: taskguild.v1.TaskAssignmentStatus
 	(*Task)(nil),                         // 1: taskguild.v1.Task
@@ -1622,25 +2125,34 @@ var file_taskguild_v1_task_proto_goTypes = []any{
 	(*UnarchiveTaskResponse)(nil),        // 23: taskguild.v1.UnarchiveTaskResponse
 	(*ListArchivedTasksRequest)(nil),     // 24: taskguild.v1.ListArchivedTasksRequest
 	(*ListArchivedTasksResponse)(nil),    // 25: taskguild.v1.ListArchivedTasksResponse
-	nil,                                  // 26: taskguild.v1.Task.MetadataEntry
-	nil,                                  // 27: taskguild.v1.CreateTaskRequest.MetadataEntry
-	nil,                                  // 28: taskguild.v1.UpdateTaskRequest.MetadataEntry
-	(*timestamppb.Timestamp)(nil),        // 29: google.protobuf.Timestamp
-	(*PaginationRequest)(nil),            // 30: taskguild.v1.PaginationRequest
-	(*PaginationResponse)(nil),           // 31: taskguild.v1.PaginationResponse
+	(*TaskImage)(nil),                    // 26: taskguild.v1.TaskImage
+	(*UploadTaskImageRequest)(nil),       // 27: taskguild.v1.UploadTaskImageRequest
+	(*UploadTaskImageResponse)(nil),      // 28: taskguild.v1.UploadTaskImageResponse
+	(*GetTaskImageRequest)(nil),          // 29: taskguild.v1.GetTaskImageRequest
+	(*GetTaskImageResponse)(nil),         // 30: taskguild.v1.GetTaskImageResponse
+	(*ListTaskImagesRequest)(nil),        // 31: taskguild.v1.ListTaskImagesRequest
+	(*ListTaskImagesResponse)(nil),       // 32: taskguild.v1.ListTaskImagesResponse
+	(*DeleteTaskImageRequest)(nil),       // 33: taskguild.v1.DeleteTaskImageRequest
+	(*DeleteTaskImageResponse)(nil),      // 34: taskguild.v1.DeleteTaskImageResponse
+	nil,                                  // 35: taskguild.v1.Task.MetadataEntry
+	nil,                                  // 36: taskguild.v1.CreateTaskRequest.MetadataEntry
+	nil,                                  // 37: taskguild.v1.UpdateTaskRequest.MetadataEntry
+	(*timestamppb.Timestamp)(nil),        // 38: google.protobuf.Timestamp
+	(*PaginationRequest)(nil),            // 39: taskguild.v1.PaginationRequest
+	(*PaginationResponse)(nil),           // 40: taskguild.v1.PaginationResponse
 }
 var file_taskguild_v1_task_proto_depIdxs = []int32{
 	0,  // 0: taskguild.v1.Task.assignment_status:type_name -> taskguild.v1.TaskAssignmentStatus
-	26, // 1: taskguild.v1.Task.metadata:type_name -> taskguild.v1.Task.MetadataEntry
-	29, // 2: taskguild.v1.Task.created_at:type_name -> google.protobuf.Timestamp
-	29, // 3: taskguild.v1.Task.updated_at:type_name -> google.protobuf.Timestamp
-	27, // 4: taskguild.v1.CreateTaskRequest.metadata:type_name -> taskguild.v1.CreateTaskRequest.MetadataEntry
+	35, // 1: taskguild.v1.Task.metadata:type_name -> taskguild.v1.Task.MetadataEntry
+	38, // 2: taskguild.v1.Task.created_at:type_name -> google.protobuf.Timestamp
+	38, // 3: taskguild.v1.Task.updated_at:type_name -> google.protobuf.Timestamp
+	36, // 4: taskguild.v1.CreateTaskRequest.metadata:type_name -> taskguild.v1.CreateTaskRequest.MetadataEntry
 	1,  // 5: taskguild.v1.CreateTaskResponse.task:type_name -> taskguild.v1.Task
 	1,  // 6: taskguild.v1.GetTaskResponse.task:type_name -> taskguild.v1.Task
-	30, // 7: taskguild.v1.ListTasksRequest.pagination:type_name -> taskguild.v1.PaginationRequest
+	39, // 7: taskguild.v1.ListTasksRequest.pagination:type_name -> taskguild.v1.PaginationRequest
 	1,  // 8: taskguild.v1.ListTasksResponse.tasks:type_name -> taskguild.v1.Task
-	31, // 9: taskguild.v1.ListTasksResponse.pagination:type_name -> taskguild.v1.PaginationResponse
-	28, // 10: taskguild.v1.UpdateTaskRequest.metadata:type_name -> taskguild.v1.UpdateTaskRequest.MetadataEntry
+	40, // 9: taskguild.v1.ListTasksResponse.pagination:type_name -> taskguild.v1.PaginationResponse
+	37, // 10: taskguild.v1.UpdateTaskRequest.metadata:type_name -> taskguild.v1.UpdateTaskRequest.MetadataEntry
 	1,  // 11: taskguild.v1.UpdateTaskResponse.task:type_name -> taskguild.v1.Task
 	1,  // 12: taskguild.v1.UpdateTaskStatusResponse.task:type_name -> taskguild.v1.Task
 	1,  // 13: taskguild.v1.StopTaskResponse.task:type_name -> taskguild.v1.Task
@@ -1649,38 +2161,50 @@ var file_taskguild_v1_task_proto_depIdxs = []int32{
 	1,  // 16: taskguild.v1.ArchiveTerminalTasksResponse.archived_tasks:type_name -> taskguild.v1.Task
 	1,  // 17: taskguild.v1.ArchiveTerminalTasksResponse.skipped_tasks:type_name -> taskguild.v1.Task
 	1,  // 18: taskguild.v1.UnarchiveTaskResponse.task:type_name -> taskguild.v1.Task
-	30, // 19: taskguild.v1.ListArchivedTasksRequest.pagination:type_name -> taskguild.v1.PaginationRequest
+	39, // 19: taskguild.v1.ListArchivedTasksRequest.pagination:type_name -> taskguild.v1.PaginationRequest
 	1,  // 20: taskguild.v1.ListArchivedTasksResponse.tasks:type_name -> taskguild.v1.Task
-	31, // 21: taskguild.v1.ListArchivedTasksResponse.pagination:type_name -> taskguild.v1.PaginationResponse
-	2,  // 22: taskguild.v1.TaskService.CreateTask:input_type -> taskguild.v1.CreateTaskRequest
-	4,  // 23: taskguild.v1.TaskService.GetTask:input_type -> taskguild.v1.GetTaskRequest
-	6,  // 24: taskguild.v1.TaskService.ListTasks:input_type -> taskguild.v1.ListTasksRequest
-	8,  // 25: taskguild.v1.TaskService.UpdateTask:input_type -> taskguild.v1.UpdateTaskRequest
-	10, // 26: taskguild.v1.TaskService.DeleteTask:input_type -> taskguild.v1.DeleteTaskRequest
-	12, // 27: taskguild.v1.TaskService.UpdateTaskStatus:input_type -> taskguild.v1.UpdateTaskStatusRequest
-	14, // 28: taskguild.v1.TaskService.StopTask:input_type -> taskguild.v1.StopTaskRequest
-	16, // 29: taskguild.v1.TaskService.ResumeTask:input_type -> taskguild.v1.ResumeTaskRequest
-	18, // 30: taskguild.v1.TaskService.ArchiveTask:input_type -> taskguild.v1.ArchiveTaskRequest
-	20, // 31: taskguild.v1.TaskService.ArchiveTerminalTasks:input_type -> taskguild.v1.ArchiveTerminalTasksRequest
-	22, // 32: taskguild.v1.TaskService.UnarchiveTask:input_type -> taskguild.v1.UnarchiveTaskRequest
-	24, // 33: taskguild.v1.TaskService.ListArchivedTasks:input_type -> taskguild.v1.ListArchivedTasksRequest
-	3,  // 34: taskguild.v1.TaskService.CreateTask:output_type -> taskguild.v1.CreateTaskResponse
-	5,  // 35: taskguild.v1.TaskService.GetTask:output_type -> taskguild.v1.GetTaskResponse
-	7,  // 36: taskguild.v1.TaskService.ListTasks:output_type -> taskguild.v1.ListTasksResponse
-	9,  // 37: taskguild.v1.TaskService.UpdateTask:output_type -> taskguild.v1.UpdateTaskResponse
-	11, // 38: taskguild.v1.TaskService.DeleteTask:output_type -> taskguild.v1.DeleteTaskResponse
-	13, // 39: taskguild.v1.TaskService.UpdateTaskStatus:output_type -> taskguild.v1.UpdateTaskStatusResponse
-	15, // 40: taskguild.v1.TaskService.StopTask:output_type -> taskguild.v1.StopTaskResponse
-	17, // 41: taskguild.v1.TaskService.ResumeTask:output_type -> taskguild.v1.ResumeTaskResponse
-	19, // 42: taskguild.v1.TaskService.ArchiveTask:output_type -> taskguild.v1.ArchiveTaskResponse
-	21, // 43: taskguild.v1.TaskService.ArchiveTerminalTasks:output_type -> taskguild.v1.ArchiveTerminalTasksResponse
-	23, // 44: taskguild.v1.TaskService.UnarchiveTask:output_type -> taskguild.v1.UnarchiveTaskResponse
-	25, // 45: taskguild.v1.TaskService.ListArchivedTasks:output_type -> taskguild.v1.ListArchivedTasksResponse
-	34, // [34:46] is the sub-list for method output_type
-	22, // [22:34] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	40, // 21: taskguild.v1.ListArchivedTasksResponse.pagination:type_name -> taskguild.v1.PaginationResponse
+	38, // 22: taskguild.v1.TaskImage.created_at:type_name -> google.protobuf.Timestamp
+	26, // 23: taskguild.v1.UploadTaskImageResponse.image:type_name -> taskguild.v1.TaskImage
+	26, // 24: taskguild.v1.GetTaskImageResponse.image:type_name -> taskguild.v1.TaskImage
+	26, // 25: taskguild.v1.ListTaskImagesResponse.images:type_name -> taskguild.v1.TaskImage
+	2,  // 26: taskguild.v1.TaskService.CreateTask:input_type -> taskguild.v1.CreateTaskRequest
+	4,  // 27: taskguild.v1.TaskService.GetTask:input_type -> taskguild.v1.GetTaskRequest
+	6,  // 28: taskguild.v1.TaskService.ListTasks:input_type -> taskguild.v1.ListTasksRequest
+	8,  // 29: taskguild.v1.TaskService.UpdateTask:input_type -> taskguild.v1.UpdateTaskRequest
+	10, // 30: taskguild.v1.TaskService.DeleteTask:input_type -> taskguild.v1.DeleteTaskRequest
+	12, // 31: taskguild.v1.TaskService.UpdateTaskStatus:input_type -> taskguild.v1.UpdateTaskStatusRequest
+	14, // 32: taskguild.v1.TaskService.StopTask:input_type -> taskguild.v1.StopTaskRequest
+	16, // 33: taskguild.v1.TaskService.ResumeTask:input_type -> taskguild.v1.ResumeTaskRequest
+	18, // 34: taskguild.v1.TaskService.ArchiveTask:input_type -> taskguild.v1.ArchiveTaskRequest
+	20, // 35: taskguild.v1.TaskService.ArchiveTerminalTasks:input_type -> taskguild.v1.ArchiveTerminalTasksRequest
+	22, // 36: taskguild.v1.TaskService.UnarchiveTask:input_type -> taskguild.v1.UnarchiveTaskRequest
+	24, // 37: taskguild.v1.TaskService.ListArchivedTasks:input_type -> taskguild.v1.ListArchivedTasksRequest
+	27, // 38: taskguild.v1.TaskService.UploadTaskImage:input_type -> taskguild.v1.UploadTaskImageRequest
+	29, // 39: taskguild.v1.TaskService.GetTaskImage:input_type -> taskguild.v1.GetTaskImageRequest
+	31, // 40: taskguild.v1.TaskService.ListTaskImages:input_type -> taskguild.v1.ListTaskImagesRequest
+	33, // 41: taskguild.v1.TaskService.DeleteTaskImage:input_type -> taskguild.v1.DeleteTaskImageRequest
+	3,  // 42: taskguild.v1.TaskService.CreateTask:output_type -> taskguild.v1.CreateTaskResponse
+	5,  // 43: taskguild.v1.TaskService.GetTask:output_type -> taskguild.v1.GetTaskResponse
+	7,  // 44: taskguild.v1.TaskService.ListTasks:output_type -> taskguild.v1.ListTasksResponse
+	9,  // 45: taskguild.v1.TaskService.UpdateTask:output_type -> taskguild.v1.UpdateTaskResponse
+	11, // 46: taskguild.v1.TaskService.DeleteTask:output_type -> taskguild.v1.DeleteTaskResponse
+	13, // 47: taskguild.v1.TaskService.UpdateTaskStatus:output_type -> taskguild.v1.UpdateTaskStatusResponse
+	15, // 48: taskguild.v1.TaskService.StopTask:output_type -> taskguild.v1.StopTaskResponse
+	17, // 49: taskguild.v1.TaskService.ResumeTask:output_type -> taskguild.v1.ResumeTaskResponse
+	19, // 50: taskguild.v1.TaskService.ArchiveTask:output_type -> taskguild.v1.ArchiveTaskResponse
+	21, // 51: taskguild.v1.TaskService.ArchiveTerminalTasks:output_type -> taskguild.v1.ArchiveTerminalTasksResponse
+	23, // 52: taskguild.v1.TaskService.UnarchiveTask:output_type -> taskguild.v1.UnarchiveTaskResponse
+	25, // 53: taskguild.v1.TaskService.ListArchivedTasks:output_type -> taskguild.v1.ListArchivedTasksResponse
+	28, // 54: taskguild.v1.TaskService.UploadTaskImage:output_type -> taskguild.v1.UploadTaskImageResponse
+	30, // 55: taskguild.v1.TaskService.GetTaskImage:output_type -> taskguild.v1.GetTaskImageResponse
+	32, // 56: taskguild.v1.TaskService.ListTaskImages:output_type -> taskguild.v1.ListTaskImagesResponse
+	34, // 57: taskguild.v1.TaskService.DeleteTaskImage:output_type -> taskguild.v1.DeleteTaskImageResponse
+	42, // [42:58] is the sub-list for method output_type
+	26, // [26:42] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_taskguild_v1_task_proto_init() }
@@ -1697,7 +2221,7 @@ func file_taskguild_v1_task_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_taskguild_v1_task_proto_rawDesc), len(file_taskguild_v1_task_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   28,
+			NumMessages:   37,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

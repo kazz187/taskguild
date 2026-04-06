@@ -243,6 +243,7 @@ func runServer() {
 	agentManagerServer := agentmanager.NewServer(agentManagerRegistry, taskRepo, workflowRepo, agentRepo, interactionRepo, projectRepo, skillRepo, scriptRepo, taskLogRepo, permissionRepo, scpRepo, claudeSettingsRepo, bus, scriptBroker)
 	descLogger := tasklog.NewDescriptionLoggerAdapter(taskLogRepo, bus)
 	taskServer := task.NewServer(taskRepo, workflowRepo, bus, agentManagerServer, agentManagerServer, []task.CascadeArchiver{interactionRepo}, descLogger, taskLogRepo, interactionRepo)
+	taskServer.SetImageStore(task.NewImageStore(store))
 	interactionServer := interaction.NewServer(interactionRepo, taskRepo, bus)
 	agentChangeNotifier := &agentChangeNotifier{
 		registry:    agentManagerRegistry,

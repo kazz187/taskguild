@@ -10,9 +10,9 @@ import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { X, Bot, Clock, GitBranch, Loader, Trash2, ArrowRight, AlertTriangle, RefreshCw, CopyPlus, ArrowUpRight, Layers } from 'lucide-react'
 import { ForceTransitionDialog } from './ForceTransitionDialog'
 import { shortId } from '@/lib/id'
-import { Button, Input, Textarea, Select, Checkbox, Badge, Tooltip } from '../atoms/index.ts'
+import { Button, Input, Select, Checkbox, Badge, Tooltip } from '../atoms/index.ts'
 import { pendingReasonText } from '@/lib/pendingReason'
-import { Modal, Card } from '../molecules/index.ts'
+import { Modal, Card, ImageUploadTextarea } from '../molecules/index.ts'
 
 const TASK_DETAIL_EVENT_TYPES = [
   EventType.TASK_UPDATED,
@@ -236,11 +236,13 @@ export function TaskDetailModal({
           </Card>
         )}
 
-        <Textarea
+        <ImageUploadTextarea
           value={descDraft}
-          onChange={(e) => setDescDraft(e.target.value)}
+          onChange={setDescDraft}
+          taskId={task?.id}
           textareaSize="md"
           placeholder="Add description..."
+          disabled={isTaskLocked}
         />
 
         {/* Agent settings */}
