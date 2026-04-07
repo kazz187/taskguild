@@ -30,7 +30,7 @@ export const updateScript = ScriptService.method.updateScript;
 export const deleteScript = ScriptService.method.deleteScript;
 
 /**
- * SyncScriptsFromDir scans the given directory for .claude/scripts/* files
+ * SyncScriptsFromDir scans the given directory for .taskguild/scripts/* files
  * and creates/updates scripts for the specified project.
  *
  * @generated from rpc taskguild.v1.ScriptService.SyncScriptsFromDir

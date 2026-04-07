@@ -60,7 +60,7 @@ func handleStopScript(cmd *v1.StopScriptCommand) {
 
 // handleExecuteScript executes a script on the agent-manager machine and reports the result.
 // Output is streamed to the server in real-time via ReportScriptOutputChunk RPCs.
-// The script is read from the local .claude/scripts/{filename} file.
+// The script is read from the local .taskguild/scripts/{filename} file.
 func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, cfg *config, cmd *v1.ExecuteScriptCommand) {
 	requestID := cmd.GetRequestId()
 	scriptID := cmd.GetScriptId()
@@ -98,7 +98,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 	scriptTracker.mu.Unlock()
 	defer scriptTracker.wg.Done()
 
-	// Resolve the script file path from the local .claude/scripts/ directory.
+	// Resolve the script file path from the local .taskguild/scripts/ directory.
 	scriptPath, err := resolveScriptPath(cfg.WorkDir, filename)
 	if err != nil {
 		reportResult(false, -1, nil, err.Error(), false)
@@ -233,10 +233,10 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 }
 
 // resolveScriptPath returns the path to the script file to execute.
-// It looks up .claude/scripts/{filename} under workDir. If the file does not
+// It looks up .taskguild/scripts/{filename} under workDir. If the file does not
 // exist, it returns an error instructing the user to run sync first.
 func resolveScriptPath(workDir, filename string) (string, error) {
-	localPath := filepath.Join(workDir, ".claude", "scripts", filename)
+	localPath := filepath.Join(workDir, ".taskguild", "scripts", filename)
 	info, err := os.Stat(localPath)
 	if err != nil || info.IsDir() {
 		return "", fmt.Errorf("script file not found locally: %s; run sync first", filename)

@@ -294,7 +294,7 @@ func TestStreamOutput_ContextCancelled(t *testing.T) {
 
 func TestResolveScriptPath_LocalFile(t *testing.T) {
 	workDir := t.TempDir()
-	scriptsDir := filepath.Join(workDir, ".claude", "scripts")
+	scriptsDir := filepath.Join(workDir, ".taskguild", "scripts")
 	os.MkdirAll(scriptsDir, 0755)
 	os.WriteFile(filepath.Join(scriptsDir, "test.sh"), []byte("#!/bin/sh\necho ok"), 0755)
 
@@ -309,7 +309,7 @@ func TestResolveScriptPath_LocalFile(t *testing.T) {
 
 func TestResolveScriptPath_LocalFileWithoutExecPermission(t *testing.T) {
 	workDir := t.TempDir()
-	scriptsDir := filepath.Join(workDir, ".claude", "scripts")
+	scriptsDir := filepath.Join(workDir, ".taskguild", "scripts")
 	os.MkdirAll(scriptsDir, 0755)
 	os.WriteFile(filepath.Join(scriptsDir, "test.sh"), []byte("#!/bin/sh\necho ok"), 0644)
 
@@ -339,10 +339,10 @@ func TestResolveScriptPath_FileNotFound(t *testing.T) {
 
 // --- writeTestScript helper ---
 
-// writeTestScript creates a script file at .claude/scripts/{filename} and returns the scripts dir.
+// writeTestScript creates a script file at .taskguild/scripts/{filename} and returns the scripts dir.
 func writeTestScript(t *testing.T, workDir, filename, content string) {
 	t.Helper()
-	scriptsDir := filepath.Join(workDir, ".claude", "scripts")
+	scriptsDir := filepath.Join(workDir, ".taskguild", "scripts")
 	if err := os.MkdirAll(scriptsDir, 0755); err != nil {
 		t.Fatalf("failed to create scripts dir: %v", err)
 	}
@@ -412,7 +412,7 @@ func TestHandleExecuteScript_Success(t *testing.T) {
 	}
 
 	// Verify the local script file was NOT deleted
-	scriptPath := filepath.Join(workDir, ".claude", "scripts", "hello.sh")
+	scriptPath := filepath.Join(workDir, ".taskguild", "scripts", "hello.sh")
 	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
 		t.Error("local script file should not be deleted after execution")
 	}

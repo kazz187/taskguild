@@ -182,7 +182,7 @@ type AgentManagerServiceClient interface {
 	// ReportGitPullMainResult reports the outcome of a git pull origin main from the agent.
 	ReportGitPullMainResult(context.Context, *connect.Request[v1.ReportGitPullMainResultRequest]) (*connect.Response[v1.ReportGitPullMainResultResponse], error)
 	// SyncScripts returns all script definitions for a project so the agent can
-	// write them as .claude/scripts/* files locally.
+	// write them as .taskguild/scripts/* files locally.
 	SyncScripts(context.Context, *connect.Request[v1.SyncScriptsRequest]) (*connect.Response[v1.SyncScriptsResponse], error)
 	// ReportScriptExecutionResult reports the outcome of a script execution from the agent.
 	ReportScriptExecutionResult(context.Context, *connect.Request[v1.ReportScriptExecutionResultRequest]) (*connect.Response[v1.ReportScriptExecutionResultResponse], error)
@@ -714,7 +714,7 @@ type AgentManagerServiceHandler interface {
 	// ReportGitPullMainResult reports the outcome of a git pull origin main from the agent.
 	ReportGitPullMainResult(context.Context, *connect.Request[v1.ReportGitPullMainResultRequest]) (*connect.Response[v1.ReportGitPullMainResultResponse], error)
 	// SyncScripts returns all script definitions for a project so the agent can
-	// write them as .claude/scripts/* files locally.
+	// write them as .taskguild/scripts/* files locally.
 	SyncScripts(context.Context, *connect.Request[v1.SyncScriptsRequest]) (*connect.Response[v1.SyncScriptsResponse], error)
 	// ReportScriptExecutionResult reports the outcome of a script execution from the agent.
 	ReportScriptExecutionResult(context.Context, *connect.Request[v1.ReportScriptExecutionResultRequest]) (*connect.Response[v1.ReportScriptExecutionResultResponse], error)

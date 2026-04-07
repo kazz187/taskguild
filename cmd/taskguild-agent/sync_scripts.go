@@ -12,7 +12,7 @@ import (
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
 
-// syncScripts calls the SyncScripts RPC and writes .claude/scripts/* files locally.
+// syncScripts calls the SyncScripts RPC and writes .taskguild/scripts/* files locally.
 // It only writes new files (files that don't exist yet on the agent).
 // Existing files are preserved to protect local modifications.
 // When forceOverwriteIDs is non-empty, those specific scripts are overwritten
@@ -34,7 +34,7 @@ func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServ
 	scripts := resp.Msg.GetScripts()
 	slog.Info("syncing scripts from server", "count", len(scripts))
 
-	scriptsDir := filepath.Join(cfg.WorkDir, ".claude", "scripts")
+	scriptsDir := filepath.Join(cfg.WorkDir, ".taskguild", "scripts")
 	if err := os.MkdirAll(scriptsDir, 0755); err != nil {
 		slog.Error("failed to create scripts directory", "error", err)
 		return

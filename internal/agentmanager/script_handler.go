@@ -123,7 +123,7 @@ func (s *Server) RequestScriptExecution(requestID string, projectID string, sc *
 				ScriptId:  sc.ID,
 				Filename:  sc.Filename,
 				// Content is no longer sent; the agent reads from the local
-				// .claude/scripts/{filename} file directly.
+				// .taskguild/scripts/{filename} file directly.
 			},
 		},
 	})
