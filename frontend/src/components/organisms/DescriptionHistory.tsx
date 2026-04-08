@@ -7,10 +7,11 @@ interface DescriptionHistoryProps {
   /** Description RESULT logs sorted newest-first */
   versions: TaskLog[]
   currentDescription: string
+  taskId: string
   onClose: () => void
 }
 
-export function DescriptionHistory({ versions, currentDescription, onClose }: DescriptionHistoryProps) {
+export function DescriptionHistory({ versions, currentDescription, taskId, onClose }: DescriptionHistoryProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   return (
@@ -30,7 +31,7 @@ export function DescriptionHistory({ versions, currentDescription, onClose }: De
       {/* Current version */}
       <div className="border-l-2 border-cyan-500/30 pl-3 py-1">
         <span className="text-[10px] font-medium uppercase text-cyan-400">Current</span>
-        <MarkdownDescription content={currentDescription} className="text-sm text-gray-300 mt-1" />
+        <MarkdownDescription content={currentDescription} className="text-sm text-gray-300 mt-1" taskId={taskId} />
       </div>
 
       {/* Historical versions */}
@@ -57,7 +58,7 @@ export function DescriptionHistory({ versions, currentDescription, onClose }: De
               )}
             </button>
             {isExpanded && (
-              <MarkdownDescription content={fullText} className="text-sm text-gray-400 mt-1" />
+              <MarkdownDescription content={fullText} className="text-sm text-gray-400 mt-1" taskId={taskId} />
             )}
           </div>
         )
