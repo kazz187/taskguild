@@ -201,37 +201,50 @@ func TestRunTask_AutoTransition_SingleTarget(t *testing.T) {
 
 // TestRunTask_TerminalStatus verifies that when the task is at a terminal
 // status (no transitions), it completes without attempting a transition.
+// The subtests cover both an empty string and "null" (what json.Marshal
+// produces for a nil Go slice) to guard against the bug where "null" was
+// treated as non-empty, causing hasTransitions to be incorrectly true.
 func TestRunTask_TerminalStatus(t *testing.T) {
-	tc := newTestClients()
-	defer tc.Close()
+	for _, tt := range []struct {
+		name        string
+		transitions string
+	}{
+		{"empty", ""},
+		{"null", "null"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tc := newTestClients()
+			defer tc.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
 
-	metadata := baseMetadata("Done", "")
+			metadata := baseMetadata("Done", tt.transitions)
 
-	qr := &mockQueryRunner{
-		results: []mockQueryRunnerResult{
-			{Result: makeResult("Task is complete.")},
-		},
+			qr := &mockQueryRunner{
+				results: []mockQueryRunnerResult{
+					{Result: makeResult("Task is complete.")},
+				},
+			}
+
+			permCache := newPermissionCache("test", tc.agentClient)
+			scpCache := newSingleCommandPermissionCache("test", tc.agentClient)
+
+			runTask(ctx, tc.agentClient, tc.taskClient, tc.interClient,
+				"agent-mgr-1", "task-terminal", "instructions", metadata,
+				t.TempDir(), permCache, scpCache, qr, func() bool { return false })
+
+			// No status transitions should have been attempted
+			tc.taskHandler.mu.Lock()
+			defer tc.taskHandler.mu.Unlock()
+			assert.Empty(t, tc.taskHandler.updateTaskStatusReqs, "no transitions expected at terminal status")
+
+			// But task result should have been reported
+			tc.agentHandler.mu.Lock()
+			defer tc.agentHandler.mu.Unlock()
+			assert.NotEmpty(t, tc.agentHandler.reportTaskResultReqs, "task result should be reported")
+		})
 	}
-
-	permCache := newPermissionCache("test", tc.agentClient)
-	scpCache := newSingleCommandPermissionCache("test", tc.agentClient)
-
-	runTask(ctx, tc.agentClient, tc.taskClient, tc.interClient,
-		"agent-mgr-1", "task-terminal", "instructions", metadata,
-		t.TempDir(), permCache, scpCache, qr, func() bool { return false })
-
-	// No status transitions should have been attempted
-	tc.taskHandler.mu.Lock()
-	defer tc.taskHandler.mu.Unlock()
-	assert.Empty(t, tc.taskHandler.updateTaskStatusReqs, "no transitions expected at terminal status")
-
-	// But task result should have been reported
-	tc.agentHandler.mu.Lock()
-	defer tc.agentHandler.mu.Unlock()
-	assert.NotEmpty(t, tc.agentHandler.reportTaskResultReqs, "task result should be reported")
 }
 
 // TestRunTask_CreateTask verifies that CREATE_TASK directives in agent output

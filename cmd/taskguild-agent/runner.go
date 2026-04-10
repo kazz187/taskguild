@@ -174,7 +174,7 @@ func runTask(
 		logger.Error("failed to build prompt with images, falling back to text-only", "error", err)
 		prompt = buildUserPrompt(metadata, workDir)
 	}
-	hasTransitions := metadata["_available_transitions"] != ""
+	hasTransitions := metadata["_available_transitions"] != "" && metadata["_available_transitions"] != "null"
 	logger.Info("task setup complete, entering turn loop", "has_session", sessionID != "", "has_transitions", hasTransitions)
 
 	const maxResumeRetries = 2 // after this many consecutive resume failures, start fresh
