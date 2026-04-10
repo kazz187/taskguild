@@ -451,6 +451,7 @@ function TaskDetailPage() {
                 <DescriptionHistory
                   versions={descriptionLogs}
                   currentDescription={task.description}
+                  taskId={task.id}
                   onClose={() => setShowDescHistory(false)}
                 />
               ) : (
