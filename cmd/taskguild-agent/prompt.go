@@ -38,6 +38,19 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 	}
 
 	var sb strings.Builder
+
+	// Inject skill invocations at the top of the prompt.
+	// /$skill_name triggers Claude CLI to load SKILL.md content and frontmatter.
+	if skillNames := metadata["_skill_names"]; skillNames != "" {
+		for _, name := range strings.Split(skillNames, ",") {
+			name = strings.TrimSpace(name)
+			if name != "" {
+				sb.WriteString(fmt.Sprintf("/%s\n", name))
+			}
+		}
+		sb.WriteString("\n")
+	}
+
 	sb.WriteString(fmt.Sprintf("# Task: %s\n", title))
 	if currentStatusName := metadata["_current_status_name"]; currentStatusName != "" {
 		sb.WriteString(fmt.Sprintf("Current status: %s\n", currentStatusName))
@@ -172,11 +185,15 @@ func buildWorkflowContext(metadata map[string]string) string {
 	sb.WriteString("## TaskGuild Workflow Context\n")
 	sb.WriteString("You are an agent in a TaskGuild workflow.\n")
 
-	if agentName := metadata["_agent_name"]; agentName != "" {
-		sb.WriteString(fmt.Sprintf("\n### Agent Identity\n"))
-		sb.WriteString(fmt.Sprintf("You are executing this task as the **%s** agent.\n", agentName))
-		sb.WriteString(fmt.Sprintf("Your agent definition file (`.claude/agents/%s.md`) has been loaded as your system prompt.\n", agentName))
-		sb.WriteString("You MUST follow all instructions, role definitions, and constraints defined in that agent definition.\n")
+	// Agent Identity section: only shown for agent-based execution (fallback).
+	// In skill-based mode, role definition is loaded via /$skill_name invocations.
+	if metadata["_skill_names"] == "" {
+		if agentName := metadata["_agent_name"]; agentName != "" {
+			sb.WriteString(fmt.Sprintf("\n### Agent Identity\n"))
+			sb.WriteString(fmt.Sprintf("You are executing this task as the **%s** agent.\n", agentName))
+			sb.WriteString(fmt.Sprintf("Your agent definition file (`.claude/agents/%s.md`) has been loaded as your system prompt.\n", agentName))
+			sb.WriteString("You MUST follow all instructions, role definitions, and constraints defined in that agent definition.\n")
+		}
 	}
 
 	// Workflow statuses with current marker.

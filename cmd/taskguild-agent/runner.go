@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -464,6 +465,7 @@ func runTask(
 					afterHooks()
 					reportTaskResult(ctx, client, taskID, displaySummary, "")
 					reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (invalid transition after retries)")
+					maybeRunSkillHarness(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner, sessionID)
 					maybeRunAgentMDHarness(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner, sessionID)
 					return
 				}
@@ -499,6 +501,7 @@ func runTask(
 			}
 			// Run harness synchronously while the task is still ASSIGNED.
 			// The agent retains ownership until hooks and harness are complete.
+			runSkillHarnessAndWait(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner, sessionID)
 			runAgentMDHarnessAndWait(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner, sessionID)
 			// Now unassign and transition.
 			logger.Info("reporting task result")
@@ -522,6 +525,7 @@ func runTask(
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Task completed at terminal status (turn %d)", turn), nil)
 			afterHooks()
+			runSkillHarnessAndWait(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner, sessionID)
 			runAgentMDHarnessAndWait(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner, sessionID)
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed")
@@ -541,6 +545,7 @@ func runTask(
 			} else {
 				afterHooks()
 			}
+			runSkillHarnessAndWait(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner, sessionID)
 			runAgentMDHarnessAndWait(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner, sessionID)
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (auto-transition)")
@@ -690,10 +695,29 @@ func buildClaudeOptions(
 		Hooks: buildToolUseHooks(tl, taskID, onModeChange, client, interClient, agentManagerID, waiter),
 	}
 
-	// Use --agent flag when a named agent is assigned; otherwise fall back to --system-prompt.
-	if agentName := metadata["_agent_name"]; agentName != "" {
+	// Skill-based mode: set model/tools/disallowedTools from status metadata.
+	if skillNames := metadata["_skill_names"]; skillNames != "" {
+		// Skill-based execution: no --agent flag. System prompt is workflow context.
+		opts.SystemPrompt = instructions
+
+		if m := metadata["_model"]; m != "" {
+			opts.Model = m
+		}
+		if toolsJSON := metadata["_tools"]; toolsJSON != "" {
+			var tools []string
+			if json.Unmarshal([]byte(toolsJSON), &tools) == nil {
+				opts.AllowedTools = tools
+			}
+		}
+		if dtJSON := metadata["_disallowed_tools"]; dtJSON != "" {
+			var dt []string
+			if json.Unmarshal([]byte(dtJSON), &dt) == nil {
+				opts.DisallowedTools = dt
+			}
+		}
+	} else if agentName := metadata["_agent_name"]; agentName != "" {
+		// Agent-based execution (fallback): use --agent flag.
 		opts.Agent = agentName
-		// Pass workflow custom prompt (if any) as append-system-prompt.
 		if instructions != "" {
 			opts.SystemPrompt = &claudeagent.SystemPromptPreset{
 				Type:   "preset",

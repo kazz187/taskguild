@@ -2,9 +2,10 @@ import type { AgentDefinition } from '@taskguild/proto/taskguild/v1/agent_pb.ts'
 import type { SkillDefinition } from '@taskguild/proto/taskguild/v1/skill_pb.ts'
 import type { ScriptDefinition } from '@taskguild/proto/taskguild/v1/script_pb.ts'
 import { HookTrigger, HookActionType } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
-import { Plus, Trash2, Bot, ChevronUp, ChevronDown, Zap } from 'lucide-react'
+import { Plus, Trash2, Bot, ChevronUp, ChevronDown, Zap, Wrench, BookOpen } from 'lucide-react'
 import { Button, Input, Select, Checkbox, Badge } from '../atoms/index.ts'
 import { FormField, Card } from '../molecules/index.ts'
+import { AVAILABLE_TOOLS, MODEL_OPTIONS } from '@/lib/constants.ts'
 import type { StatusDraft, HookDraft, AgentConfigDraft } from './WorkflowFormTypes.ts'
 
 export function StatusCard({ status: s, index, statuses, agents, skills, scripts, agentConfigs, onMoveStatus, onRemoveStatus, onUpdateStatus, onToggleTransition, onAddHook, onRemoveHook, onMoveHook, onUpdateHook }: {
@@ -172,6 +173,132 @@ export function StatusCard({ status: s, index, statuses, agents, skills, scripts
         </Card>
       )}
 
+      {/* Execution Configuration */}
+      {!s.isTerminal && (
+        <Card variant="nested" className="p-2.5 md:p-3 mt-2">
+          <div className="flex items-center gap-2 mb-2">
+            <Wrench className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-xs text-emerald-400">Execution Config</span>
+          </div>
+
+          {/* Model */}
+          <FormField label="Model" labelSize="xs" className="mb-2">
+            <Select
+              value={s.model}
+              onChange={(e) => onUpdateStatus(s.key, { model: e.target.value })}
+              selectSize="xs"
+              className="rounded"
+            >
+              {MODEL_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </Select>
+          </FormField>
+
+          {/* Allowed Tools */}
+          <FormField label="Allowed Tools" labelSize="xs" className="mb-2">
+            <div className="flex gap-1 flex-wrap">
+              {AVAILABLE_TOOLS.map(tool => {
+                const active = s.tools.includes(tool)
+                return (
+                  <button
+                    key={tool}
+                    type="button"
+                    onClick={() => {
+                      const next = active
+                        ? s.tools.filter(t => t !== tool)
+                        : [...s.tools, tool]
+                      onUpdateStatus(s.key, { tools: next })
+                    }}
+                    className="transition-colors"
+                  >
+                    <Badge
+                      color={active ? 'emerald' : 'gray'}
+                      variant="outline"
+                      size="xs"
+                      className={active ? '' : 'hover:text-gray-300'}
+                    >
+                      {tool}
+                    </Badge>
+                  </button>
+                )
+              })}
+            </div>
+          </FormField>
+
+          {/* Disallowed Tools */}
+          <FormField label="Disallowed Tools" labelSize="xs">
+            <div className="flex gap-1 flex-wrap">
+              {AVAILABLE_TOOLS.map(tool => {
+                const active = s.disallowedTools.includes(tool)
+                return (
+                  <button
+                    key={tool}
+                    type="button"
+                    onClick={() => {
+                      const next = active
+                        ? s.disallowedTools.filter(t => t !== tool)
+                        : [...s.disallowedTools, tool]
+                      onUpdateStatus(s.key, { disallowedTools: next })
+                    }}
+                    className="transition-colors"
+                  >
+                    <Badge
+                      color={active ? 'red' : 'gray'}
+                      variant="outline"
+                      size="xs"
+                      className={active ? '' : 'hover:text-gray-300'}
+                    >
+                      {tool}
+                    </Badge>
+                  </button>
+                )
+              })}
+            </div>
+          </FormField>
+        </Card>
+      )}
+
+      {/* Skills */}
+      {!s.isTerminal && (
+        <Card variant="nested" className="p-2.5 md:p-3 mt-2">
+          <div className="flex items-center gap-2 mb-2">
+            <BookOpen className="w-3.5 h-3.5 text-violet-400" />
+            <span className="text-xs text-violet-400">Skills</span>
+          </div>
+          <div className="flex gap-1 flex-wrap">
+            {skills.map(sk => {
+              const active = s.skillIds.includes(sk.id)
+              return (
+                <button
+                  key={sk.id}
+                  type="button"
+                  onClick={() => {
+                    const next = active
+                      ? s.skillIds.filter(id => id !== sk.id)
+                      : [...s.skillIds, sk.id]
+                    onUpdateStatus(s.key, { skillIds: next })
+                  }}
+                  className="transition-colors"
+                >
+                  <Badge
+                    color={active ? 'violet' : 'gray'}
+                    variant="outline"
+                    size="xs"
+                    className={active ? '' : 'hover:text-gray-300'}
+                  >
+                    {sk.name}
+                  </Badge>
+                </button>
+              )
+            })}
+          </div>
+          {skills.length === 0 && (
+            <p className="text-[11px] text-gray-600">No skills defined yet.</p>
+          )}
+        </Card>
+      )}
+
       {/* Permission Mode */}
       {!s.isTerminal && (
         <div className="mt-2 px-1">
@@ -214,10 +341,27 @@ export function StatusCard({ status: s, index, statuses, agents, skills, scripts
         </div>
       )}
 
-      {/* Agent Markdown Harness Toggle */}
+      {/* Skill Harness Toggle */}
       {!s.isTerminal && (
         <div className="mt-2 px-1">
           <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+            <Checkbox
+              checked={s.enableSkillHarness}
+              onChange={(e) => onUpdateStatus(s.key, {
+                enableSkillHarness: e.target.checked,
+                skillHarnessExplicitlyDisabled: !e.target.checked,
+              })}
+            />
+            <span>Skill Harness</span>
+            <span className="text-[10px] text-gray-600">(append failure patterns to skill files on status exit)</span>
+          </label>
+        </div>
+      )}
+
+      {/* Agent Markdown Harness Toggle (deprecated) */}
+      {!s.isTerminal && s.agentId && (
+        <div className="mt-2 px-1">
+          <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
             <Checkbox
               checked={s.enableAgentMdHarness}
               onChange={(e) => onUpdateStatus(s.key, {
@@ -225,8 +369,8 @@ export function StatusCard({ status: s, index, statuses, agents, skills, scripts
                 agentMdHarnessExplicitlyDisabled: !e.target.checked,
               })}
             />
-            <span>Agent Markdown Harness</span>
-            <span className="text-[10px] text-gray-600">(review &amp; update agent markdown on status exit)</span>
+            <span>Agent MD Harness</span>
+            <span className="text-[10px] text-gray-600">(deprecated)</span>
           </label>
         </div>
       )}

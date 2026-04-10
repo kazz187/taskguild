@@ -37,11 +37,11 @@ export function WorkflowForm({
         const kClosed = genKey()
         return {
           statusDrafts: [
-            { key: kDraft, id: '', name: 'Draft', order: 0, isInitial: true, isTerminal: false, transitionsTo: [kDevelop], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '' },
-            { key: kDevelop, id: '', name: 'Develop', order: 1, isInitial: false, isTerminal: false, transitionsTo: [kReview, kDraft], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '' },
-            { key: kReview, id: '', name: 'Review', order: 2, isInitial: false, isTerminal: false, transitionsTo: [kTest], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '' },
-            { key: kTest, id: '', name: 'Test', order: 3, isInitial: false, isTerminal: false, transitionsTo: [kClosed], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '' },
-            { key: kClosed, id: '', name: 'Closed', order: 4, isInitial: false, isTerminal: true, transitionsTo: [], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '' },
+            { key: kDraft, id: '', name: 'Draft', order: 0, isInitial: true, isTerminal: false, transitionsTo: [kDevelop], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '', model: '', tools: [], disallowedTools: [], skillIds: [], enableSkillHarness: true, skillHarnessExplicitlyDisabled: false },
+            { key: kDevelop, id: '', name: 'Develop', order: 1, isInitial: false, isTerminal: false, transitionsTo: [kReview, kDraft], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '', model: '', tools: [], disallowedTools: [], skillIds: [], enableSkillHarness: true, skillHarnessExplicitlyDisabled: false },
+            { key: kReview, id: '', name: 'Review', order: 2, isInitial: false, isTerminal: false, transitionsTo: [kTest], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '', model: '', tools: [], disallowedTools: [], skillIds: [], enableSkillHarness: true, skillHarnessExplicitlyDisabled: false },
+            { key: kTest, id: '', name: 'Test', order: 3, isInitial: false, isTerminal: false, transitionsTo: [kClosed], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '', model: '', tools: [], disallowedTools: [], skillIds: [], enableSkillHarness: true, skillHarnessExplicitlyDisabled: false },
+            { key: kClosed, id: '', name: 'Closed', order: 4, isInitial: false, isTerminal: true, transitionsTo: [], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '', model: '', tools: [], disallowedTools: [], skillIds: [], enableSkillHarness: true, skillHarnessExplicitlyDisabled: false },
           ],
           agentDrafts: [],
         }
@@ -135,7 +135,7 @@ export function WorkflowForm({
   const addStatus = () => {
     setStatuses((prev) => [
       ...prev,
-      { key: genKey(), id: '', name: '', order: prev.length, isInitial: false, isTerminal: false, transitionsTo: [], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '' },
+      { key: genKey(), id: '', name: '', order: prev.length, isInitial: false, isTerminal: false, transitionsTo: [], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '', model: '', tools: [], disallowedTools: [], skillIds: [], enableSkillHarness: true, skillHarnessExplicitlyDisabled: false },
     ])
   }
 

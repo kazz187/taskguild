@@ -19,12 +19,19 @@ export interface StatusDraft {
   isInitial: boolean
   isTerminal: boolean
   transitionsTo: string[] // keys
-  agentId: string // reference to AgentDefinition
+  agentId: string // Deprecated: reference to AgentDefinition (fallback)
   hooks: HookDraft[]
-  enableAgentMdHarness: boolean // default true: review agent markdown on status exit
-  agentMdHarnessExplicitlyDisabled: boolean // tracks explicit user choice
+  enableAgentMdHarness: boolean // Deprecated: use enableSkillHarness
+  agentMdHarnessExplicitlyDisabled: boolean // Deprecated
   permissionMode: string // permission mode for agents in this status
   inheritSessionFrom: string // name of status to inherit session from (fork)
+  // Execution configuration (replaces agent MD frontmatter)
+  model: string
+  tools: string[]
+  disallowedTools: string[]
+  skillIds: string[] // Skill entity IDs
+  enableSkillHarness: boolean
+  skillHarnessExplicitlyDisabled: boolean
 }
 
 export interface AgentConfigDraft {

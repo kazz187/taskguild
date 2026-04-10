@@ -21,6 +21,12 @@ export function workflowToDrafts(wf: Workflow) {
       agentMdHarnessExplicitlyDisabled: s.agentMdHarnessExplicitlyDisabled,
       permissionMode: s.permissionMode ?? '',
       inheritSessionFrom: s.inheritSessionFrom ?? '',
+      model: s.model ?? '',
+      tools: [...(s.tools ?? [])],
+      disallowedTools: [...(s.disallowedTools ?? [])],
+      skillIds: [...(s.skillIds ?? [])],
+      enableSkillHarness: s.skillHarnessExplicitlyDisabled ? s.enableSkillHarness : true,
+      skillHarnessExplicitlyDisabled: s.skillHarnessExplicitlyDisabled,
       hooks: (s.hooks ?? []).map((h) => ({
         key: genKey(),
         id: h.id,
@@ -78,6 +84,12 @@ export function buildProtoPayload(statuses: StatusDraft[], agentConfigs: AgentCo
     agentMdHarnessExplicitlyDisabled: s.agentMdHarnessExplicitlyDisabled,
     permissionMode: s.permissionMode,
     inheritSessionFrom: s.inheritSessionFrom,
+    model: s.model,
+    tools: s.tools,
+    disallowedTools: s.disallowedTools,
+    skillIds: s.skillIds,
+    enableSkillHarness: s.enableSkillHarness,
+    skillHarnessExplicitlyDisabled: s.skillHarnessExplicitlyDisabled,
     hooks: s.hooks
       .filter((h) => h.actionId)
       .map((h) => ({
