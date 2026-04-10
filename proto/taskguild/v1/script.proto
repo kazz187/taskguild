@@ -11,7 +11,7 @@ service ScriptService {
   rpc ListScripts(ListScriptsRequest) returns (ListScriptsResponse);
   rpc UpdateScript(UpdateScriptRequest) returns (UpdateScriptResponse);
   rpc DeleteScript(DeleteScriptRequest) returns (DeleteScriptResponse);
-  // SyncScriptsFromDir scans the given directory for .claude/scripts/* files
+  // SyncScriptsFromDir scans the given directory for .taskguild/scripts/* files
   // and creates/updates scripts for the specified project.
   rpc SyncScriptsFromDir(SyncScriptsFromDirRequest) returns (SyncScriptsFromDirResponse);
   // ExecuteScript triggers execution of a script on a connected agent-manager.
@@ -37,7 +37,7 @@ message ScriptDefinition {
   string content = 6;           // shell script body
 
   // metadata
-  bool is_synced = 7;           // true if synced from repository .claude/scripts/ directory
+  bool is_synced = 7;           // true if synced from repository .taskguild/scripts/ directory
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
 }

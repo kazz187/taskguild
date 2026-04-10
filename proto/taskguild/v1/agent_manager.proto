@@ -52,7 +52,7 @@ service AgentManagerService {
   // ReportGitPullMainResult reports the outcome of a git pull origin main from the agent.
   rpc ReportGitPullMainResult(ReportGitPullMainResultRequest) returns (ReportGitPullMainResultResponse);
   // SyncScripts returns all script definitions for a project so the agent can
-  // write them as .claude/scripts/* files locally.
+  // write them as .taskguild/scripts/* files locally.
   rpc SyncScripts(SyncScriptsRequest) returns (SyncScriptsResponse);
   // ReportScriptExecutionResult reports the outcome of a script execution from the agent.
   rpc ReportScriptExecutionResult(ReportScriptExecutionResultRequest) returns (ReportScriptExecutionResultResponse);
@@ -379,14 +379,14 @@ message ReportGitPullMainResultResponse {}
 
 // --- Script sync & execution ---
 
-// SyncScriptsCommand tells the agent to re-sync its local .claude/scripts/* files.
+// SyncScriptsCommand tells the agent to re-sync its local .taskguild/scripts/* files.
 // When force_overwrite_script_ids is non-empty, those scripts should be overwritten
 // on the agent even if the local file already exists.
 message SyncScriptsCommand {
   repeated string force_overwrite_script_ids = 1;
 }
 
-// CompareScriptsCommand tells the agent to compare its local .claude/scripts/*
+// CompareScriptsCommand tells the agent to compare its local .taskguild/scripts/*
 // files with server-side versions and report any differences.
 message CompareScriptsCommand {
   string request_id = 1;
@@ -394,7 +394,7 @@ message CompareScriptsCommand {
 }
 
 // ExecuteScriptCommand tells the agent to execute a specific script.
-// The agent reads the script from the local .claude/scripts/{filename} file.
+// The agent reads the script from the local .taskguild/scripts/{filename} file.
 message ExecuteScriptCommand {
   string request_id = 1;
   string script_id = 2;

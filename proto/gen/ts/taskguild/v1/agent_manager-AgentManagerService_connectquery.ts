@@ -120,7 +120,7 @@ export const reportGitPullMainResult = AgentManagerService.method.reportGitPullM
 
 /**
  * SyncScripts returns all script definitions for a project so the agent can
- * write them as .claude/scripts/* files locally.
+ * write them as .taskguild/scripts/* files locally.
  *
  * @generated from rpc taskguild.v1.AgentManagerService.SyncScripts
  */

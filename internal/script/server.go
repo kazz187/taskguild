@@ -143,7 +143,7 @@ func (s *Server) DeleteScript(ctx context.Context, req *connect.Request[taskguil
 	return connect.NewResponse(&taskguildv1.DeleteScriptResponse{}), nil
 }
 
-// SyncScriptsFromDir scans a directory for .claude/scripts/* files and syncs them.
+// SyncScriptsFromDir scans a directory for .taskguild/scripts/* files and syncs them.
 func (s *Server) SyncScriptsFromDir(ctx context.Context, req *connect.Request[taskguildv1.SyncScriptsFromDirRequest]) (*connect.Response[taskguildv1.SyncScriptsFromDirResponse], error) {
 	dir := req.Msg.Directory
 	if (dir == "" || dir == ".") && s.resolver != nil {
@@ -156,7 +156,7 @@ func (s *Server) SyncScriptsFromDir(ctx context.Context, req *connect.Request[ta
 	if dir == "" {
 		dir = "."
 	}
-	scriptsDir := filepath.Join(dir, ".claude", "scripts")
+	scriptsDir := filepath.Join(dir, ".taskguild", "scripts")
 
 	entries, err := os.ReadDir(scriptsDir)
 	if err != nil {

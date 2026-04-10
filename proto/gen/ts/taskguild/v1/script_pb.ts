@@ -67,7 +67,7 @@ export type ScriptDefinition = Message<"taskguild.v1.ScriptDefinition"> & {
   /**
    * metadata
    *
-   * true if synced from repository .claude/scripts/ directory
+   * true if synced from repository .taskguild/scripts/ directory
    *
    * @generated from field: bool is_synced = 7;
    */
@@ -718,7 +718,7 @@ export const ScriptService: GenService<{
     output: typeof DeleteScriptResponseSchema;
   },
   /**
-   * SyncScriptsFromDir scans the given directory for .claude/scripts/* files
+   * SyncScriptsFromDir scans the given directory for .taskguild/scripts/* files
    * and creates/updates scripts for the specified project.
    *
    * @generated from rpc taskguild.v1.ScriptService.SyncScriptsFromDir

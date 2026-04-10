@@ -202,7 +202,7 @@ export function ScriptList({ projectId }: { projectId: string }) {
           <SyncButton
             onClick={handleSync}
             isPending={syncMut.isPending || requestComparisonMut.isPending}
-            title="Sync scripts from .claude/scripts/ directory"
+            title="Sync scripts from .taskguild/scripts/ directory"
           />
           <Button
             variant="ghost"
@@ -540,7 +540,7 @@ export function ScriptList({ projectId }: { projectId: string }) {
           <EmptyState
             icon={Terminal}
             message="No scripts defined yet."
-            hint="Create scripts or sync from your repository's .claude/scripts/ directory."
+            hint="Create scripts or sync from your repository's .taskguild/scripts/ directory."
           />
         )}
       </div>

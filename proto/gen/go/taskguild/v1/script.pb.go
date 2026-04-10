@@ -84,7 +84,7 @@ type ScriptDefinition struct {
 	Filename string `protobuf:"bytes,5,opt,name=filename,proto3" json:"filename,omitempty"` // original filename (e.g. deploy.sh)
 	Content  string `protobuf:"bytes,6,opt,name=content,proto3" json:"content,omitempty"`   // shell script body
 	// metadata
-	IsSynced      bool                   `protobuf:"varint,7,opt,name=is_synced,json=isSynced,proto3" json:"is_synced,omitempty"` // true if synced from repository .claude/scripts/ directory
+	IsSynced      bool                   `protobuf:"varint,7,opt,name=is_synced,json=isSynced,proto3" json:"is_synced,omitempty"` // true if synced from repository .taskguild/scripts/ directory
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields

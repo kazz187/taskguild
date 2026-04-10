@@ -71,7 +71,7 @@ type ScriptServiceClient interface {
 	ListScripts(context.Context, *connect.Request[v1.ListScriptsRequest]) (*connect.Response[v1.ListScriptsResponse], error)
 	UpdateScript(context.Context, *connect.Request[v1.UpdateScriptRequest]) (*connect.Response[v1.UpdateScriptResponse], error)
 	DeleteScript(context.Context, *connect.Request[v1.DeleteScriptRequest]) (*connect.Response[v1.DeleteScriptResponse], error)
-	// SyncScriptsFromDir scans the given directory for .claude/scripts/* files
+	// SyncScriptsFromDir scans the given directory for .taskguild/scripts/* files
 	// and creates/updates scripts for the specified project.
 	SyncScriptsFromDir(context.Context, *connect.Request[v1.SyncScriptsFromDirRequest]) (*connect.Response[v1.SyncScriptsFromDirResponse], error)
 	// ExecuteScript triggers execution of a script on a connected agent-manager.
@@ -229,7 +229,7 @@ type ScriptServiceHandler interface {
 	ListScripts(context.Context, *connect.Request[v1.ListScriptsRequest]) (*connect.Response[v1.ListScriptsResponse], error)
 	UpdateScript(context.Context, *connect.Request[v1.UpdateScriptRequest]) (*connect.Response[v1.UpdateScriptResponse], error)
 	DeleteScript(context.Context, *connect.Request[v1.DeleteScriptRequest]) (*connect.Response[v1.DeleteScriptResponse], error)
-	// SyncScriptsFromDir scans the given directory for .claude/scripts/* files
+	// SyncScriptsFromDir scans the given directory for .taskguild/scripts/* files
 	// and creates/updates scripts for the specified project.
 	SyncScriptsFromDir(context.Context, *connect.Request[v1.SyncScriptsFromDirRequest]) (*connect.Response[v1.SyncScriptsFromDirResponse], error)
 	// ExecuteScript triggers execution of a script on a connected agent-manager.

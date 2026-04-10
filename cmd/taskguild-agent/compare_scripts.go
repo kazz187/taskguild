@@ -13,7 +13,7 @@ import (
 	"github.com/kazz187/taskguild/internal/script"
 )
 
-// handleCompareScripts compares local .claude/scripts/* files with server-side
+// handleCompareScripts compares local .taskguild/scripts/* files with server-side
 // script content and reports differences back to the server.
 func handleCompareScripts(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, cfg *config, cmd *v1.CompareScriptsCommand) {
 	requestID := cmd.GetRequestId()
@@ -21,7 +21,7 @@ func handleCompareScripts(ctx context.Context, client taskguildv1connect.AgentMa
 
 	slog.Info("comparing scripts with server", "request_id", requestID, "server_count", len(serverScripts))
 
-	scriptsDir := filepath.Join(cfg.WorkDir, ".claude", "scripts")
+	scriptsDir := filepath.Join(cfg.WorkDir, ".taskguild", "scripts")
 
 	// Read all local script files.
 	localScripts := readLocalScripts(scriptsDir)

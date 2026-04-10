@@ -3059,7 +3059,7 @@ func (*ReportGitPullMainResultResponse) Descriptor() ([]byte, []int) {
 	return file_taskguild_v1_agent_manager_proto_rawDescGZIP(), []int{44}
 }
 
-// SyncScriptsCommand tells the agent to re-sync its local .claude/scripts/* files.
+// SyncScriptsCommand tells the agent to re-sync its local .taskguild/scripts/* files.
 // When force_overwrite_script_ids is non-empty, those scripts should be overwritten
 // on the agent even if the local file already exists.
 type SyncScriptsCommand struct {
@@ -3106,7 +3106,7 @@ func (x *SyncScriptsCommand) GetForceOverwriteScriptIds() []string {
 	return nil
 }
 
-// CompareScriptsCommand tells the agent to compare its local .claude/scripts/*
+// CompareScriptsCommand tells the agent to compare its local .taskguild/scripts/*
 // files with server-side versions and report any differences.
 type CompareScriptsCommand struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -3161,7 +3161,7 @@ func (x *CompareScriptsCommand) GetScripts() []*ScriptDefinition {
 }
 
 // ExecuteScriptCommand tells the agent to execute a specific script.
-// The agent reads the script from the local .claude/scripts/{filename} file.
+// The agent reads the script from the local .taskguild/scripts/{filename} file.
 type ExecuteScriptCommand struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`

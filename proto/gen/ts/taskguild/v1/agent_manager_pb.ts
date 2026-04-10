@@ -1212,7 +1212,7 @@ export const ReportGitPullMainResultResponseSchema: GenMessage<ReportGitPullMain
   messageDesc(file_taskguild_v1_agent_manager, 44);
 
 /**
- * SyncScriptsCommand tells the agent to re-sync its local .claude/scripts/* files.
+ * SyncScriptsCommand tells the agent to re-sync its local .taskguild/scripts/* files.
  * When force_overwrite_script_ids is non-empty, those scripts should be overwritten
  * on the agent even if the local file already exists.
  *
@@ -1233,7 +1233,7 @@ export const SyncScriptsCommandSchema: GenMessage<SyncScriptsCommand> = /*@__PUR
   messageDesc(file_taskguild_v1_agent_manager, 45);
 
 /**
- * CompareScriptsCommand tells the agent to compare its local .claude/scripts/*
+ * CompareScriptsCommand tells the agent to compare its local .taskguild/scripts/*
  * files with server-side versions and report any differences.
  *
  * @generated from message taskguild.v1.CompareScriptsCommand
@@ -1261,7 +1261,7 @@ export const CompareScriptsCommandSchema: GenMessage<CompareScriptsCommand> = /*
 
 /**
  * ExecuteScriptCommand tells the agent to execute a specific script.
- * The agent reads the script from the local .claude/scripts/{filename} file.
+ * The agent reads the script from the local .taskguild/scripts/{filename} file.
  *
  * @generated from message taskguild.v1.ExecuteScriptCommand
  */
@@ -2808,7 +2808,7 @@ export const AgentManagerService: GenService<{
   },
   /**
    * SyncScripts returns all script definitions for a project so the agent can
-   * write them as .claude/scripts/* files locally.
+   * write them as .taskguild/scripts/* files locally.
    *
    * @generated from rpc taskguild.v1.AgentManagerService.SyncScripts
    */
