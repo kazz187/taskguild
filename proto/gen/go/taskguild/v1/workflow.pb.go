@@ -361,14 +361,12 @@ type WorkflowStatus struct {
 	IsTerminal bool `protobuf:"varint,5,opt,name=is_terminal,json=isTerminal,proto3" json:"is_terminal,omitempty"`
 	// transitions & agent
 	TransitionsTo []string `protobuf:"bytes,6,rep,name=transitions_to,json=transitionsTo,proto3" json:"transitions_to,omitempty"` // Names of statuses this can transition to
-	AgentId       string   `protobuf:"bytes,7,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`                   // ID of the AgentDefinition assigned to this status
+	AgentId       string   `protobuf:"bytes,7,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`                   // Deprecated: use skill_ids instead
 	// hooks
 	Hooks []*StatusHook `protobuf:"bytes,8,rep,name=hooks,proto3" json:"hooks,omitempty"`
-	// harness: when true, a background agent reviews and updates agent markdown
-	// with lessons learned upon status exit. Defaults to true when not set.
+	// Deprecated: use enable_skill_harness instead
 	EnableAgentMdHarness bool `protobuf:"varint,9,opt,name=enable_agent_md_harness,json=enableAgentMdHarness,proto3" json:"enable_agent_md_harness,omitempty"`
-	// Explicitly tracks whether enable_agent_md_harness was set by the user.
-	// When false (default), the harness is treated as enabled.
+	// Deprecated: use skill_harness_explicitly_disabled instead
 	AgentMdHarnessExplicitlyDisabled bool `protobuf:"varint,10,opt,name=agent_md_harness_explicitly_disabled,json=agentMdHarnessExplicitlyDisabled,proto3" json:"agent_md_harness_explicitly_disabled,omitempty"`
 	// permission mode for agents executing tasks in this status
 	// (default, acceptEdits, dontAsk, bypassPermissions, plan)
@@ -376,8 +374,16 @@ type WorkflowStatus struct {
 	// Name of the status whose session to inherit (fork) when entering this status.
 	// Empty means start a fresh session.
 	InheritSessionFrom string `protobuf:"bytes,12,opt,name=inherit_session_from,json=inheritSessionFrom,proto3" json:"inherit_session_from,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Execution configuration (replaces agent MD frontmatter)
+	Model           string   `protobuf:"bytes,13,opt,name=model,proto3" json:"model,omitempty"`                                            // "opus" / "sonnet" / "haiku"
+	Tools           []string `protobuf:"bytes,14,rep,name=tools,proto3" json:"tools,omitempty"`                                            // Allowed tool names
+	DisallowedTools []string `protobuf:"bytes,15,rep,name=disallowed_tools,json=disallowedTools,proto3" json:"disallowed_tools,omitempty"` // Disallowed tool names
+	SkillIds        []string `protobuf:"bytes,16,rep,name=skill_ids,json=skillIds,proto3" json:"skill_ids,omitempty"`                      // Skill name list (injected as /$skill_name in prompt)
+	// Skill-based harness: appends failure patterns to Skill files
+	EnableSkillHarness             bool `protobuf:"varint,17,opt,name=enable_skill_harness,json=enableSkillHarness,proto3" json:"enable_skill_harness,omitempty"`
+	SkillHarnessExplicitlyDisabled bool `protobuf:"varint,18,opt,name=skill_harness_explicitly_disabled,json=skillHarnessExplicitlyDisabled,proto3" json:"skill_harness_explicitly_disabled,omitempty"`
+	unknownFields                  protoimpl.UnknownFields
+	sizeCache                      protoimpl.SizeCache
 }
 
 func (x *WorkflowStatus) Reset() {
@@ -493,6 +499,48 @@ func (x *WorkflowStatus) GetInheritSessionFrom() string {
 		return x.InheritSessionFrom
 	}
 	return ""
+}
+
+func (x *WorkflowStatus) GetModel() string {
+	if x != nil {
+		return x.Model
+	}
+	return ""
+}
+
+func (x *WorkflowStatus) GetTools() []string {
+	if x != nil {
+		return x.Tools
+	}
+	return nil
+}
+
+func (x *WorkflowStatus) GetDisallowedTools() []string {
+	if x != nil {
+		return x.DisallowedTools
+	}
+	return nil
+}
+
+func (x *WorkflowStatus) GetSkillIds() []string {
+	if x != nil {
+		return x.SkillIds
+	}
+	return nil
+}
+
+func (x *WorkflowStatus) GetEnableSkillHarness() bool {
+	if x != nil {
+		return x.EnableSkillHarness
+	}
+	return false
+}
+
+func (x *WorkflowStatus) GetSkillHarnessExplicitlyDisabled() bool {
+	if x != nil {
+		return x.SkillHarnessExplicitlyDisabled
+	}
+	return false
 }
 
 // AgentConfig defines how an agent should behave for a specific status.
@@ -1180,7 +1228,7 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\x04name\x18\x05 \x01(\tR\x04name\x12=\n" +
 	"\vaction_type\x18\x06 \x01(\x0e2\x1c.taskguild.v1.HookActionTypeR\n" +
 	"actionType\x12\x1b\n" +
-	"\taction_id\x18\a \x01(\tR\bactionId\"\xe2\x03\n" +
+	"\taction_id\x18\a \x01(\tR\bactionId\"\xd3\x05\n" +
 	"\x0eWorkflowStatus\x12\x12\n" +
 	"\x02id\x18\x01 \x01(\tB\x02\x18\x01R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -1196,7 +1244,13 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"$agent_md_harness_explicitly_disabled\x18\n" +
 	" \x01(\bR agentMdHarnessExplicitlyDisabled\x12'\n" +
 	"\x0fpermission_mode\x18\v \x01(\tR\x0epermissionMode\x120\n" +
-	"\x14inherit_session_from\x18\f \x01(\tR\x12inheritSessionFrom\"\xca\x01\n" +
+	"\x14inherit_session_from\x18\f \x01(\tR\x12inheritSessionFrom\x12\x14\n" +
+	"\x05model\x18\r \x01(\tR\x05model\x12\x14\n" +
+	"\x05tools\x18\x0e \x03(\tR\x05tools\x12)\n" +
+	"\x10disallowed_tools\x18\x0f \x03(\tR\x0fdisallowedTools\x12\x1b\n" +
+	"\tskill_ids\x18\x10 \x03(\tR\bskillIds\x120\n" +
+	"\x14enable_skill_harness\x18\x11 \x01(\bR\x12enableSkillHarness\x12I\n" +
+	"!skill_harness_explicitly_disabled\x18\x12 \x01(\bR\x1eskillHarnessExplicitlyDisabled\"\xca\x01\n" +
 	"\vAgentConfig\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
 	"\x12workflow_status_id\x18\x02 \x01(\tR\x10workflowStatusId\x12\x12\n" +

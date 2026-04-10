@@ -57,10 +57,9 @@ type Status struct {
 	AgentID       string       `yaml:"agent_id,omitempty"`
 	Hooks         []StatusHook `yaml:"hooks,omitempty"`
 
-	// EnableAgentMDHarness controls whether a background agent markdown review
-	// harness runs when a task exits this status. Default is true (enabled).
-	EnableAgentMDHarness              bool `yaml:"enable_agent_md_harness"`
-	AgentMDHarnessExplicitlyDisabled  bool `yaml:"agent_md_harness_explicitly_disabled,omitempty"`
+	// Deprecated: use EnableSkillHarness instead.
+	EnableAgentMDHarness             bool `yaml:"enable_agent_md_harness"`
+	AgentMDHarnessExplicitlyDisabled bool `yaml:"agent_md_harness_explicitly_disabled,omitempty"`
 
 	// PermissionMode for agents executing tasks in this status.
 	PermissionMode string `yaml:"permission_mode,omitempty"`
@@ -68,6 +67,16 @@ type Status struct {
 	// InheritSessionFrom is the name of a previous status whose session
 	// should be forked when entering this status. Empty means fresh session.
 	InheritSessionFrom string `yaml:"inherit_session_from,omitempty"`
+
+	// Execution configuration (replaces agent MD frontmatter)
+	Model           string   `yaml:"model,omitempty"`
+	Tools           []string `yaml:"tools,omitempty"`
+	DisallowedTools []string `yaml:"disallowed_tools,omitempty"`
+	SkillIDs        []string `yaml:"skill_ids,omitempty"`
+
+	// Skill-based harness: appends failure patterns to Skill files.
+	EnableSkillHarness             bool `yaml:"enable_skill_harness"`
+	SkillHarnessExplicitlyDisabled bool `yaml:"skill_harness_explicitly_disabled,omitempty"`
 }
 
 // FindAgentIDForStatus returns the agent ID configured for the given status.
@@ -85,6 +94,17 @@ func (w *Workflow) FindAgentIDForStatus(statusName string) string {
 		}
 	}
 	return ""
+}
+
+// FindSkillIDsForStatus returns the skill IDs configured for the given status.
+// Returns nil if no skills are configured.
+func (w *Workflow) FindSkillIDsForStatus(statusName string) []string {
+	for _, s := range w.Statuses {
+		if s.Name == statusName && len(s.SkillIDs) > 0 {
+			return s.SkillIDs
+		}
+	}
+	return nil
 }
 
 type AgentConfig struct {

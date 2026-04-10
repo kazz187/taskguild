@@ -75,16 +75,14 @@ message WorkflowStatus {
 
   // transitions & agent
   repeated string transitions_to = 6;  // Names of statuses this can transition to
-  string agent_id = 7;                 // ID of the AgentDefinition assigned to this status
+  string agent_id = 7;                 // Deprecated: use skill_ids instead
 
   // hooks
   repeated StatusHook hooks = 8;
 
-  // harness: when true, a background agent reviews and updates agent markdown
-  // with lessons learned upon status exit. Defaults to true when not set.
+  // Deprecated: use enable_skill_harness instead
   bool enable_agent_md_harness = 9;
-  // Explicitly tracks whether enable_agent_md_harness was set by the user.
-  // When false (default), the harness is treated as enabled.
+  // Deprecated: use skill_harness_explicitly_disabled instead
   bool agent_md_harness_explicitly_disabled = 10;
 
   // permission mode for agents executing tasks in this status
@@ -94,6 +92,16 @@ message WorkflowStatus {
   // Name of the status whose session to inherit (fork) when entering this status.
   // Empty means start a fresh session.
   string inherit_session_from = 12;
+
+  // Execution configuration (replaces agent MD frontmatter)
+  string model = 13;                      // "opus" / "sonnet" / "haiku"
+  repeated string tools = 14;             // Allowed tool names
+  repeated string disallowed_tools = 15;  // Disallowed tool names
+  repeated string skill_ids = 16;         // Skill name list (injected as /$skill_name in prompt)
+
+  // Skill-based harness: appends failure patterns to Skill files
+  bool enable_skill_harness = 17;
+  bool skill_harness_explicitly_disabled = 18;
 }
 
 // AgentConfig defines how an agent should behave for a specific status.

@@ -6,23 +6,20 @@ import (
 
 	"github.com/oklog/ulid/v2"
 
-	"github.com/kazz187/taskguild/internal/agent"
 	"github.com/kazz187/taskguild/internal/skill"
 	"github.com/kazz187/taskguild/internal/workflow"
 )
 
-// Seeder creates default workflow, agents, and skills for a newly created project.
+// Seeder creates default workflow and skills for a newly created project.
 type Seeder struct {
 	workflowRepo workflow.Repository
-	agentRepo    agent.Repository
 	skillRepo    skill.Repository
 }
 
 // NewSeeder creates a new Seeder.
-func NewSeeder(workflowRepo workflow.Repository, agentRepo agent.Repository, skillRepo skill.Repository) *Seeder {
+func NewSeeder(workflowRepo workflow.Repository, skillRepo skill.Repository) *Seeder {
 	return &Seeder{
 		workflowRepo: workflowRepo,
-		agentRepo:    agentRepo,
 		skillRepo:    skillRepo,
 	}
 }
@@ -32,41 +29,110 @@ func NewSeeder(workflowRepo workflow.Repository, agentRepo agent.Repository, ski
 func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 	now := time.Now()
 
-	// 1. Create agents.
-	architectAgent := &agent.Agent{
-		ID:             ulid.Make().String(),
-		ProjectID:      projectID,
-		Name:           "architect",
-		Description:    "system architect",
-		Prompt:         defaultArchitectPrompt,
-		Tools:          []string{"Read", "Glob", "Grep", "WebSearch", "WebFetch", "Task"},
-		Model:          "opus",
-		PermissionMode: "plan",
-		Memory:         "user",
-		CreatedAt:      now,
-		UpdatedAt:      now,
+	// 1. Create workflow skills (role + guard skills).
+	projectRulesSkill := &skill.Skill{
+		ID:            ulid.Make().String(),
+		ProjectID:     projectID,
+		Name:          "project-rules",
+		Description:   "プロジェクトのビルド・コマンド・ディレクトリ規約",
+		UserInvocable: false,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	if err := s.agentRepo.Create(ctx, architectAgent); err != nil {
+	if err := s.skillRepo.Create(ctx, projectRulesSkill); err != nil {
 		return err
 	}
 
-	swEngineerAgent := &agent.Agent{
-		ID:             ulid.Make().String(),
-		ProjectID:      projectID,
-		Name:           "software-engineer",
-		Description:    "software engineer",
-		Prompt:         defaultSoftwareEngineerPrompt,
-		Tools:          []string{"Read", "Write", "Edit", "Glob", "Grep", "WebSearch", "WebFetch", "Task", "NotebookEdit"},
-		Model:          "opus",
-		PermissionMode: "acceptEdits",
-		CreatedAt:      now,
-		UpdatedAt:      now,
+	codebaseMapSkill := &skill.Skill{
+		ID:            ulid.Make().String(),
+		ProjectID:     projectID,
+		Name:          "codebase-map",
+		Description:   "プロジェクトのアーキテクチャ知識・変更伝播パス",
+		UserInvocable: false,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	if err := s.agentRepo.Create(ctx, swEngineerAgent); err != nil {
+	if err := s.skillRepo.Create(ctx, codebaseMapSkill); err != nil {
 		return err
 	}
 
-	// 2. Create create-pr skill.
+	goGuardsSkill := &skill.Skill{
+		ID:            ulid.Make().String(),
+		ProjectID:     projectID,
+		Name:          "go-guards",
+		Description:   "Go コードを書く際の技術規約・罠",
+		UserInvocable: false,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+	if err := s.skillRepo.Create(ctx, goGuardsSkill); err != nil {
+		return err
+	}
+
+	frontendGuardsSkill := &skill.Skill{
+		ID:            ulid.Make().String(),
+		ProjectID:     projectID,
+		Name:          "frontend-guards",
+		Description:   "TypeScript/React コードの規約・罠",
+		UserInvocable: false,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+	if err := s.skillRepo.Create(ctx, frontendGuardsSkill); err != nil {
+		return err
+	}
+
+	architectSkill := &skill.Skill{
+		ID:            ulid.Make().String(),
+		ProjectID:     projectID,
+		Name:          "architect",
+		Description:   "システム設計者。タスクの仕様を策定する。",
+		UserInvocable: false,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+	if err := s.skillRepo.Create(ctx, architectSkill); err != nil {
+		return err
+	}
+
+	softwareEngineerSkill := &skill.Skill{
+		ID:            ulid.Make().String(),
+		ProjectID:     projectID,
+		Name:          "software-engineer",
+		Description:   "ソフトウェアエンジニア。設計に従いコードを実装する。",
+		UserInvocable: false,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+	if err := s.skillRepo.Create(ctx, softwareEngineerSkill); err != nil {
+		return err
+	}
+
+	seniorEngineerSkill := &skill.Skill{
+		ID:            ulid.Make().String(),
+		ProjectID:     projectID,
+		Name:          "senior-engineer",
+		Description:   "シニアエンジニア。コードレビュー・品質保証を行う。",
+		UserInvocable: false,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+	if err := s.skillRepo.Create(ctx, seniorEngineerSkill); err != nil {
+		return err
+	}
+
+	// Collect skill IDs for workflow statuses.
+	commonSkillIDs := []string{
+		projectRulesSkill.ID,
+		codebaseMapSkill.ID,
+		goGuardsSkill.ID,
+		frontendGuardsSkill.ID,
+	}
+	planSkillIDs := append(append([]string{}, commonSkillIDs...), architectSkill.ID)
+	developSkillIDs := append(append([]string{}, commonSkillIDs...), softwareEngineerSkill.ID)
+	reviewSkillIDs := append(append([]string{}, commonSkillIDs...), seniorEngineerSkill.ID)
+
+	// 4. Create create-pr skill.
 	createPRSkill := &skill.Skill{
 		ID:            ulid.Make().String(),
 		ProjectID:     projectID,
@@ -82,7 +148,7 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 		return err
 	}
 
-	// 3. Create sync-default-branch skill.
+	// 5. Create sync-default-branch skill.
 	syncBranchSkill := &skill.Skill{
 		ID:            ulid.Make().String(),
 		ProjectID:     projectID,
@@ -98,7 +164,7 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 		return err
 	}
 
-	// 4. Create development workflow referencing the created agent and skill IDs.
+	// 6. Create development workflow referencing the created agent and skill IDs.
 	hookID := ulid.Make().String()
 	wf := &workflow.Workflow{
 		ID:        ulid.Make().String(),
@@ -106,25 +172,27 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 		Name:      "development",
 		Statuses: []workflow.Status{
 			{
-				Name:                 "Draft",
-				Order:                0,
-				IsInitial:            true,
-				TransitionsTo:        []string{"Plan", "Develop"},
-				EnableAgentMDHarness: true,
+				Name:               "Draft",
+				Order:              0,
+				IsInitial:          true,
+				TransitionsTo:      []string{"Plan", "Develop"},
+				EnableSkillHarness: true,
 			},
 			{
-				Name:                 "Plan",
-				Order:                1,
-				TransitionsTo:        []string{"Develop"},
-				AgentID:              architectAgent.ID,
-				EnableAgentMDHarness: true,
-				PermissionMode:       "plan",
+				Name:            "Plan",
+				Order:           1,
+				TransitionsTo:   []string{"Develop"},
+				PermissionMode:  "plan",
+				Model:           "opus",
+				Tools:           []string{"Read", "Glob", "Grep", "Bash", "WebSearch", "WebFetch", "Task"},
+				DisallowedTools: []string{"Write", "Edit", "MultiEdit", "NotebookEdit"},
+				SkillIDs:        planSkillIDs,
+				EnableSkillHarness: true,
 			},
 			{
 				Name:               "Develop",
 				Order:              2,
 				TransitionsTo:      []string{"Review"},
-				AgentID:            swEngineerAgent.ID,
 				InheritSessionFrom: "Plan",
 				Hooks: []workflow.StatusHook{
 					{
@@ -145,21 +213,27 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 						ActionID:   createPRSkill.ID,
 					},
 				},
-				EnableAgentMDHarness: true,
-				PermissionMode:       "acceptEdits",
+				PermissionMode:     "acceptEdits",
+				Model:              "opus",
+				Tools:              []string{"Read", "Write", "Edit", "Glob", "Grep", "Bash", "WebSearch", "WebFetch", "Task", "NotebookEdit"},
+				SkillIDs:           developSkillIDs,
+				EnableSkillHarness: true,
 			},
 			{
-				Name:                 "Review",
-				Order:                3,
-				TransitionsTo:        []string{"Closed"},
-				EnableAgentMDHarness: true,
+				Name:               "Review",
+				Order:              3,
+				TransitionsTo:      []string{"Closed"},
+				PermissionMode:     "acceptEdits",
+				Model:              "opus",
+				Tools:              []string{"Read", "Write", "Edit", "Glob", "Grep", "Bash", "WebSearch", "WebFetch", "Task", "NotebookEdit"},
+				SkillIDs:           reviewSkillIDs,
+				EnableSkillHarness: true,
 			},
 			{
-				Name:                 "Closed",
-				Order:                4,
-				IsTerminal:           true,
-				TransitionsTo:        []string{},
-				EnableAgentMDHarness: true,
+				Name:          "Closed",
+				Order:         4,
+				IsTerminal:    true,
+				TransitionsTo: []string{},
 			},
 		},
 		DefaultUseWorktree: true,
@@ -172,38 +246,6 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 
 	return nil
 }
-
-const defaultArchitectPrompt = `あなたはシステム設計者です。以下の手順でタスクの仕様を策定してください。
-
-## 役割
-
-1. **現状調査**: 既存のコードベースを Read, Glob, Grep で徹底的に調査し、タスクに関連するアーキテクチャ・既存実装を把握する
-2. **仕様の明確化**: ユーザーがタスク概要欄に書いた内容の不明点・曖昧な点を洗い出し、ユーザーに質問して要件を確定させる
-3. **設計の策定**: 変更対象ファイル、実装方針、影響範囲、テスト方針を含む設計をまとめる
-4. **仕様の記録**: 確定した仕様を ` + "`TASK_DESCRIPTION_START`" + ` / ` + "`TASK_DESCRIPTION_END`" + ` ブロックでタスク概要に書き戻す
-
-## 制約
-
-- このエージェントは Plan mode で動作するため、ファイルの編集・作成・コマンド実行はできない。調査と対話に専念すること
-- 仕様が確定しユーザーが承認するまで ` + "`NEXT_STATUS`" + ` を出力しないこと。早期遷移はユーザーとの対話機会を奪う
-- 設計は次のステータス（Develop）の software-engineer エージェントが迷わず実装できる粒度で記述すること
-
-## Lessons Learned
-
-- ユーザーが明示的に承認するまで NEXT_STATUS を出力しないこと。自動遷移により対話機会が失われる。`
-
-const defaultSoftwareEngineerPrompt = `あなたはソフトウェアエンジニアです。タスクの仕様に従いコードを実装してください。
-
-## 役割
-
-1. **仕様の確認**: タスク概要に記載された設計・仕様を熟読し、実装スコープを把握する
-2. **実装**: 変更対象ファイルを特定し、仕様に沿ってコードを追加・修正する。既存コードのスタイル・パターンに合わせること
-3. **テスト**: 既存テストが壊れていないことを確認し、必要に応じてテストを追加する
-
-## 制約
-
-- 仕様に記載されていない範囲の変更（リファクタリング、機能追加等）は行わないこと
-- 実装完了後、` + "`NEXT_STATUS: Review`" + ` を出力して次のステータスに遷移すること`
 
 const defaultCreatePRSkillContent = `# Create PR / Push to Existing PR
 

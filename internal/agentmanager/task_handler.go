@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -652,41 +653,62 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	var instructions string
 	var agentConfigID string
 	var agentName string
+	var skillNames []string
 
-	// Try new approach: status-level agent_id referencing Agent entity.
-	var currentAgentID string
-	for _, st := range wf.Statuses {
-		if st.Name == t.StatusID && st.AgentID != "" {
-			currentAgentID = st.AgentID
+	// Resolve the current status to find execution configuration.
+	var currentStatus *workflow.Status
+	for i, st := range wf.Statuses {
+		if st.Name == t.StatusID {
+			currentStatus = &wf.Statuses[i]
 			break
 		}
 	}
 
-	if currentAgentID != "" {
-		// New approach: fetch Agent entity.
-		// The agent's prompt is provided by the .claude/agents/<name>.md file
-		// via the --agent CLI flag, so we don't include ag.Prompt in instructions.
-		ag, err := s.agentRepo.Get(ctx, currentAgentID)
-		if err == nil {
-			agentConfigID = ag.ID
-			agentName = ag.Name
+	// Priority 1: Skill-based execution (skill_ids on status).
+	if currentStatus != nil && len(currentStatus.SkillIDs) > 0 {
+		for _, sid := range currentStatus.SkillIDs {
+			if s.skillRepo != nil {
+				if sk, err := s.skillRepo.Get(ctx, sid); err == nil {
+					skillNames = append(skillNames, sk.Name)
+				} else {
+					slog.Warn("failed to resolve skill for status", "skill_id", sid, "status", t.StatusID, "error", err)
+				}
+			}
 		}
 	}
 
-	// Fall back to legacy AgentConfig list.
-	if agentName == "" {
-		for _, cfg := range wf.AgentConfigs {
-			if cfg.WorkflowStatusID == t.StatusID {
-				instructions = cfg.Instructions
-				agentConfigID = cfg.ID
-				break
+	// Priority 2: Agent-based execution (agent_id on status) — fallback.
+	if len(skillNames) == 0 {
+		var currentAgentID string
+		if currentStatus != nil && currentStatus.AgentID != "" {
+			currentAgentID = currentStatus.AgentID
+		}
+
+		if currentAgentID != "" {
+			ag, err := s.agentRepo.Get(ctx, currentAgentID)
+			if err == nil {
+				agentConfigID = ag.ID
+				agentName = ag.Name
+			}
+		}
+
+		// Priority 3: Legacy AgentConfig list.
+		if agentName == "" {
+			for _, cfg := range wf.AgentConfigs {
+				if cfg.WorkflowStatusID == t.StatusID {
+					instructions = cfg.Instructions
+					agentConfigID = cfg.ID
+					break
+				}
 			}
 		}
 	}
 
 	// Prepend workflow custom prompt to agent instructions.
-	// For named agents, CustomPrompt is passed as append-system-prompt via metadata.
-	if agentName != "" {
+	if len(skillNames) > 0 {
+		// Skill-based: CustomPrompt goes into instructions directly.
+		instructions = wf.CustomPrompt
+	} else if agentName != "" {
 		// Named agent: pass CustomPrompt separately (not merged into instructions).
 		instructions = wf.CustomPrompt
 	} else if wf.CustomPrompt != "" && instructions != "" {
@@ -719,6 +741,26 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	}
 	if agentName != "" {
 		enrichedMetadata["_agent_name"] = agentName
+	}
+
+	// Inject skill-based execution metadata.
+	if len(skillNames) > 0 {
+		enrichedMetadata["_skill_names"] = strings.Join(skillNames, ",")
+	}
+	if currentStatus != nil {
+		if currentStatus.Model != "" {
+			enrichedMetadata["_model"] = currentStatus.Model
+		}
+		if len(currentStatus.Tools) > 0 {
+			if b, err := json.Marshal(currentStatus.Tools); err == nil {
+				enrichedMetadata["_tools"] = string(b)
+			}
+		}
+		if len(currentStatus.DisallowedTools) > 0 {
+			if b, err := json.Marshal(currentStatus.DisallowedTools); err == nil {
+				enrichedMetadata["_disallowed_tools"] = string(b)
+			}
+		}
 	}
 
 	// Resolve current status name and available transitions from workflow.
@@ -830,20 +872,28 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		}
 	}
 
-	// Inject agent markdown harness flag for the current status.
-	// Default is enabled (true) unless explicitly disabled.
-	for _, st := range wf.Statuses {
-		if st.Name == t.StatusID {
-			harnessEnabled := !st.AgentMDHarnessExplicitlyDisabled
-			if st.AgentMDHarnessExplicitlyDisabled {
-				harnessEnabled = st.EnableAgentMDHarness
-			}
-			if harnessEnabled {
-				enrichedMetadata["_enable_agent_md_harness"] = "true"
-			} else {
-				enrichedMetadata["_enable_agent_md_harness"] = "false"
-			}
-			break
+	// Inject harness flags for the current status.
+	if currentStatus != nil {
+		// Skill harness (new): default enabled unless explicitly disabled.
+		skillHarnessEnabled := !currentStatus.SkillHarnessExplicitlyDisabled
+		if currentStatus.SkillHarnessExplicitlyDisabled {
+			skillHarnessEnabled = currentStatus.EnableSkillHarness
+		}
+		if skillHarnessEnabled {
+			enrichedMetadata["_enable_skill_harness"] = "true"
+		} else {
+			enrichedMetadata["_enable_skill_harness"] = "false"
+		}
+
+		// Agent MD harness (deprecated): default enabled unless explicitly disabled.
+		agentHarnessEnabled := !currentStatus.AgentMDHarnessExplicitlyDisabled
+		if currentStatus.AgentMDHarnessExplicitlyDisabled {
+			agentHarnessEnabled = currentStatus.EnableAgentMDHarness
+		}
+		if agentHarnessEnabled {
+			enrichedMetadata["_enable_agent_md_harness"] = "true"
+		} else {
+			enrichedMetadata["_enable_agent_md_harness"] = "false"
 		}
 	}
 
