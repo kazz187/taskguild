@@ -488,6 +488,13 @@ func handlePermissionRequest(
 		return claudeagent.PermissionResultAllow{}, nil
 	}
 
+	// Plan mode tools: ExitPlanMode approval is handled by PreToolUse hook,
+	// EnterPlanMode is a safe mode switch — both skip permission requests.
+	if toolName == "ExitPlanMode" || toolName == "EnterPlanMode" {
+		logger.Debug("auto-allowing plan mode tool", "tool", toolName)
+		return claudeagent.PermissionResultAllow{}, nil
+	}
+
 	// AskUserQuestion: present as QUESTION interactions instead of permission request
 	if toolName == "AskUserQuestion" {
 		return handleAskUserQuestion(ctx, client, taskID, agentID, input, waiter)
