@@ -359,9 +359,10 @@ type WorkflowStatus struct {
 	// status flags
 	IsInitial  bool `protobuf:"varint,4,opt,name=is_initial,json=isInitial,proto3" json:"is_initial,omitempty"`
 	IsTerminal bool `protobuf:"varint,5,opt,name=is_terminal,json=isTerminal,proto3" json:"is_terminal,omitempty"`
-	// transitions & agent
+	// transitions & skill/agent
 	TransitionsTo []string `protobuf:"bytes,6,rep,name=transitions_to,json=transitionsTo,proto3" json:"transitions_to,omitempty"` // Names of statuses this can transition to
-	AgentId       string   `protobuf:"bytes,7,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`                   // ID of the AgentDefinition assigned to this status
+	AgentId       string   `protobuf:"bytes,7,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`                   // Deprecated: use skill_id instead
+	SkillId       string   `protobuf:"bytes,13,opt,name=skill_id,json=skillId,proto3" json:"skill_id,omitempty"`                  // ID of the Skill assigned to this status
 	// hooks
 	Hooks []*StatusHook `protobuf:"bytes,8,rep,name=hooks,proto3" json:"hooks,omitempty"`
 	// harness: when true, a background agent reviews and updates agent markdown
@@ -456,6 +457,13 @@ func (x *WorkflowStatus) GetTransitionsTo() []string {
 func (x *WorkflowStatus) GetAgentId() string {
 	if x != nil {
 		return x.AgentId
+	}
+	return ""
+}
+
+func (x *WorkflowStatus) GetSkillId() string {
+	if x != nil {
+		return x.SkillId
 	}
 	return ""
 }
@@ -1180,7 +1188,7 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\x04name\x18\x05 \x01(\tR\x04name\x12=\n" +
 	"\vaction_type\x18\x06 \x01(\x0e2\x1c.taskguild.v1.HookActionTypeR\n" +
 	"actionType\x12\x1b\n" +
-	"\taction_id\x18\a \x01(\tR\bactionId\"\xe2\x03\n" +
+	"\taction_id\x18\a \x01(\tR\bactionId\"\xfd\x03\n" +
 	"\x0eWorkflowStatus\x12\x12\n" +
 	"\x02id\x18\x01 \x01(\tB\x02\x18\x01R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -1190,7 +1198,8 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\vis_terminal\x18\x05 \x01(\bR\n" +
 	"isTerminal\x12%\n" +
 	"\x0etransitions_to\x18\x06 \x03(\tR\rtransitionsTo\x12\x19\n" +
-	"\bagent_id\x18\a \x01(\tR\aagentId\x12.\n" +
+	"\bagent_id\x18\a \x01(\tR\aagentId\x12\x19\n" +
+	"\bskill_id\x18\r \x01(\tR\askillId\x12.\n" +
 	"\x05hooks\x18\b \x03(\v2\x18.taskguild.v1.StatusHookR\x05hooks\x125\n" +
 	"\x17enable_agent_md_harness\x18\t \x01(\bR\x14enableAgentMdHarness\x12N\n" +
 	"$agent_md_harness_explicitly_disabled\x18\n" +

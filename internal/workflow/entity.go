@@ -55,6 +55,7 @@ type Status struct {
 	IsTerminal    bool         `yaml:"is_terminal"`
 	TransitionsTo []string     `yaml:"transitions_to"`
 	AgentID       string       `yaml:"agent_id,omitempty"`
+	SkillID       string       `yaml:"skill_id,omitempty"`
 	Hooks         []StatusHook `yaml:"hooks,omitempty"`
 
 	// EnableAgentMDHarness controls whether a background agent markdown review
@@ -70,13 +71,17 @@ type Status struct {
 	InheritSessionFrom string `yaml:"inherit_session_from,omitempty"`
 }
 
-// FindAgentIDForStatus returns the agent ID configured for the given status.
-// It first checks the status-level AgentID field, then falls back to the
-// legacy AgentConfig list on the workflow. Returns "" if no agent is configured.
+// FindAgentIDForStatus returns the assignment ID configured for the given status.
+// Priority: SkillID > AgentID > legacy AgentConfig. Returns "" if nothing is configured.
 func (w *Workflow) FindAgentIDForStatus(statusName string) string {
 	for _, s := range w.Statuses {
-		if s.Name == statusName && s.AgentID != "" {
-			return s.AgentID
+		if s.Name == statusName {
+			if s.SkillID != "" {
+				return s.SkillID
+			}
+			if s.AgentID != "" {
+				return s.AgentID
+			}
 		}
 	}
 	for _, cfg := range w.AgentConfigs {

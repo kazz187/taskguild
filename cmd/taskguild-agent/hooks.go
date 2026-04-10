@@ -95,7 +95,12 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 			opts.ForkSession = true
 		}
 
-		result, err := qr.RunQuerySync(hookCtx, h.Content, opts, workDir, taskID, fmt.Sprintf("hook_%s", h.Name))
+		// Invoke the skill via /$name so SKILL.md frontmatter (model, tools) is applied.
+		hookPrompt := h.Content
+		if h.Name != "" {
+			hookPrompt = fmt.Sprintf("/%s", h.Name)
+		}
+		result, err := qr.RunQuerySync(hookCtx, hookPrompt, opts, workDir, taskID, fmt.Sprintf("hook_%s", h.Name))
 		cancel()
 
 		if err != nil {

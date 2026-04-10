@@ -49,10 +49,10 @@ func TestExecuteHooks_CreatePR(t *testing.T) {
 
 	executeHooks(ctx, "task-hook-test", "after_task_execution", metadata, t.TempDir(), tc.taskClient, tl, qr, "")
 
-	// Verify QueryRunner was called with the hook content
+	// Verify QueryRunner was called with /$skill_name invocation
 	calls := qr.getCalls()
 	require.Len(t, calls, 1)
-	assert.Equal(t, "Create a PR for the changes made in this task.", calls[0].Prompt)
+	assert.Equal(t, "/create-pr", calls[0].Prompt)
 	assert.Equal(t, "hook_create-pr", calls[0].Label)
 
 	// Verify TASK_METADATA was applied via UpdateTask

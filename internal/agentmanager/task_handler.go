@@ -652,29 +652,46 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	var instructions string
 	var agentConfigID string
 	var agentName string
+	var skillName string
 
-	// Try new approach: status-level agent_id referencing Agent entity.
-	var currentAgentID string
+	// Try skill-based assignment first (preferred).
+	var currentSkillID string
 	for _, st := range wf.Statuses {
-		if st.Name == t.StatusID && st.AgentID != "" {
-			currentAgentID = st.AgentID
+		if st.Name == t.StatusID && st.SkillID != "" {
+			currentSkillID = st.SkillID
 			break
 		}
 	}
 
-	if currentAgentID != "" {
-		// New approach: fetch Agent entity.
-		// The agent's prompt is provided by the .claude/agents/<name>.md file
-		// via the --agent CLI flag, so we don't include ag.Prompt in instructions.
-		ag, err := s.agentRepo.Get(ctx, currentAgentID)
+	if currentSkillID != "" {
+		sk, err := s.skillRepo.Get(ctx, currentSkillID)
 		if err == nil {
-			agentConfigID = ag.ID
-			agentName = ag.Name
+			agentConfigID = sk.ID
+			skillName = sk.Name
+		}
+	}
+
+	// Fall back to agent-based assignment.
+	if skillName == "" {
+		var currentAgentID string
+		for _, st := range wf.Statuses {
+			if st.Name == t.StatusID && st.AgentID != "" {
+				currentAgentID = st.AgentID
+				break
+			}
+		}
+
+		if currentAgentID != "" {
+			ag, err := s.agentRepo.Get(ctx, currentAgentID)
+			if err == nil {
+				agentConfigID = ag.ID
+				agentName = ag.Name
+			}
 		}
 	}
 
 	// Fall back to legacy AgentConfig list.
-	if agentName == "" {
+	if skillName == "" && agentName == "" {
 		for _, cfg := range wf.AgentConfigs {
 			if cfg.WorkflowStatusID == t.StatusID {
 				instructions = cfg.Instructions
@@ -684,10 +701,12 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		}
 	}
 
-	// Prepend workflow custom prompt to agent instructions.
+	// Prepend workflow custom prompt to instructions.
+	// For skill-based statuses, CustomPrompt is passed as system prompt.
 	// For named agents, CustomPrompt is passed as append-system-prompt via metadata.
-	if agentName != "" {
-		// Named agent: pass CustomPrompt separately (not merged into instructions).
+	if skillName != "" {
+		instructions = wf.CustomPrompt
+	} else if agentName != "" {
 		instructions = wf.CustomPrompt
 	} else if wf.CustomPrompt != "" && instructions != "" {
 		instructions = wf.CustomPrompt + "\n\n" + instructions
@@ -716,6 +735,9 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	}
 	if _, ok := enrichedMetadata["_permission_mode"]; !ok && wf.DefaultPermissionMode != "" {
 		enrichedMetadata["_permission_mode"] = wf.DefaultPermissionMode
+	}
+	if skillName != "" {
+		enrichedMetadata["_skill_name"] = skillName
 	}
 	if agentName != "" {
 		enrichedMetadata["_agent_name"] = agentName

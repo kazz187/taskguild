@@ -19,7 +19,8 @@ export interface StatusDraft {
   isInitial: boolean
   isTerminal: boolean
   transitionsTo: string[] // keys
-  agentId: string // reference to AgentDefinition
+  agentId: string // deprecated: use skillId
+  skillId: string // reference to SkillDefinition assigned to this status
   hooks: HookDraft[]
   enableAgentMdHarness: boolean // default true: review agent markdown on status exit
   agentMdHarnessExplicitlyDisabled: boolean // tracks explicit user choice

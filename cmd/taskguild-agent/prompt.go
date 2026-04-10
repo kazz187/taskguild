@@ -26,6 +26,18 @@ type resultHistoryEntry struct {
 // Keeps only the task content and current status — all boilerplate instructions
 // live in the system prompt (buildWorkflowContext).
 func buildUserPrompt(metadata map[string]string, workDir string) string {
+	taskContent := buildTaskContent(metadata)
+
+	// When a skill is assigned to this status, invoke it via /$skill_name.
+	if skillName := metadata["_skill_name"]; skillName != "" {
+		return fmt.Sprintf("/%s %s", skillName, taskContent)
+	}
+
+	return taskContent
+}
+
+// buildTaskContent constructs the task details portion of the prompt.
+func buildTaskContent(metadata map[string]string) string {
 	title := metadata["_task_title"]
 	description := metadata["_task_description"]
 

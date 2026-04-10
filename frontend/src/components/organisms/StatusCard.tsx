@@ -2,7 +2,7 @@ import type { AgentDefinition } from '@taskguild/proto/taskguild/v1/agent_pb.ts'
 import type { SkillDefinition } from '@taskguild/proto/taskguild/v1/skill_pb.ts'
 import type { ScriptDefinition } from '@taskguild/proto/taskguild/v1/script_pb.ts'
 import { HookTrigger, HookActionType } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
-import { Plus, Trash2, Bot, ChevronUp, ChevronDown, Zap } from 'lucide-react'
+import { Plus, Trash2, ChevronUp, ChevronDown, Zap } from 'lucide-react'
 import { Button, Input, Select, Checkbox, Badge } from '../atoms/index.ts'
 import { FormField, Card } from '../molecules/index.ts'
 import type { StatusDraft, HookDraft, AgentConfigDraft } from './WorkflowFormTypes.ts'
@@ -24,6 +24,7 @@ export function StatusCard({ status: s, index, statuses, agents, skills, scripts
   onMoveHook: (statusKey: string, hookIndex: number, direction: -1 | 1) => void
   onUpdateHook: (statusKey: string, hookKey: string, patch: Partial<HookDraft>) => void
 }) {
+  const selectedSkill = skills.find(sk => sk.id === s.skillId)
   const selectedAgent = agents.find(a => a.id === s.agentId)
   const legacyAgent = agentConfigs.find(a => a.statusKey === s.key)
 
@@ -128,45 +129,52 @@ export function StatusCard({ status: s, index, statuses, agents, skills, scripts
         </div>
       </div>
 
-      {/* Agent Assignment (dropdown) */}
+      {/* Skill Assignment (dropdown) */}
       {!s.isTerminal && (
         <Card variant="nested" className="p-2.5 md:p-3 mt-2">
           <div className="flex items-center gap-2 mb-2">
-            <Bot className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-xs text-cyan-400">Assigned Agent</span>
+            <Zap className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="text-xs text-cyan-400">Assigned Skill</span>
           </div>
           <Select
-            value={s.agentId}
-            onChange={(e) => onUpdateStatus(s.key, { agentId: e.target.value })}
+            value={s.skillId}
+            onChange={(e) => onUpdateStatus(s.key, { skillId: e.target.value })}
             selectSize="xs"
             className="rounded"
           >
-            <option value="">No agent (manual status)</option>
-            {agents.map(agent => (
-              <option key={agent.id} value={agent.id}>
-                {agent.name} — {agent.description}
+            <option value="">No skill (manual status)</option>
+            {skills.map(skill => (
+              <option key={skill.id} value={skill.id}>
+                {skill.name} — {skill.description}
               </option>
             ))}
           </Select>
-          {selectedAgent && (
+          {selectedSkill && (
             <div className="mt-2 text-[11px] text-gray-500">
-              <span className="text-gray-400">Model:</span> {selectedAgent.model || 'inherit'}
-              {selectedAgent.tools.length > 0 && (
+              {selectedSkill.model && (
+                <><span className="text-gray-400">Model:</span> {selectedSkill.model}</>
+              )}
+              {selectedSkill.allowedTools.length > 0 && (
                 <>
-                  {' · '}
-                  <span className="text-gray-400">Tools:</span> {selectedAgent.tools.join(', ')}
+                  {selectedSkill.model ? ' · ' : ''}
+                  <span className="text-gray-400">Tools:</span> {selectedSkill.allowedTools.join(', ')}
                 </>
               )}
             </div>
           )}
-          {!s.agentId && legacyAgent && (
+          {!s.skillId && s.agentId && selectedAgent && (
+            <div className="mt-2 text-[11px] text-amber-500/70">
+              Legacy agent assigned: {selectedAgent.name} — please migrate to a skill
+            </div>
+          )}
+          {!s.skillId && !s.agentId && legacyAgent && (
             <div className="mt-2 text-[11px] text-amber-500/70">
               Legacy agent config: {legacyAgent.name} (will be preserved)
             </div>
           )}
-          {agents.length === 0 && (
+          {skills.length === 0 && (
             <p className="mt-2 text-[11px] text-gray-600">
-              No agents defined yet. Create agents in the Agents page first.
+              No skills defined yet. Create skills in the Skills page first.
             </p>
           )}
         </Card>

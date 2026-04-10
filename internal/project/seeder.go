@@ -6,67 +6,63 @@ import (
 
 	"github.com/oklog/ulid/v2"
 
-	"github.com/kazz187/taskguild/internal/agent"
 	"github.com/kazz187/taskguild/internal/skill"
 	"github.com/kazz187/taskguild/internal/workflow"
 )
 
-// Seeder creates default workflow, agents, and skills for a newly created project.
+// Seeder creates default workflow and skills for a newly created project.
 type Seeder struct {
 	workflowRepo workflow.Repository
-	agentRepo    agent.Repository
 	skillRepo    skill.Repository
 }
 
 // NewSeeder creates a new Seeder.
-func NewSeeder(workflowRepo workflow.Repository, agentRepo agent.Repository, skillRepo skill.Repository) *Seeder {
+func NewSeeder(workflowRepo workflow.Repository, skillRepo skill.Repository) *Seeder {
 	return &Seeder{
 		workflowRepo: workflowRepo,
-		agentRepo:    agentRepo,
 		skillRepo:    skillRepo,
 	}
 }
 
-// Seed creates the default development workflow with architect and software-engineer
-// agents, and the create-pr skill for the given project.
+// Seed creates the default development workflow with skills for the given project.
 func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 	now := time.Now()
 
-	// 1. Create agents.
-	architectAgent := &agent.Agent{
-		ID:             ulid.Make().String(),
-		ProjectID:      projectID,
-		Name:           "architect",
-		Description:    "system architect",
-		Prompt:         defaultArchitectPrompt,
-		Tools:          []string{"Read", "Glob", "Grep", "WebSearch", "WebFetch", "Task"},
-		Model:          "opus",
-		PermissionMode: "plan",
-		Memory:         "user",
-		CreatedAt:      now,
-		UpdatedAt:      now,
+	// 1. Create architect skill (assigned to Plan status).
+	architectSkill := &skill.Skill{
+		ID:            ulid.Make().String(),
+		ProjectID:     projectID,
+		Name:          "architect",
+		Description:   "System architect for task planning and specification.",
+		Content:       defaultArchitectPrompt,
+		AllowedTools:  []string{"Read", "Glob", "Grep", "WebSearch", "WebFetch", "Task"},
+		Model:         "opus",
+		UserInvocable: false,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	if err := s.agentRepo.Create(ctx, architectAgent); err != nil {
+	if err := s.skillRepo.Create(ctx, architectSkill); err != nil {
 		return err
 	}
 
-	swEngineerAgent := &agent.Agent{
-		ID:             ulid.Make().String(),
-		ProjectID:      projectID,
-		Name:           "software-engineer",
-		Description:    "software engineer",
-		Prompt:         defaultSoftwareEngineerPrompt,
-		Tools:          []string{"Read", "Write", "Edit", "Glob", "Grep", "WebSearch", "WebFetch", "Task", "NotebookEdit"},
-		Model:          "opus",
-		PermissionMode: "acceptEdits",
-		CreatedAt:      now,
-		UpdatedAt:      now,
+	// 2. Create software-engineer skill (assigned to Develop status).
+	swEngineerSkill := &skill.Skill{
+		ID:            ulid.Make().String(),
+		ProjectID:     projectID,
+		Name:          "software-engineer",
+		Description:   "Software engineer for code implementation.",
+		Content:       defaultSoftwareEngineerPrompt,
+		AllowedTools:  []string{"Read", "Write", "Edit", "Glob", "Grep", "WebSearch", "WebFetch", "Task", "NotebookEdit"},
+		Model:         "opus",
+		UserInvocable: false,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
-	if err := s.agentRepo.Create(ctx, swEngineerAgent); err != nil {
+	if err := s.skillRepo.Create(ctx, swEngineerSkill); err != nil {
 		return err
 	}
 
-	// 2. Create create-pr skill.
+	// 3. Create create-pr skill.
 	createPRSkill := &skill.Skill{
 		ID:            ulid.Make().String(),
 		ProjectID:     projectID,
@@ -82,7 +78,7 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 		return err
 	}
 
-	// 3. Create sync-default-branch skill.
+	// 4. Create sync-default-branch skill.
 	syncBranchSkill := &skill.Skill{
 		ID:            ulid.Make().String(),
 		ProjectID:     projectID,
@@ -98,7 +94,7 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 		return err
 	}
 
-	// 4. Create development workflow referencing the created agent and skill IDs.
+	// 5. Create development workflow referencing skill IDs.
 	hookID := ulid.Make().String()
 	wf := &workflow.Workflow{
 		ID:        ulid.Make().String(),
@@ -116,7 +112,7 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 				Name:                 "Plan",
 				Order:                1,
 				TransitionsTo:        []string{"Develop"},
-				AgentID:              architectAgent.ID,
+				SkillID:              architectSkill.ID,
 				EnableAgentMDHarness: true,
 				PermissionMode:       "plan",
 			},
@@ -124,7 +120,7 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 				Name:               "Develop",
 				Order:              2,
 				TransitionsTo:      []string{"Review"},
-				AgentID:            swEngineerAgent.ID,
+				SkillID:            swEngineerSkill.ID,
 				InheritSessionFrom: "Plan",
 				Hooks: []workflow.StatusHook{
 					{

@@ -17,6 +17,7 @@ export function workflowToDrafts(wf: Workflow) {
       isTerminal: s.isTerminal,
       transitionsTo: [], // fill below
       agentId: s.agentId ?? '',
+      skillId: s.skillId ?? '',
       enableAgentMdHarness: s.agentMdHarnessExplicitlyDisabled ? s.enableAgentMdHarness : true,
       agentMdHarnessExplicitlyDisabled: s.agentMdHarnessExplicitlyDisabled,
       permissionMode: s.permissionMode ?? '',
@@ -74,6 +75,7 @@ export function buildProtoPayload(statuses: StatusDraft[], agentConfigs: AgentCo
     isTerminal: s.isTerminal,
     transitionsTo: s.transitionsTo.map((k) => keyToId.get(k)!).filter(Boolean),
     agentId: s.agentId,
+    skillId: s.skillId,
     enableAgentMdHarness: s.enableAgentMdHarness,
     agentMdHarnessExplicitlyDisabled: s.agentMdHarnessExplicitlyDisabled,
     permissionMode: s.permissionMode,
