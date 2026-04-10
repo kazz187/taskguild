@@ -470,9 +470,11 @@ func handlePermissionRequest(
 ) (claudeagent.PermissionResult, error) {
 	logger := clog.LoggerFromContext(ctx)
 
-	// bypassPermissions: allow everything
-	if permMode == claudeagent.PermissionModeBypassPermissions {
-		logger.Debug("auto-allowing tool (bypassPermissions)", "tool", toolName)
+	// bypassPermissions / auto / dontAsk: allow everything
+	if permMode == claudeagent.PermissionModeBypassPermissions ||
+		permMode == claudeagent.PermissionModeAuto ||
+		permMode == claudeagent.PermissionModeDontAsk {
+		logger.Debug("auto-allowing tool", "tool", toolName, "mode", string(permMode))
 		return claudeagent.PermissionResultAllow{}, nil
 	}
 
@@ -499,6 +501,8 @@ func handlePermissionRequest(
 	if toolName == "AskUserQuestion" {
 		return handleAskUserQuestion(ctx, client, taskID, agentID, input, waiter)
 	}
+
+	logger.Debug("permission request", "tool", toolName, "agent_id", toolCtx.AgentID, "tool_use_id", toolCtx.ToolUseID)
 
 	// Check permission cache: auto-allow if a matching "always allow" rule exists.
 	if permCache != nil && permCache.Check(toolName, input) {

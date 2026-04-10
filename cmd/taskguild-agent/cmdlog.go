@@ -204,6 +204,12 @@ func (tl *turnLog) LogResult(result *claudeagent.ResultMessage, queryErr error) 
 	} else {
 		sb.WriteString(fmt.Sprintf("Session ID: %s\n", result.SessionID))
 		sb.WriteString(fmt.Sprintf("Is Error: %v\n", result.IsError))
+		if result.StopReason != "" {
+			sb.WriteString(fmt.Sprintf("Stop Reason: %s\n", result.StopReason))
+		}
+		if len(result.Errors) > 0 {
+			sb.WriteString(fmt.Sprintf("Errors: %v\n", result.Errors))
+		}
 		sb.WriteString(fmt.Sprintf("Result Text (%d chars):\n", len(result.Result)))
 		sb.WriteString(result.Result)
 		sb.WriteString("\n")
