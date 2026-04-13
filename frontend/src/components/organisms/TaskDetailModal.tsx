@@ -7,12 +7,12 @@ import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import type { WorkflowStatus } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
-import { X, Bot, Clock, GitBranch, Loader, Trash2, ArrowRight, AlertTriangle, RefreshCw, CopyPlus, ArrowUpRight, Layers } from 'lucide-react'
+import { Bot, Clock, GitBranch, Loader, Trash2, ArrowRight, AlertTriangle, RefreshCw, CopyPlus, ArrowUpRight, Layers } from 'lucide-react'
 import { ForceTransitionDialog } from './ForceTransitionDialog'
 import { shortId } from '@/lib/id'
-import { Button, Input, Select, Checkbox, Badge, Tooltip } from '../atoms/index.ts'
+import { Button, Select, Checkbox, Badge, Tooltip } from '../atoms/index.ts'
 import { pendingReasonText } from '@/lib/pendingReason'
-import { Modal, Card, ImageUploadTextarea } from '../molecules/index.ts'
+import { Modal, TaskFormModal, Card, ImageUploadTextarea } from '../molecules/index.ts'
 
 const TASK_DETAIL_EVENT_TYPES = [
   EventType.TASK_UPDATED,
@@ -201,26 +201,42 @@ export function TaskDetailModal({
   }
 
   return (
-    <Modal open={true} onClose={onClose} size="full">
-      {/* Header */}
-      <div className="flex items-start justify-between px-4 pt-4 pb-1">
-        <div className="flex-1 min-w-0 mr-3">
-          <Input
-            autoFocus
-            value={titleDraft}
-            onChange={(e) => setTitleDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleSave() }}
-            className="!border-slate-600 text-base md:text-lg font-semibold !rounded"
-            placeholder="Task title..."
-          />
-        </div>
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors shrink-0 mt-1 p-1">
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* Body */}
-      <Modal.Body>
+    <>
+      <TaskFormModal
+        title={titleDraft}
+        onTitleChange={setTitleDraft}
+        onClose={handleCancel}
+        onSubmit={handleSave}
+        submitLabel="Save"
+        submitPendingLabel="Saving..."
+        isSubmitting={updateMut.isPending}
+        submitDisabled={!hasChanges || !titleDraft.trim()}
+        footerLeadingActions={
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Trash2 className="w-3.5 h-3.5" />}
+              onClick={handleDelete}
+              disabled={deleteMut.isPending}
+              className="!text-gray-500 hover:!text-red-400"
+            >
+              Delete
+            </Button>
+            {onCreateChild && task && (
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<CopyPlus className="w-3.5 h-3.5" />}
+                onClick={() => onCreateChild(task)}
+                className="!text-gray-500 hover:!text-cyan-400"
+              >
+                Subtask
+              </Button>
+            )}
+          </>
+        }
+      >
         {/* Parent task link */}
         {parentTask && (
           <Card variant="nested" className="!rounded-lg !py-2 !px-3">
@@ -379,47 +395,7 @@ export function TaskDetailModal({
             </div>
           </div>
         )}
-
-        {/* Action buttons */}
-        <div className="border-t border-slate-800 mt-4 pt-3 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<Trash2 className="w-3.5 h-3.5" />}
-              onClick={handleDelete}
-              disabled={deleteMut.isPending}
-              className="!text-gray-500 hover:!text-red-400"
-            >
-              Delete
-            </Button>
-            {onCreateChild && task && (
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={<CopyPlus className="w-3.5 h-3.5" />}
-                onClick={() => onCreateChild(task)}
-                className="!text-gray-500 hover:!text-cyan-400"
-              >
-                Subtask
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={handleCancel}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleSave}
-              disabled={!hasChanges || !titleDraft.trim() || updateMut.isPending}
-            >
-              {updateMut.isPending ? 'Saving...' : 'Save'}
-            </Button>
-          </div>
-        </div>
-      </Modal.Body>
+      </TaskFormModal>
 
       {/* Force-transition confirmation dialog */}
       {forceTransitionTarget && currentStatus && (
@@ -430,6 +406,6 @@ export function TaskDetailModal({
           onCancel={handleForceCancel}
         />
       )}
-    </Modal>
+    </>
   )
 }
