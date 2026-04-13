@@ -90,67 +90,48 @@ func (ht *harnessTracker) launchOrReplace(key string, fn func(ctx context.Contex
 // Skill-based harness
 // ---------------------------------------------------------------------------
 
-const skillHarnessPrompt = `You are a failure pattern analyst. Your job is to review the work just completed on a task and record specific failure patterns to Skill files so the same mistakes are not repeated.
+const skillHarnessPrompt = `You are a failure pattern analyst. Your job is to review the work just completed on a task and append non-obvious failure patterns to a single shared file so the same mistakes are not repeated on future tasks.
 
 ## What to Record
 
-Record ONLY concrete, specific failure patterns:
-- Bash commands that failed (non-zero exit) and what the correct command was
+Record ONLY concrete, specific, recurrence-worthy failure patterns:
+- Bash commands that failed (non-zero exit) and the correct command
 - Commands that were tried, corrected, and retried (trial-and-error traces)
 - Code edits that caused build/test failures and required fixing
 - Files that were missed in a cross-cutting change (propagation path gaps)
 
 ## What NOT to Record
 
-- Architectural knowledge (humans write this in the Skill body)
+- Architectural knowledge (already documented in skill files / docs)
 - Abstract lessons ("always write tests", "be careful with X")
-- Anything already recorded in the Skill
-- Task-specific details that won't recur
+- Anything already recorded in HARNESS.md
+- Task-specific details that won't recur on a different task
+- The fact that a task completed successfully
 
 ## Where to Record
 
-Append exactly ONE line to the "## 失敗パターン（自動追記）" section at the end of the appropriate Skill file:
+There is exactly ONE target file. Its absolute path is provided in the user message under "## Harness File".
 
-| Failure type | Target Skill |
-|---|---|
-| Build/run command failures | project-rules |
-| Go coding violations (logger, error types, style) | go-guards |
-| Frontend violations (imports, components, pnpm) | frontend-guards |
-| Missing changes in a propagation chain | codebase-map |
-| Role-specific judgment errors | The role skill (architect, software-engineer, senior-engineer) |
+Append entries to the ` + "`" + `## 失敗パターン（自動追記）` + "`" + ` section at the end of that file. If the file or section does not exist yet, create it (the file may also be empty).
 
 ## Format
 
 Each entry is a single line starting with "- ":
 - ` + "`" + `npx buf generate` + "`" + ` → 失敗。正解は ` + "`" + `cd proto && make generate` + "`" + `
 
+Group related entries under a short ` + "`" + `### <topic>` + "`" + ` subheading inside the 失敗パターン section if helpful, but keep individual lines terse.
+
 ## Rules
 
-1. Read the relevant Skill file(s) FIRST.
+1. Read the harness file FIRST to see what is already recorded.
 2. If the task completed cleanly with no failures, do nothing.
-3. If a pattern is already recorded, do nothing.
-4. If the "失敗パターン" section has 20+ lines, do NOT append. Instead output: HARNESS_REVIEW_NEEDED: <skill-name>
-5. Append to BOTH the worktree copy AND the main copy of each modified Skill file (if paths differ).
-6. Do NOT modify anything above the "## 失敗パターン（自動追記）" heading.
-7. Write in the language of the existing entries (Japanese or English).`
+3. If a pattern is already recorded (even paraphrased), do nothing.
+4. If the 失敗パターン section already has 30+ lines, do NOT append. Instead output: HARNESS_REVIEW_NEEDED
+5. Do NOT modify anything above the ` + "`" + `## 失敗パターン（自動追記）` + "`" + ` heading.
+6. Write in the language of the existing entries (Japanese by default).`
 
-var knownSkillNames = []string{
-	"project-rules", "codebase-map", "go-guards", "frontend-guards",
-	"architect", "software-engineer", "senior-engineer",
-}
-
-func resolveSkillPaths(workDir string, metadata map[string]string, skillName string) (worktreePath, mainPath string) {
-	skillRelPath := filepath.Join(".claude", "skills", skillName, "SKILL.md")
-	mainPath = filepath.Join(workDir, skillRelPath)
-
-	if metadata["_use_worktree"] == "true" {
-		if wt := metadata["worktree"]; wt != "" {
-			wtDir := filepath.Join(workDir, ".claude", "worktrees", wt)
-			worktreePath = filepath.Join(wtDir, skillRelPath)
-			return worktreePath, mainPath
-		}
-	}
-	return mainPath, mainPath
+func harnessMDPath(workDir string) string {
+	return filepath.Join(workDir, ".taskguild", "HARNESS.md")
 }
 
 func maybeRunSkillHarness(
@@ -242,28 +223,10 @@ func runSkillHarness(
 
 	logger.Info("starting skill harness", "task_id", taskID)
 
-	// Capture before-content for all known skill files.
-	type skillSnapshot struct {
-		name                       string
-		worktreePath, mainPath     string
-		beforeWT, beforeMain       string
-	}
-	var snapshots []skillSnapshot
-	for _, name := range knownSkillNames {
-		wtPath, mainPath := resolveSkillPaths(workDir, metadata, name)
-		snap := skillSnapshot{
-			name:         name,
-			worktreePath: wtPath,
-			mainPath:     mainPath,
-			beforeWT:     readFileOrEmpty(wtPath),
-		}
-		if wtPath != mainPath {
-			snap.beforeMain = readFileOrEmpty(mainPath)
-		}
-		snapshots = append(snapshots, snap)
-	}
+	harnessPath := harnessMDPath(workDir)
+	beforeContent := readFileOrEmpty(harnessPath)
 
-	userPrompt := buildSkillHarnessUserPrompt(taskID, taskTitle, taskDescription, taskSummary, workDir, metadata)
+	userPrompt := buildSkillHarnessUserPrompt(taskID, taskTitle, taskDescription, taskSummary, harnessPath)
 
 	harnessCtx, cancel := context.WithTimeout(ctx, harnessTimeout)
 	defer cancel()
@@ -295,54 +258,32 @@ func runSkillHarness(
 		return
 	}
 
-	// Compute diffs for all modified skill files.
-	var allDiffs []string
-	for _, snap := range snapshots {
-		afterWT := readFileOrEmpty(snap.worktreePath)
-		diff := computeUnifiedDiff(snap.name+"/SKILL.md", snap.beforeWT, afterWT)
-		if diff != "" {
-			allDiffs = append(allDiffs, diff)
-		}
-		if snap.worktreePath != snap.mainPath {
-			afterMain := readFileOrEmpty(snap.mainPath)
-			mainDiff := computeUnifiedDiff(snap.name+"/SKILL.md (main)", snap.beforeMain, afterMain)
-			if mainDiff != "" {
-				allDiffs = append(allDiffs, mainDiff)
-			}
-		}
-	}
+	afterContent := readFileOrEmpty(harnessPath)
+	diff := computeUnifiedDiff(".taskguild/HARNESS.md", beforeContent, afterContent)
 
-	if len(allDiffs) == 0 {
+	if diff == "" {
 		logger.Info("skill harness completed, no changes", "task_id", taskID)
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 			"Skill harness completed: No changes", nil)
 	} else {
-		combined := strings.Join(allDiffs, "\n\n")
 		logger.Info("skill harness completed with changes", "task_id", taskID)
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-			fmt.Sprintf("Skill harness completed\n\n%s", combined), nil)
+			fmt.Sprintf("Skill harness completed\n\n%s", diff), nil)
 	}
 }
 
-func buildSkillHarnessUserPrompt(taskID, title, description, summary, workDir string, metadata map[string]string) string {
+func buildSkillHarnessUserPrompt(taskID, title, description, summary, harnessPath string) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("## Completed Task\n\n**Task ID:** %s\n**Title:** %s\n\n### Description\n%s\n\n### Task Summary / Output\n%s\n", taskID, title, description, summary))
+	fmt.Fprintf(&sb, "## Completed Task\n\n**Task ID:** %s\n**Title:** %s\n\n### Description\n%s\n\n### Task Summary / Output\n%s\n", taskID, title, description, summary)
 
-	sb.WriteString("\n## Skill File Paths\n\nWhen appending failure patterns, write to BOTH paths for each skill:\n\n")
-	for _, name := range knownSkillNames {
-		wtPath, mainPath := resolveSkillPaths(workDir, metadata, name)
-		if wtPath == mainPath {
-			sb.WriteString(fmt.Sprintf("- %s: `%s`\n", name, mainPath))
-		} else {
-			sb.WriteString(fmt.Sprintf("- %s:\n  - worktree: `%s`\n  - main: `%s`\n", name, wtPath, mainPath))
-		}
-	}
+	fmt.Fprintf(&sb, "\n## Harness File\n\nAppend any worth-recording failure patterns to this single file (absolute path):\n\n`%s`\n", harnessPath)
+	sb.WriteString("\nThe file lives at the repository root under `.taskguild/`, NOT inside any worktree. Always use the absolute path above when reading or writing.\n")
 
 	sb.WriteString("\n## Instructions\n\n")
-	sb.WriteString("1. Read the relevant Skill file(s) based on the task summary.\n")
-	sb.WriteString("2. Identify concrete failure patterns (commands that failed, edits that broke builds, etc.).\n")
-	sb.WriteString("3. Append ONE line per pattern to the appropriate Skill's \"## 失敗パターン（自動追記）\" section.\n")
-	sb.WriteString("4. If the task completed cleanly with no failures, leave all files unchanged.\n")
+	sb.WriteString("1. Read the harness file (it may not exist yet — that is fine).\n")
+	sb.WriteString("2. Identify concrete failure patterns from the completed task.\n")
+	sb.WriteString("3. Append ONE line per pattern to the `## 失敗パターン（自動追記）` section, creating the file/section if needed.\n")
+	sb.WriteString("4. If the task completed cleanly with no failures, leave the file unchanged.\n")
 
 	return sb.String()
 }
