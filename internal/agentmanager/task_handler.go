@@ -480,8 +480,9 @@ func (s *Server) delayedRebroadcast(taskID, projectID, workflowID string, delay 
 	}
 
 	agentConfigID := wf.FindAgentIDForStatus(t.StatusID)
-	if agentConfigID == "" {
-		slog.Info("retry rebroadcast: no agent config for status, skipping",
+	skillIDs := wf.FindSkillIDsForStatus(t.StatusID)
+	if agentConfigID == "" && len(skillIDs) == 0 {
+		slog.Info("retry rebroadcast: no executor (skill or agent) for status, skipping",
 			"task_id", taskID, "status_id", t.StatusID)
 		return
 	}
@@ -1058,8 +1059,9 @@ func (s *Server) RequestTaskResume(ctx context.Context, t *task.Task) error {
 		return err
 	}
 	agentConfigID := wf.FindAgentIDForStatus(t.StatusID)
-	if agentConfigID == "" {
-		return fmt.Errorf("no agent configured for status %s", t.StatusID)
+	skillIDs := wf.FindSkillIDsForStatus(t.StatusID)
+	if agentConfigID == "" && len(skillIDs) == 0 {
+		return fmt.Errorf("no executor (skill or agent) configured for status %s", t.StatusID)
 	}
 
 	var projectName string

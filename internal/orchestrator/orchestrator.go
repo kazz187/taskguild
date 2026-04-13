@@ -72,10 +72,14 @@ func (o *Orchestrator) handleTaskEvent(ctx context.Context, event *taskguildv1.E
 		return
 	}
 
-	// Determine the agent config ID for this status.
+	// Determine the executor for this status. A status can be driven by
+	// skill_ids (new skill-based flow), an agent_id, or a legacy
+	// AgentConfig — resolved via ClaimTask's 3-tier fallback. Only skip if
+	// the status has none of these configured (e.g. Draft / Closed).
 	agentConfigID := wf.FindAgentIDForStatus(t.StatusID)
-	if agentConfigID == "" {
-		return // no agent config for this status (terminal or manual)
+	skillIDs := wf.FindSkillIDsForStatus(t.StatusID)
+	if agentConfigID == "" && len(skillIDs) == 0 {
+		return // no executor configured for this status (initial/terminal)
 	}
 
 	// If the task is already assigned to an agent (e.g. still running hooks
