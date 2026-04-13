@@ -30,16 +30,6 @@ export interface StatusDraft {
   skillHarnessExplicitlyDisabled: boolean
 }
 
-/** @deprecated Legacy agent config, kept for backward compat */
-export interface AgentConfigDraft {
-  key: string
-  id: string
-  statusKey: string
-  name: string
-  description: string
-  instructions: string
-}
-
 let nextKey = 0
 export function genKey() {
   return `k${++nextKey}`
