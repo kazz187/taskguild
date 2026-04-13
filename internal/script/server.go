@@ -29,6 +29,14 @@ type ExecutionRequester interface {
 	RequestScriptStop(projectID string, requestID string) error
 }
 
+// ChangeNotifier is called after script CRUD operations to notify connected
+// agents that they should re-sync their local script files.
+// changedScriptIDs lists scripts that were created or updated and should be
+// force-overwritten on the agent side even if a local file already exists.
+type ChangeNotifier interface {
+	NotifyScriptChange(projectID string, changedScriptIDs []string)
+}
+
 // WorkDirResolver resolves the absolute working directory for a project
 // by looking up the connected agent's work_dir.
 type WorkDirResolver interface {
@@ -40,10 +48,17 @@ type Server struct {
 	execReq  ExecutionRequester
 	broker   *ScriptExecutionBroker
 	resolver WorkDirResolver
+	notifier ChangeNotifier
 }
 
-func NewServer(repo Repository, execReq ExecutionRequester, broker *ScriptExecutionBroker, resolver WorkDirResolver) *Server {
-	return &Server{repo: repo, execReq: execReq, broker: broker, resolver: resolver}
+func NewServer(repo Repository, execReq ExecutionRequester, broker *ScriptExecutionBroker, resolver WorkDirResolver, notifier ChangeNotifier) *Server {
+	return &Server{repo: repo, execReq: execReq, broker: broker, resolver: resolver, notifier: notifier}
+}
+
+func (s *Server) notifyChange(projectID string, changedScriptIDs []string) {
+	if s.notifier != nil {
+		s.notifier.NotifyScriptChange(projectID, changedScriptIDs)
+	}
 }
 
 func (s *Server) CreateScript(ctx context.Context, req *connect.Request[taskguildv1.CreateScriptRequest]) (*connect.Response[taskguildv1.CreateScriptResponse], error) {
@@ -66,6 +81,7 @@ func (s *Server) CreateScript(ctx context.Context, req *connect.Request[taskguil
 	if err := s.repo.Create(ctx, sc); err != nil {
 		return nil, err
 	}
+	s.notifyChange(sc.ProjectID, []string{sc.ID})
 	return connect.NewResponse(&taskguildv1.CreateScriptResponse{
 		Script: toProto(sc),
 	}), nil
@@ -128,18 +144,21 @@ func (s *Server) UpdateScript(ctx context.Context, req *connect.Request[taskguil
 	if err := s.repo.Update(ctx, sc); err != nil {
 		return nil, err
 	}
+	s.notifyChange(sc.ProjectID, []string{sc.ID})
 	return connect.NewResponse(&taskguildv1.UpdateScriptResponse{
 		Script: toProto(sc),
 	}), nil
 }
 
 func (s *Server) DeleteScript(ctx context.Context, req *connect.Request[taskguildv1.DeleteScriptRequest]) (*connect.Response[taskguildv1.DeleteScriptResponse], error) {
-	if _, err := s.repo.Get(ctx, req.Msg.Id); err != nil {
+	sc, err := s.repo.Get(ctx, req.Msg.Id)
+	if err != nil {
 		return nil, err
 	}
 	if err := s.repo.Delete(ctx, req.Msg.Id); err != nil {
 		return nil, err
 	}
+	s.notifyChange(sc.ProjectID, nil)
 	return connect.NewResponse(&taskguildv1.DeleteScriptResponse{}), nil
 }
 

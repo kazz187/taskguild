@@ -41,6 +41,8 @@ func syncSkills(ctx context.Context, client taskguildv1connect.AgentManagerServi
 		return
 	}
 
+	// serverSkillNames tracks skill directory names known to the server.
+	serverSkillNames := make(map[string]bool)
 	var written, skipped int
 	for _, sk := range skills {
 		name := sk.GetName()
@@ -55,6 +57,7 @@ func syncSkills(ctx context.Context, client taskguildv1connect.AgentManagerServi
 			continue
 		}
 
+		serverSkillNames[name] = true
 		skillDir := filepath.Join(skillsDir, name)
 		filePath := filepath.Join(skillDir, "SKILL.md")
 
@@ -85,6 +88,7 @@ func syncSkills(ctx context.Context, client taskguildv1connect.AgentManagerServi
 		written++
 	}
 
+	cleanupStaleSkillDirs(skillsDir, serverSkillNames)
 	slog.Info("skill sync complete", "written", written, "skipped_existing", skipped)
 }
 
@@ -135,4 +139,27 @@ func buildSkillMDContent(sk *v1.SkillDefinition) string {
 	}
 
 	return sb.String()
+}
+
+// cleanupStaleSkillDirs removes skill subdirectories from the skills directory
+// that were not found on the server during the current sync.
+func cleanupStaleSkillDirs(skillsDir string, serverSkillNames map[string]bool) {
+	entries, err := os.ReadDir(skillsDir)
+	if err != nil {
+		return
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		if !serverSkillNames[entry.Name()] {
+			dirPath := filepath.Join(skillsDir, entry.Name())
+			if err := os.RemoveAll(dirPath); err != nil {
+				slog.Error("failed to remove stale skill directory", "path", dirPath, "error", err)
+			} else {
+				slog.Info("removed stale skill directory", "name", entry.Name())
+			}
+		}
+	}
 }

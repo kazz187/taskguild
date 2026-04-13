@@ -78,7 +78,7 @@ func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServi
 		slog.Debug("synced agent", "filename", filename)
 	}
 
-	cleanupStaleAgentFiles(agentsDir, serverFiles, forceAll)
+	cleanupStaleAgentFiles(agentsDir, serverFiles)
 }
 
 // buildAgentMDContent generates markdown content with YAML frontmatter
@@ -146,8 +146,7 @@ func writeYAMLStringField(sb *strings.Builder, key, value string) {
 
 // cleanupStaleAgentFiles removes .md files from the agents directory
 // that were not found on the server during the current sync.
-// When forceAll is false, local-only files are preserved.
-func cleanupStaleAgentFiles(agentsDir string, serverFiles map[string]bool, forceAll bool) {
+func cleanupStaleAgentFiles(agentsDir string, serverFiles map[string]bool) {
 	entries, err := os.ReadDir(agentsDir)
 	if err != nil {
 		return
@@ -159,14 +158,10 @@ func cleanupStaleAgentFiles(agentsDir string, serverFiles map[string]bool, force
 		}
 		if !serverFiles[entry.Name()] {
 			filePath := filepath.Join(agentsDir, entry.Name())
-			if !forceAll {
-				slog.Debug("preserving locally-modified agent file not found on server", "filename", entry.Name())
-				continue
-			}
 			if err := os.Remove(filePath); err != nil {
 				slog.Error("failed to remove stale agent file", "path", filePath, "error", err)
 			} else {
-				slog.Debug("removed stale agent", "filename", entry.Name())
+				slog.Info("removed stale agent file", "filename", entry.Name())
 			}
 		}
 	}

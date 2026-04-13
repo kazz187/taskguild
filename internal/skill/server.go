@@ -21,8 +21,10 @@ var _ taskguildv1connect.SkillServiceHandler = (*Server)(nil)
 
 // ChangeNotifier is called after skill CRUD operations to notify connected
 // agents that they should re-sync their local skill definitions.
+// changedSkillIDs lists skills that were created or updated and should be
+// force-overwritten on the agent side even if a local file already exists.
 type ChangeNotifier interface {
-	NotifySkillChange(projectID string)
+	NotifySkillChange(projectID string, changedSkillIDs []string)
 }
 
 // WorkDirResolver resolves the absolute working directory for a project
@@ -41,9 +43,9 @@ func NewServer(repo Repository, notifier ChangeNotifier, resolver WorkDirResolve
 	return &Server{repo: repo, notifier: notifier, resolver: resolver}
 }
 
-func (s *Server) notifyChange(projectID string) {
+func (s *Server) notifyChange(projectID string, changedSkillIDs []string) {
 	if s.notifier != nil {
-		s.notifier.NotifySkillChange(projectID)
+		s.notifier.NotifySkillChange(projectID, changedSkillIDs)
 	}
 }
 
@@ -69,7 +71,7 @@ func (s *Server) CreateSkill(ctx context.Context, req *connect.Request[taskguild
 	if err := s.repo.Create(ctx, sk); err != nil {
 		return nil, err
 	}
-	s.notifyChange(sk.ProjectID)
+	s.notifyChange(sk.ProjectID, []string{sk.ID})
 	return connect.NewResponse(&taskguildv1.CreateSkillResponse{
 		Skill: toProto(sk),
 	}), nil
@@ -147,7 +149,7 @@ func (s *Server) UpdateSkill(ctx context.Context, req *connect.Request[taskguild
 	if err := s.repo.Update(ctx, sk); err != nil {
 		return nil, err
 	}
-	s.notifyChange(sk.ProjectID)
+	s.notifyChange(sk.ProjectID, []string{sk.ID})
 	return connect.NewResponse(&taskguildv1.UpdateSkillResponse{
 		Skill: toProto(sk),
 	}), nil
@@ -161,7 +163,7 @@ func (s *Server) DeleteSkill(ctx context.Context, req *connect.Request[taskguild
 	if err := s.repo.Delete(ctx, req.Msg.Id); err != nil {
 		return nil, err
 	}
-	s.notifyChange(sk.ProjectID)
+	s.notifyChange(sk.ProjectID, nil)
 	return connect.NewResponse(&taskguildv1.DeleteSkillResponse{}), nil
 }
 
