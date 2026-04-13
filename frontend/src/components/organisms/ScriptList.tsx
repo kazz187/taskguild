@@ -17,13 +17,14 @@ import type { ScriptDiff } from '@taskguild/proto/taskguild/v1/agent_manager_pb.
 import { ScriptDiffType, ScriptResolutionChoice } from '@taskguild/proto/taskguild/v1/agent_manager_pb.ts'
 import type { Template } from '@taskguild/proto/taskguild/v1/template_pb.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
-import { Terminal, Plus, Trash2, Edit2, X, Save, Cloud, Play, Square, CheckCircle, XCircle, StopCircle, Loader2, Layers, Copy, AlertTriangle, Server, Monitor } from 'lucide-react'
+import { Terminal, Plus, Trash2, Edit2, X, Cloud, Play, Square, CheckCircle, XCircle, StopCircle, Loader2, Layers, Copy, AlertTriangle, Server, Monitor } from 'lucide-react'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { useTemplateIntegration } from '@/hooks/useTemplateIntegration.ts'
-import { Button, Input, Textarea, Badge, MutationError } from '../atoms/index.ts'
-import { Card, FormField, Modal, PageHeading, EmptyState, SyncButton } from '../molecules/index.ts'
+import { Button, Badge, MutationError } from '../atoms/index.ts'
+import { Card, Modal, PageHeading, EmptyState, SyncButton } from '../molecules/index.ts'
 import { emptyForm, scriptToForm, diffTypeLabel } from './ScriptListUtils'
 import type { ScriptFormData } from './ScriptListUtils'
+import { ScriptFormModal } from './ScriptFormModal.tsx'
 import { LogOutput } from './LogOutput'
 import { useScriptExecution } from './useScriptExecution'
 import { SaveAsTemplateDialog } from './SaveAsTemplateDialog.tsx'
@@ -238,89 +239,17 @@ export function ScriptList({ projectId }: { projectId: string }) {
         </div>
       )}
 
-      {/* Script Form */}
+      {/* Script Form Modal */}
       {formMode && (
-        <form onSubmit={handleSubmit}>
-          <Card className="p-5 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">
-                {formMode === 'create' ? 'New Script' : 'Edit Script'}
-              </h3>
-              <Button variant="ghost" size="sm" iconOnly onClick={closeForm} type="button" icon={<X className="w-5 h-5" />} />
-            </div>
-
-            <div className="space-y-4">
-              {/* Name & Description row */}
-              <div className="grid grid-cols-2 gap-3">
-                <FormField label="Name *" hint="Script name (used as identifier)">
-                  <Input
-                    type="text"
-                    required
-                    value={form.name}
-                    onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
-                    className="focus:border-green-500"
-                    placeholder="e.g. deploy"
-                  />
-                </FormField>
-                <FormField label="Description">
-                  <Input
-                    type="text"
-                    value={form.description}
-                    onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}
-                    className="focus:border-green-500"
-                    placeholder="What this script does"
-                  />
-                </FormField>
-              </div>
-
-              {/* Filename */}
-              <FormField label="Filename" hint="Defaults to name.sh if empty">
-                <Input
-                  type="text"
-                  value={form.filename}
-                  onChange={e => setForm(prev => ({ ...prev, filename: e.target.value }))}
-                  className="focus:border-green-500"
-                  placeholder={form.name ? `${form.name}.sh` : 'e.g. deploy.sh'}
-                />
-              </FormField>
-
-              {/* Content */}
-              <FormField label="Script Content *" hint="Shell script to execute on the agent-manager machine.">
-                <Textarea
-                  required
-                  value={form.content}
-                  onChange={e => setForm(prev => ({ ...prev, content: e.target.value }))}
-                  mono
-                  className="focus:border-green-500 min-h-[200px]"
-                  placeholder={'#!/bin/bash\necho "Hello from script"'}
-                />
-              </FormField>
-            </div>
-
-            <MutationError error={mutation.error} />
-
-            <div className="flex justify-end gap-2 mt-4">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={closeForm}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                size="sm"
-                disabled={mutation.isPending || !form.name || !form.content}
-                icon={<Save className="w-3.5 h-3.5" />}
-                className="bg-green-600 hover:bg-green-500"
-              >
-                {mutation.isPending ? 'Saving...' : formMode === 'create' ? 'Create' : 'Save'}
-              </Button>
-            </div>
-          </Card>
-        </form>
+        <ScriptFormModal
+          formMode={formMode}
+          form={form}
+          setForm={setForm}
+          onSubmit={handleSubmit}
+          onClose={closeForm}
+          isPending={mutation.isPending}
+          error={mutation.error}
+        />
       )}
 
       {/* Script Cards */}
