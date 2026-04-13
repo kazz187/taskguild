@@ -298,6 +298,15 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 		}
 	}
 
+	// Harness knowledge file — accumulated failure patterns from past tasks.
+	if workDir != "" {
+		harnessPath := filepath.Join(workDir, ".taskguild", "HARNESS.md")
+		sb.WriteString("\n### Past Failure Patterns\n")
+		sb.WriteString(fmt.Sprintf("Before starting work, consult `%s` (absolute path) for failure patterns recorded by previous tasks. ", harnessPath))
+		sb.WriteString("It lives at the repository root under `.taskguild/`, NOT inside any worktree, so always use the absolute path even when your CWD is a worktree. ")
+		sb.WriteString("The file may not exist yet — that is fine, just skip it.\n")
+	}
+
 	// Interactive session.
 	sb.WriteString("\n### Interactive Session\n")
 	sb.WriteString("If you need user input or clarification, clearly state what you need and wait for a response.\n")

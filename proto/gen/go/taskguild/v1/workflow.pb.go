@@ -364,10 +364,6 @@ type WorkflowStatus struct {
 	AgentId       string   `protobuf:"bytes,7,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`                   // Deprecated: use skill_ids instead
 	// hooks
 	Hooks []*StatusHook `protobuf:"bytes,8,rep,name=hooks,proto3" json:"hooks,omitempty"`
-	// Deprecated: use enable_skill_harness instead
-	EnableAgentMdHarness bool `protobuf:"varint,9,opt,name=enable_agent_md_harness,json=enableAgentMdHarness,proto3" json:"enable_agent_md_harness,omitempty"`
-	// Deprecated: use skill_harness_explicitly_disabled instead
-	AgentMdHarnessExplicitlyDisabled bool `protobuf:"varint,10,opt,name=agent_md_harness_explicitly_disabled,json=agentMdHarnessExplicitlyDisabled,proto3" json:"agent_md_harness_explicitly_disabled,omitempty"`
 	// permission mode for agents executing tasks in this status
 	// (default, acceptEdits, dontAsk, bypassPermissions, plan)
 	PermissionMode string `protobuf:"bytes,11,opt,name=permission_mode,json=permissionMode,proto3" json:"permission_mode,omitempty"`
@@ -473,20 +469,6 @@ func (x *WorkflowStatus) GetHooks() []*StatusHook {
 		return x.Hooks
 	}
 	return nil
-}
-
-func (x *WorkflowStatus) GetEnableAgentMdHarness() bool {
-	if x != nil {
-		return x.EnableAgentMdHarness
-	}
-	return false
-}
-
-func (x *WorkflowStatus) GetAgentMdHarnessExplicitlyDisabled() bool {
-	if x != nil {
-		return x.AgentMdHarnessExplicitlyDisabled
-	}
-	return false
 }
 
 func (x *WorkflowStatus) GetPermissionMode() string {
@@ -1237,7 +1219,7 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\x04name\x18\x05 \x01(\tR\x04name\x12=\n" +
 	"\vaction_type\x18\x06 \x01(\x0e2\x1c.taskguild.v1.HookActionTypeR\n" +
 	"actionType\x12\x1b\n" +
-	"\taction_id\x18\a \x01(\tR\bactionId\"\xeb\x05\n" +
+	"\taction_id\x18\a \x01(\tR\bactionId\"\xaf\x05\n" +
 	"\x0eWorkflowStatus\x12\x12\n" +
 	"\x02id\x18\x01 \x01(\tB\x02\x18\x01R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -1248,10 +1230,7 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"isTerminal\x12%\n" +
 	"\x0etransitions_to\x18\x06 \x03(\tR\rtransitionsTo\x12\x19\n" +
 	"\bagent_id\x18\a \x01(\tR\aagentId\x12.\n" +
-	"\x05hooks\x18\b \x03(\v2\x18.taskguild.v1.StatusHookR\x05hooks\x125\n" +
-	"\x17enable_agent_md_harness\x18\t \x01(\bR\x14enableAgentMdHarness\x12N\n" +
-	"$agent_md_harness_explicitly_disabled\x18\n" +
-	" \x01(\bR agentMdHarnessExplicitlyDisabled\x12'\n" +
+	"\x05hooks\x18\b \x03(\v2\x18.taskguild.v1.StatusHookR\x05hooks\x12'\n" +
 	"\x0fpermission_mode\x18\v \x01(\tR\x0epermissionMode\x120\n" +
 	"\x14inherit_session_from\x18\f \x01(\tR\x12inheritSessionFrom\x12\x14\n" +
 	"\x05model\x18\r \x01(\tR\x05model\x12\x14\n" +
@@ -1260,7 +1239,9 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\tskill_ids\x18\x10 \x03(\tR\bskillIds\x120\n" +
 	"\x14enable_skill_harness\x18\x11 \x01(\bR\x12enableSkillHarness\x12I\n" +
 	"!skill_harness_explicitly_disabled\x18\x12 \x01(\bR\x1eskillHarnessExplicitlyDisabled\x12\x16\n" +
-	"\x06effort\x18\x13 \x01(\tR\x06effort\"\xca\x01\n" +
+	"\x06effort\x18\x13 \x01(\tR\x06effortJ\x04\b\t\x10\n" +
+	"J\x04\b\n" +
+	"\x10\vR\x17enable_agent_md_harnessR$agent_md_harness_explicitly_disabled\"\xca\x01\n" +
 	"\vAgentConfig\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
 	"\x12workflow_status_id\x18\x02 \x01(\tR\x10workflowStatusId\x12\x12\n" +
