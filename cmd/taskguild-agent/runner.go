@@ -267,9 +267,18 @@ func runTask(
 		}
 
 		// Save session ID for resume.
+		// Prefer ResultMessage.SessionID, but fall back to intermediate
+		// messages (StreamEvent, etc.) when the turn was interrupted before
+		// the ResultMessage arrived (e.g., user-stopped task).
+		newSessionID := ""
 		if result.Result != nil && result.Result.SessionID != "" {
-			sessionID = result.Result.SessionID
-			saveSessionID(ctx, taskClient, taskID, sessionID, metadata)
+			newSessionID = result.Result.SessionID
+		} else {
+			newSessionID = extractSessionIDFromMessages(result.Messages)
+		}
+		if newSessionID != "" {
+			sessionID = newSessionID
+			saveSessionIDBestEffort(ctx, taskClient, taskID, sessionID, metadata)
 			// Keep local metadata in sync for subtask session inheritance.
 			if statusName := metadata["_current_status_name"]; statusName != "" {
 				metadata["session_id_"+statusName] = sessionID
@@ -671,6 +680,25 @@ func resolveSession(metadata map[string]string) string {
 		}
 	}
 
+	return ""
+}
+
+// extractSessionIDFromMessages scans intermediate messages (StreamEvent,
+// RateLimitEvent, etc.) in reverse for a session_id. Used as fallback when
+// ResultMessage is not available (e.g., user-stopped turn).
+func extractSessionIDFromMessages(messages []claudeagent.Message) string {
+	for i := len(messages) - 1; i >= 0; i-- {
+		switch m := messages[i].(type) {
+		case *claudeagent.StreamEvent:
+			if m.SessionID != "" {
+				return m.SessionID
+			}
+		case *claudeagent.RateLimitEvent:
+			if m.SessionID != "" {
+				return m.SessionID
+			}
+		}
+	}
 	return ""
 }
 
