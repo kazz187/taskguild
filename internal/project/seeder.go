@@ -2,12 +2,31 @@ package project
 
 import (
 	"context"
+	_ "embed"
+	"errors"
 	"time"
 
 	"github.com/oklog/ulid/v2"
 
 	"github.com/kazz187/taskguild/internal/skill"
 	"github.com/kazz187/taskguild/internal/workflow"
+	"github.com/kazz187/taskguild/pkg/cerr"
+)
+
+// Default role-skill content, embedded from seed_skills/*.md. These files
+// are the harness-agnostic body of the role definitions under
+// .claude/agents/ — the YAML frontmatter (tools, model, permissionMode,
+// etc.) is intentionally excluded so that the harness configuration stays
+// at the workflow Status level, not on the skill itself.
+var (
+	//go:embed seed_skills/architect.md
+	defaultArchitectSkillContent string
+
+	//go:embed seed_skills/senior-engineer.md
+	defaultSeniorEngineerSkillContent string
+
+	//go:embed seed_skills/software-engineer.md
+	defaultSoftwareEngineerSkillContent string
 )
 
 // Seeder creates default workflow and skills for a newly created project.
@@ -24,136 +43,93 @@ func NewSeeder(workflowRepo workflow.Repository, skillRepo skill.Repository) *Se
 	}
 }
 
-// Seed creates the default development workflow with architect and software-engineer
-// agents, and the create-pr skill for the given project.
+// buildDefaultSkillDefinitions returns fresh copies of the default skill
+// definitions used by both Seed (create-only) and UpsertSkills (upsert).
+// Returned skills have Name/Description/Content/UserInvocable/AllowedTools
+// populated, but ID/ProjectID/CreatedAt/UpdatedAt are left zero — callers
+// are responsible for filling them in.
+func buildDefaultSkillDefinitions() []*skill.Skill {
+	return []*skill.Skill{
+		{
+			Name:          "project-rules",
+			Description:   "プロジェクトのビルド・コマンド・ディレクトリ規約",
+			UserInvocable: false,
+		},
+		{
+			Name:          "codebase-map",
+			Description:   "プロジェクトのアーキテクチャ知識・変更伝播パス",
+			UserInvocable: false,
+		},
+		{
+			Name:          "go-guards",
+			Description:   "Go コードを書く際の技術規約・罠",
+			UserInvocable: false,
+		},
+		{
+			Name:          "frontend-guards",
+			Description:   "TypeScript/React コードの規約・罠",
+			UserInvocable: false,
+		},
+		{
+			Name:          "architect",
+			Description:   "システム設計者。タスクの仕様を策定する。",
+			Content:       defaultArchitectSkillContent,
+			UserInvocable: false,
+		},
+		{
+			Name:          "software-engineer",
+			Description:   "ソフトウェアエンジニア。設計に従いコードを実装する。",
+			Content:       defaultSoftwareEngineerSkillContent,
+			UserInvocable: false,
+		},
+		{
+			Name:          "senior-engineer",
+			Description:   "シニアエンジニア。コードレビュー・品質保証を行う。",
+			Content:       defaultSeniorEngineerSkillContent,
+			UserInvocable: false,
+		},
+		{
+			Name:          "create-pr",
+			Description:   `Use when the user wants to create a pull request or push changes to an existing PR. Examples: "create a PR", "make a pull request", "push changes", "update the PR".`,
+			Content:       defaultCreatePRSkillContent,
+			UserInvocable: true,
+			AllowedTools:  []string{"Bash", "Read", "Grep", "Glob"},
+		},
+		{
+			Name:          "sync-default-branch",
+			Description:   "Fetches the latest default branch from origin before worktree creation.",
+			Content:       defaultSyncDefaultBranchSkillContent,
+			UserInvocable: false,
+			AllowedTools:  []string{"Bash"},
+		},
+	}
+}
+
+// Seed creates the default development workflow with role skills, guard
+// skills, and hook skills for a newly created project.
 func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 	now := time.Now()
 
-	// 1. Create workflow skills (role + guard skills).
-	projectRulesSkill := &skill.Skill{
-		ID:            ulid.Make().String(),
-		ProjectID:     projectID,
-		Name:          "project-rules",
-		Description:   "プロジェクトのビルド・コマンド・ディレクトリ規約",
-		UserInvocable: false,
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}
-	if err := s.skillRepo.Create(ctx, projectRulesSkill); err != nil {
-		return err
-	}
-
-	codebaseMapSkill := &skill.Skill{
-		ID:            ulid.Make().String(),
-		ProjectID:     projectID,
-		Name:          "codebase-map",
-		Description:   "プロジェクトのアーキテクチャ知識・変更伝播パス",
-		UserInvocable: false,
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}
-	if err := s.skillRepo.Create(ctx, codebaseMapSkill); err != nil {
-		return err
+	defs := buildDefaultSkillDefinitions()
+	skillsByName := make(map[string]*skill.Skill, len(defs))
+	for _, def := range defs {
+		def.ID = ulid.Make().String()
+		def.ProjectID = projectID
+		def.CreatedAt = now
+		def.UpdatedAt = now
+		if err := s.skillRepo.Create(ctx, def); err != nil {
+			return err
+		}
+		skillsByName[def.Name] = def
 	}
 
-	goGuardsSkill := &skill.Skill{
-		ID:            ulid.Make().String(),
-		ProjectID:     projectID,
-		Name:          "go-guards",
-		Description:   "Go コードを書く際の技術規約・罠",
-		UserInvocable: false,
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}
-	if err := s.skillRepo.Create(ctx, goGuardsSkill); err != nil {
-		return err
-	}
+	architectSkill := skillsByName["architect"]
+	softwareEngineerSkill := skillsByName["software-engineer"]
+	seniorEngineerSkill := skillsByName["senior-engineer"]
+	createPRSkill := skillsByName["create-pr"]
+	syncBranchSkill := skillsByName["sync-default-branch"]
 
-	frontendGuardsSkill := &skill.Skill{
-		ID:            ulid.Make().String(),
-		ProjectID:     projectID,
-		Name:          "frontend-guards",
-		Description:   "TypeScript/React コードの規約・罠",
-		UserInvocable: false,
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}
-	if err := s.skillRepo.Create(ctx, frontendGuardsSkill); err != nil {
-		return err
-	}
-
-	architectSkill := &skill.Skill{
-		ID:            ulid.Make().String(),
-		ProjectID:     projectID,
-		Name:          "architect",
-		Description:   "システム設計者。タスクの仕様を策定する。",
-		UserInvocable: false,
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}
-	if err := s.skillRepo.Create(ctx, architectSkill); err != nil {
-		return err
-	}
-
-	softwareEngineerSkill := &skill.Skill{
-		ID:            ulid.Make().String(),
-		ProjectID:     projectID,
-		Name:          "software-engineer",
-		Description:   "ソフトウェアエンジニア。設計に従いコードを実装する。",
-		UserInvocable: false,
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}
-	if err := s.skillRepo.Create(ctx, softwareEngineerSkill); err != nil {
-		return err
-	}
-
-	seniorEngineerSkill := &skill.Skill{
-		ID:            ulid.Make().String(),
-		ProjectID:     projectID,
-		Name:          "senior-engineer",
-		Description:   "シニアエンジニア。コードレビュー・品質保証を行う。",
-		UserInvocable: false,
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}
-	if err := s.skillRepo.Create(ctx, seniorEngineerSkill); err != nil {
-		return err
-	}
-
-	// 4. Create create-pr skill.
-	createPRSkill := &skill.Skill{
-		ID:            ulid.Make().String(),
-		ProjectID:     projectID,
-		Name:          "create-pr",
-		Description:   `Use when the user wants to create a pull request or push changes to an existing PR. Examples: "create a PR", "make a pull request", "push changes", "update the PR".`,
-		Content:       defaultCreatePRSkillContent,
-		UserInvocable: true,
-		AllowedTools:  []string{"Bash", "Read", "Grep", "Glob"},
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}
-	if err := s.skillRepo.Create(ctx, createPRSkill); err != nil {
-		return err
-	}
-
-	// 5. Create sync-default-branch skill.
-	syncBranchSkill := &skill.Skill{
-		ID:            ulid.Make().String(),
-		ProjectID:     projectID,
-		Name:          "sync-default-branch",
-		Description:   "Fetches the latest default branch from origin before worktree creation.",
-		Content:       defaultSyncDefaultBranchSkillContent,
-		UserInvocable: false,
-		AllowedTools:  []string{"Bash"},
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}
-	if err := s.skillRepo.Create(ctx, syncBranchSkill); err != nil {
-		return err
-	}
-
-	// 6. Create development workflow referencing the created agent and skill IDs.
+	// Create development workflow referencing the created skill IDs.
 	hookID := ulid.Make().String()
 	wf := &workflow.Workflow{
 		ID:        ulid.Make().String(),
@@ -230,6 +206,53 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 	}
 	if err := s.workflowRepo.Create(ctx, wf); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// UpsertSkills upserts the default skill definitions into the given project.
+// For each definition, if a skill with the same name already exists in the
+// project, its description/content/tools/etc. are updated while preserving
+// the existing ID and CreatedAt. Otherwise a new skill is created.
+//
+// UpsertSkills never deletes skills — any skills in the project that are
+// not in the default definitions are left untouched. The workflow is also
+// left alone, so calling this against an existing project is safe.
+func (s *Seeder) UpsertSkills(ctx context.Context, projectID string) error {
+	now := time.Now()
+	defs := buildDefaultSkillDefinitions()
+
+	for _, def := range defs {
+		existing, err := s.skillRepo.FindByName(ctx, projectID, def.Name)
+		if err != nil {
+			var cerrErr *cerr.Error
+			if !errors.As(err, &cerrErr) || cerrErr.Code != cerr.NotFound {
+				return err
+			}
+			def.ID = ulid.Make().String()
+			def.ProjectID = projectID
+			def.CreatedAt = now
+			def.UpdatedAt = now
+			if err := s.skillRepo.Create(ctx, def); err != nil {
+				return err
+			}
+			continue
+		}
+
+		existing.Description = def.Description
+		existing.Content = def.Content
+		existing.DisableModelInvocation = def.DisableModelInvocation
+		existing.UserInvocable = def.UserInvocable
+		existing.AllowedTools = def.AllowedTools
+		existing.Model = def.Model
+		existing.Context = def.Context
+		existing.Agent = def.Agent
+		existing.ArgumentHint = def.ArgumentHint
+		existing.UpdatedAt = now
+		if err := s.skillRepo.Update(ctx, existing); err != nil {
+			return err
+		}
 	}
 
 	return nil
