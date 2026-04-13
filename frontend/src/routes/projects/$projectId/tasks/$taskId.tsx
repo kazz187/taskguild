@@ -176,10 +176,11 @@ function TaskDetailPage() {
     refetchAllTasks()
   }, [refetchTask, refetchInteractions, refetchAllTasks])
 
+  // TASK_LOG is handled separately by useTaskLogs; excluded here to avoid a refetch
+  // storm (ListTasks/GetTask/ListInteractions fire per log line otherwise).
   const eventTypes = useMemo(() => [
     EventType.TASK_CREATED, EventType.TASK_UPDATED, EventType.TASK_STATUS_CHANGED, EventType.AGENT_ASSIGNED,
     EventType.AGENT_STATUS_CHANGED, EventType.INTERACTION_CREATED, EventType.INTERACTION_RESPONDED,
-    EventType.TASK_LOG,
   ], [])
 
   const { connectionStatus, reconnect } = useEventSubscription(eventTypes, projectId, onEvent)
