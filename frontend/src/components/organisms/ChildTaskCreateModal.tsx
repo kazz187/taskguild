@@ -116,6 +116,7 @@ export function ChildTaskCreateModal({
 
   return (
     <TaskFormModal
+      headerLabel="New Subtask"
       title={title}
       onTitleChange={setTitle}
       titlePlaceholder="Subtask title..."
