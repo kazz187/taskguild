@@ -121,17 +121,6 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 		return err
 	}
 
-	// Collect skill IDs for workflow statuses.
-	commonSkillIDs := []string{
-		projectRulesSkill.ID,
-		codebaseMapSkill.ID,
-		goGuardsSkill.ID,
-		frontendGuardsSkill.ID,
-	}
-	planSkillIDs := append(append([]string{}, commonSkillIDs...), architectSkill.ID)
-	developSkillIDs := append(append([]string{}, commonSkillIDs...), softwareEngineerSkill.ID)
-	reviewSkillIDs := append(append([]string{}, commonSkillIDs...), seniorEngineerSkill.ID)
-
 	// 4. Create create-pr skill.
 	createPRSkill := &skill.Skill{
 		ID:            ulid.Make().String(),
@@ -179,14 +168,13 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 				EnableSkillHarness: true,
 			},
 			{
-				Name:            "Plan",
-				Order:           1,
-				TransitionsTo:   []string{"Develop"},
-				PermissionMode:  "plan",
-				Model:           "opus",
-				Tools:           []string{"Read", "Glob", "Grep", "Bash", "WebSearch", "WebFetch", "Task"},
-				DisallowedTools: []string{"Write", "Edit", "MultiEdit", "NotebookEdit"},
-				SkillIDs:        planSkillIDs,
+				Name:               "Plan",
+				Order:              1,
+				TransitionsTo:      []string{"Develop"},
+				PermissionMode:     "plan",
+				Model:              "opus",
+				Effort:             "high",
+				SkillIDs:           []string{architectSkill.ID},
 				EnableSkillHarness: true,
 			},
 			{
@@ -215,8 +203,8 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 				},
 				PermissionMode:     "acceptEdits",
 				Model:              "opus",
-				Tools:              []string{"Read", "Write", "Edit", "Glob", "Grep", "Bash", "WebSearch", "WebFetch", "Task", "NotebookEdit"},
-				SkillIDs:           developSkillIDs,
+				Effort:             "max",
+				SkillIDs:           []string{softwareEngineerSkill.ID},
 				EnableSkillHarness: true,
 			},
 			{
@@ -225,8 +213,8 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 				TransitionsTo:      []string{"Closed"},
 				PermissionMode:     "acceptEdits",
 				Model:              "opus",
-				Tools:              []string{"Read", "Write", "Edit", "Glob", "Grep", "Bash", "WebSearch", "WebFetch", "Task", "NotebookEdit"},
-				SkillIDs:           reviewSkillIDs,
+				Effort:             "high",
+				SkillIDs:           []string{seniorEngineerSkill.ID},
 				EnableSkillHarness: true,
 			},
 			{

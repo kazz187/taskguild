@@ -1,21 +1,18 @@
-import type { AgentDefinition } from '@taskguild/proto/taskguild/v1/agent_pb.ts'
 import type { SkillDefinition } from '@taskguild/proto/taskguild/v1/skill_pb.ts'
 import type { ScriptDefinition } from '@taskguild/proto/taskguild/v1/script_pb.ts'
 import { HookTrigger, HookActionType } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
-import { Plus, Trash2, Bot, ChevronUp, ChevronDown, Zap, Wrench, BookOpen } from 'lucide-react'
+import { Plus, Trash2, ChevronUp, ChevronDown, Zap, Wrench } from 'lucide-react'
 import { Button, Input, Select, Checkbox, Badge } from '../atoms/index.ts'
 import { FormField, Card } from '../molecules/index.ts'
-import { AVAILABLE_TOOLS, MODEL_OPTIONS } from '@/lib/constants.ts'
-import type { StatusDraft, HookDraft, AgentConfigDraft } from './WorkflowFormTypes.ts'
+import { MODEL_OPTIONS, EFFORT_OPTIONS } from '@/lib/constants.ts'
+import type { StatusDraft, HookDraft } from './WorkflowFormTypes.ts'
 
-export function StatusCard({ status: s, index, statuses, agents, skills, scripts, agentConfigs, onMoveStatus, onRemoveStatus, onUpdateStatus, onToggleTransition, onAddHook, onRemoveHook, onMoveHook, onUpdateHook }: {
+export function StatusCard({ status: s, index, statuses, skills, scripts, onMoveStatus, onRemoveStatus, onUpdateStatus, onToggleTransition, onAddHook, onRemoveHook, onMoveHook, onUpdateHook }: {
   status: StatusDraft
   index: number
   statuses: StatusDraft[]
-  agents: AgentDefinition[]
   skills: SkillDefinition[]
   scripts: ScriptDefinition[]
-  agentConfigs: AgentConfigDraft[]
   onMoveStatus: (index: number, direction: -1 | 1) => void
   onRemoveStatus: (key: string) => void
   onUpdateStatus: (key: string, patch: Partial<StatusDraft>) => void
@@ -25,9 +22,6 @@ export function StatusCard({ status: s, index, statuses, agents, skills, scripts
   onMoveHook: (statusKey: string, hookIndex: number, direction: -1 | 1) => void
   onUpdateHook: (statusKey: string, hookKey: string, patch: Partial<HookDraft>) => void
 }) {
-  const selectedAgent = agents.find(a => a.id === s.agentId)
-  const legacyAgent = agentConfigs.find(a => a.statusKey === s.key)
-
   return (
     <Card
       variant="default"
@@ -129,50 +123,6 @@ export function StatusCard({ status: s, index, statuses, agents, skills, scripts
         </div>
       </div>
 
-      {/* Agent Assignment (dropdown) */}
-      {!s.isTerminal && (
-        <Card variant="nested" className="p-2.5 md:p-3 mt-2">
-          <div className="flex items-center gap-2 mb-2">
-            <Bot className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-xs text-cyan-400">Assigned Agent</span>
-          </div>
-          <Select
-            value={s.agentId}
-            onChange={(e) => onUpdateStatus(s.key, { agentId: e.target.value })}
-            selectSize="xs"
-            className="rounded"
-          >
-            <option value="">No agent (manual status)</option>
-            {agents.map(agent => (
-              <option key={agent.id} value={agent.id}>
-                {agent.name} — {agent.description}
-              </option>
-            ))}
-          </Select>
-          {selectedAgent && (
-            <div className="mt-2 text-[11px] text-gray-500">
-              <span className="text-gray-400">Model:</span> {selectedAgent.model || 'inherit'}
-              {selectedAgent.tools.length > 0 && (
-                <>
-                  {' · '}
-                  <span className="text-gray-400">Tools:</span> {selectedAgent.tools.join(', ')}
-                </>
-              )}
-            </div>
-          )}
-          {!s.agentId && legacyAgent && (
-            <div className="mt-2 text-[11px] text-amber-500/70">
-              Legacy agent config: {legacyAgent.name} (will be preserved)
-            </div>
-          )}
-          {agents.length === 0 && (
-            <p className="mt-2 text-[11px] text-gray-600">
-              No agents defined yet. Create agents in the Agents page first.
-            </p>
-          )}
-        </Card>
-      )}
-
       {/* Execution Configuration */}
       {!s.isTerminal && (
         <Card variant="nested" className="p-2.5 md:p-3 mt-2">
@@ -195,107 +145,36 @@ export function StatusCard({ status: s, index, statuses, agents, skills, scripts
             </Select>
           </FormField>
 
-          {/* Allowed Tools */}
-          <FormField label="Allowed Tools" labelSize="xs" className="mb-2">
-            <div className="flex gap-1 flex-wrap">
-              {AVAILABLE_TOOLS.map(tool => {
-                const active = s.tools.includes(tool)
-                return (
-                  <button
-                    key={tool}
-                    type="button"
-                    onClick={() => {
-                      const next = active
-                        ? s.tools.filter(t => t !== tool)
-                        : [...s.tools, tool]
-                      onUpdateStatus(s.key, { tools: next })
-                    }}
-                    className="transition-colors"
-                  >
-                    <Badge
-                      color={active ? 'green' : 'gray'}
-                      variant="outline"
-                      size="xs"
-                      className={active ? '' : 'hover:text-gray-300'}
-                    >
-                      {tool}
-                    </Badge>
-                  </button>
-                )
-              })}
-            </div>
+          {/* Effort */}
+          <FormField label="Effort" labelSize="xs" className="mb-2">
+            <Select
+              value={s.effort}
+              onChange={(e) => onUpdateStatus(s.key, { effort: e.target.value })}
+              selectSize="xs"
+              className="rounded"
+            >
+              {EFFORT_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </Select>
           </FormField>
 
-          {/* Disallowed Tools */}
-          <FormField label="Disallowed Tools" labelSize="xs">
-            <div className="flex gap-1 flex-wrap">
-              {AVAILABLE_TOOLS.map(tool => {
-                const active = s.disallowedTools.includes(tool)
-                return (
-                  <button
-                    key={tool}
-                    type="button"
-                    onClick={() => {
-                      const next = active
-                        ? s.disallowedTools.filter(t => t !== tool)
-                        : [...s.disallowedTools, tool]
-                      onUpdateStatus(s.key, { disallowedTools: next })
-                    }}
-                    className="transition-colors"
-                  >
-                    <Badge
-                      color={active ? 'red' : 'gray'}
-                      variant="outline"
-                      size="xs"
-                      className={active ? '' : 'hover:text-gray-300'}
-                    >
-                      {tool}
-                    </Badge>
-                  </button>
-                )
-              })}
-            </div>
+          {/* Execution Skill */}
+          <FormField label="Execution Skill" labelSize="xs">
+            <Select
+              value={s.skillId}
+              onChange={(e) => onUpdateStatus(s.key, { skillId: e.target.value })}
+              selectSize="xs"
+              className="rounded"
+            >
+              <option value="">None</option>
+              {skills.map(sk => (
+                <option key={sk.id} value={sk.id}>
+                  {sk.name}{sk.description ? ` — ${sk.description}` : ''}
+                </option>
+              ))}
+            </Select>
           </FormField>
-        </Card>
-      )}
-
-      {/* Skills */}
-      {!s.isTerminal && (
-        <Card variant="nested" className="p-2.5 md:p-3 mt-2">
-          <div className="flex items-center gap-2 mb-2">
-            <BookOpen className="w-3.5 h-3.5 text-violet-400" />
-            <span className="text-xs text-violet-400">Skills</span>
-          </div>
-          <div className="flex gap-1 flex-wrap">
-            {skills.map(sk => {
-              const active = s.skillIds.includes(sk.id)
-              return (
-                <button
-                  key={sk.id}
-                  type="button"
-                  onClick={() => {
-                    const next = active
-                      ? s.skillIds.filter(id => id !== sk.id)
-                      : [...s.skillIds, sk.id]
-                    onUpdateStatus(s.key, { skillIds: next })
-                  }}
-                  className="transition-colors"
-                >
-                  <Badge
-                    color={active ? 'purple' : 'gray'}
-                    variant="outline"
-                    size="xs"
-                    className={active ? '' : 'hover:text-gray-300'}
-                  >
-                    {sk.name}
-                  </Badge>
-                </button>
-              )
-            })}
-          </div>
-          {skills.length === 0 && (
-            <p className="text-[11px] text-gray-600">No skills defined yet.</p>
-          )}
         </Card>
       )}
 
@@ -354,23 +233,6 @@ export function StatusCard({ status: s, index, statuses, agents, skills, scripts
             />
             <span>Skill Harness</span>
             <span className="text-[10px] text-gray-600">(append failure patterns to skill files on status exit)</span>
-          </label>
-        </div>
-      )}
-
-      {/* Agent Markdown Harness Toggle (deprecated) */}
-      {!s.isTerminal && s.agentId && (
-        <div className="mt-2 px-1">
-          <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
-            <Checkbox
-              checked={s.enableAgentMdHarness}
-              onChange={(e) => onUpdateStatus(s.key, {
-                enableAgentMdHarness: e.target.checked,
-                agentMdHarnessExplicitlyDisabled: !e.target.checked,
-              })}
-            />
-            <span>Agent MD Harness</span>
-            <span className="text-[10px] text-gray-600">(deprecated)</span>
           </label>
         </div>
       )}

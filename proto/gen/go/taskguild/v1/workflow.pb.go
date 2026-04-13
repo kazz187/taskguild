@@ -382,8 +382,10 @@ type WorkflowStatus struct {
 	// Skill-based harness: appends failure patterns to Skill files
 	EnableSkillHarness             bool `protobuf:"varint,17,opt,name=enable_skill_harness,json=enableSkillHarness,proto3" json:"enable_skill_harness,omitempty"`
 	SkillHarnessExplicitlyDisabled bool `protobuf:"varint,18,opt,name=skill_harness_explicitly_disabled,json=skillHarnessExplicitlyDisabled,proto3" json:"skill_harness_explicitly_disabled,omitempty"`
-	unknownFields                  protoimpl.UnknownFields
-	sizeCache                      protoimpl.SizeCache
+	// Effort controls thinking depth. Valid values: "low", "medium", "high", "max".
+	Effort        string `protobuf:"bytes,19,opt,name=effort,proto3" json:"effort,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *WorkflowStatus) Reset() {
@@ -541,6 +543,13 @@ func (x *WorkflowStatus) GetSkillHarnessExplicitlyDisabled() bool {
 		return x.SkillHarnessExplicitlyDisabled
 	}
 	return false
+}
+
+func (x *WorkflowStatus) GetEffort() string {
+	if x != nil {
+		return x.Effort
+	}
+	return ""
 }
 
 // AgentConfig defines how an agent should behave for a specific status.
@@ -1228,7 +1237,7 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\x04name\x18\x05 \x01(\tR\x04name\x12=\n" +
 	"\vaction_type\x18\x06 \x01(\x0e2\x1c.taskguild.v1.HookActionTypeR\n" +
 	"actionType\x12\x1b\n" +
-	"\taction_id\x18\a \x01(\tR\bactionId\"\xd3\x05\n" +
+	"\taction_id\x18\a \x01(\tR\bactionId\"\xeb\x05\n" +
 	"\x0eWorkflowStatus\x12\x12\n" +
 	"\x02id\x18\x01 \x01(\tB\x02\x18\x01R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -1250,7 +1259,8 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\x10disallowed_tools\x18\x0f \x03(\tR\x0fdisallowedTools\x12\x1b\n" +
 	"\tskill_ids\x18\x10 \x03(\tR\bskillIds\x120\n" +
 	"\x14enable_skill_harness\x18\x11 \x01(\bR\x12enableSkillHarness\x12I\n" +
-	"!skill_harness_explicitly_disabled\x18\x12 \x01(\bR\x1eskillHarnessExplicitlyDisabled\"\xca\x01\n" +
+	"!skill_harness_explicitly_disabled\x18\x12 \x01(\bR\x1eskillHarnessExplicitlyDisabled\x12\x16\n" +
+	"\x06effort\x18\x13 \x01(\tR\x06effort\"\xca\x01\n" +
 	"\vAgentConfig\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12,\n" +
 	"\x12workflow_status_id\x18\x02 \x01(\tR\x10workflowStatusId\x12\x12\n" +

@@ -178,6 +178,7 @@ func statusToProto(s Status) *taskguildv1.WorkflowStatus {
 		SkillIds:                        s.SkillIDs,
 		EnableSkillHarness:              s.EnableSkillHarness,
 		SkillHarnessExplicitlyDisabled:  s.SkillHarnessExplicitlyDisabled,
+		Effort:                          s.Effort,
 	}
 	for _, h := range s.Hooks {
 		pb.Hooks = append(pb.Hooks, hookToProto(h))
@@ -256,6 +257,7 @@ func statusFromProto(ps *taskguildv1.WorkflowStatus) Status {
 		SkillIDs:                        ps.SkillIds,
 		EnableSkillHarness:              ps.EnableSkillHarness,
 		SkillHarnessExplicitlyDisabled:  ps.SkillHarnessExplicitlyDisabled,
+		Effort:                          ps.Effort,
 	}
 	for _, ph := range ps.Hooks {
 		s.Hooks = append(s.Hooks, hookFromProto(ph))

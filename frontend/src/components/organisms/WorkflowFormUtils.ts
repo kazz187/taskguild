@@ -1,6 +1,6 @@
 import type { Workflow } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { HookActionType } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
-import type { StatusDraft, AgentConfigDraft } from './WorkflowFormTypes.ts'
+import type { StatusDraft } from './WorkflowFormTypes.ts'
 import { genKey } from './WorkflowFormTypes.ts'
 
 export function workflowToDrafts(wf: Workflow) {
@@ -16,15 +16,11 @@ export function workflowToDrafts(wf: Workflow) {
       isInitial: s.isInitial,
       isTerminal: s.isTerminal,
       transitionsTo: [], // fill below
-      agentId: s.agentId ?? '',
-      enableAgentMdHarness: s.agentMdHarnessExplicitlyDisabled ? s.enableAgentMdHarness : true,
-      agentMdHarnessExplicitlyDisabled: s.agentMdHarnessExplicitlyDisabled,
       permissionMode: s.permissionMode ?? '',
       inheritSessionFrom: s.inheritSessionFrom ?? '',
       model: s.model ?? '',
-      tools: [...(s.tools ?? [])],
-      disallowedTools: [...(s.disallowedTools ?? [])],
-      skillIds: [...(s.skillIds ?? [])],
+      effort: s.effort ?? '',
+      skillId: s.skillIds?.[0] ?? '',
       enableSkillHarness: s.skillHarnessExplicitlyDisabled ? s.enableSkillHarness : true,
       skillHarnessExplicitlyDisabled: s.skillHarnessExplicitlyDisabled,
       hooks: (s.hooks ?? []).map((h) => ({
@@ -45,28 +41,10 @@ export function workflowToDrafts(wf: Workflow) {
     draft.transitionsTo = s.transitionsTo.map((id) => idToKey.get(id)!).filter(Boolean)
   }
 
-  // Legacy: if a status doesn't have agentId but has a matching AgentConfig, use it for display.
-  for (const cfg of wf.agentConfigs) {
-    const draft = statusDrafts.find((d) => d.id === cfg.workflowStatusId)
-    if (draft && !draft.agentId) {
-      // Legacy agent configs don't map to Agent entities, so leave agentId empty.
-      // They'll be shown as "Legacy" in the UI.
-    }
-  }
-
-  const agentDrafts: AgentConfigDraft[] = wf.agentConfigs.map((a) => ({
-    key: genKey(),
-    id: a.id,
-    statusKey: idToKey.get(a.workflowStatusId) ?? '',
-    name: a.name,
-    description: a.description,
-    instructions: a.instructions,
-  }))
-
-  return { statusDrafts, agentDrafts }
+  return { statusDrafts }
 }
 
-export function buildProtoPayload(statuses: StatusDraft[], agentConfigs: AgentConfigDraft[]) {
+export function buildProtoPayload(statuses: StatusDraft[]) {
   const keyToId = new Map<string, string>()
   statuses.forEach((s) => {
     keyToId.set(s.key, s.name)
@@ -79,15 +57,16 @@ export function buildProtoPayload(statuses: StatusDraft[], agentConfigs: AgentCo
     isInitial: s.isInitial,
     isTerminal: s.isTerminal,
     transitionsTo: s.transitionsTo.map((k) => keyToId.get(k)!).filter(Boolean),
-    agentId: s.agentId,
-    enableAgentMdHarness: s.enableAgentMdHarness,
-    agentMdHarnessExplicitlyDisabled: s.agentMdHarnessExplicitlyDisabled,
+    agentId: '',
+    enableAgentMdHarness: false,
+    agentMdHarnessExplicitlyDisabled: true,
     permissionMode: s.permissionMode,
     inheritSessionFrom: s.inheritSessionFrom,
     model: s.model,
-    tools: s.tools,
-    disallowedTools: s.disallowedTools,
-    skillIds: s.skillIds,
+    effort: s.effort,
+    tools: [] as string[],
+    disallowedTools: [] as string[],
+    skillIds: s.skillId ? [s.skillId] : [],
     enableSkillHarness: s.enableSkillHarness,
     skillHarnessExplicitlyDisabled: s.skillHarnessExplicitlyDisabled,
     hooks: s.hooks
@@ -103,24 +82,5 @@ export function buildProtoPayload(statuses: StatusDraft[], agentConfigs: AgentCo
       })),
   }))
 
-  // Keep legacy agent configs for backward compatibility with existing statuses
-  // that don't have agentId set. Only include legacy configs for statuses without agentId.
-  const statusesWithAgentId = new Set(
-    statuses.filter(s => s.agentId).map(s => keyToId.get(s.key)!)
-  )
-  const protoAgentConfigs = agentConfigs
-    .filter(a => {
-      const statusId = keyToId.get(a.statusKey)
-      return statusId && !statusesWithAgentId.has(statusId)
-    })
-    .map((a, i) => ({
-      id: a.id || `agent-config-${i}`,
-      workflowStatusId: keyToId.get(a.statusKey)!,
-      name: a.name,
-      description: a.description,
-      instructions: a.instructions,
-      allowedTools: [] as string[],
-    }))
-
-  return { protoStatuses, protoAgentConfigs }
+  return { protoStatuses, protoAgentConfigs: [] as { id: string; workflowStatusId: string; name: string; description: string; instructions: string; allowedTools: string[] }[] }
 }

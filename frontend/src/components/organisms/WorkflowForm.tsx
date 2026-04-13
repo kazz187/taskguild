@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@connectrpc/connect-query'
 import { createWorkflow, updateWorkflow } from '@taskguild/proto/taskguild/v1/workflow-WorkflowService_connectquery.ts'
-import { listAgents } from '@taskguild/proto/taskguild/v1/agent-AgentService_connectquery.ts'
 import { listSkills } from '@taskguild/proto/taskguild/v1/skill-SkillService_connectquery.ts'
 import { listScripts } from '@taskguild/proto/taskguild/v1/script-ScriptService_connectquery.ts'
 import type { Workflow } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
@@ -9,7 +8,7 @@ import { HookTrigger, HookActionType } from '@taskguild/proto/taskguild/v1/workf
 import { X, Plus } from 'lucide-react'
 import { Button, Input, Checkbox, Textarea } from '../atoms/index.ts'
 import { FormField } from '../molecules/index.ts'
-import type { StatusDraft, HookDraft, AgentConfigDraft } from './WorkflowFormTypes.ts'
+import type { StatusDraft, HookDraft } from './WorkflowFormTypes.ts'
 import { genKey } from './WorkflowFormTypes.ts'
 import { workflowToDrafts, buildProtoPayload } from './WorkflowFormUtils.ts'
 import { StatusCard } from './StatusCard.tsx'
@@ -37,13 +36,12 @@ export function WorkflowForm({
         const kClosed = genKey()
         return {
           statusDrafts: [
-            { key: kDraft, id: '', name: 'Draft', order: 0, isInitial: true, isTerminal: false, transitionsTo: [kDevelop], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '', model: '', tools: [], disallowedTools: [], skillIds: [], enableSkillHarness: true, skillHarnessExplicitlyDisabled: false },
-            { key: kDevelop, id: '', name: 'Develop', order: 1, isInitial: false, isTerminal: false, transitionsTo: [kReview, kDraft], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '', model: '', tools: [], disallowedTools: [], skillIds: [], enableSkillHarness: true, skillHarnessExplicitlyDisabled: false },
-            { key: kReview, id: '', name: 'Review', order: 2, isInitial: false, isTerminal: false, transitionsTo: [kTest], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '', model: '', tools: [], disallowedTools: [], skillIds: [], enableSkillHarness: true, skillHarnessExplicitlyDisabled: false },
-            { key: kTest, id: '', name: 'Test', order: 3, isInitial: false, isTerminal: false, transitionsTo: [kClosed], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '', model: '', tools: [], disallowedTools: [], skillIds: [], enableSkillHarness: true, skillHarnessExplicitlyDisabled: false },
-            { key: kClosed, id: '', name: 'Closed', order: 4, isInitial: false, isTerminal: true, transitionsTo: [], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '', model: '', tools: [], disallowedTools: [], skillIds: [], enableSkillHarness: true, skillHarnessExplicitlyDisabled: false },
+            { key: kDraft, id: '', name: 'Draft', order: 0, isInitial: true, isTerminal: false, transitionsTo: [kDevelop], hooks: [], permissionMode: '', inheritSessionFrom: '', model: '', effort: '', skillId: '', enableSkillHarness: true, skillHarnessExplicitlyDisabled: false },
+            { key: kDevelop, id: '', name: 'Develop', order: 1, isInitial: false, isTerminal: false, transitionsTo: [kReview, kDraft], hooks: [], permissionMode: '', inheritSessionFrom: '', model: '', effort: '', skillId: '', enableSkillHarness: true, skillHarnessExplicitlyDisabled: false },
+            { key: kReview, id: '', name: 'Review', order: 2, isInitial: false, isTerminal: false, transitionsTo: [kTest], hooks: [], permissionMode: '', inheritSessionFrom: '', model: '', effort: '', skillId: '', enableSkillHarness: true, skillHarnessExplicitlyDisabled: false },
+            { key: kTest, id: '', name: 'Test', order: 3, isInitial: false, isTerminal: false, transitionsTo: [kClosed], hooks: [], permissionMode: '', inheritSessionFrom: '', model: '', effort: '', skillId: '', enableSkillHarness: true, skillHarnessExplicitlyDisabled: false },
+            { key: kClosed, id: '', name: 'Closed', order: 4, isInitial: false, isTerminal: true, transitionsTo: [], hooks: [], permissionMode: '', inheritSessionFrom: '', model: '', effort: '', skillId: '', enableSkillHarness: true, skillHarnessExplicitlyDisabled: false },
           ],
-          agentDrafts: [],
         }
       })()
 
@@ -52,11 +50,6 @@ export function WorkflowForm({
   const [defaultUseWorktree, setDefaultUseWorktree] = useState(workflow?.defaultUseWorktree ?? false)
   const [customPrompt, setCustomPrompt] = useState(workflow?.customPrompt ?? '')
   const [statuses, setStatuses] = useState<StatusDraft[]>(initial.statusDrafts)
-  const [agentConfigs] = useState<AgentConfigDraft[]>(initial.agentDrafts)
-
-  // Fetch available agents for the project.
-  const { data: agentsData } = useQuery(listAgents, { projectId })
-  const agents = agentsData?.agents ?? []
 
   // Fetch available skills for the project.
   const { data: skillsData } = useQuery(listSkills, { projectId })
@@ -135,7 +128,7 @@ export function WorkflowForm({
   const addStatus = () => {
     setStatuses((prev) => [
       ...prev,
-      { key: genKey(), id: '', name: '', order: prev.length, isInitial: false, isTerminal: false, transitionsTo: [], agentId: '', hooks: [], enableAgentMdHarness: true, agentMdHarnessExplicitlyDisabled: false, permissionMode: '', inheritSessionFrom: '', model: '', tools: [], disallowedTools: [], skillIds: [], enableSkillHarness: true, skillHarnessExplicitlyDisabled: false },
+      { key: genKey(), id: '', name: '', order: prev.length, isInitial: false, isTerminal: false, transitionsTo: [], hooks: [], permissionMode: '', inheritSessionFrom: '', model: '', effort: '', skillId: '', enableSkillHarness: true, skillHarnessExplicitlyDisabled: false },
     ])
   }
 
@@ -211,7 +204,7 @@ export function WorkflowForm({
       nameSet.add(s.name)
     }
 
-    const { protoStatuses, protoAgentConfigs } = buildProtoPayload(statuses, agentConfigs)
+    const { protoStatuses, protoAgentConfigs } = buildProtoPayload(statuses)
 
     if (isEdit) {
       updateMutation.mutate(
@@ -334,10 +327,8 @@ export function WorkflowForm({
                 status={s}
                 index={index}
                 statuses={statuses}
-                agents={agents}
                 skills={skills}
                 scripts={scripts}
-                agentConfigs={agentConfigs}
                 onMoveStatus={moveStatus}
                 onRemoveStatus={removeStatus}
                 onUpdateStatus={updateStatus}

@@ -86,7 +86,6 @@ function WorkflowsPage() {
 
 function WorkflowCard({ workflow, onClick }: { workflow: Workflow; onClick: () => void }) {
   const statusCount = workflow.statuses.length
-  const agentCount = workflow.agentConfigs.length
 
   return (
     <div
@@ -107,9 +106,6 @@ function WorkflowCard({ workflow, onClick }: { workflow: Workflow; onClick: () =
             )}
             <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
               <span>{statusCount} {statusCount === 1 ? 'status' : 'statuses'}</span>
-              {agentCount > 0 && (
-                <span>{agentCount} {agentCount === 1 ? 'agent' : 'agents'}</span>
-              )}
             </div>
           </div>
         </div>

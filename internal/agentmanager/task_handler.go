@@ -761,6 +761,9 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 				enrichedMetadata["_disallowed_tools"] = string(b)
 			}
 		}
+		if currentStatus.Effort != "" {
+			enrichedMetadata["_effort"] = currentStatus.Effort
+		}
 	}
 
 	// Resolve current status name and available transitions from workflow.
