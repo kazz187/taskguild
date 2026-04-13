@@ -728,6 +728,12 @@ func buildClaudeOptions(
 		opts.SystemPrompt = instructions
 	}
 
+	// Effort setting (applies to both skill-based and agent-based modes).
+	if effort := metadata["_effort"]; effort != "" {
+		e := effort
+		opts.Effort = &e
+	}
+
 	if sessionID != "" {
 		opts.Resume = sessionID
 	}

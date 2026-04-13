@@ -102,6 +102,9 @@ message WorkflowStatus {
   // Skill-based harness: appends failure patterns to Skill files
   bool enable_skill_harness = 17;
   bool skill_harness_explicitly_disabled = 18;
+
+  // Effort controls thinking depth. Valid values: "low", "medium", "high", "max".
+  string effort = 19;
 }
 
 // AgentConfig defines how an agent should behave for a specific status.

@@ -19,21 +19,18 @@ export interface StatusDraft {
   isInitial: boolean
   isTerminal: boolean
   transitionsTo: string[] // keys
-  agentId: string // Deprecated: reference to AgentDefinition (fallback)
   hooks: HookDraft[]
-  enableAgentMdHarness: boolean // Deprecated: use enableSkillHarness
-  agentMdHarnessExplicitlyDisabled: boolean // Deprecated
   permissionMode: string // permission mode for agents in this status
   inheritSessionFrom: string // name of status to inherit session from (fork)
-  // Execution configuration (replaces agent MD frontmatter)
+  // Execution configuration
   model: string
-  tools: string[]
-  disallowedTools: string[]
-  skillIds: string[] // Skill entity IDs
+  effort: string // "low" / "medium" / "high" / "max" (empty = inherit)
+  skillId: string // Single execution skill ID (empty = none)
   enableSkillHarness: boolean
   skillHarnessExplicitlyDisabled: boolean
 }
 
+/** @deprecated Legacy agent config, kept for backward compat */
 export interface AgentConfigDraft {
   key: string
   id: string

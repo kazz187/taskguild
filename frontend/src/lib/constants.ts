@@ -10,6 +10,14 @@ export const MODEL_OPTIONS = [
   { value: 'haiku', label: 'Haiku' },
 ]
 
+export const EFFORT_OPTIONS = [
+  { value: '', label: 'Inherit (default)' },
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'max', label: 'Max' },
+]
+
 export const CONTEXT_OPTIONS = [
   { value: '', label: 'Inline (default)' },
   { value: 'fork', label: 'Fork (run in sub-agent)' },
