@@ -111,7 +111,7 @@ func TestBuildWorkflowContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := buildWorkflowContext(tt.metadata)
+			result := buildWorkflowContext(tt.metadata, "")
 
 			if tt.empty {
 				if result != "" {

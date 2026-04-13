@@ -90,7 +90,7 @@ func buildDefaultSkillDefinitions() []*skill.Skill {
 		},
 		{
 			Name:          "create-pr",
-			Description:   `Use when the user wants to create a pull request or push changes to an existing PR. Examples: "create a PR", "make a pull request", "push changes", "update the PR".`,
+			Description:   `Slash command that commits any pending changes, pushes the branch, and opens or updates a PR. Only invoke when the user explicitly asks via "/create-pr"; this skill is also wired as an after_task_execution hook, so tasks should not call it on their own.`,
 			Content:       defaultCreatePRSkillContent,
 			UserInvocable: true,
 			AllowedTools:  []string{"Bash", "Read", "Grep", "Glob"},

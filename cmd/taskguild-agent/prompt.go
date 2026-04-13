@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -176,7 +177,7 @@ func buildUserPromptWithImages(ctx context.Context, metadata map[string]string, 
 // buildWorkflowContext builds the workflow context block for the system prompt
 // (passed via --append-system-prompt). Contains all TaskGuild operational
 // instructions so the user prompt stays focused on task content.
-func buildWorkflowContext(metadata map[string]string) string {
+func buildWorkflowContext(metadata map[string]string, workDir string) string {
 	if metadata["_workflow_id"] == "" {
 		return ""
 	}
@@ -284,8 +285,12 @@ func buildWorkflowContext(metadata map[string]string) string {
 	// Git worktree.
 	if metadata["_use_worktree"] == "true" {
 		if wt := metadata["worktree"]; wt != "" {
+			wtDir := fmt.Sprintf(".claude/worktrees/%s/", wt)
+			if workDir != "" {
+				wtDir = filepath.Join(workDir, ".claude", "worktrees", wt) + "/"
+			}
 			sb.WriteString("\n### Git Worktree\n")
-			sb.WriteString(fmt.Sprintf("Branch: `worktree-%s` | Dir: `.claude/worktrees/%s/`\n", wt, wt))
+			sb.WriteString(fmt.Sprintf("Branch: `worktree-%s` | Dir: `%s`\n", wt, wtDir))
 			sb.WriteString("All file modifications and commits must occur within this worktree.\n")
 			sb.WriteString("IMPORTANT: Do NOT use `cd` to navigate outside of this worktree directory.\n")
 			sb.WriteString("Your CWD is already set to the worktree — use relative paths or paths within this directory.\n")

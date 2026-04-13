@@ -467,6 +467,7 @@ func handlePermissionRequest(
 	toolCtx claudeagent.ToolPermissionContext,
 	permCache *permissionCache,
 	scpCache *singleCommandPermissionCache,
+	statusSkills map[string]bool,
 ) (claudeagent.PermissionResult, error) {
 	logger := clog.LoggerFromContext(ctx)
 
@@ -500,6 +501,19 @@ func handlePermissionRequest(
 	// AskUserQuestion: present as QUESTION interactions instead of permission request
 	if toolName == "AskUserQuestion" {
 		return handleAskUserQuestion(ctx, client, taskID, agentID, input, waiter)
+	}
+
+	// Skill tool: auto-allow when the requested skill is one of the current
+	// status's execution skills or a skill registered as a hook for the
+	// current status. These are skills TaskGuild itself has wired up for the
+	// task, so there is no user decision needed.
+	if toolName == "Skill" && len(statusSkills) > 0 {
+		if skillRaw, ok := input["skill"]; ok {
+			if skillName, ok := skillRaw.(string); ok && statusSkills[skillName] {
+				logger.Debug("auto-allowing Skill tool (configured for status)", "skill", skillName)
+				return claudeagent.PermissionResultAllow{}, nil
+			}
+		}
 	}
 
 	logger.Debug("permission request", "tool", toolName, "agent_id", toolCtx.AgentID, "tool_use_id", toolCtx.ToolUseID)

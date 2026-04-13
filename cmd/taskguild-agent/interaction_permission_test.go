@@ -125,7 +125,7 @@ func TestHandlePermissionRequest_BashAutoAllow(t *testing.T) {
 		"Bash", map[string]any{"command": "cd /home && git status"},
 		waiter, claudeagent.PermissionModeDefault,
 		claudeagent.ToolPermissionContext{},
-		nil, scpCache,
+		nil, scpCache, nil,
 	)
 
 	if err != nil {
@@ -162,7 +162,7 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 			"Bash", map[string]any{"command": "cd /home && npm test"},
 			waiter, claudeagent.PermissionModeDefault,
 			claudeagent.ToolPermissionContext{},
-			nil, scpCache,
+			nil, scpCache, nil,
 		)
 		resultCh <- result
 		errCh <- err
@@ -241,7 +241,7 @@ func TestHandlePermissionRequest_NonBashToolOptions(t *testing.T) {
 			"Write", map[string]any{"file_path": "/tmp/test.txt"},
 			waiter, claudeagent.PermissionModeDefault,
 			claudeagent.ToolPermissionContext{},
-			nil, nil,
+			nil, nil, nil,
 		)
 	})
 
@@ -289,7 +289,7 @@ func TestHandlePermissionRequest_AlwaysAllowCommand(t *testing.T) {
 			"Bash", map[string]any{"command": "cd /home && npm test"},
 			waiter, claudeagent.PermissionModeDefault,
 			claudeagent.ToolPermissionContext{},
-			nil, scpCache,
+			nil, scpCache, nil,
 		)
 		resultCh <- result
 		errCh <- err
@@ -360,7 +360,7 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_InvalidJSON(t *testing.T) {
 			"Bash", map[string]any{"command": "echo hello"},
 			waiter, claudeagent.PermissionModeDefault,
 			claudeagent.ToolPermissionContext{},
-			nil, scpCache,
+			nil, scpCache, nil,
 		)
 		resultCh <- result
 		errCh <- err
@@ -408,7 +408,7 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_WithRedirects(t *testing.T) 
 			"Bash", map[string]any{"command": "echo hello > /dev/null"},
 			waiter, claudeagent.PermissionModeDefault,
 			claudeagent.ToolPermissionContext{},
-			nil, scpCache,
+			nil, scpCache, nil,
 		)
 		resultCh <- result
 		errCh <- err
@@ -472,4 +472,64 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_WithRedirects(t *testing.T) 
 	if mock.addedPermissions[1].Type != "redirect" {
 		t.Errorf("expected second permission type 'redirect', got %q", mock.addedPermissions[1].Type)
 	}
+}
+
+func TestHandlePermissionRequest_SkillToolAutoAllow(t *testing.T) {
+	mock := &mockAgentManagerClient{}
+	ctx := context.Background()
+	waiter := newInteractionWaiter()
+
+	statusSkills := map[string]bool{
+		"architect": true,
+		"create-pr": true,
+	}
+
+	// Status execution skill and hook skill should be auto-allowed.
+	for _, skill := range []string{"architect", "create-pr"} {
+		result, err := handlePermissionRequest(
+			ctx, mock, "task-1", "agent-1",
+			"Skill", map[string]any{"skill": skill},
+			waiter, claudeagent.PermissionModeDefault,
+			claudeagent.ToolPermissionContext{},
+			nil, nil, statusSkills,
+		)
+		if err != nil {
+			t.Fatalf("unexpected error for %s: %v", skill, err)
+		}
+		if _, ok := result.(claudeagent.PermissionResultAllow); !ok {
+			t.Fatalf("expected PermissionResultAllow for %s, got %T", skill, result)
+		}
+	}
+
+	if len(mock.interactions) != 0 {
+		t.Errorf("expected no permission interactions, got %d", len(mock.interactions))
+	}
+
+	// A skill that is not configured for this status should still go through
+	// the permission flow (blocks waiting for a response).
+	blockedResultCh := make(chan claudeagent.PermissionResult, 1)
+	var wg conc.WaitGroup
+	wg.Go(func() {
+		result, _ := handlePermissionRequest(
+			ctx, mock, "task-1", "agent-1",
+			"Skill", map[string]any{"skill": "some-other-skill"},
+			waiter, claudeagent.PermissionModeDefault,
+			claudeagent.ToolPermissionContext{},
+			nil, nil, statusSkills,
+		)
+		blockedResultCh <- result
+	})
+
+	time.Sleep(50 * time.Millisecond)
+
+	if len(mock.interactions) != 1 {
+		t.Fatalf("expected 1 permission interaction for non-status skill, got %d", len(mock.interactions))
+	}
+	// Respond so the goroutine exits cleanly.
+	waiter.Deliver(&v1.Interaction{
+		Id:       "test-interaction-id",
+		Status:   v1.InteractionStatus_INTERACTION_STATUS_RESPONDED,
+		Response: "deny",
+	})
+	<-blockedResultCh
 }

@@ -609,6 +609,45 @@ func runTask(
 	}
 }
 
+// collectStatusSkills returns the set of skill names that should be
+// auto-allowed when invoked via the Skill tool for the current turn:
+//
+//  1. The current status's execution skills (metadata["_skill_names"]).
+//  2. Skills registered as hooks for the current status
+//     (metadata["_hooks"], entries whose action_type is "skill" — or blank
+//     for legacy hooks that omit the field).
+//
+// Both are pre-approved by the TaskGuild workflow definition, so the agent
+// does not need to prompt the user when Claude decides to launch one as a
+// sub-skill during task execution.
+func collectStatusSkills(metadata map[string]string) map[string]bool {
+	out := map[string]bool{}
+	if names := metadata["_skill_names"]; names != "" {
+		for _, n := range strings.Split(names, ",") {
+			if n = strings.TrimSpace(n); n != "" {
+				out[n] = true
+			}
+		}
+	}
+	if hooksJSON := metadata["_hooks"]; hooksJSON != "" {
+		var hooks []struct {
+			Name       string `json:"name"`
+			ActionType string `json:"action_type"`
+		}
+		if err := json.Unmarshal([]byte(hooksJSON), &hooks); err == nil {
+			for _, h := range hooks {
+				if h.Name == "" {
+					continue
+				}
+				if h.ActionType == "" || h.ActionType == "skill" {
+					out[h.Name] = true
+				}
+			}
+		}
+	}
+	return out
+}
+
 // resolveSession determines which session ID to use for resume.
 // Sessions are always directly resumed (never forked). Only hooks and harness
 // fork sessions independently via their own opts.ForkSession = true.
@@ -675,7 +714,7 @@ func buildClaudeOptions(
 	}
 
 	// Append workflow context to instructions for the system prompt.
-	if wfCtx := buildWorkflowContext(metadata); wfCtx != "" {
+	if wfCtx := buildWorkflowContext(metadata, workDir); wfCtx != "" {
 		if instructions != "" {
 			instructions = instructions + "\n\n" + wfCtx
 		} else {
@@ -683,11 +722,17 @@ func buildClaudeOptions(
 		}
 	}
 
+	// Build the set of skill names that should be auto-allowed when invoked
+	// via the Skill tool: the current status's execution skills plus any
+	// skills registered as hooks for the status. Both are pre-approved by
+	// the TaskGuild workflow definition.
+	statusSkills := collectStatusSkills(metadata)
+
 	opts := &claudeagent.ClaudeAgentOptions{
 		Cwd:            cwd,
 		PermissionMode: permMode,
 		CanUseTool: func(toolName string, input map[string]any, toolCtx claudeagent.ToolPermissionContext) (claudeagent.PermissionResult, error) {
-			return handlePermissionRequest(ctx, client, taskID, agentManagerID, toolName, input, waiter, permMode, toolCtx, permCache, scpCache)
+			return handlePermissionRequest(ctx, client, taskID, agentManagerID, toolName, input, waiter, permMode, toolCtx, permCache, scpCache, statusSkills)
 		},
 		StderrCallback: func(line string) {
 			logger.Debug("claude-stderr", "line", line)
