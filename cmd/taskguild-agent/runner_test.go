@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -435,4 +436,133 @@ func TestResolveSession(t *testing.T) {
 			assert.Equal(t, tt.wantSessionID, sessionID)
 		})
 	}
+}
+
+func TestExtractSessionIDFromMessages(t *testing.T) {
+	tests := []struct {
+		name     string
+		messages []claudeagent.Message
+		want     string
+	}{
+		{
+			name:     "no messages returns empty",
+			messages: nil,
+			want:     "",
+		},
+		{
+			name: "extracts from StreamEvent",
+			messages: []claudeagent.Message{
+				&claudeagent.StreamEvent{
+					UUID:      "uuid-1",
+					SessionID: "stream-sess-1",
+					Event:     map[string]any{"type": "content_block_start"},
+				},
+			},
+			want: "stream-sess-1",
+		},
+		{
+			name: "extracts from RateLimitEvent",
+			messages: []claudeagent.Message{
+				&claudeagent.RateLimitEvent{
+					UUID:      "uuid-2",
+					SessionID: "rate-limit-sess",
+				},
+			},
+			want: "rate-limit-sess",
+		},
+		{
+			name: "returns last session ID (reverse scan)",
+			messages: []claudeagent.Message{
+				&claudeagent.StreamEvent{
+					UUID:      "uuid-1",
+					SessionID: "old-sess",
+					Event:     map[string]any{"type": "content_block_start"},
+				},
+				&claudeagent.StreamEvent{
+					UUID:      "uuid-2",
+					SessionID: "new-sess",
+					Event:     map[string]any{"type": "content_block_delta"},
+				},
+			},
+			want: "new-sess",
+		},
+		{
+			name: "skips messages without session ID",
+			messages: []claudeagent.Message{
+				&claudeagent.StreamEvent{
+					UUID:      "uuid-1",
+					SessionID: "found-sess",
+					Event:     map[string]any{"type": "content_block_start"},
+				},
+				&claudeagent.AssistantMessage{
+					Content: []claudeagent.ContentBlock{
+						claudeagent.TextBlock{Text: "hello"},
+					},
+				},
+			},
+			want: "found-sess",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractSessionIDFromMessages(tt.messages)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// TestRunTask_SessionSavedOnCancel verifies that when a task is stopped
+// mid-turn (context cancelled before ResultMessage), the session ID is
+// still extracted from intermediate messages and saved to metadata.
+func TestRunTask_SessionSavedOnCancel(t *testing.T) {
+	tc := newTestClients()
+	defer tc.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	metadata := baseMetadata("Plan", `[{"name":"Develop"}]`)
+
+	// Simulate a cancelled turn: RunQuerySync returns with ctx.Canceled error
+	// but the QueryResult contains StreamEvent messages with session_id.
+	cancelledResult := &claudeagent.QueryResult{
+		Messages: []claudeagent.Message{
+			&claudeagent.StreamEvent{
+				UUID:      "uuid-1",
+				SessionID: "interrupted-session-id",
+				Event:     map[string]any{"type": "content_block_start"},
+			},
+		},
+		Result: nil, // No ResultMessage because the turn was interrupted.
+	}
+
+	qr := &mockQueryRunner{
+		results: []mockQueryRunnerResult{
+			{Result: cancelledResult, Err: context.Canceled},
+			// Second turn: normal completion to end the task.
+			{Result: makeResult("Done.\nNEXT_STATUS: Develop")},
+		},
+	}
+
+	permCache := newPermissionCache("test", tc.agentClient)
+	scpCache := newSingleCommandPermissionCache("test", tc.agentClient)
+
+	runTask(ctx, tc.agentClient, tc.taskClient, tc.interClient,
+		"agent-mgr-1", "task-cancel-sess", "instructions", metadata,
+		t.TempDir(), permCache, scpCache, qr, func() bool { return false })
+
+	tc.taskHandler.mu.Lock()
+	defer tc.taskHandler.mu.Unlock()
+
+	// Verify that session_id_Plan was saved from the interrupted turn's
+	// intermediate messages.
+	var savedSessionID bool
+	for _, req := range tc.taskHandler.updateTaskReqs {
+		if sid, ok := req.Metadata["session_id_Plan"]; ok && sid == "interrupted-session-id" {
+			savedSessionID = true
+			break
+		}
+	}
+	assert.True(t, savedSessionID, "session_id_Plan should be saved from intermediate messages even when turn is interrupted")
 }

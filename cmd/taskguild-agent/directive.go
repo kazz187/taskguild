@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
@@ -421,6 +422,20 @@ func handleStatusTransition(
 	tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 		fmt.Sprintf("Status transitioned to %s", nextStatusID), nil)
 	return nil
+}
+
+// saveSessionIDBestEffort is like saveSessionID but falls back to a
+// background context when the original context is already cancelled
+// (e.g., user-stopped task). This ensures the session ID is persisted
+// even during shutdown.
+func saveSessionIDBestEffort(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, sessionID string, metadata map[string]string) {
+	if ctx.Err() != nil {
+		bgCtx, bgCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer bgCancel()
+		saveSessionID(bgCtx, taskClient, taskID, sessionID, metadata)
+		return
+	}
+	saveSessionID(ctx, taskClient, taskID, sessionID, metadata)
 }
 
 // saveSessionID persists the session ID under a per-status key (session_id_{StatusName}).
