@@ -213,7 +213,7 @@ export function StatusCard({ status: s, index, statuses, agents, skills, scripts
                     className="transition-colors"
                   >
                     <Badge
-                      color={active ? 'emerald' : 'gray'}
+                      color={active ? 'green' : 'gray'}
                       variant="outline"
                       size="xs"
                       className={active ? '' : 'hover:text-gray-300'}
@@ -282,7 +282,7 @@ export function StatusCard({ status: s, index, statuses, agents, skills, scripts
                   className="transition-colors"
                 >
                   <Badge
-                    color={active ? 'violet' : 'gray'}
+                    color={active ? 'purple' : 'gray'}
                     variant="outline"
                     size="xs"
                     className={active ? '' : 'hover:text-gray-300'}

@@ -12,7 +12,7 @@ function ImageRefInline({ imageNum, taskId }: { imageNum: string; taskId?: strin
 
   useEffect(() => {
     if (data?.data && data.image?.mediaType) {
-      const blob = new Blob([data.data], { type: data.image.mediaType })
+      const blob = new Blob([data.data as BlobPart], { type: data.image.mediaType })
       const url = URL.createObjectURL(blob)
       setObjectUrl(url)
       return () => URL.revokeObjectURL(url)
