@@ -3,56 +3,15 @@ import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { listSkills, createSkill, updateSkill, deleteSkill, syncSkillsFromDir } from '@taskguild/proto/taskguild/v1/skill-SkillService_connectquery.ts'
 import type { SkillDefinition } from '@taskguild/proto/taskguild/v1/skill_pb.ts'
 import type { Template } from '@taskguild/proto/taskguild/v1/template_pb.ts'
-import { Sparkles, Plus, Trash2, Edit2, X, Save, Cloud, Layers, Copy } from 'lucide-react'
-import { Button } from '../atoms/index.ts'
-import { Input, Textarea, Select, Checkbox, Badge, MutationError } from '../atoms/index.ts'
-import { Card, FormField, PageHeading, EmptyState, SyncButton } from '../molecules/index.ts'
-import { AVAILABLE_TOOLS, MODEL_OPTIONS, CONTEXT_OPTIONS, AGENT_OPTIONS } from '@/lib/constants.ts'
-import { toggleArrayItem } from '@/lib/arrays.ts'
+import { Sparkles, Plus, Trash2, Edit2, Cloud, Layers, Copy } from 'lucide-react'
+import { Button, Badge } from '../atoms/index.ts'
+import { Card, PageHeading, EmptyState, SyncButton } from '../molecules/index.ts'
 import { useTemplateIntegration } from '@/hooks/useTemplateIntegration.ts'
 import { SaveAsTemplateDialog } from './SaveAsTemplateDialog.tsx'
 import { TemplatePickerDialog } from './TemplatePickerDialog.tsx'
-
-interface SkillFormData {
-  name: string
-  description: string
-  content: string
-  disableModelInvocation: boolean
-  userInvocable: boolean
-  allowedTools: string[]
-  model: string
-  context: string
-  agent: string
-  argumentHint: string
-}
-
-const emptyForm: SkillFormData = {
-  name: '',
-  description: '',
-  content: '',
-  disableModelInvocation: false,
-  userInvocable: true,
-  allowedTools: [],
-  model: '',
-  context: '',
-  agent: '',
-  argumentHint: '',
-}
-
-function skillToForm(s: SkillDefinition): SkillFormData {
-  return {
-    name: s.name,
-    description: s.description,
-    content: s.content,
-    disableModelInvocation: s.disableModelInvocation,
-    userInvocable: s.userInvocable,
-    allowedTools: [...(s.allowedTools ?? [])],
-    model: s.model,
-    context: s.context,
-    agent: s.agent,
-    argumentHint: s.argumentHint,
-  }
-}
+import { SkillFormModal } from './SkillFormModal.tsx'
+import { emptyForm, skillToForm } from './SkillListUtils.ts'
+import type { SkillFormData } from './SkillListUtils.ts'
 
 export function SkillList({ projectId }: { projectId: string }) {
   const { data, refetch, isLoading } = useQuery(listSkills, { projectId })
@@ -133,10 +92,6 @@ export function SkillList({ projectId }: { projectId: string }) {
     )
   }
 
-  const toggleAllowedTool = (tool: string) => {
-    setForm(prev => ({ ...prev, allowedTools: toggleArrayItem(prev.allowedTools, tool) }))
-  }
-
   const mutation = formMode === 'create' ? createMut : updateMut
 
   return (
@@ -181,174 +136,17 @@ export function SkillList({ projectId }: { projectId: string }) {
         </div>
       )}
 
-      {/* Skill Form */}
+      {/* Skill Form Modal */}
       {formMode && (
-        <form onSubmit={handleSubmit}>
-          <Card className="p-5 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">
-                {formMode === 'create' ? 'New Skill' : 'Edit Skill'}
-              </h3>
-              <Button variant="ghost" size="sm" iconOnly onClick={closeForm} type="button" icon={<X className="w-5 h-5" />} />
-            </div>
-
-            <div className="space-y-4">
-              {/* Name & Description row */}
-              <div className="grid grid-cols-2 gap-3">
-                <FormField label="Name *" hint="Lowercase with hyphens. Used as directory name in .claude/skills/">
-                  <Input
-                    type="text"
-                    required
-                    value={form.name}
-                    onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
-                    className="focus:border-purple-500"
-                    placeholder="e.g. explain-code"
-                  />
-                </FormField>
-                <FormField label="Description" hint="Claude uses this to decide when to load this skill">
-                  <Input
-                    type="text"
-                    value={form.description}
-                    onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}
-                    className="focus:border-purple-500"
-                    placeholder="When to use this skill"
-                  />
-                </FormField>
-              </div>
-
-              {/* Argument Hint */}
-              <FormField label="Argument Hint" hint="Hint shown in autocomplete for expected arguments">
-                <Input
-                  type="text"
-                  value={form.argumentHint}
-                  onChange={e => setForm(prev => ({ ...prev, argumentHint: e.target.value }))}
-                  className="focus:border-purple-500"
-                  placeholder="e.g. [issue-number] or [filename] [format]"
-                />
-              </FormField>
-
-              {/* Content */}
-              <FormField label="Content *" hint="Body of the SKILL.md file. Instructions Claude follows when this skill is invoked.">
-                <Textarea
-                  required
-                  value={form.content}
-                  onChange={e => setForm(prev => ({ ...prev, content: e.target.value }))}
-                  mono
-                  className="focus:border-purple-500 min-h-[150px]"
-                  placeholder={"When explaining code, always include:\n1. Start with an analogy\n2. Draw a diagram using ASCII art\n3. Walk through the code step-by-step"}
-                />
-              </FormField>
-
-              {/* Invocation Control */}
-              <div>
-                <label className="block text-xs text-gray-400 mb-2">Invocation Control</label>
-                <div className="flex gap-6">
-                  <Checkbox
-                    label="Disable model invocation"
-                    color="purple"
-                    checked={form.disableModelInvocation}
-                    onChange={e => setForm(prev => ({ ...prev, disableModelInvocation: e.target.checked }))}
-                  />
-                  <Checkbox
-                    label="User invocable"
-                    color="purple"
-                    checked={form.userInvocable}
-                    onChange={e => setForm(prev => ({ ...prev, userInvocable: e.target.checked }))}
-                  />
-                </div>
-                <p className="text-[10px] text-gray-600 mt-1">
-                  "Disable model invocation" prevents Claude from auto-loading. "User invocable" controls /slash-command visibility.
-                </p>
-              </div>
-
-              {/* Allowed Tools */}
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Allowed Tools</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {AVAILABLE_TOOLS.map(tool => (
-                    <button
-                      key={tool}
-                      type="button"
-                      onClick={() => toggleAllowedTool(tool)}
-                      className={`px-2.5 py-1 text-xs rounded-lg transition-colors ${
-                        form.allowedTools.includes(tool)
-                          ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                          : 'bg-slate-800 text-gray-500 border border-slate-700 hover:text-gray-300'
-                      }`}
-                    >
-                      {tool}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[10px] text-gray-600 mt-1">Tools Claude can use without asking when this skill is active. Leave empty for default.</p>
-              </div>
-
-              {/* Model, Context & Agent row */}
-              <div className="grid grid-cols-3 gap-3">
-                <FormField label="Model">
-                  <Select
-                    value={form.model}
-                    onChange={e => setForm(prev => ({ ...prev, model: e.target.value }))}
-                    selectSize="xs"
-                    className="rounded focus:border-purple-500"
-                  >
-                    {MODEL_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </Select>
-                </FormField>
-                <FormField label="Context">
-                  <Select
-                    value={form.context}
-                    onChange={e => setForm(prev => ({ ...prev, context: e.target.value }))}
-                    selectSize="xs"
-                    className="rounded focus:border-purple-500"
-                  >
-                    {CONTEXT_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </Select>
-                </FormField>
-                <FormField label="Agent" hint='Only used when context is "fork"'>
-                  <Select
-                    value={form.agent}
-                    onChange={e => setForm(prev => ({ ...prev, agent: e.target.value }))}
-                    disabled={form.context !== 'fork'}
-                    selectSize="xs"
-                    className="rounded focus:border-purple-500 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {AGENT_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </Select>
-                </FormField>
-              </div>
-            </div>
-
-            <MutationError error={mutation.error} />
-
-            <div className="flex justify-end gap-2 mt-4">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={closeForm}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                size="sm"
-                disabled={mutation.isPending || !form.name || !form.content}
-                icon={<Save className="w-3.5 h-3.5" />}
-                className="bg-purple-600 hover:bg-purple-500"
-              >
-                {mutation.isPending ? 'Saving...' : formMode === 'create' ? 'Create' : 'Save'}
-              </Button>
-            </div>
-          </Card>
-        </form>
+        <SkillFormModal
+          formMode={formMode}
+          form={form}
+          setForm={setForm}
+          onSubmit={handleSubmit}
+          onClose={closeForm}
+          isPending={mutation.isPending}
+          error={mutation.error}
+        />
       )}
 
       {/* Skill Cards */}
