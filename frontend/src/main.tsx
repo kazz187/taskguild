@@ -4,15 +4,45 @@ import { routeTree } from './routeTree.gen'
 import { ConfigProvider } from './components/organisms/ConfigProvider'
 
 // Handle stale asset errors after deployments by reloading the page once.
-// When Cloudflare Pages deploys new assets with different hashes, browsers
-// with cached index.html will fail to load the old chunks.
+// A cached index.html may reference hashed chunks that no longer exist after
+// a redeploy; Cloudflare Pages then returns index.html with an HTML MIME type,
+// causing module-script load failures. Catch the various forms and reload once.
+const CHUNK_RELOAD_KEY = 'vite-chunk-reloaded'
+
+function isChunkLoadError(message: string): boolean {
+  return (
+    message.includes('Failed to fetch dynamically imported module') ||
+    message.includes('Importing a module script failed') ||
+    message.includes('Failed to load module script') ||
+    message.includes('Expected a JavaScript-or-Wasm module script') ||
+    message.includes('dynamically imported module')
+  )
+}
+
+function reloadOnce() {
+  if (sessionStorage.getItem(CHUNK_RELOAD_KEY) === '1') return
+  sessionStorage.setItem(CHUNK_RELOAD_KEY, '1')
+  window.location.reload()
+}
+
 window.addEventListener('vite:preloadError', (event) => {
   event.preventDefault()
-  const reloadedKey = 'vite-preload-reloaded'
-  if (!sessionStorage.getItem(reloadedKey)) {
-    sessionStorage.setItem(reloadedKey, '1')
-    window.location.reload()
-  }
+  reloadOnce()
+})
+
+window.addEventListener('error', (event) => {
+  if (isChunkLoadError(event.message || '')) reloadOnce()
+})
+
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason
+  const message = typeof reason === 'string' ? reason : reason?.message || ''
+  if (isChunkLoadError(message)) reloadOnce()
+})
+
+// Clear the guard on successful page show so future deploys can trigger again.
+window.addEventListener('pageshow', () => {
+  sessionStorage.removeItem(CHUNK_RELOAD_KEY)
 })
 
 const router = createRouter({
