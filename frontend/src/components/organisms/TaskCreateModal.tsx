@@ -89,6 +89,7 @@ export function TaskCreateModal({ projectId, workflowId, defaultUseWorktree, onC
 
   return (
     <TaskFormModal
+      headerLabel="New Task"
       title={title}
       onTitleChange={setTitle}
       onClose={onClose}

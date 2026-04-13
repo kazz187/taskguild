@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
-import { X } from 'lucide-react'
 import { Button, Input } from '../atoms/index.ts'
 import { Modal } from './Modal.tsx'
 
 export interface TaskFormModalProps {
+  /** ヘッダーラベル ("New Task", "Edit Task", "New Subtask" など) */
+  headerLabel: string
   /** タイトル入力の値 */
   title: string
   /** タイトル変更コールバック */
@@ -32,6 +33,7 @@ export interface TaskFormModalProps {
 }
 
 export function TaskFormModal({
+  headerLabel,
   title,
   onTitleChange,
   titlePlaceholder = 'Task title...',
@@ -46,57 +48,46 @@ export function TaskFormModal({
 }: TaskFormModalProps) {
   return (
     <Modal open={true} onClose={onClose} size="full">
-      {/* Header */}
-      <div className="flex items-start justify-between px-4 pt-4 pb-1">
-        <div className="flex-1 min-w-0 mr-3">
-          <Input
-            autoFocus
-            value={title}
-            onChange={(e) => onTitleChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) onSubmit()
-            }}
-            className="!border-slate-600 text-base md:text-lg font-semibold !rounded"
-            placeholder={titlePlaceholder}
-          />
-        </div>
-        <button
-          tabIndex={-1}
-          onClick={onClose}
-          className="text-gray-500 hover:text-gray-300 transition-colors shrink-0 mt-1 p-1"
-        >
-          <X className="w-5 h-5" />
-        </button>
+      <Modal.Header onClose={onClose}>
+        <h3 className="text-lg font-semibold text-white">{headerLabel}</h3>
+      </Modal.Header>
+
+      {/* Task 固有: タイトル入力欄 */}
+      <div className="px-4 pb-1">
+        <Input
+          autoFocus
+          value={title}
+          onChange={(e) => onTitleChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) onSubmit()
+          }}
+          className="!border-slate-600 text-base md:text-lg font-semibold !rounded"
+          placeholder={titlePlaceholder}
+        />
       </div>
 
-      {/* Body */}
       <Modal.Body>
         {children}
-
-        {/* Footer */}
-        <div
-          className={`border-t border-slate-800 mt-4 pt-3 flex items-center gap-2 ${
-            footerLeadingActions ? 'justify-between' : 'justify-end'
-          }`}
-        >
-          {footerLeadingActions && (
-            <div className="flex items-center gap-2">{footerLeadingActions}</div>
-          )}
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={onSubmit}
-              disabled={isSubmitting || submitDisabled}
-            >
-              {isSubmitting && submitPendingLabel ? submitPendingLabel : submitLabel}
-            </Button>
-          </div>
-        </div>
       </Modal.Body>
+
+      <Modal.Footer align={footerLeadingActions ? 'between' : 'end'}>
+        {footerLeadingActions && (
+          <div className="flex items-center gap-2">{footerLeadingActions}</div>
+        )}
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={onSubmit}
+            disabled={isSubmitting || submitDisabled}
+          >
+            {isSubmitting && submitPendingLabel ? submitPendingLabel : submitLabel}
+          </Button>
+        </div>
+      </Modal.Footer>
     </Modal>
   )
 }

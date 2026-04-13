@@ -203,6 +203,7 @@ export function TaskDetailModal({
   return (
     <>
       <TaskFormModal
+        headerLabel="Edit Task"
         title={titleDraft}
         onTitleChange={setTitleDraft}
         onClose={handleCancel}
