@@ -878,7 +878,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 
 	// Inject harness flags for the current status.
 	if currentStatus != nil {
-		// Skill harness (new): default enabled unless explicitly disabled.
+		// Skill harness: default enabled unless explicitly disabled.
 		skillHarnessEnabled := !currentStatus.SkillHarnessExplicitlyDisabled
 		if currentStatus.SkillHarnessExplicitlyDisabled {
 			skillHarnessEnabled = currentStatus.EnableSkillHarness
@@ -887,17 +887,6 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 			enrichedMetadata["_enable_skill_harness"] = "true"
 		} else {
 			enrichedMetadata["_enable_skill_harness"] = "false"
-		}
-
-		// Agent MD harness (deprecated): default enabled unless explicitly disabled.
-		agentHarnessEnabled := !currentStatus.AgentMDHarnessExplicitlyDisabled
-		if currentStatus.AgentMDHarnessExplicitlyDisabled {
-			agentHarnessEnabled = currentStatus.EnableAgentMDHarness
-		}
-		if agentHarnessEnabled {
-			enrichedMetadata["_enable_agent_md_harness"] = "true"
-		} else {
-			enrichedMetadata["_enable_agent_md_harness"] = "false"
 		}
 	}
 

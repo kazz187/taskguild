@@ -257,7 +257,7 @@ Workflow: "Development Flow"
 | `permission_mode` | このステータスでの権限モード（Agent 設定より優先） |
 | `inherit_session_from` | 前ステータスのセッションを直接 resume するための設定 |
 | `hooks` | このステータスで実行するフック（スキル/スクリプト） |
-| `enable_agent_md_harness` | Agent 定義ファイルの自動更新（デフォルト有効） |
+| `enable_skill_harness` | Skill ファイルの自動更新（デフォルト有効） |
 
 ### Task
 
@@ -454,15 +454,15 @@ PR の作成手順...
 
 ---
 
-## Agent MD Harness
+## Skill Harness
 
-タスク完了時に自動的に実行される Agent 定義ファイルの更新機能です。
+タスク完了時に自動的に実行される Skill ファイルの更新機能です。
 
-1. タスクの実行結果を分析し、Agent 定義ファイル（`.claude/agents/{name}.md`）の「Lessons Learned」セクションに知見を追記します
+1. タスクの実行結果を分析し、関連する Skill ファイル（`.claude/skills/{name}/SKILL.md`）に失敗パターンや学びを追記します
 2. コードベースの構造知識やプロセス改善の知見が蓄積され、次回以降のタスク実行効率が向上します
 3. メインセッションを fork して独立に実行されるため、タスクの実行には影響しません
 
-ステータスごとに `enable_agent_md_harness` で有効/無効を切り替えられます（デフォルト有効）。
+ステータスごとに `enable_skill_harness` で有効/無効を切り替えられます（デフォルト有効）。
 
 ---
 

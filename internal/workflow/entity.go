@@ -57,10 +57,6 @@ type Status struct {
 	AgentID       string       `yaml:"agent_id,omitempty"`
 	Hooks         []StatusHook `yaml:"hooks,omitempty"`
 
-	// Deprecated: use EnableSkillHarness instead.
-	EnableAgentMDHarness             bool `yaml:"enable_agent_md_harness"`
-	AgentMDHarnessExplicitlyDisabled bool `yaml:"agent_md_harness_explicitly_disabled,omitempty"`
-
 	// PermissionMode for agents executing tasks in this status.
 	PermissionMode string `yaml:"permission_mode,omitempty"`
 

@@ -475,7 +475,6 @@ func runTask(
 					reportTaskResult(ctx, client, taskID, displaySummary, "")
 					reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (invalid transition after retries)")
 					maybeRunSkillHarness(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner, sessionID)
-					maybeRunAgentMDHarness(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner, sessionID)
 					return
 				}
 
@@ -511,7 +510,6 @@ func runTask(
 			// Run harness synchronously while the task is still ASSIGNED.
 			// The agent retains ownership until hooks and harness are complete.
 			runSkillHarnessAndWait(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner, sessionID)
-			runAgentMDHarnessAndWait(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner, sessionID)
 			// Now unassign and transition.
 			logger.Info("reporting task result")
 			reportTaskResult(ctx, client, taskID, displaySummary, "")
@@ -535,7 +533,6 @@ func runTask(
 				fmt.Sprintf("Task completed at terminal status (turn %d)", turn), nil)
 			afterHooks()
 			runSkillHarnessAndWait(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner, sessionID)
-			runAgentMDHarnessAndWait(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner, sessionID)
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed")
 			return
@@ -555,7 +552,6 @@ func runTask(
 				afterHooks()
 			}
 			runSkillHarnessAndWait(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner, sessionID)
-			runAgentMDHarnessAndWait(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner, sessionID)
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (auto-transition)")
 			if err := handleStatusTransition(ctx, taskClient, taskID, autoName, metadata, tl); err != nil {

@@ -80,10 +80,8 @@ message WorkflowStatus {
   // hooks
   repeated StatusHook hooks = 8;
 
-  // Deprecated: use enable_skill_harness instead
-  bool enable_agent_md_harness = 9;
-  // Deprecated: use skill_harness_explicitly_disabled instead
-  bool agent_md_harness_explicitly_disabled = 10;
+  reserved 9, 10;
+  reserved "enable_agent_md_harness", "agent_md_harness_explicitly_disabled";
 
   // permission mode for agents executing tasks in this status
   // (default, acceptEdits, dontAsk, bypassPermissions, plan)
