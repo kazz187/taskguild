@@ -40,6 +40,8 @@ func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServ
 		return
 	}
 
+	// serverFiles tracks filenames known to the server.
+	serverFiles := make(map[string]bool)
 	var written, skipped int
 	for _, sc := range scripts {
 		filename := sc.GetFilename()
@@ -53,6 +55,7 @@ func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServ
 			continue
 		}
 
+		serverFiles[filename] = true
 		filePath := filepath.Join(scriptsDir, filename)
 
 		// Check if the file already exists.
@@ -75,5 +78,29 @@ func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServ
 		written++
 	}
 
+	cleanupStaleScriptFiles(scriptsDir, serverFiles)
 	slog.Info("script sync complete", "written", written, "skipped_existing", skipped)
+}
+
+// cleanupStaleScriptFiles removes script files from the scripts directory
+// that were not found on the server during the current sync.
+func cleanupStaleScriptFiles(scriptsDir string, serverFiles map[string]bool) {
+	entries, err := os.ReadDir(scriptsDir)
+	if err != nil {
+		return
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		if !serverFiles[entry.Name()] {
+			filePath := filepath.Join(scriptsDir, entry.Name())
+			if err := os.Remove(filePath); err != nil {
+				slog.Error("failed to remove stale script file", "path", filePath, "error", err)
+			} else {
+				slog.Info("removed stale script file", "filename", entry.Name())
+			}
+		}
+	}
 }

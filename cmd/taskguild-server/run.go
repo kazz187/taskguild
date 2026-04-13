@@ -61,7 +61,7 @@ type agentChangeNotifier struct {
 	projectRepo project.Repository
 }
 
-func (n *agentChangeNotifier) NotifyAgentChange(projectID string) {
+func (n *agentChangeNotifier) NotifyAgentChange(projectID string, changedAgentNames []string) {
 	p, err := n.projectRepo.Get(context.Background(), projectID)
 	if err != nil {
 		slog.Error("failed to look up project for agent change notification", "project_id", projectID, "error", err)
@@ -69,7 +69,9 @@ func (n *agentChangeNotifier) NotifyAgentChange(projectID string) {
 	}
 	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
 		Command: &taskguildv1.AgentCommand_SyncAgents{
-			SyncAgents: &taskguildv1.SyncAgentsCommand{},
+			SyncAgents: &taskguildv1.SyncAgentsCommand{
+				ForceOverwriteAgentNames: changedAgentNames,
+			},
 		},
 	})
 }
@@ -122,6 +124,28 @@ type skillChangeNotifier struct {
 	projectRepo project.Repository
 }
 
+// scriptChangeNotifier implements script.ChangeNotifier by broadcasting
+// a SyncScriptsCommand to connected agents in the same project.
+type scriptChangeNotifier struct {
+	registry    *agentmanager.Registry
+	projectRepo project.Repository
+}
+
+func (n *scriptChangeNotifier) NotifyScriptChange(projectID string, changedScriptIDs []string) {
+	p, err := n.projectRepo.Get(context.Background(), projectID)
+	if err != nil {
+		slog.Error("failed to look up project for script change notification", "project_id", projectID, "error", err)
+		return
+	}
+	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
+		Command: &taskguildv1.AgentCommand_SyncScripts{
+			SyncScripts: &taskguildv1.SyncScriptsCommand{
+				ForceOverwriteScriptIds: changedScriptIDs,
+			},
+		},
+	})
+}
+
 // claudeSettingsChangeNotifier implements claudesettings.ChangeNotifier by broadcasting
 // a SyncClaudeSettingsCommand to connected agents in the same project.
 type claudeSettingsChangeNotifier struct {
@@ -142,7 +166,7 @@ func (n *claudeSettingsChangeNotifier) NotifyClaudeSettingsChange(projectID stri
 	})
 }
 
-func (n *skillChangeNotifier) NotifySkillChange(projectID string) {
+func (n *skillChangeNotifier) NotifySkillChange(projectID string, changedSkillIDs []string) {
 	p, err := n.projectRepo.Get(context.Background(), projectID)
 	if err != nil {
 		slog.Error("failed to look up project for skill change notification", "project_id", projectID, "error", err)
@@ -150,7 +174,9 @@ func (n *skillChangeNotifier) NotifySkillChange(projectID string) {
 	}
 	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
 		Command: &taskguildv1.AgentCommand_SyncSkills{
-			SyncSkills: &taskguildv1.SyncSkillsCommand{},
+			SyncSkills: &taskguildv1.SyncSkillsCommand{
+				ForceOverwriteSkillIds: changedSkillIDs,
+			},
 		},
 	})
 }
@@ -259,7 +285,11 @@ func runServer() {
 		projectRepo: projectRepo,
 	}
 	skillServer := skill.NewServer(skillRepo, skillChangeNotifier, wdResolver)
-	scriptServer := script.NewServer(scriptRepo, agentManagerServer, scriptBroker, wdResolver)
+	scriptChangeNotifier := &scriptChangeNotifier{
+		registry:    agentManagerRegistry,
+		projectRepo: projectRepo,
+	}
+	scriptServer := script.NewServer(scriptRepo, agentManagerServer, scriptBroker, wdResolver, scriptChangeNotifier)
 	taskLogServer := tasklog.NewServer(taskLogRepo, taskRepo)
 	eventServer := event.NewServer(bus)
 	permissionChangeNotifier := &permissionChangeNotifier{
