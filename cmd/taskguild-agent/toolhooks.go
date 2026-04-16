@@ -146,12 +146,22 @@ func logToolUse(tl *taskLogger, taskID string, input claudeagent.HookInput, isFa
 	}
 
 	// Serialize tool output/response.
+	// Note: input.ToolResponse is often already a JSON string (from Claude's raw
+	// tool result). Re-marshalling such a string would double-encode it —
+	// wrapping the content in quotes and escaping inner characters (e.g. `<`
+	// becomes `\u003c`, newlines become literal `\n`). Detect that case and
+	// store the string as-is; only marshal non-string payloads.
 	if input.ToolResponse != nil {
-		if outputJSON, err := json.Marshal(input.ToolResponse); err == nil {
-			metadata["tool_output"] = truncateText(string(outputJSON), maxToolOutputSize)
-		} else {
-			// Fallback: convert to string.
-			metadata["tool_output"] = truncateText(fmt.Sprintf("%v", input.ToolResponse), maxToolOutputSize)
+		switch v := input.ToolResponse.(type) {
+		case string:
+			metadata["tool_output"] = truncateText(v, maxToolOutputSize)
+		default:
+			if outputJSON, err := json.Marshal(v); err == nil {
+				metadata["tool_output"] = truncateText(string(outputJSON), maxToolOutputSize)
+			} else {
+				// Fallback: convert to string.
+				metadata["tool_output"] = truncateText(fmt.Sprintf("%v", v), maxToolOutputSize)
+			}
 		}
 	}
 
