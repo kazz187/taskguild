@@ -226,6 +226,10 @@ func formatToolSummary(toolName string, toolInput map[string]any) string {
 		if nbPath, ok := toolInput["notebook_path"].(string); ok {
 			return fmt.Sprintf("NotebookEdit: %s", nbPath)
 		}
+	case "Skill":
+		if skill, ok := toolInput["skill"].(string); ok {
+			return fmt.Sprintf("Skill /%s", skill)
+		}
 	case "AskUserQuestion":
 		return "AskUserQuestion"
 	}
