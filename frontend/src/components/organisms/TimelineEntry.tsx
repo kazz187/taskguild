@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { InteractionType, InteractionStatus } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import type { Interaction } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import { TaskLogCategory, TaskLogLevel } from '@taskguild/proto/taskguild/v1/task_log_pb.ts'
@@ -13,6 +13,7 @@ import { Badge, AsciiArtPopover } from '../atoms/index.ts'
 import { isAsciiArt } from '../../lib/asciiArt.ts'
 import { WorktreePath } from '../atoms/WorktreePath.tsx'
 import { MarkdownDescription } from './MarkdownDescription.tsx'
+import { EditToolDiffView } from '../molecules/EditToolDiffView.tsx'
 
 export type TimelineItem =
   | { kind: 'interaction'; interaction: Interaction }
@@ -293,18 +294,50 @@ function ExpandedContent({ log }: { log: TaskLog }) {
 
 /** Tool use expanded detail: shows input parameters and output result. */
 function ToolUseDetail({ metadata }: { metadata: Record<string, string> }) {
+  const toolName = metadata['tool_name']
   const toolInput = metadata['tool_input']
   const toolOutput = metadata['tool_output']
   const error = metadata['error']
 
+  // Detect Edit tool and extract its fields for diff rendering
+  const editInput = useMemo(() => {
+    if (toolName !== 'Edit' || !toolInput) return null
+    try {
+      const parsed = JSON.parse(toolInput)
+      if (
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        'file_path' in parsed &&
+        ('old_string' in parsed || 'new_string' in parsed)
+      ) {
+        return parsed as {
+          file_path: string
+          old_string?: string
+          new_string?: string
+          replace_all?: boolean
+        }
+      }
+    } catch {
+      /* ignore parse errors */
+    }
+    return null
+  }, [toolName, toolInput])
+
   return (
     <div className="space-y-1.5">
-      {toolInput && (
+      {editInput ? (
+        <EditToolDiffView
+          filePath={editInput.file_path}
+          oldString={editInput.old_string ?? ''}
+          newString={editInput.new_string ?? ''}
+          replaceAll={editInput.replace_all}
+        />
+      ) : toolInput ? (
         <div>
           <div className="text-[9px] text-gray-600 font-medium mb-0.5 uppercase tracking-wider">Input</div>
           <JsonKeyValueDisplay raw={toolInput} />
         </div>
-      )}
+      ) : null}
       {toolOutput && (
         <div>
           <div className="text-[9px] text-gray-600 font-medium mb-0.5 uppercase tracking-wider">Output</div>
