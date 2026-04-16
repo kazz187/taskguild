@@ -14,6 +14,7 @@ import { isAsciiArt } from '../../lib/asciiArt.ts'
 import { WorktreePath } from '../atoms/WorktreePath.tsx'
 import { MarkdownDescription } from './MarkdownDescription.tsx'
 import { EditToolDiffView } from '../molecules/EditToolDiffView.tsx'
+import { safeParseToolJSON, PARSE_FAILED } from '../../lib/tool-output.ts'
 
 export type TimelineItem =
   | { kind: 'interaction'; interaction: Interaction }
@@ -302,31 +303,50 @@ function ToolUseDetail({ metadata }: { metadata: Record<string, string> }) {
   // Detect Edit tool and extract its fields for diff rendering
   const editInput = useMemo(() => {
     if (toolName !== 'Edit' || !toolInput) return null
-    try {
-      const parsed = JSON.parse(toolInput)
-      if (
-        typeof parsed === 'object' &&
-        parsed !== null &&
-        'file_path' in parsed &&
-        ('old_string' in parsed || 'new_string' in parsed)
-      ) {
-        return parsed as {
-          file_path: string
-          old_string?: string
-          new_string?: string
-          replace_all?: boolean
-        }
+    const parsed = safeParseToolJSON(toolInput)
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      'file_path' in parsed &&
+      ('old_string' in parsed || 'new_string' in parsed)
+    ) {
+      return parsed as {
+        file_path: string
+        old_string?: string
+        new_string?: string
+        replace_all?: boolean
       }
-    } catch {
-      /* ignore parse errors */
     }
     return null
   }, [toolName, toolInput])
+
+  // Detect Edit tool output and extract its fields (including the full original
+  // file content) for richer diff rendering with surrounding context.
+  const editOutput = useMemo(() => {
+    if (toolName !== 'Edit' || !toolOutput) return null
+    const parsed = safeParseToolJSON(toolOutput)
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      'filePath' in parsed &&
+      ('oldString' in parsed || 'newString' in parsed)
+    ) {
+      return parsed as {
+        filePath: string
+        oldString?: string
+        newString?: string
+        originalFile?: string
+        replaceAll?: boolean
+      }
+    }
+    return null
+  }, [toolName, toolOutput])
 
   return (
     <div className="space-y-1.5">
       {editInput ? (
         <EditToolDiffView
+          variant="input"
           filePath={editInput.file_path}
           oldString={editInput.old_string ?? ''}
           newString={editInput.new_string ?? ''}
@@ -338,12 +358,21 @@ function ToolUseDetail({ metadata }: { metadata: Record<string, string> }) {
           <JsonKeyValueDisplay raw={toolInput} />
         </div>
       ) : null}
-      {toolOutput && (
+      {editOutput ? (
+        <EditToolDiffView
+          variant="output"
+          filePath={editOutput.filePath}
+          oldString={editOutput.oldString ?? ''}
+          newString={editOutput.newString ?? ''}
+          replaceAll={editOutput.replaceAll ?? editInput?.replace_all}
+          originalFile={editOutput.originalFile}
+        />
+      ) : toolOutput ? (
         <div>
           <div className="text-[9px] text-gray-600 font-medium mb-0.5 uppercase tracking-wider">Output</div>
           <JsonKeyValueDisplay raw={toolOutput} />
         </div>
-      )}
+      ) : null}
       {error && (
         <div>
           <div className="text-[9px] text-red-400 font-medium mb-0.5 uppercase tracking-wider">Error</div>
@@ -435,10 +464,10 @@ function formatValue(value: unknown): string {
 
 /** Render JSON as flat key-value pairs. Falls back to raw string for non-object JSON. */
 function JsonKeyValueDisplay({ raw }: { raw: string }) {
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(raw)
-  } catch {
+  // safeParseToolJSON transparently handles legacy double-encoded payloads
+  // (where JSON.parse yields a string that itself contains JSON).
+  const parsed = safeParseToolJSON(raw)
+  if (parsed === PARSE_FAILED) {
     return (
       <pre className="text-[11px] text-gray-400 font-mono whitespace-pre-wrap break-all bg-slate-900/50 rounded px-2 py-1 max-h-48 overflow-y-auto">
         {raw}
