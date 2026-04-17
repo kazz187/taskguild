@@ -762,9 +762,10 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 				enrichedMetadata["_disallowed_tools"] = string(b)
 			}
 		}
-		if currentStatus.Effort != "" {
-			enrichedMetadata["_effort"] = currentStatus.Effort
-		}
+	}
+	// Resolve effort: task override wins over WorkflowStatus.
+	if effort := resolveEffort(t, currentStatus); effort != "" {
+		enrichedMetadata["_effort"] = effort
 	}
 
 	// Resolve current status name and available transitions from workflow.
@@ -1090,4 +1091,18 @@ func (s *Server) RequestTaskResume(ctx context.Context, t *task.Task) error {
 		"project_name", projectName,
 	)
 	return nil
+}
+
+// resolveEffort returns the effort string used when dispatching the task.
+// Task-level Effort (when non-empty) overrides the WorkflowStatus-level Effort.
+// An empty return value means no explicit effort should be set (runner defaults apply).
+func resolveEffort(t *task.Task, currentStatus *workflow.Status) string {
+	effort := ""
+	if currentStatus != nil {
+		effort = currentStatus.Effort
+	}
+	if t != nil && t.Effort != "" {
+		effort = t.Effort
+	}
+	return effort
 }

@@ -90,9 +90,12 @@ type Task struct {
 	// execution options
 	UseWorktree bool `protobuf:"varint,9,opt,name=use_worktree,json=useWorktree,proto3" json:"use_worktree,omitempty"`
 	// metadata
-	Metadata      map[string]string      `protobuf:"bytes,11,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Metadata  map[string]string      `protobuf:"bytes,11,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// overrides WorkflowStatus.effort when non-empty.
+	// Valid values: "low", "medium", "high", "max".
+	Effort        string `protobuf:"bytes,14,opt,name=effort,proto3" json:"effort,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -211,6 +214,13 @@ func (x *Task) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Task) GetEffort() string {
+	if x != nil {
+		return x.Effort
+	}
+	return ""
+}
+
 type CreateTaskRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// identity
@@ -224,7 +234,10 @@ type CreateTaskRequest struct {
 	// metadata
 	Metadata map[string]string `protobuf:"bytes,7,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// optional: specify initial status (defaults to workflow's IsInitial status)
-	StatusId      *string `protobuf:"bytes,8,opt,name=status_id,json=statusId,proto3,oneof" json:"status_id,omitempty"`
+	StatusId *string `protobuf:"bytes,8,opt,name=status_id,json=statusId,proto3,oneof" json:"status_id,omitempty"`
+	// overrides WorkflowStatus.effort when non-empty.
+	// Valid values: "low", "medium", "high", "max".
+	Effort        string `protobuf:"bytes,9,opt,name=effort,proto3" json:"effort,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -304,6 +317,13 @@ func (x *CreateTaskRequest) GetMetadata() map[string]string {
 func (x *CreateTaskRequest) GetStatusId() string {
 	if x != nil && x.StatusId != nil {
 		return *x.StatusId
+	}
+	return ""
+}
+
+func (x *CreateTaskRequest) GetEffort() string {
+	if x != nil {
+		return x.Effort
 	}
 	return ""
 }
@@ -570,7 +590,11 @@ type UpdateTaskRequest struct {
 	// execution options
 	UseWorktree *bool `protobuf:"varint,4,opt,name=use_worktree,json=useWorktree,proto3,oneof" json:"use_worktree,omitempty"`
 	// metadata
-	Metadata      map[string]string `protobuf:"bytes,6,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Metadata map[string]string `protobuf:"bytes,6,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// optional override of WorkflowStatus.effort.
+	// Empty string explicitly clears the override (falls back to WorkflowStatus).
+	// Valid non-empty values: "low", "medium", "high", "max".
+	Effort        *string `protobuf:"bytes,7,opt,name=effort,proto3,oneof" json:"effort,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -638,6 +662,13 @@ func (x *UpdateTaskRequest) GetMetadata() map[string]string {
 		return x.Metadata
 	}
 	return nil
+}
+
+func (x *UpdateTaskRequest) GetEffort() string {
+	if x != nil && x.Effort != nil {
+		return *x.Effort
+	}
+	return ""
 }
 
 type UpdateTaskResponse struct {
@@ -1910,7 +1941,7 @@ var File_taskguild_v1_task_proto protoreflect.FileDescriptor
 
 const file_taskguild_v1_task_proto_rawDesc = "" +
 	"\n" +
-	"\x17taskguild/v1/task.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19taskguild/v1/common.proto\"\xd3\x04\n" +
+	"\x17taskguild/v1/task.proto\x12\ftaskguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19taskguild/v1/common.proto\"\xeb\x04\n" +
 	"\x04Task\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -1927,11 +1958,12 @@ const file_taskguild_v1_task_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x1a;\n" +
+	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x16\n" +
+	"\x06effort\x18\x0e \x01(\tR\x06effort\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01J\x04\b\n" +
-	"\x10\vR\x0fpermission_mode\"\xfd\x02\n" +
+	"\x10\vR\x0fpermission_mode\"\x95\x03\n" +
 	"\x11CreateTaskRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1f\n" +
@@ -1941,7 +1973,8 @@ const file_taskguild_v1_task_proto_rawDesc = "" +
 	"\vdescription\x18\x04 \x01(\tR\vdescription\x12!\n" +
 	"\fuse_worktree\x18\x05 \x01(\bR\vuseWorktree\x12I\n" +
 	"\bmetadata\x18\a \x03(\v2-.taskguild.v1.CreateTaskRequest.MetadataEntryR\bmetadata\x12 \n" +
-	"\tstatus_id\x18\b \x01(\tH\x00R\bstatusId\x88\x01\x01\x1a;\n" +
+	"\tstatus_id\x18\b \x01(\tH\x00R\bstatusId\x88\x01\x01\x12\x16\n" +
+	"\x06effort\x18\t \x01(\tR\x06effort\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\f\n" +
@@ -1966,17 +1999,19 @@ const file_taskguild_v1_task_proto_rawDesc = "" +
 	"\x05tasks\x18\x01 \x03(\v2\x12.taskguild.v1.TaskR\x05tasks\x12@\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2 .taskguild.v1.PaginationResponseR\n" +
-	"pagination\"\xb3\x02\n" +
+	"pagination\"\xdb\x02\n" +
 	"\x11UpdateTaskRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12&\n" +
 	"\fuse_worktree\x18\x04 \x01(\bH\x00R\vuseWorktree\x88\x01\x01\x12I\n" +
-	"\bmetadata\x18\x06 \x03(\v2-.taskguild.v1.UpdateTaskRequest.MetadataEntryR\bmetadata\x1a;\n" +
+	"\bmetadata\x18\x06 \x03(\v2-.taskguild.v1.UpdateTaskRequest.MetadataEntryR\bmetadata\x12\x1b\n" +
+	"\x06effort\x18\a \x01(\tH\x01R\x06effort\x88\x01\x01\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x0f\n" +
-	"\r_use_worktreeJ\x04\b\x05\x10\x06R\x0fpermission_mode\"<\n" +
+	"\r_use_worktreeB\t\n" +
+	"\a_effortJ\x04\b\x05\x10\x06R\x0fpermission_mode\"<\n" +
 	"\x12UpdateTaskResponse\x12&\n" +
 	"\x04task\x18\x01 \x01(\v2\x12.taskguild.v1.TaskR\x04task\"#\n" +
 	"\x11DeleteTaskRequest\x12\x0e\n" +
