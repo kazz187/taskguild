@@ -6,7 +6,8 @@ import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { GitBranch, RefreshCw } from 'lucide-react'
 import { Select, Checkbox } from '../atoms/index.ts'
-import { TaskFormModal, ImageUploadTextarea, type PendingImage } from '../molecules/index.ts'
+import { TaskFormModal, ImageUploadTextarea, FormField, type PendingImage } from '../molecules/index.ts'
+import { EFFORT_OPTIONS } from '@/lib/constants.ts'
 
 interface TaskCreateModalProps {
   projectId: string
@@ -19,6 +20,7 @@ interface TaskCreateModalProps {
 export function TaskCreateModal({ projectId, workflowId, defaultUseWorktree, onCreated, onClose }: TaskCreateModalProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [effort, setEffort] = useState('')
   const [useWorktree, setUseWorktree] = useState(defaultUseWorktree ?? false)
   const [selectedWorktree, setSelectedWorktree] = useState('')
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([])
@@ -56,7 +58,7 @@ export function TaskCreateModal({ projectId, workflowId, defaultUseWorktree, onC
 
     try {
       const resp = await createMut.mutateAsync(
-        { projectId, workflowId, title: title.trim(), description, metadata, useWorktree },
+        { projectId, workflowId, title: title.trim(), description, metadata, useWorktree, effort },
       )
 
       // Upload pending images after task creation
@@ -107,6 +109,20 @@ export function TaskCreateModal({ projectId, workflowId, defaultUseWorktree, onC
         textareaSize="md"
         placeholder="Add description..."
       />
+
+      {/* Effort */}
+      <FormField label="Effort" labelSize="xs">
+        <Select
+          value={effort}
+          onChange={(e) => setEffort(e.target.value)}
+          selectSize="xs"
+          className="rounded"
+        >
+          {EFFORT_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </Select>
+      </FormField>
 
       <Checkbox
         label="Use Worktree (isolate changes in a git worktree)"

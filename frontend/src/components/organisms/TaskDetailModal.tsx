@@ -12,7 +12,8 @@ import { ForceTransitionDialog } from './ForceTransitionDialog'
 import { shortId } from '@/lib/id'
 import { Button, Select, Checkbox, Badge, Tooltip } from '../atoms/index.ts'
 import { pendingReasonText } from '@/lib/pendingReason'
-import { Modal, TaskFormModal, Card, ImageUploadTextarea } from '../molecules/index.ts'
+import { Modal, TaskFormModal, Card, ImageUploadTextarea, FormField } from '../molecules/index.ts'
+import { EFFORT_OPTIONS } from '@/lib/constants.ts'
 
 const TASK_DETAIL_EVENT_TYPES = [
   EventType.TASK_UPDATED,
@@ -69,6 +70,7 @@ export function TaskDetailModal({
   const [descDraft, setDescDraft] = useState('')
   const [worktreeDraft, setWorktreeDraft] = useState(false)
   const [selectedWorktree, setSelectedWorktree] = useState('')
+  const [effortDraft, setEffortDraft] = useState('')
 
   const task = taskData?.task
 
@@ -89,6 +91,7 @@ export function TaskDetailModal({
       setDescDraft(task.description)
       setWorktreeDraft(task.useWorktree ?? false)
       setSelectedWorktree(task.metadata?.['worktree'] ?? '')
+      setEffortDraft(task.effort ?? '')
     }
   }, [task?.id])
 
@@ -135,7 +138,8 @@ export function TaskDetailModal({
     titleDraft !== task.title ||
     descDraft !== task.description ||
     worktreeDraft !== (task.useWorktree ?? false) ||
-    selectedWorktree !== (task.metadata?.['worktree'] ?? '')
+    selectedWorktree !== (task.metadata?.['worktree'] ?? '') ||
+    effortDraft !== (task.effort ?? '')
   ) : false
 
   const handleSave = () => {
@@ -147,7 +151,7 @@ export function TaskDetailModal({
       metadata['worktree'] = ''
     }
     updateMut.mutate(
-      { id: task.id, title: titleDraft.trim(), description: descDraft, metadata, useWorktree: worktreeDraft },
+      { id: task.id, title: titleDraft.trim(), description: descDraft, metadata, useWorktree: worktreeDraft, effort: effortDraft },
       { onSuccess: () => { refetchTask(); onChanged() } },
     )
   }
@@ -158,6 +162,7 @@ export function TaskDetailModal({
       setDescDraft(task.description)
       setWorktreeDraft(task.useWorktree ?? false)
       setSelectedWorktree(task.metadata?.['worktree'] ?? '')
+      setEffortDraft(task.effort ?? '')
     }
     onClose()
   }
@@ -263,6 +268,20 @@ export function TaskDetailModal({
         />
 
         {/* Agent settings */}
+        <FormField label="Effort" labelSize="xs">
+          <Select
+            value={effortDraft}
+            onChange={(e) => setEffortDraft(e.target.value)}
+            selectSize="xs"
+            className="rounded"
+            disabled={isTaskLocked}
+          >
+            {EFFORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </Select>
+        </FormField>
+
         <Checkbox
           label="Use Worktree (isolate changes in a git worktree)"
           checked={worktreeDraft}

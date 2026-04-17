@@ -9,7 +9,8 @@ import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { GitBranch, RefreshCw, AlertTriangle, ArrowUpRight } from 'lucide-react'
 import { shortId } from '@/lib/id'
 import { Select, Checkbox, Badge } from '../atoms/index.ts'
-import { TaskFormModal, Card, ImageUploadTextarea, type PendingImage } from '../molecules/index.ts'
+import { TaskFormModal, Card, ImageUploadTextarea, FormField, type PendingImage } from '../molecules/index.ts'
+import { EFFORT_OPTIONS } from '@/lib/constants.ts'
 
 interface ChildTaskCreateModalProps {
   parentTask: Task
@@ -30,6 +31,7 @@ export function ChildTaskCreateModal({
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState(parentRef)
+  const [effort, setEffort] = useState(parentTask.effort ?? '')
   const [useWorktree, setUseWorktree] = useState(parentTask.useWorktree ?? false)
   const [selectedWorktree, setSelectedWorktree] = useState(parentTask.metadata?.['worktree'] ?? '')
   const [inheritSession, setInheritSession] = useState(false)
@@ -85,6 +87,7 @@ export function ChildTaskCreateModal({
         description,
         metadata,
         useWorktree,
+        effort,
       })
 
       // Upload pending images after task creation
@@ -174,6 +177,19 @@ export function ChildTaskCreateModal({
       </div>
 
       {/* Agent settings */}
+      <FormField label="Effort" labelSize="xs">
+        <Select
+          value={effort}
+          onChange={(e) => setEffort(e.target.value)}
+          selectSize="xs"
+          className="rounded"
+        >
+          {EFFORT_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </Select>
+      </FormField>
+
       <Checkbox
         label="Use Worktree (isolate changes in a git worktree)"
         checked={useWorktree}

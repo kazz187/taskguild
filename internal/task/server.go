@@ -123,6 +123,7 @@ func (s *Server) CreateTask(ctx context.Context, req *connect.Request[taskguildv
 		AssignmentStatus: AssignmentStatusUnassigned,
 		Metadata:         req.Msg.Metadata,
 		UseWorktree:      req.Msg.UseWorktree,
+		Effort:           req.Msg.Effort,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
@@ -204,6 +205,9 @@ func (s *Server) UpdateTask(ctx context.Context, req *connect.Request[taskguildv
 	}
 	if req.Msg.UseWorktree != nil {
 		t.UseWorktree = *req.Msg.UseWorktree
+	}
+	if req.Msg.Effort != nil {
+		t.Effort = *req.Msg.Effort
 	}
 	t.UpdatedAt = time.Now()
 	if err := s.repo.Update(ctx, t); err != nil {
@@ -636,6 +640,7 @@ func toProto(t *Task) *taskguildv1.Task {
 		AssignmentStatus: assignmentStatusToProto(t.AssignmentStatus),
 		Metadata:         t.Metadata,
 		UseWorktree:      t.UseWorktree,
+		Effort:           t.Effort,
 		CreatedAt:        timestamppb.New(t.CreatedAt),
 		UpdatedAt:        timestamppb.New(t.UpdatedAt),
 	}
