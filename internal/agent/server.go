@@ -51,6 +51,7 @@ func (s *Server) notifyChange(projectID string, changedAgentNames []string) {
 
 func (s *Server) CreateAgent(ctx context.Context, req *connect.Request[taskguildv1.CreateAgentRequest]) (*connect.Response[taskguildv1.CreateAgentResponse], error) {
 	now := time.Now()
+
 	a := &Agent{
 		ID:              ulid.Make().String(),
 		ProjectID:       req.Msg.GetProjectId(),
@@ -70,7 +71,9 @@ func (s *Server) CreateAgent(ctx context.Context, req *connect.Request[taskguild
 	if err := s.repo.Create(ctx, a); err != nil {
 		return nil, err
 	}
+
 	s.notifyChange(a.ProjectID, []string{a.Name})
+
 	return connect.NewResponse(&taskguildv1.CreateAgentResponse{
 		Agent: toProto(a),
 	}), nil
@@ -81,6 +84,7 @@ func (s *Server) GetAgent(ctx context.Context, req *connect.Request[taskguildv1.
 	if err != nil {
 		return nil, err
 	}
+
 	return connect.NewResponse(&taskguildv1.GetAgentResponse{
 		Agent: toProto(a),
 	}), nil
@@ -88,20 +92,25 @@ func (s *Server) GetAgent(ctx context.Context, req *connect.Request[taskguildv1.
 
 func (s *Server) ListAgents(ctx context.Context, req *connect.Request[taskguildv1.ListAgentsRequest]) (*connect.Response[taskguildv1.ListAgentsResponse], error) {
 	limit, offset := int32(50), int32(0)
+
 	if req.Msg.GetPagination() != nil {
 		if req.Msg.GetPagination().GetLimit() > 0 {
 			limit = req.Msg.GetPagination().GetLimit()
 		}
+
 		offset = req.Msg.GetPagination().GetOffset()
 	}
+
 	agents, total, err := s.repo.List(ctx, req.Msg.GetProjectId(), int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}
+
 	protos := make([]*taskguildv1.AgentDefinition, len(agents))
 	for i, a := range agents {
 		protos[i] = toProto(a)
 	}
+
 	return connect.NewResponse(&taskguildv1.ListAgentsResponse{
 		Agents: protos,
 		Pagination: &taskguildv1.PaginationResponse{
@@ -117,38 +126,50 @@ func (s *Server) UpdateAgent(ctx context.Context, req *connect.Request[taskguild
 	if err != nil {
 		return nil, err
 	}
+
 	if req.Msg.GetName() != "" {
 		a.Name = req.Msg.GetName()
 	}
+
 	if req.Msg.GetDescription() != "" {
 		a.Description = req.Msg.GetDescription()
 	}
+
 	if req.Msg.GetPrompt() != "" {
 		a.Prompt = req.Msg.GetPrompt()
 	}
+
 	if req.Msg.Tools != nil {
 		a.Tools = req.Msg.GetTools()
 	}
+
 	if req.Msg.DisallowedTools != nil {
 		a.DisallowedTools = req.Msg.GetDisallowedTools()
 	}
+
 	if req.Msg.GetModel() != "" {
 		a.Model = req.Msg.GetModel()
 	}
+
 	if req.Msg.GetPermissionMode() != "" {
 		a.PermissionMode = req.Msg.GetPermissionMode()
 	}
+
 	if req.Msg.Skills != nil {
 		a.Skills = req.Msg.GetSkills()
 	}
+
 	if req.Msg.GetMemory() != "" {
 		a.Memory = req.Msg.GetMemory()
 	}
+
 	a.UpdatedAt = time.Now()
 	if err := s.repo.Update(ctx, a); err != nil {
 		return nil, err
 	}
+
 	s.notifyChange(a.ProjectID, []string{a.Name})
+
 	return connect.NewResponse(&taskguildv1.UpdateAgentResponse{
 		Agent: toProto(a),
 	}), nil
@@ -160,10 +181,13 @@ func (s *Server) DeleteAgent(ctx context.Context, req *connect.Request[taskguild
 	if err != nil {
 		return nil, err
 	}
+
 	if err := s.repo.Delete(ctx, req.Msg.GetId()); err != nil {
 		return nil, err
 	}
+
 	s.notifyChange(a.ProjectID, nil)
+
 	return connect.NewResponse(&taskguildv1.DeleteAgentResponse{}), nil
 }
 
@@ -175,11 +199,14 @@ func (s *Server) SyncAgentsFromDir(ctx context.Context, req *connect.Request[tas
 		if err != nil {
 			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("failed to resolve work directory: %w", err))
 		}
+
 		dir = resolved
 	}
+
 	if dir == "" {
 		dir = "."
 	}
+
 	agentsDir := filepath.Join(dir, ".claude", "agents")
 
 	entries, err := os.ReadDir(agentsDir)
@@ -187,6 +214,7 @@ func (s *Server) SyncAgentsFromDir(ctx context.Context, req *connect.Request[tas
 		if os.IsNotExist(err) {
 			return connect.NewResponse(&taskguildv1.SyncAgentsFromDirResponse{}), nil
 		}
+
 		return nil, fmt.Errorf("failed to read agents directory: %w", err)
 	}
 
@@ -202,6 +230,7 @@ func (s *Server) SyncAgentsFromDir(ctx context.Context, req *connect.Request[tas
 		}
 
 		filePath := filepath.Join(agentsDir, entry.Name())
+
 		parsed, err := parseAgentMDFile(filePath)
 		if err != nil {
 			continue
@@ -220,15 +249,18 @@ func (s *Server) SyncAgentsFromDir(ctx context.Context, req *connect.Request[tas
 			existing.Skills = parsed.Skills
 			existing.Memory = parsed.Memory
 			existing.IsSynced = true
+
 			existing.UpdatedAt = time.Now()
 			if err := s.repo.Update(ctx, existing); err != nil {
 				continue
 			}
+
 			synced = append(synced, toProto(existing))
 			updated++
 		} else {
 			// Create new agent.
 			now := time.Now()
+
 			a := &Agent{
 				ID:              ulid.Make().String(),
 				ProjectID:       req.Msg.GetProjectId(),
@@ -248,6 +280,7 @@ func (s *Server) SyncAgentsFromDir(ctx context.Context, req *connect.Request[tas
 			if err := s.repo.Create(ctx, a); err != nil {
 				continue
 			}
+
 			synced = append(synced, toProto(a))
 			created++
 		}
@@ -290,8 +323,12 @@ func parseAgentMDFile(filePath string) (*parsedAgent, error) {
 
 	// Detect frontmatter start.
 	hasFrontmatter := false
-	var frontmatterLines []string
-	var bodyLines []string
+
+	var (
+		frontmatterLines []string
+		bodyLines        []string
+	)
+
 	inFrontmatter := false
 	frontmatterDone := false
 
@@ -301,19 +338,25 @@ func parseAgentMDFile(filePath string) (*parsedAgent, error) {
 			if strings.TrimSpace(line) == "---" {
 				hasFrontmatter = true
 				inFrontmatter = true
+
 				continue
 			}
 			// No frontmatter, everything is body.
 			frontmatterDone = true
+
 			bodyLines = append(bodyLines, line)
+
 			continue
 		}
+
 		if inFrontmatter {
 			if strings.TrimSpace(line) == "---" {
 				inFrontmatter = false
 				frontmatterDone = true
+
 				continue
 			}
+
 			frontmatterLines = append(frontmatterLines, line)
 		} else {
 			bodyLines = append(bodyLines, line)
@@ -331,13 +374,16 @@ func parseAgentMDFile(filePath string) (*parsedAgent, error) {
 	// Parse frontmatter as simple key: value pairs.
 	// Also supports YAML list format (  - item) for list fields like skills,
 	// and YAML block scalar indicators (| and >) for multi-line string values.
-	var currentListKey string
-	var blockScalarKey string
-	var blockScalarLines []string
-	var blockIndent int
+	var (
+		currentListKey   string
+		blockScalarKey   string
+		blockScalarLines []string
+		blockIndent      int
+	)
 
 	assignAgentBlockScalar := func(key string, lines []string) {
 		value := strings.TrimRight(strings.Join(lines, "\n"), "\n ")
+
 		switch key {
 		case "name":
 			result.Name = value
@@ -362,13 +408,17 @@ func parseAgentMDFile(filePath string) (*parsedAgent, error) {
 				if len(blockScalarLines) == 0 {
 					blockIndent = len(line) - len(strings.TrimLeft(line, " \t"))
 				}
+
 				stripped := line
 				if len(line) >= blockIndent {
 					stripped = line[blockIndent:]
 				}
+
 				blockScalarLines = append(blockScalarLines, stripped)
+
 				continue
 			}
+
 			if trimmed == "" {
 				// Blank line within block scalar.
 				blockScalarLines = append(blockScalarLines, "")
@@ -393,6 +443,7 @@ func parseAgentMDFile(filePath string) (*parsedAgent, error) {
 					result.DisallowedTools = append(result.DisallowedTools, item)
 				}
 			}
+
 			continue
 		}
 
@@ -406,6 +457,7 @@ func parseAgentMDFile(filePath string) (*parsedAgent, error) {
 				blockScalarKey = key
 				blockScalarLines = nil
 				blockIndent = 0
+
 				continue
 			}
 

@@ -98,6 +98,7 @@ func readLocalAgents(agentsDir string) map[string]string {
 		if !os.IsNotExist(err) {
 			slog.Error("failed to read agents directory", "error", err)
 		}
+
 		return result
 	}
 
@@ -107,6 +108,7 @@ func readLocalAgents(agentsDir string) map[string]string {
 		}
 
 		filePath := filepath.Join(agentsDir, entry.Name())
+
 		content, err := os.ReadFile(filePath)
 		if err != nil {
 			slog.Error("failed to read local agent file", "path", filePath, "error", err)

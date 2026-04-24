@@ -65,6 +65,7 @@ func (n *agentChangeNotifier) NotifyAgentChange(projectID string, changedAgentNa
 		slog.Error("failed to look up project for agent change notification", "project_id", projectID, "error", err)
 		return
 	}
+
 	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
 		Command: &taskguildv1.AgentCommand_SyncAgents{
 			SyncAgents: &taskguildv1.SyncAgentsCommand{
@@ -87,6 +88,7 @@ func (n *permissionChangeNotifier) NotifyPermissionChange(projectID string) {
 		slog.Error("failed to look up project for permission change notification", "project_id", projectID, "error", err)
 		return
 	}
+
 	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
 		Command: &taskguildv1.AgentCommand_SyncPermissions{
 			SyncPermissions: &taskguildv1.SyncPermissionsCommand{},
@@ -108,6 +110,7 @@ func (n *scpChangeNotifier) NotifySingleCommandPermissionChange(projectID string
 		slog.Error("failed to look up project for single command permission change notification", "project_id", projectID, "error", err)
 		return
 	}
+
 	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
 		Command: &taskguildv1.AgentCommand_SyncPermissions{
 			SyncPermissions: &taskguildv1.SyncPermissionsCommand{},
@@ -135,6 +138,7 @@ func (n *scriptChangeNotifier) NotifyScriptChange(projectID string, changedScrip
 		slog.Error("failed to look up project for script change notification", "project_id", projectID, "error", err)
 		return
 	}
+
 	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
 		Command: &taskguildv1.AgentCommand_SyncScripts{
 			SyncScripts: &taskguildv1.SyncScriptsCommand{
@@ -157,6 +161,7 @@ func (n *claudeSettingsChangeNotifier) NotifyClaudeSettingsChange(projectID stri
 		slog.Error("failed to look up project for claude settings change notification", "project_id", projectID, "error", err)
 		return
 	}
+
 	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
 		Command: &taskguildv1.AgentCommand_SyncClaudeSettings{
 			SyncClaudeSettings: &taskguildv1.SyncClaudeSettingsCommand{},
@@ -170,6 +175,7 @@ func (n *skillChangeNotifier) NotifySkillChange(projectID string, changedSkillID
 		slog.Error("failed to look up project for skill change notification", "project_id", projectID, "error", err)
 		return
 	}
+
 	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
 		Command: &taskguildv1.AgentCommand_SyncSkills{
 			SyncSkills: &taskguildv1.SyncSkillsCommand{
@@ -191,10 +197,12 @@ func (r *workDirResolver) ResolveWorkDir(projectID string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("project not found: %w", err)
 	}
+
 	workDir, ok := r.registry.GetWorkDirForProject(p.Name)
 	if !ok {
 		return "", fmt.Errorf("no connected agent for project %q", p.Name)
 	}
+
 	return workDir, nil
 }
 
@@ -207,18 +215,21 @@ func runServer() {
 
 	// Setup logger
 	level := env.SlogLevel()
+
 	var handler slog.Handler
 	if env.Env == "local" {
 		handler = clog.NewConnectTextHandler(os.Stderr, clog.WithLevel(level))
 	} else {
 		handler = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: level})
 	}
+
 	slog.SetDefault(slog.New(clog.NewAttributesHandler(handler)))
 
 	slog.Info("server starting", "version", version.Short(), "env", env.Env)
 
 	// Setup storage
 	var store storage.Storage
+
 	switch env.StorageEnv.Type {
 	case "s3":
 		store, err = storage.NewS3Storage(context.Background(), env.StorageEnv.S3Bucket, env.StorageEnv.S3Prefix, env.StorageEnv.S3Region)
@@ -267,6 +278,7 @@ func runServer() {
 	descLogger := tasklog.NewDescriptionLoggerAdapter(taskLogRepo, bus)
 	taskServer := task.NewServer(taskRepo, workflowRepo, bus, agentManagerServer, agentManagerServer, []task.CascadeArchiver{interactionRepo}, descLogger, taskLogRepo, interactionRepo)
 	taskServer.SetImageStore(task.NewImageStore(store))
+
 	interactionServer := interaction.NewServer(interactionRepo, taskRepo, bus)
 	agentChangeNotifier := &agentChangeNotifier{
 		registry:    agentManagerRegistry,
@@ -359,6 +371,7 @@ func runServer() {
 	// for active ones to complete before triggering the normal shutdown flow.
 	usr1Ch := make(chan os.Signal, 1)
 	signal.Notify(usr1Ch, syscall.SIGUSR1)
+
 	var sigWg conc.WaitGroup
 	sigWg.Go(func() {
 		select {
@@ -369,11 +382,13 @@ func runServer() {
 			// so we shut down gracefully instead of being force-killed.
 			drainCtx, drainCancel := context.WithTimeout(context.Background(), 5*time.Minute+30*time.Second)
 			defer drainCancel()
+
 			if err := scriptBroker.Drain(drainCtx); err != nil {
 				slog.Warn("drain timed out, forcing shutdown", "active_executions", scriptBroker.ActiveCount())
 			} else {
 				slog.Info("all script executions completed, shutting down for hot reload")
 			}
+
 			cancel()
 		case <-ctx.Done():
 		}
@@ -385,6 +400,7 @@ func runServer() {
 		svcWg.Go(func() {
 			pprofAddr := ":6060"
 			slog.Info("starting pprof server", "addr", pprofAddr)
+
 			if err := http.ListenAndServe(pprofAddr, nil); err != nil {
 				slog.Error("pprof server error", "error", err)
 			}
@@ -399,6 +415,7 @@ func runServer() {
 	svcWg.Go(func() {
 		ticker := time.NewTicker(6 * time.Hour)
 		defer ticker.Stop()
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -426,6 +443,7 @@ func runServer() {
 	// Give active connections time to finish after stream contexts are canceled.
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
+
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("shutdown error", "error", err)
 	}

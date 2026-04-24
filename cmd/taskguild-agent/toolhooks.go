@@ -42,6 +42,7 @@ func buildToolUseHooks(
 						if input.ToolName != "ExitPlanMode" {
 							return claudeagent.HookOutput{}, nil
 						}
+
 						return handleExitPlanModeApproval(hookCtx.Signal, input, client, interClient, taskID, agentManagerID, waiter, planFilePath)
 					},
 				},
@@ -71,6 +72,7 @@ func buildToolUseHooks(
 						// Save plan result when ExitPlanMode is called.
 						if input.ToolName == "ExitPlanMode" && tl != nil {
 							var planContent string
+
 							if input.ToolResponse != nil {
 								if s, ok := input.ToolResponse.(string); ok {
 									// Try to parse as JSON and extract the "plan" field.
@@ -90,12 +92,14 @@ func buildToolUseHooks(
 									}
 								}
 							}
+
 							if planContent == "" && planFilePath != "" {
 								// Fallback: read from plan file if no tool response.
 								if content, err := os.ReadFile(planFilePath); err == nil {
 									planContent = string(content)
 								}
 							}
+
 							if planContent != "" {
 								savePlanResult(context.Background(), taskID, planContent, tl)
 							}
@@ -117,6 +121,7 @@ func buildToolUseHooks(
 						}
 
 						logToolUse(tl, taskID, input, true)
+
 						return claudeagent.HookOutput{}, nil
 					},
 				},
@@ -169,6 +174,7 @@ func logToolUse(tl *taskLogger, taskID string, input claudeagent.HookInput, isFa
 	// Capture error if present.
 	if input.Error != "" {
 		metadata["error"] = input.Error
+
 		if !isFail {
 			level = v1.TaskLogLevel_TASK_LOG_LEVEL_WARN
 		}
@@ -205,6 +211,7 @@ func formatToolSummary(toolName string, toolInput map[string]any) string {
 			if len(cmd) > 80 {
 				cmd = cmd[:77] + "..."
 			}
+
 			return "Bash: " + cmd
 		}
 	case "Glob":
@@ -217,6 +224,7 @@ func formatToolSummary(toolName string, toolInput map[string]any) string {
 			if p, ok := toolInput["path"].(string); ok {
 				path = " in " + p
 			}
+
 			return fmt.Sprintf("Grep: %q%s", pattern, path)
 		}
 	case "WebSearch":
@@ -254,6 +262,7 @@ func truncateText(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
 	}
+
 	return s[:maxLen-3] + "..."
 }
 
@@ -263,6 +272,7 @@ func truncateLines(s string, maxLines int) string {
 	if len(lines) <= maxLines {
 		return s
 	}
+
 	return strings.Join(lines[:maxLines], "\n") + "\n..."
 }
 
@@ -323,6 +333,7 @@ func handleExitPlanModeApproval(
 	case inter := <-ch:
 		if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
 			logger.Info("plan approval expired, blocking ExitPlanMode")
+
 			return claudeagent.HookOutput{
 				Decision: "block",
 				Reason:   "Plan approval expired. Please revise the plan and try again.",
@@ -350,6 +361,7 @@ func handleExitPlanModeApproval(
 	case msg := <-waiter.UserMessages():
 		// User sent a free-form message — treat as feedback and block.
 		logger.Info("user sent message during plan approval", "message_id", msg.GetId())
+
 		if _, expErr := interClient.ExpireInteraction(ctx, connect.NewRequest(&v1.ExpireInteractionRequest{
 			Id: interactionID,
 		})); expErr != nil {

@@ -191,6 +191,7 @@ func (s *Server) apiKeyMiddleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+
 		apiKey := r.Header.Get("X-API-Key")
 		if apiKey == "" {
 			apiKey = r.Header.Get("Authorization")
@@ -198,10 +199,12 @@ func (s *Server) apiKeyMiddleware(next http.Handler) http.Handler {
 				apiKey = apiKey[7:]
 			}
 		}
+
 		if apiKey != s.env.APIKey {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
+
 		next.ServeHTTP(w, r)
 	})
 }

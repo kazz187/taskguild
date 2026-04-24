@@ -24,6 +24,7 @@ func (h *AttributesHandler) Handle(ctx context.Context, record slog.Record) erro
 	if len(attrs) > 0 {
 		record.AddAttrs(mapToAttrs(attrs)...)
 	}
+
 	return h.handler.Handle(ctx, record)
 }
 
@@ -44,5 +45,6 @@ func mapToAttrs(m map[string]any) []slog.Attr {
 	for k, v := range m {
 		attrs = append(attrs, slog.Any(k, v))
 	}
+
 	return attrs
 }

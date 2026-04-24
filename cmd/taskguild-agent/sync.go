@@ -44,6 +44,7 @@ func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServi
 
 	// serverFiles tracks filenames known to the server (regardless of whether we wrote them).
 	serverFiles := make(map[string]bool)
+
 	for _, ag := range agents {
 		name := ag.GetName()
 
@@ -76,6 +77,7 @@ func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServi
 			slog.Error("failed to write agent file", "path", filePath, "error", err)
 			continue
 		}
+
 		slog.Debug("synced agent", "filename", filename)
 	}
 
@@ -92,27 +94,35 @@ func buildAgentMDContent(ag *v1.AgentDefinition) string {
 	if ag.GetName() != "" {
 		sb.WriteString(fmt.Sprintf("name: %s\n", ag.GetName()))
 	}
+
 	if ag.GetDescription() != "" {
 		writeYAMLStringField(&sb, "description", ag.GetDescription())
 	}
+
 	if len(ag.GetTools()) > 0 {
 		sb.WriteString(fmt.Sprintf("tools: %s\n", strings.Join(ag.GetTools(), ", ")))
 	}
+
 	if len(ag.GetDisallowedTools()) > 0 {
 		sb.WriteString(fmt.Sprintf("disallowedTools: %s\n", strings.Join(ag.GetDisallowedTools(), ", ")))
 	}
+
 	if ag.GetModel() != "" {
 		sb.WriteString(fmt.Sprintf("model: %s\n", ag.GetModel()))
 	}
+
 	if ag.GetPermissionMode() != "" {
 		sb.WriteString(fmt.Sprintf("permissionMode: %s\n", ag.GetPermissionMode()))
 	}
+
 	if len(ag.GetSkills()) > 0 {
 		sb.WriteString("skills:\n")
+
 		for _, skill := range ag.GetSkills() {
 			sb.WriteString(fmt.Sprintf("  - %s\n", skill))
 		}
 	}
+
 	if ag.GetMemory() != "" {
 		sb.WriteString(fmt.Sprintf("memory: %s\n", ag.GetMemory()))
 	}
@@ -133,6 +143,7 @@ func buildAgentMDContent(ag *v1.AgentDefinition) string {
 func writeYAMLStringField(sb *strings.Builder, key, value string) {
 	if strings.Contains(value, "\n") {
 		sb.WriteString(key + ": |\n")
+
 		for line := range strings.SplitSeq(value, "\n") {
 			if line == "" {
 				sb.WriteString("\n")
@@ -157,6 +168,7 @@ func cleanupStaleAgentFiles(agentsDir string, serverFiles map[string]bool) {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
 			continue
 		}
+
 		if !serverFiles[entry.Name()] {
 			filePath := filepath.Join(agentsDir, entry.Name())
 			if err := os.Remove(filePath); err != nil {

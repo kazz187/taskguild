@@ -76,6 +76,7 @@ func readLocalPermissions(path string) (allow, ask, deny []string, raw map[strin
 	if !ok {
 		return nil, nil, nil, raw
 	}
+
 	permsMap, ok := permsRaw.(map[string]any)
 	if !ok {
 		return nil, nil, nil, raw
@@ -84,6 +85,7 @@ func readLocalPermissions(path string) (allow, ask, deny []string, raw map[strin
 	allow = toStringSlice(permsMap["allow"])
 	ask = toStringSlice(permsMap["ask"])
 	deny = toStringSlice(permsMap["deny"])
+
 	return allow, ask, deny, raw
 }
 
@@ -107,10 +109,12 @@ func writeLocalPermissions(path string, raw map[string]any, merged *v1.Permissio
 	if allowList == nil {
 		allowList = []string{}
 	}
+
 	askList := merged.GetAsk()
 	if askList == nil {
 		askList = []string{}
 	}
+
 	denyList := merged.GetDeny()
 	if denyList == nil {
 		denyList = []string{}
@@ -133,6 +137,7 @@ func writeLocalPermissions(path string, raw map[string]any, merged *v1.Permissio
 		slog.Error("failed to write settings.json", "error", err)
 		return
 	}
+
 	slog.Info("updated settings.json with merged permissions", "path", path)
 }
 
@@ -141,15 +146,18 @@ func toStringSlice(v any) []string {
 	if v == nil {
 		return nil
 	}
+
 	arr, ok := v.([]any)
 	if !ok {
 		return nil
 	}
+
 	result := make([]string, 0, len(arr))
 	for _, item := range arr {
 		if s, ok := item.(string); ok {
 			result = append(result, s)
 		}
 	}
+
 	return result
 }

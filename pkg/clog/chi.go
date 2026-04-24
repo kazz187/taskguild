@@ -45,14 +45,17 @@ func SlogChiMiddleware(opts ...ChiOption) func(http.Handler) http.Handler {
 				"proto":     r.Proto,
 			})
 			next.ServeHTTP(ww, r.WithContext(ctx))
+
 			if cfg.Filter != nil && !cfg.Filter(r) {
 				return
 			}
+
 			AddAttributes(ctx, map[string]any{
 				"status":        ww.Status(),
 				"bytes_written": ww.BytesWritten(),
 				"duration":      time.Since(startTime),
 			})
+
 			msg := http.StatusText(ww.Status())
 			switch HTTPStatusToLevel(ww.Status()) {
 			case LevelError:

@@ -53,6 +53,7 @@ func (s *Server) GetPermissions(ctx context.Context, req *connect.Request[taskgu
 	if err != nil {
 		return nil, err
 	}
+
 	return connect.NewResponse(&taskguildv1.GetPermissionsResponse{
 		Permissions: toProto(ps),
 	}), nil
@@ -70,7 +71,9 @@ func (s *Server) UpdatePermissions(ctx context.Context, req *connect.Request[tas
 	if err := s.repo.Upsert(ctx, ps); err != nil {
 		return nil, err
 	}
+
 	s.notifyChange(ps.ProjectID)
+
 	return connect.NewResponse(&taskguildv1.UpdatePermissionsResponse{
 		Permissions: toProto(ps),
 	}), nil
@@ -85,11 +88,14 @@ func (s *Server) SyncPermissionsFromDir(ctx context.Context, req *connect.Reques
 		if err != nil {
 			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("failed to resolve work directory: %w", err))
 		}
+
 		dir = resolved
 	}
+
 	if dir == "" {
 		dir = "."
 	}
+
 	settingsPath := filepath.Join(dir, ".claude", "settings.json")
 
 	localAllow, localAsk, localDeny, err := readSettingsPermissions(settingsPath)
@@ -103,6 +109,7 @@ func (s *Server) SyncPermissionsFromDir(ctx context.Context, req *connect.Reques
 		if err != nil {
 			return nil, err
 		}
+
 		return connect.NewResponse(&taskguildv1.SyncPermissionsFromDirResponse{
 			Permissions: toProto(stored),
 		}), nil
@@ -134,6 +141,7 @@ func readSettingsPermissions(path string) (allow, ask, deny []string, err error)
 		if os.IsNotExist(readErr) {
 			return nil, nil, nil, nil
 		}
+
 		return nil, nil, nil, readErr
 	}
 
@@ -146,6 +154,7 @@ func readSettingsPermissions(path string) (allow, ask, deny []string, err error)
 	if !ok {
 		return nil, nil, nil, nil
 	}
+
 	permsMap, ok := permsRaw.(map[string]any)
 	if !ok {
 		return nil, nil, nil, nil
@@ -154,6 +163,7 @@ func readSettingsPermissions(path string) (allow, ask, deny []string, err error)
 	allow = toStringSlice(permsMap["allow"])
 	ask = toStringSlice(permsMap["ask"])
 	deny = toStringSlice(permsMap["deny"])
+
 	return allow, ask, deny, nil
 }
 
@@ -162,16 +172,20 @@ func toStringSlice(v any) []string {
 	if v == nil {
 		return nil
 	}
+
 	arr, ok := v.([]any)
 	if !ok {
 		return nil
 	}
+
 	var result []string
+
 	for _, item := range arr {
 		if s, ok := item.(string); ok {
 			result = append(result, s)
 		}
 	}
+
 	return result
 }
 
@@ -190,32 +204,39 @@ func Merge(stored *PermissionSet, localAllow, localAsk, localDeny []string) *Per
 // unionDedup merges two string slices, removing duplicates while preserving order.
 func unionDedup(a, b []string) []string {
 	seen := make(map[string]bool)
+
 	var result []string
+
 	for _, s := range a {
 		if !seen[s] {
 			seen[s] = true
 			result = append(result, s)
 		}
 	}
+
 	for _, s := range b {
 		if !seen[s] {
 			seen[s] = true
 			result = append(result, s)
 		}
 	}
+
 	return result
 }
 
 // dedup removes duplicate strings while preserving order.
 func dedup(items []string) []string {
 	seen := make(map[string]bool)
+
 	var result []string
+
 	for _, s := range items {
 		if !seen[s] {
 			seen[s] = true
 			result = append(result, s)
 		}
 	}
+
 	return result
 }
 

@@ -16,6 +16,7 @@ func MarshalInteractionPayload(pb *taskguildv1.Interaction) string {
 		slog.Warn("failed to marshal interaction payload", "id", pb.GetId(), "error", err)
 		return ""
 	}
+
 	return string(b)
 }
 
@@ -25,11 +26,13 @@ func UnmarshalInteractionPayload(payload string) *taskguildv1.Interaction {
 	if payload == "" {
 		return nil
 	}
+
 	pb := &taskguildv1.Interaction{}
 	if err := protojson.Unmarshal([]byte(payload), pb); err != nil {
 		slog.Warn("failed to unmarshal interaction payload", "error", err)
 		return nil
 	}
+
 	return pb
 }
 
@@ -38,6 +41,7 @@ func FromProto(pb *taskguildv1.Interaction) *Interaction {
 	if pb == nil {
 		return nil
 	}
+
 	inter := &Interaction{
 		ID:          pb.GetId(),
 		TaskID:      pb.GetTaskId(),
@@ -51,10 +55,12 @@ func FromProto(pb *taskguildv1.Interaction) *Interaction {
 	if pb.GetCreatedAt() != nil {
 		inter.CreatedAt = pb.GetCreatedAt().AsTime()
 	}
+
 	if pb.GetRespondedAt() != nil {
 		t := pb.GetRespondedAt().AsTime()
 		inter.RespondedAt = &t
 	}
+
 	for _, opt := range pb.GetOptions() {
 		inter.Options = append(inter.Options, Option{
 			Label:       opt.GetLabel(),
@@ -62,5 +68,6 @@ func FromProto(pb *taskguildv1.Interaction) *Interaction {
 			Description: opt.GetDescription(),
 		})
 	}
+
 	return inter
 }

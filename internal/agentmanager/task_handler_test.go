@@ -56,10 +56,12 @@ func TestResolveEffort(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			taskObj := &task.Task{Effort: tc.taskEffort}
+
 			var status *workflow.Status
 			if !tc.nilStatus {
 				status = &workflow.Status{Effort: tc.statusEffort}
 			}
+
 			got := resolveEffort(taskObj, status)
 			if got != tc.expected {
 				t.Errorf("resolveEffort(%q, status.effort=%q nilStatus=%v) = %q, want %q",

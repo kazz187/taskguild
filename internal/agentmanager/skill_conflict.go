@@ -163,6 +163,7 @@ func (s *Server) ResolveSkillConflict(ctx context.Context, req *connect.Request[
 			if err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)
 			}
+
 			resultSkill.Description = parsed.Description
 			resultSkill.Content = parsed.Content
 			resultSkill.DisableModelInvocation = parsed.DisableModelInvocation
@@ -173,6 +174,7 @@ func (s *Server) ResolveSkillConflict(ctx context.Context, req *connect.Request[
 			resultSkill.Agent = parsed.Agent
 			resultSkill.ArgumentHint = parsed.ArgumentHint
 			resultSkill.IsSynced = true
+
 			resultSkill.UpdatedAt = time.Now()
 			if err := s.skillRepo.Update(ctx, resultSkill); err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)
@@ -180,6 +182,7 @@ func (s *Server) ResolveSkillConflict(ctx context.Context, req *connect.Request[
 		} else {
 			// Agent-only skill — create new in DB.
 			now := time.Now()
+
 			resultSkill = &skill.Skill{
 				ID:                     ulid.Make().String(),
 				ProjectID:              req.Msg.GetProjectId(),
@@ -242,11 +245,14 @@ func (s *Server) removeSkillDiff(projectID, skillID, filename string) {
 		if skillID != "" && d.GetSkillId() == skillID {
 			continue // remove this diff
 		}
+
 		if skillID == "" && filename != "" && d.GetFilename() == filename {
 			continue // remove agent-only diff by filename
 		}
+
 		filtered = append(filtered, d)
 	}
+
 	s.skillDiffCache[projectID] = filtered
 }
 
@@ -266,12 +272,14 @@ func parseSkillMDContent(content string) (*parsedSkillMD, error) {
 
 	// Find closing ---.
 	closingIdx := -1
+
 	for i := 1; i < len(lines); i++ {
 		if strings.TrimSpace(lines[i]) == "---" {
 			closingIdx = i
 			break
 		}
 	}
+
 	if closingIdx == -1 {
 		result.Content = content
 		return result, nil
@@ -279,6 +287,7 @@ func parseSkillMDContent(content string) (*parsedSkillMD, error) {
 
 	// Parse YAML frontmatter.
 	var currentListKey string
+
 	for i := 1; i < closingIdx; i++ {
 		line := lines[i]
 		trimmed := strings.TrimSpace(line)
@@ -292,6 +301,7 @@ func parseSkillMDContent(content string) (*parsedSkillMD, error) {
 					result.AllowedTools = append(result.AllowedTools, item)
 				}
 			}
+
 			continue
 		}
 

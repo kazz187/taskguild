@@ -69,10 +69,12 @@ var connectCodeToCodeMap = map[connect.Code]Code{
 
 func NewCodeFromConnectError(err error) Code {
 	cc := connect.CodeOf(err)
+
 	c, ok := connectCodeToCodeMap[cc]
 	if !ok {
 		return Unknown
 	}
+
 	return c
 }
 
@@ -80,10 +82,12 @@ func (c Code) ConnectCode() connect.Code {
 	if c == OK {
 		return 0
 	}
+
 	code, ok := codeToConnectCodeMap[c]
 	if !ok {
 		return connect.CodeUnknown
 	}
+
 	return code
 }
 

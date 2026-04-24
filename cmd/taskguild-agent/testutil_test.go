@@ -57,6 +57,7 @@ func (m *mockQueryRunner) RunQuerySync(
 	if idx >= len(m.results) {
 		idx = len(m.results) - 1
 	}
+
 	if idx < 0 {
 		return &claudeagent.QueryResult{
 			Result: &claudeagent.ResultMessage{
@@ -64,14 +65,17 @@ func (m *mockQueryRunner) RunQuerySync(
 			},
 		}, nil
 	}
+
 	return m.results[idx].Result, m.results[idx].Err
 }
 
 func (m *mockQueryRunner) getCalls() []mockQueryRunnerCall {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	cp := make([]mockQueryRunnerCall, len(m.calls))
 	copy(cp, m.calls)
+
 	return cp
 }
 
@@ -118,6 +122,7 @@ func (h *testAgentManagerHandler) ReportAgentStatus(ctx context.Context, req *co
 	h.mu.Lock()
 	h.reportAgentStatusReqs = append(h.reportAgentStatusReqs, req.Msg)
 	h.mu.Unlock()
+
 	return connect.NewResponse(&v1.ReportAgentStatusResponse{}), nil
 }
 
@@ -125,6 +130,7 @@ func (h *testAgentManagerHandler) ReportTaskResult(ctx context.Context, req *con
 	h.mu.Lock()
 	h.reportTaskResultReqs = append(h.reportTaskResultReqs, req.Msg)
 	h.mu.Unlock()
+
 	return connect.NewResponse(&v1.ReportTaskResultResponse{}), nil
 }
 
@@ -132,6 +138,7 @@ func (h *testAgentManagerHandler) ReportTaskLog(ctx context.Context, req *connec
 	h.mu.Lock()
 	h.reportTaskLogReqs = append(h.reportTaskLogReqs, req.Msg)
 	h.mu.Unlock()
+
 	return connect.NewResponse(&v1.ReportTaskLogResponse{}), nil
 }
 
@@ -139,6 +146,7 @@ func (h *testAgentManagerHandler) CreateInteraction(ctx context.Context, req *co
 	h.mu.Lock()
 	h.createInteractionReqs = append(h.createInteractionReqs, req.Msg)
 	h.mu.Unlock()
+
 	return connect.NewResponse(&v1.CreateInteractionResponse{
 		Interaction: &v1.Interaction{Id: "test-interaction"},
 	}), nil
@@ -158,6 +166,7 @@ func (h *testTaskHandler) UpdateTask(ctx context.Context, req *connect.Request[v
 	h.mu.Lock()
 	h.updateTaskReqs = append(h.updateTaskReqs, req.Msg)
 	h.mu.Unlock()
+
 	return connect.NewResponse(&v1.UpdateTaskResponse{}), nil
 }
 
@@ -165,6 +174,7 @@ func (h *testTaskHandler) UpdateTaskStatus(ctx context.Context, req *connect.Req
 	h.mu.Lock()
 	h.updateTaskStatusReqs = append(h.updateTaskStatusReqs, req.Msg)
 	h.mu.Unlock()
+
 	return connect.NewResponse(&v1.UpdateTaskStatusResponse{}), nil
 }
 
@@ -172,6 +182,7 @@ func (h *testTaskHandler) CreateTask(ctx context.Context, req *connect.Request[v
 	h.mu.Lock()
 	h.createTaskReqs = append(h.createTaskReqs, req.Msg)
 	h.mu.Unlock()
+
 	return connect.NewResponse(&v1.CreateTaskResponse{
 		Task: &v1.Task{Id: "new-task-1"},
 	}), nil

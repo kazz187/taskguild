@@ -56,6 +56,7 @@ func (s *Server) ReportScriptExecutionResult(ctx context.Context, req *connect.R
 	// Complete execution in the broker — this sends the completion event
 	// to all streaming subscribers and closes their channels.
 	slog.Info("[STREAM-TRACE] backend(agentmanager): received execution result from agent", "request_id", req.Msg.GetRequestId(), "success", req.Msg.GetSuccess(), "exit_code", req.Msg.GetExitCode(), "log_entry_count", len(req.Msg.GetLogEntries()))
+
 	if s.scriptBroker != nil {
 		s.scriptBroker.CompleteExecution(
 			req.Msg.GetRequestId(),

@@ -106,6 +106,7 @@ func (s *Server) ReportAgentStatus(ctx context.Context, req *connect.Request[tas
 			"message":          req.Msg.GetMessage(),
 		},
 	)
+
 	return connect.NewResponse(&taskguildv1.ReportAgentStatusResponse{}), nil
 }
 
@@ -146,6 +147,7 @@ func attributionFromProto(a *taskguildv1.Attribution) *claudesettings.Attributio
 	if a == nil {
 		return nil
 	}
+
 	return &claudesettings.Attribution{
 		Commit: a.Commit,
 		Pr:     a.Pr,
@@ -156,6 +158,7 @@ func attributionToProto(a *claudesettings.Attribution) *taskguildv1.Attribution 
 	if a == nil {
 		return nil
 	}
+
 	return &taskguildv1.Attribution{
 		Commit: a.Commit,
 		Pr:     a.Pr,
@@ -174,16 +177,20 @@ func mergeClaudeSettings(stored *claudesettings.ClaudeSettings, localLanguage *s
 	if result.Language == nil && localLanguage != nil {
 		result.Language = localLanguage
 	}
+
 	if localAttribution != nil {
 		if result.Attribution == nil {
 			result.Attribution = &claudesettings.Attribution{}
 		}
+
 		if result.Attribution.Commit == nil && localAttribution.Commit != nil {
 			result.Attribution.Commit = localAttribution.Commit
 		}
+
 		if result.Attribution.Pr == nil && localAttribution.Pr != nil {
 			result.Attribution.Pr = localAttribution.Pr
 		}
 	}
+
 	return result
 }

@@ -60,15 +60,19 @@ func TestExecuteHooks_CreatePR(t *testing.T) {
 	defer tc.taskHandler.mu.Unlock()
 
 	var foundMetadata bool
+
 	for _, req := range tc.taskHandler.updateTaskReqs {
 		if req.Metadata != nil {
 			if url, ok := req.GetMetadata()["pr_url"]; ok {
 				assert.Equal(t, "https://github.com/test/repo/pull/42", url)
+
 				foundMetadata = true
+
 				break
 			}
 		}
 	}
+
 	assert.True(t, foundMetadata, "expected pr_url metadata update from hook")
 }
 
@@ -304,17 +308,20 @@ func TestRunTask_WithAfterHooks(t *testing.T) {
 
 	// Find the hook call
 	var hookCallFound bool
+
 	for _, c := range calls {
 		if c.Label == "hook_create-pr" {
 			hookCallFound = true
 			break
 		}
 	}
+
 	assert.True(t, hookCallFound, "create-pr hook should have been executed")
 
 	// Verify status transition still happened
 	tc.taskHandler.mu.Lock()
 	defer tc.taskHandler.mu.Unlock()
+
 	require.Len(t, tc.taskHandler.updateTaskStatusReqs, 1)
 	assert.Equal(t, "Review", tc.taskHandler.updateTaskStatusReqs[0].GetStatusId())
 }

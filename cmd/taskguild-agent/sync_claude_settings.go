@@ -70,11 +70,13 @@ func readLocalClaudeSettings(path string) (language *string, attribution *v1.Att
 
 	if attrRaw, ok := raw["attribution"].(map[string]any); ok {
 		attribution = &v1.Attribution{}
+
 		if val, exists := attrRaw["commit"]; exists {
 			if s, ok := val.(string); ok {
 				attribution.Commit = &s
 			}
 		}
+
 		if val, exists := attrRaw["pr"]; exists {
 			if s, ok := val.(string); ok {
 				attribution.Pr = &s
@@ -113,11 +115,13 @@ func writeLocalClaudeSettings(path string, raw map[string]any, merged *v1.Claude
 		} else {
 			attrMap["commit"] = nil
 		}
+
 		if attr.Pr != nil {
 			attrMap["pr"] = attr.GetPr()
 		} else {
 			attrMap["pr"] = nil
 		}
+
 		raw["attribution"] = attrMap
 	}
 
@@ -131,5 +135,6 @@ func writeLocalClaudeSettings(path string, raw map[string]any, merged *v1.Claude
 		slog.Error("failed to write settings.json", "error", err)
 		return
 	}
+
 	slog.Info("updated settings.json with merged claude settings", "path", path)
 }

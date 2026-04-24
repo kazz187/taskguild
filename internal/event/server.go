@@ -60,6 +60,7 @@ func (s *Server) SubscribeEvents(ctx context.Context, req *connect.Request[taskg
 					continue
 				}
 			}
+
 			if err := stream.Send(event); err != nil {
 				return err
 			}

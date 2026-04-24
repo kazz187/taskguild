@@ -156,11 +156,14 @@ func (s *Server) ResolveScriptConflict(ctx context.Context, req *connect.Request
 			if err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)
 			}
+
 			resultScript.Content = req.Msg.GetAgentContent()
 			if req.Msg.GetFilename() != "" {
 				resultScript.Filename = req.Msg.GetFilename()
 			}
+
 			resultScript.IsSynced = true
+
 			resultScript.UpdatedAt = time.Now()
 			if err := s.scriptRepo.Update(ctx, resultScript); err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)
@@ -168,10 +171,12 @@ func (s *Server) ResolveScriptConflict(ctx context.Context, req *connect.Request
 		} else {
 			// Agent-only script — create new in DB.
 			now := time.Now()
+
 			filename := req.Msg.GetFilename()
 			if filename == "" {
 				filename = req.Msg.GetScriptName() + ".sh"
 			}
+
 			resultScript = &script.Script{
 				ID:        ulid.Make().String(),
 				ProjectID: req.Msg.GetProjectId(),
@@ -227,10 +232,13 @@ func (s *Server) removeScriptDiff(projectID, scriptID, filename string) {
 		if scriptID != "" && d.GetScriptId() == scriptID {
 			continue // remove this diff
 		}
+
 		if scriptID == "" && filename != "" && d.GetFilename() == filename {
 			continue // remove agent-only diff by filename
 		}
+
 		filtered = append(filtered, d)
 	}
+
 	s.scriptDiffCache[projectID] = filtered
 }

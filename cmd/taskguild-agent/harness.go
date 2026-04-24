@@ -41,17 +41,21 @@ func resolveClaudeCwd(workDir string, metadata map[string]string, sessionID stri
 	if sessionID == "" {
 		return workDir
 	}
+
 	if metadata["_use_worktree"] != "true" {
 		return workDir
 	}
+
 	wt := metadata["worktree"]
 	if wt == "" {
 		return workDir
 	}
+
 	wtDir := filepath.Join(workDir, ".claude", "worktrees", wt)
 	if info, err := os.Stat(wtDir); err == nil && info.IsDir() {
 		return wtDir
 	}
+
 	return workDir
 }
 
@@ -61,10 +65,12 @@ func (ht *harnessTracker) launchOrReplace(key string, fn func(ctx context.Contex
 	if prev, ok := ht.running[key]; ok {
 		prev.cancel()
 		ht.mu.Unlock()
+
 		select {
 		case <-prev.done:
 		case <-time.After(harnessReplaceTimeout):
 		}
+
 		ht.mu.Lock()
 	}
 
@@ -83,6 +89,7 @@ func (ht *harnessTracker) launchOrReplace(key string, fn func(ctx context.Contex
 			}
 			ht.mu.Unlock()
 		}()
+
 		fn(ctx)
 	})
 }
@@ -192,6 +199,7 @@ func runSkillHarnessAndWait(
 	if prev, ok := globalHarnessTracker.running["skill-harness"]; ok {
 		prev.cancel()
 		globalHarnessTracker.mu.Unlock()
+
 		select {
 		case <-prev.done:
 		case <-time.After(harnessReplaceTimeout):
@@ -233,6 +241,7 @@ func runSkillHarness(
 	defer cancel()
 
 	maxTurns := harnessMaxTurns
+
 	opts := &claudeagent.ClaudeAgentOptions{
 		SystemPrompt:   skillHarnessPrompt,
 		Cwd:            claudeCwd,
@@ -249,6 +258,7 @@ func runSkillHarness(
 		logger.Error("skill harness failed", "task_id", taskID, "error", err)
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 			fmt.Sprintf("Skill harness failed: %v", err), nil)
+
 		return
 	}
 
@@ -256,6 +266,7 @@ func runSkillHarness(
 		logger.Error("skill harness returned error", "task_id", taskID, "result", result.Result.Result)
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 			"Skill harness error: "+result.Result.Result, nil)
+
 		return
 	}
 
@@ -298,6 +309,7 @@ func readFileOrEmpty(path string) string {
 	if err != nil {
 		return ""
 	}
+
 	return string(data)
 }
 
@@ -312,5 +324,6 @@ func computeUnifiedDiff(filename, before, after string) string {
 	if err != nil {
 		return fmt.Sprintf("(failed to compute diff: %v)", err)
 	}
+
 	return strings.TrimRight(diff, "\n")
 }

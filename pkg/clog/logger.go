@@ -18,5 +18,6 @@ func LoggerFromContext(ctx context.Context) *slog.Logger {
 	if l, ok := ctx.Value(ctxLoggerKey{}).(*slog.Logger); ok {
 		return l
 	}
+
 	return slog.Default()
 }

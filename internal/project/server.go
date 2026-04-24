@@ -29,6 +29,7 @@ func (s *Server) CreateProject(ctx context.Context, req *connect.Request[taskgui
 	if err != nil {
 		return nil, err
 	}
+
 	maxOrder := int32(0)
 	for _, ep := range allProjects {
 		if ep.Order > maxOrder {
@@ -37,6 +38,7 @@ func (s *Server) CreateProject(ctx context.Context, req *connect.Request[taskgui
 	}
 
 	now := time.Now()
+
 	p := &Project{
 		ID:            ulid.Make().String(),
 		Name:          req.Msg.GetName(),
@@ -70,6 +72,7 @@ func (s *Server) GetProject(ctx context.Context, req *connect.Request[taskguildv
 	if err != nil {
 		return nil, err
 	}
+
 	return connect.NewResponse(&taskguildv1.GetProjectResponse{
 		Project: toProto(p),
 	}), nil
@@ -77,20 +80,25 @@ func (s *Server) GetProject(ctx context.Context, req *connect.Request[taskguildv
 
 func (s *Server) ListProjects(ctx context.Context, req *connect.Request[taskguildv1.ListProjectsRequest]) (*connect.Response[taskguildv1.ListProjectsResponse], error) {
 	limit, offset := int32(50), int32(0)
+
 	if req.Msg.GetPagination() != nil {
 		if req.Msg.GetPagination().GetLimit() > 0 {
 			limit = req.Msg.GetPagination().GetLimit()
 		}
+
 		offset = req.Msg.GetPagination().GetOffset()
 	}
+
 	projects, total, err := s.repo.List(ctx, int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}
+
 	protos := make([]*taskguildv1.Project, len(projects))
 	for i, p := range projects {
 		protos[i] = toProto(p)
 	}
+
 	return connect.NewResponse(&taskguildv1.ListProjectsResponse{
 		Projects: protos,
 		Pagination: &taskguildv1.PaginationResponse{
@@ -106,25 +114,32 @@ func (s *Server) UpdateProject(ctx context.Context, req *connect.Request[taskgui
 	if err != nil {
 		return nil, err
 	}
+
 	if req.Msg.GetName() != "" {
 		p.Name = req.Msg.GetName()
 	}
+
 	if req.Msg.GetDescription() != "" {
 		p.Description = req.Msg.GetDescription()
 	}
+
 	if req.Msg.GetRepositoryUrl() != "" {
 		p.RepositoryURL = req.Msg.GetRepositoryUrl()
 	}
+
 	if req.Msg.GetDefaultBranch() != "" {
 		p.DefaultBranch = req.Msg.GetDefaultBranch()
 	}
+
 	if req.Msg.HiddenFromSidebar != nil {
 		p.HiddenFromSidebar = req.Msg.GetHiddenFromSidebar()
 	}
+
 	p.UpdatedAt = time.Now()
 	if err := s.repo.Update(ctx, p); err != nil {
 		return nil, err
 	}
+
 	return connect.NewResponse(&taskguildv1.UpdateProjectResponse{
 		Project: toProto(p),
 	}), nil
@@ -134,17 +149,21 @@ func (s *Server) DeleteProject(ctx context.Context, req *connect.Request[taskgui
 	if err := s.repo.Delete(ctx, req.Msg.GetId()); err != nil {
 		return nil, err
 	}
+
 	return connect.NewResponse(&taskguildv1.DeleteProjectResponse{}), nil
 }
 
 func (s *Server) ReorderProjects(ctx context.Context, req *connect.Request[taskguildv1.ReorderProjectsRequest]) (*connect.Response[taskguildv1.ReorderProjectsResponse], error) {
 	now := time.Now()
+
 	for i, id := range req.Msg.GetProjectIds() {
 		p, err := s.repo.Get(ctx, id)
 		if err != nil {
 			return nil, err
 		}
+
 		p.Order = int32(i + 1)
+
 		p.UpdatedAt = now
 		if err := s.repo.Update(ctx, p); err != nil {
 			return nil, err
@@ -156,10 +175,12 @@ func (s *Server) ReorderProjects(ctx context.Context, req *connect.Request[taskg
 	if err != nil {
 		return nil, err
 	}
+
 	protos := make([]*taskguildv1.Project, len(allProjects))
 	for i, p := range allProjects {
 		protos[i] = toProto(p)
 	}
+
 	return connect.NewResponse(&taskguildv1.ReorderProjectsResponse{
 		Projects: protos,
 	}), nil

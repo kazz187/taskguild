@@ -21,6 +21,7 @@ func (s *Server) CreateInteraction(ctx context.Context, req *connect.Request[tas
 	}
 
 	now := time.Now()
+
 	inter := &interaction.Interaction{
 		ID:          ulid.Make().String(),
 		ProjectID:   t.ProjectID,
@@ -74,6 +75,7 @@ func (s *Server) GetInteractionResponse(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
+
 	return connect.NewResponse(&taskguildv1.GetInteractionResponseResponse{
 		Interaction: interaction.ToProto(inter),
 	}), nil

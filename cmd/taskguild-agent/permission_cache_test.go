@@ -119,6 +119,7 @@ func TestMatchPermissionRule(t *testing.T) {
 		if cmd, ok := tt.input["command"].(string); ok {
 			name += "_" + cmd
 		}
+
 		t.Run(name, func(t *testing.T) {
 			got := matchPermissionRule(tt.rule, tt.toolName, tt.input)
 			if got != tt.want {
@@ -158,6 +159,7 @@ func ruleValueToStringHelper(toolName, ruleContent string) string {
 	if ruleContent == "" {
 		return toolName
 	}
+
 	return toolName + "(" + ruleContent + ")"
 }
 
@@ -184,6 +186,7 @@ func TestPermissionCacheCheck(t *testing.T) {
 		if cmd, ok := tt.input["command"].(string); ok {
 			name += "_" + cmd
 		}
+
 		t.Run(name, func(t *testing.T) {
 			got := cache.Check(tt.toolName, tt.input)
 			if got != tt.want {
@@ -215,9 +218,11 @@ func TestUnionDedupRules(t *testing.T) {
 			if len(got) == 0 && len(tt.want) == 0 {
 				return
 			}
+
 			if len(got) != len(tt.want) {
 				t.Fatalf("unionDedupRules(%v, %v) length = %d, want %d", tt.a, tt.b, len(got), len(tt.want))
 			}
+
 			for i := range got {
 				if got[i] != tt.want[i] {
 					t.Errorf("unionDedupRules(%v, %v)[%d] = %q, want %q", tt.a, tt.b, i, got[i], tt.want[i])

@@ -34,6 +34,7 @@ func (s *Server) GetVapidPublicKey(_ context.Context, _ *connect.Request[taskgui
 	if s.vapidEnv.VAPIDPublicKey == "" {
 		return nil, cerr.NewError(cerr.FailedPrecondition, "VAPID keys not configured", nil).ConnectError()
 	}
+
 	return connect.NewResponse(&taskguildv1.GetVapidPublicKeyResponse{
 		PublicKey: s.vapidEnv.VAPIDPublicKey,
 	}), nil
@@ -43,9 +44,11 @@ func (s *Server) RegisterPushSubscription(ctx context.Context, req *connect.Requ
 	if req.Msg.GetEndpoint() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "endpoint is required", nil).ConnectError()
 	}
+
 	if req.Msg.GetP256DhKey() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "p256dh_key is required", nil).ConnectError()
 	}
+
 	if req.Msg.GetAuthKey() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "auth_key is required", nil).ConnectError()
 	}
@@ -54,13 +57,16 @@ func (s *Server) RegisterPushSubscription(ctx context.Context, req *connect.Requ
 	existing, err := s.repo.FindByEndpoint(ctx, req.Msg.GetEndpoint())
 	if err == nil && existing != nil {
 		existing.P256dhKey = req.Msg.GetP256DhKey()
+
 		existing.AuthKey = req.Msg.GetAuthKey()
 		if delErr := s.repo.Delete(ctx, existing.ID); delErr != nil {
 			return nil, delErr
 		}
+
 		if crErr := s.repo.Create(ctx, existing); crErr != nil {
 			return nil, crErr
 		}
+
 		return connect.NewResponse(&taskguildv1.RegisterPushSubscriptionResponse{}), nil
 	}
 
@@ -95,5 +101,6 @@ func (s *Server) SendTestNotification(ctx context.Context, _ *connect.Request[ta
 		Title: "TaskGuild Test",
 		Body:  "Push notifications are working!",
 	})
+
 	return connect.NewResponse(&taskguildv1.SendTestNotificationResponse{}), nil
 }

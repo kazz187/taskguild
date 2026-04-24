@@ -39,11 +39,13 @@ func TestLogToolUse_StringToolResponseNotDoubleEncoded(t *testing.T) {
 	require.Eventually(t, func() bool {
 		tc.agentHandler.mu.Lock()
 		defer tc.agentHandler.mu.Unlock()
+
 		return len(tc.agentHandler.reportTaskLogReqs) >= 1
 	}, 2*time.Second, 10*time.Millisecond)
 
 	tc.agentHandler.mu.Lock()
 	defer tc.agentHandler.mu.Unlock()
+
 	req := tc.agentHandler.reportTaskLogReqs[0]
 	out, ok := req.GetMetadata()["tool_output"]
 	require.True(t, ok, "tool_output should be present")
@@ -81,11 +83,13 @@ func TestLogToolUse_NonStringToolResponseMarshaled(t *testing.T) {
 	require.Eventually(t, func() bool {
 		tc.agentHandler.mu.Lock()
 		defer tc.agentHandler.mu.Unlock()
+
 		return len(tc.agentHandler.reportTaskLogReqs) >= 1
 	}, 2*time.Second, 10*time.Millisecond)
 
 	tc.agentHandler.mu.Lock()
 	defer tc.agentHandler.mu.Unlock()
+
 	req := tc.agentHandler.reportTaskLogReqs[0]
 	out, ok := req.GetMetadata()["tool_output"]
 	require.True(t, ok, "tool_output should be present")

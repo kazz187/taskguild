@@ -9,14 +9,17 @@ import (
 func writeTempSkillMD(t *testing.T, content string) (filePath string, dirName string) {
 	t.Helper()
 	dir := t.TempDir()
+
 	skillDir := filepath.Join(dir, "test-skill")
 	if err := os.MkdirAll(skillDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
+
 	fp := filepath.Join(skillDir, "SKILL.md")
 	if err := os.WriteFile(fp, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
+
 	return fp, "test-skill"
 }
 
@@ -31,6 +34,7 @@ description: |
 Body content here.
 `
 	fp, dirName := writeTempSkillMD(t, content)
+
 	parsed, err := parseSkillMDFile(fp, dirName)
 	if err != nil {
 		t.Fatal(err)
@@ -40,9 +44,11 @@ Body content here.
 	if parsed.Description != expected {
 		t.Errorf("description mismatch\ngot:  %q\nwant: %q", parsed.Description, expected)
 	}
+
 	if parsed.Name != "gopls-explorer" {
 		t.Errorf("name = %q, want %q", parsed.Name, "gopls-explorer")
 	}
+
 	if parsed.Content != "Body content here." {
 		t.Errorf("content = %q, want %q", parsed.Content, "Body content here.")
 	}
@@ -59,6 +65,7 @@ model: sonnet
 ---
 `
 	fp, dirName := writeTempSkillMD(t, content)
+
 	parsed, err := parseSkillMDFile(fp, dirName)
 	if err != nil {
 		t.Fatal(err)
@@ -68,6 +75,7 @@ model: sonnet
 	if parsed.Description != expected {
 		t.Errorf("description mismatch\ngot:  %q\nwant: %q", parsed.Description, expected)
 	}
+
 	if parsed.Model != "sonnet" {
 		t.Errorf("model = %q, want %q", parsed.Model, "sonnet")
 	}
@@ -82,6 +90,7 @@ description: |
 ---
 `
 	fp, dirName := writeTempSkillMD(t, content)
+
 	parsed, err := parseSkillMDFile(fp, dirName)
 	if err != nil {
 		t.Fatal(err)
@@ -103,6 +112,7 @@ model: opus
 Some body.
 `
 	fp, dirName := writeTempSkillMD(t, content)
+
 	parsed, err := parseSkillMDFile(fp, dirName)
 	if err != nil {
 		t.Fatal(err)
@@ -111,6 +121,7 @@ Some body.
 	if parsed.Description != "A simple one-line description" {
 		t.Errorf("description = %q, want %q", parsed.Description, "A simple one-line description")
 	}
+
 	if parsed.Model != "opus" {
 		t.Errorf("model = %q, want %q", parsed.Model, "opus")
 	}
@@ -128,6 +139,7 @@ allowed-tools:
 ---
 `
 	fp, dirName := writeTempSkillMD(t, content)
+
 	parsed, err := parseSkillMDFile(fp, dirName)
 	if err != nil {
 		t.Fatal(err)
@@ -137,6 +149,7 @@ allowed-tools:
 	if parsed.Description != expected {
 		t.Errorf("description mismatch\ngot:  %q\nwant: %q", parsed.Description, expected)
 	}
+
 	if len(parsed.AllowedTools) != 2 || parsed.AllowedTools[0] != "Read" || parsed.AllowedTools[1] != "Write" {
 		t.Errorf("allowed-tools = %v, want [Read, Write]", parsed.AllowedTools)
 	}
@@ -150,6 +163,7 @@ model: sonnet
 ---
 `
 	fp, dirName := writeTempSkillMD(t, content)
+
 	parsed, err := parseSkillMDFile(fp, dirName)
 	if err != nil {
 		t.Fatal(err)
@@ -158,6 +172,7 @@ model: sonnet
 	if parsed.Description != "" {
 		t.Errorf("description = %q, want empty string", parsed.Description)
 	}
+
 	if parsed.Model != "sonnet" {
 		t.Errorf("model = %q, want %q", parsed.Model, "sonnet")
 	}
@@ -173,6 +188,7 @@ description: |
 ---
 `
 	fp, dirName := writeTempSkillMD(t, content)
+
 	parsed, err := parseSkillMDFile(fp, dirName)
 	if err != nil {
 		t.Fatal(err)

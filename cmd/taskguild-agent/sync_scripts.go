@@ -43,7 +43,9 @@ func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServ
 
 	// serverFiles tracks filenames known to the server.
 	serverFiles := make(map[string]bool)
+
 	var written, skipped int
+
 	for _, sc := range scripts {
 		filename := sc.GetFilename()
 		if filename == "" {
@@ -66,7 +68,9 @@ func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServ
 				slog.Debug("force-overwriting existing script", "filename", filename, "script_id", sc.GetId())
 			} else {
 				slog.Debug("script file already exists, preserving local version", "filename", filename)
+
 				skipped++
+
 				continue
 			}
 		}
@@ -75,7 +79,9 @@ func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServ
 			slog.Error("failed to write script file", "path", filePath, "error", err)
 			continue
 		}
+
 		slog.Debug("synced script", "filename", filename)
+
 		written++
 	}
 
@@ -95,6 +101,7 @@ func cleanupStaleScriptFiles(scriptsDir string, serverFiles map[string]bool) {
 		if entry.IsDir() {
 			continue
 		}
+
 		if !serverFiles[entry.Name()] {
 			filePath := filepath.Join(scriptsDir, entry.Name())
 			if err := os.Remove(filePath); err != nil {

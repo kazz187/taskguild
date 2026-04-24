@@ -97,6 +97,7 @@ func readLocalSkills(skillsDir string) map[string]string {
 		if !os.IsNotExist(err) {
 			slog.Error("failed to read skills directory", "error", err)
 		}
+
 		return result
 	}
 
@@ -107,11 +108,13 @@ func readLocalSkills(skillsDir string) map[string]string {
 
 		name := entry.Name()
 		filePath := filepath.Join(skillsDir, name, "SKILL.md")
+
 		content, err := os.ReadFile(filePath)
 		if err != nil {
 			if !os.IsNotExist(err) {
 				slog.Error("failed to read local skill file", "path", filePath, "error", err)
 			}
+
 			continue
 		}
 

@@ -111,15 +111,18 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 	now := time.Now()
 
 	defs := buildDefaultSkillDefinitions()
+
 	skillsByName := make(map[string]*skill.Skill, len(defs))
 	for _, def := range defs {
 		def.ID = ulid.Make().String()
 		def.ProjectID = projectID
 		def.CreatedAt = now
+
 		def.UpdatedAt = now
 		if err := s.skillRepo.Create(ctx, def); err != nil {
 			return err
 		}
+
 		skillsByName[def.Name] = def
 	}
 
@@ -131,6 +134,7 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 
 	// Create development workflow referencing the created skill IDs.
 	hookID := ulid.Make().String()
+
 	wf := &workflow.Workflow{
 		ID:        ulid.Make().String(),
 		ProjectID: projectID,
@@ -230,13 +234,16 @@ func (s *Seeder) UpsertSkills(ctx context.Context, projectID string) error {
 			if !errors.As(err, &cerrErr) || cerrErr.Code != cerr.NotFound {
 				return err
 			}
+
 			def.ID = ulid.Make().String()
 			def.ProjectID = projectID
 			def.CreatedAt = now
+
 			def.UpdatedAt = now
 			if err := s.skillRepo.Create(ctx, def); err != nil {
 				return err
 			}
+
 			continue
 		}
 
@@ -249,6 +256,7 @@ func (s *Seeder) UpsertSkills(ctx context.Context, projectID string) error {
 		existing.Context = def.Context
 		existing.Agent = def.Agent
 		existing.ArgumentHint = def.ArgumentHint
+
 		existing.UpdatedAt = now
 		if err := s.skillRepo.Update(ctx, existing); err != nil {
 			return err

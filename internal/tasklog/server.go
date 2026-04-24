@@ -31,11 +31,13 @@ func (s *Server) ListTaskLogs(ctx context.Context, req *connect.Request[taskguil
 
 	// When project_id is provided (and task_id is not), resolve to task IDs for filtering.
 	var taskIDs []string
+
 	if req.Msg.GetProjectId() != "" && req.Msg.GetTaskId() == "" {
 		tasks, _, err := s.taskRepo.List(ctx, req.Msg.GetProjectId(), "", "", 0, 0)
 		if err != nil {
 			return nil, err
 		}
+
 		taskIDs = make([]string, len(tasks))
 		for i, t := range tasks {
 			taskIDs[i] = t.ID
@@ -52,10 +54,12 @@ func (s *Server) ListTaskLogs(ctx context.Context, req *connect.Request[taskguil
 	for _, l := range logs {
 		uniqueTaskIDs[l.TaskID] = struct{}{}
 	}
+
 	ids := make([]string, 0, len(uniqueTaskIDs))
 	for id := range uniqueTaskIDs {
 		ids = append(ids, id)
 	}
+
 	taskTitles, taskProjectIDs := task.ResolveAll(ctx, s.taskRepo, ids)
 
 	protos := make([]*taskguildv1.TaskLog, len(logs))

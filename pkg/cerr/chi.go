@@ -20,6 +20,7 @@ func responseReceiverFromContext(ctx context.Context) *responseReceiver {
 	if err, ok := ctx.Value(responseReceiverKey{}).(*responseReceiver); ok {
 		return err
 	}
+
 	return nil
 }
 

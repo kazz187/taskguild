@@ -35,6 +35,7 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 		if p := metadata["prompt"]; p != "" {
 			return p
 		}
+
 		return "Please complete the assigned task."
 	}
 
@@ -49,13 +50,16 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 				sb.WriteString(fmt.Sprintf("/%s\n", name))
 			}
 		}
+
 		sb.WriteString("\n")
 	}
 
 	sb.WriteString(fmt.Sprintf("# Task: %s\n", title))
+
 	if currentStatusName := metadata["_current_status_name"]; currentStatusName != "" {
 		sb.WriteString(fmt.Sprintf("Current status: %s\n", currentStatusName))
 	}
+
 	if description != "" {
 		sb.WriteString(fmt.Sprintf("\n%s\n", description))
 	}
@@ -65,6 +69,7 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 		var history []resultHistoryEntry
 		if json.Unmarshal([]byte(historyJSON), &history) == nil && len(history) > 0 {
 			sb.WriteString("\n## Previous Results\n")
+
 			for _, h := range history {
 				sb.WriteString(fmt.Sprintf("### %s (%s)\n%s\n\n", h.ResultType, h.CreatedAt, h.Text))
 			}
@@ -104,6 +109,7 @@ func buildUserPromptWithImages(ctx context.Context, metadata map[string]string, 
 
 	// Split the text by [Image#N] references and interleave with image blocks.
 	var blocks []map[string]any
+
 	lastEnd := 0
 
 	for _, match := range imageRefPattern.FindAllStringSubmatchIndex(textPrompt, -1) {
@@ -202,10 +208,13 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 		type statusEntry struct {
 			Name string `json:"name"`
 		}
+
 		var statuses []statusEntry
 		if err := json.Unmarshal([]byte(statusesJSON), &statuses); err == nil && len(statuses) > 0 {
 			currentName := metadata["_current_status_name"]
+
 			sb.WriteString("\n### Workflow\n")
+
 			for _, s := range statuses {
 				if s.Name == currentName {
 					sb.WriteString(fmt.Sprintf("- **%s** (current)\n", s.Name))
@@ -221,20 +230,26 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 		type transitionEntry struct {
 			Name string `json:"name"`
 		}
+
 		var raw []transitionEntry
+
 		currentName := metadata["_current_status_name"]
+
 		if err := json.Unmarshal([]byte(transitionsJSON), &raw); err == nil {
 			var transitions []transitionEntry
+
 			for _, t := range raw {
 				if !strings.EqualFold(t.Name, currentName) {
 					transitions = append(transitions, t)
 				}
 			}
+
 			if len(transitions) > 0 {
 				sb.WriteString("\n### Status Transition\n")
 				sb.WriteString("When your work is complete, output on the last line:\n")
 				sb.WriteString("`NEXT_STATUS: <status>`\n")
 				sb.WriteString("Available next statuses:\n")
+
 				for _, t := range transitions {
 					sb.WriteString(fmt.Sprintf("- %s\n", t.Name))
 				}
@@ -249,9 +264,11 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 			ActionType string `json:"action_type"`
 			Trigger    string `json:"trigger"`
 		}
+
 		var hooks []hookEntry
 		if err := json.Unmarshal([]byte(hooksJSON), &hooks); err == nil && len(hooks) > 0 {
 			sb.WriteString("\n### Hooks\n")
+
 			for _, h := range hooks {
 				sb.WriteString(fmt.Sprintf("- %q (%s) — %s\n", h.Name, h.ActionType, h.Trigger))
 			}
@@ -272,12 +289,14 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 		type statusEntry struct {
 			Name string `json:"name"`
 		}
+
 		var statuses []statusEntry
 		if err := json.Unmarshal([]byte(statusesJSON), &statuses); err == nil && len(statuses) > 0 {
 			names := make([]string, len(statuses))
 			for i, s := range statuses {
 				names[i] = s.Name
 			}
+
 			sb.WriteString(fmt.Sprintf("Available statuses: %s\n", strings.Join(names, ", ")))
 		}
 	}
@@ -289,6 +308,7 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 			if workDir != "" {
 				wtDir = filepath.Join(workDir, ".claude", "worktrees", wt) + "/"
 			}
+
 			sb.WriteString("\n### Git Worktree\n")
 			sb.WriteString(fmt.Sprintf("Branch: `worktree-%s` | Dir: `%s`\n", wt, wtDir))
 			sb.WriteString("All file modifications and commits must occur within this worktree.\n")
@@ -301,6 +321,7 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 	// Harness knowledge file — accumulated failure patterns from past tasks.
 	if workDir != "" {
 		harnessPath := filepath.Join(workDir, ".taskguild", "HARNESS.md")
+
 		sb.WriteString("\n### Past Failure Patterns\n")
 		sb.WriteString(fmt.Sprintf("Before starting work, consult `%s` (absolute path) for failure patterns recorded by previous tasks. ", harnessPath))
 		sb.WriteString("It lives at the repository root under `.taskguild/`, NOT inside any worktree, so always use the absolute path even when your CWD is a worktree. ")

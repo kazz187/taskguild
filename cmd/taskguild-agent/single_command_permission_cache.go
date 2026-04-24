@@ -23,6 +23,7 @@ func wildcardToRegex(pattern string) string {
 	for i, p := range parts {
 		parts[i] = regexp.QuoteMeta(p)
 	}
+
 	return "(?s)^" + strings.Join(parts, ".*") + "$"
 }
 
@@ -32,6 +33,7 @@ func compileWildcard(pattern string) (*regexp.Regexp, error) {
 	if pattern == "" {
 		return nil, errors.New("empty pattern")
 	}
+
 	return regexp.Compile(wildcardToRegex(pattern))
 }
 
@@ -73,6 +75,7 @@ func (c *singleCommandPermissionCache) Update(perms []*v1.SingleCommandPermissio
 			slog.Warn("skipping invalid wildcard pattern", "pattern", p.GetPattern(), "error", err)
 			continue
 		}
+
 		compiled = append(compiled, compiledPattern{
 			id:    p.GetId(),
 			raw:   p.GetPattern(),
@@ -80,6 +83,7 @@ func (c *singleCommandPermissionCache) Update(perms []*v1.SingleCommandPermissio
 			ptype: p.GetType(),
 		})
 	}
+
 	c.patterns = compiled
 	slog.Info("single command permission cache updated", "patterns", len(compiled))
 }
@@ -94,6 +98,7 @@ func (c *singleCommandPermissionCache) Sync(ctx context.Context) {
 		slog.Error("failed to sync single command permissions", "error", err)
 		return
 	}
+
 	c.Update(resp.Msg.GetPermissions())
 }
 
@@ -131,10 +136,12 @@ func (c *singleCommandPermissionCache) CheckCommand(command string) (matched boo
 		if p.ptype != "command" {
 			continue
 		}
+
 		if p.regex.MatchString(command) {
 			return true, p.raw
 		}
 	}
+
 	return false, ""
 }
 
@@ -147,10 +154,12 @@ func (c *singleCommandPermissionCache) CheckRedirect(path string) (matched bool,
 		if p.ptype != "redirect" {
 			continue
 		}
+
 		if p.regex.MatchString(path) {
 			return true, p.raw
 		}
 	}
+
 	return false, ""
 }
 
@@ -163,6 +172,7 @@ func (c *singleCommandPermissionCache) CheckAllCommands(parsed *shellparse.Parse
 
 	for _, cmd := range parsed.Commands {
 		matched, pattern := c.CheckCommand(cmd.Raw)
+
 		result := commandCheckResult{
 			Command: cmd.Raw,
 			Matched: matched,
@@ -173,6 +183,7 @@ func (c *singleCommandPermissionCache) CheckAllCommands(parsed *shellparse.Parse
 			allMatched = false
 			result.SuggestedPattern = SuggestCommandPattern(cmd)
 		}
+
 		meta.ParsedCommands = append(meta.ParsedCommands, result)
 
 		// Check each redirect.
@@ -180,7 +191,9 @@ func (c *singleCommandPermissionCache) CheckAllCommands(parsed *shellparse.Parse
 			if redir.Path == "" {
 				continue
 			}
+
 			rMatched, rPattern := c.CheckRedirect(redir.Path)
+
 			rResult := redirectCheckResult{
 				Operator: redir.Op,
 				Path:     redir.Path,
@@ -192,6 +205,7 @@ func (c *singleCommandPermissionCache) CheckAllCommands(parsed *shellparse.Parse
 				allMatched = false
 				rResult.SuggestedPattern = SuggestRedirectPattern(redir.Path)
 			}
+
 			meta.Redirects = append(meta.Redirects, rResult)
 		}
 	}

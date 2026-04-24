@@ -51,6 +51,7 @@ func (s *Server) notifyChange(projectID string, changedSkillIDs []string) {
 
 func (s *Server) CreateSkill(ctx context.Context, req *connect.Request[taskguildv1.CreateSkillRequest]) (*connect.Response[taskguildv1.CreateSkillResponse], error) {
 	now := time.Now()
+
 	sk := &Skill{
 		ID:                     ulid.Make().String(),
 		ProjectID:              req.Msg.GetProjectId(),
@@ -71,7 +72,9 @@ func (s *Server) CreateSkill(ctx context.Context, req *connect.Request[taskguild
 	if err := s.repo.Create(ctx, sk); err != nil {
 		return nil, err
 	}
+
 	s.notifyChange(sk.ProjectID, []string{sk.ID})
+
 	return connect.NewResponse(&taskguildv1.CreateSkillResponse{
 		Skill: toProto(sk),
 	}), nil
@@ -82,6 +85,7 @@ func (s *Server) GetSkill(ctx context.Context, req *connect.Request[taskguildv1.
 	if err != nil {
 		return nil, err
 	}
+
 	return connect.NewResponse(&taskguildv1.GetSkillResponse{
 		Skill: toProto(sk),
 	}), nil
@@ -89,20 +93,25 @@ func (s *Server) GetSkill(ctx context.Context, req *connect.Request[taskguildv1.
 
 func (s *Server) ListSkills(ctx context.Context, req *connect.Request[taskguildv1.ListSkillsRequest]) (*connect.Response[taskguildv1.ListSkillsResponse], error) {
 	limit, offset := int32(50), int32(0)
+
 	if req.Msg.GetPagination() != nil {
 		if req.Msg.GetPagination().GetLimit() > 0 {
 			limit = req.Msg.GetPagination().GetLimit()
 		}
+
 		offset = req.Msg.GetPagination().GetOffset()
 	}
+
 	skills, total, err := s.repo.List(ctx, req.Msg.GetProjectId(), int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}
+
 	protos := make([]*taskguildv1.SkillDefinition, len(skills))
 	for i, sk := range skills {
 		protos[i] = toProto(sk)
 	}
+
 	return connect.NewResponse(&taskguildv1.ListSkillsResponse{
 		Skills: protos,
 		Pagination: &taskguildv1.PaginationResponse{
@@ -118,38 +127,49 @@ func (s *Server) UpdateSkill(ctx context.Context, req *connect.Request[taskguild
 	if err != nil {
 		return nil, err
 	}
+
 	if req.Msg.GetName() != "" {
 		sk.Name = req.Msg.GetName()
 	}
+
 	if req.Msg.GetDescription() != "" {
 		sk.Description = req.Msg.GetDescription()
 	}
+
 	if req.Msg.GetContent() != "" {
 		sk.Content = req.Msg.GetContent()
 	}
 	// Boolean fields are always applied (proto3 default is false).
 	sk.DisableModelInvocation = req.Msg.GetDisableModelInvocation()
+
 	sk.UserInvocable = req.Msg.GetUserInvocable()
 	if req.Msg.AllowedTools != nil {
 		sk.AllowedTools = req.Msg.GetAllowedTools()
 	}
+
 	if req.Msg.GetModel() != "" {
 		sk.Model = req.Msg.GetModel()
 	}
+
 	if req.Msg.GetContext() != "" {
 		sk.Context = req.Msg.GetContext()
 	}
+
 	if req.Msg.GetAgent() != "" {
 		sk.Agent = req.Msg.GetAgent()
 	}
+
 	if req.Msg.GetArgumentHint() != "" {
 		sk.ArgumentHint = req.Msg.GetArgumentHint()
 	}
+
 	sk.UpdatedAt = time.Now()
 	if err := s.repo.Update(ctx, sk); err != nil {
 		return nil, err
 	}
+
 	s.notifyChange(sk.ProjectID, []string{sk.ID})
+
 	return connect.NewResponse(&taskguildv1.UpdateSkillResponse{
 		Skill: toProto(sk),
 	}), nil
@@ -160,10 +180,13 @@ func (s *Server) DeleteSkill(ctx context.Context, req *connect.Request[taskguild
 	if err != nil {
 		return nil, err
 	}
+
 	if err := s.repo.Delete(ctx, req.Msg.GetId()); err != nil {
 		return nil, err
 	}
+
 	s.notifyChange(sk.ProjectID, nil)
+
 	return connect.NewResponse(&taskguildv1.DeleteSkillResponse{}), nil
 }
 
@@ -175,11 +198,14 @@ func (s *Server) SyncSkillsFromDir(ctx context.Context, req *connect.Request[tas
 		if err != nil {
 			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("failed to resolve work directory: %w", err))
 		}
+
 		dir = resolved
 	}
+
 	if dir == "" {
 		dir = "."
 	}
+
 	skillsDir := filepath.Join(dir, ".claude", "skills")
 
 	entries, err := os.ReadDir(skillsDir)
@@ -187,6 +213,7 @@ func (s *Server) SyncSkillsFromDir(ctx context.Context, req *connect.Request[tas
 		if os.IsNotExist(err) {
 			return connect.NewResponse(&taskguildv1.SyncSkillsFromDirResponse{}), nil
 		}
+
 		return nil, fmt.Errorf("failed to read skills directory: %w", err)
 	}
 
@@ -202,6 +229,7 @@ func (s *Server) SyncSkillsFromDir(ctx context.Context, req *connect.Request[tas
 		}
 
 		skillMDPath := filepath.Join(skillsDir, entry.Name(), "SKILL.md")
+
 		parsed, err := parseSkillMDFile(skillMDPath, entry.Name())
 		if err != nil {
 			continue
@@ -221,15 +249,18 @@ func (s *Server) SyncSkillsFromDir(ctx context.Context, req *connect.Request[tas
 			existing.Agent = parsed.Agent
 			existing.ArgumentHint = parsed.ArgumentHint
 			existing.IsSynced = true
+
 			existing.UpdatedAt = time.Now()
 			if err := s.repo.Update(ctx, existing); err != nil {
 				continue
 			}
+
 			synced = append(synced, toProto(existing))
 			updated++
 		} else {
 			// Create new skill.
 			now := time.Now()
+
 			sk := &Skill{
 				ID:                     ulid.Make().String(),
 				ProjectID:              req.Msg.GetProjectId(),
@@ -250,6 +281,7 @@ func (s *Server) SyncSkillsFromDir(ctx context.Context, req *connect.Request[tas
 			if err := s.repo.Create(ctx, sk); err != nil {
 				continue
 			}
+
 			synced = append(synced, toProto(sk))
 			created++
 		}
@@ -289,8 +321,12 @@ func parseSkillMDFile(filePath string, dirName string) (*parsedSkill, error) {
 
 	// Detect frontmatter start.
 	hasFrontmatter := false
-	var frontmatterLines []string
-	var bodyLines []string
+
+	var (
+		frontmatterLines []string
+		bodyLines        []string
+	)
+
 	inFrontmatter := false
 	frontmatterDone := false
 
@@ -300,19 +336,25 @@ func parseSkillMDFile(filePath string, dirName string) (*parsedSkill, error) {
 			if strings.TrimSpace(line) == "---" {
 				hasFrontmatter = true
 				inFrontmatter = true
+
 				continue
 			}
 			// No frontmatter, everything is body.
 			frontmatterDone = true
+
 			bodyLines = append(bodyLines, line)
+
 			continue
 		}
+
 		if inFrontmatter {
 			if strings.TrimSpace(line) == "---" {
 				inFrontmatter = false
 				frontmatterDone = true
+
 				continue
 			}
+
 			frontmatterLines = append(frontmatterLines, line)
 		} else {
 			bodyLines = append(bodyLines, line)
@@ -327,13 +369,16 @@ func parseSkillMDFile(filePath string, dirName string) (*parsedSkill, error) {
 	// Parse frontmatter as simple key: value pairs.
 	// Also supports YAML list format (  - item) for list fields like allowed-tools,
 	// and YAML block scalar indicators (| and >) for multi-line string values.
-	var currentListKey string
-	var blockScalarKey string
-	var blockScalarLines []string
-	var blockIndent int
+	var (
+		currentListKey   string
+		blockScalarKey   string
+		blockScalarLines []string
+		blockIndent      int
+	)
 
 	assignSkillBlockScalar := func(key string, lines []string) {
 		value := strings.TrimRight(strings.Join(lines, "\n"), "\n ")
+
 		switch key {
 		case "name":
 			result.Name = value
@@ -360,13 +405,17 @@ func parseSkillMDFile(filePath string, dirName string) (*parsedSkill, error) {
 				if len(blockScalarLines) == 0 {
 					blockIndent = len(line) - len(strings.TrimLeft(line, " \t"))
 				}
+
 				stripped := line
 				if len(line) >= blockIndent {
 					stripped = line[blockIndent:]
 				}
+
 				blockScalarLines = append(blockScalarLines, stripped)
+
 				continue
 			}
+
 			if trimmed == "" {
 				// Blank line within block scalar.
 				blockScalarLines = append(blockScalarLines, "")
@@ -387,6 +436,7 @@ func parseSkillMDFile(filePath string, dirName string) (*parsedSkill, error) {
 					result.AllowedTools = append(result.AllowedTools, item)
 				}
 			}
+
 			continue
 		}
 
@@ -400,6 +450,7 @@ func parseSkillMDFile(filePath string, dirName string) (*parsedSkill, error) {
 				blockScalarKey = key
 				blockScalarLines = nil
 				blockIndent = 0
+
 				continue
 			}
 

@@ -35,6 +35,7 @@ func (d *Dispatcher) Start(ctx context.Context) {
 	defer d.eventBus.Unsubscribe(subID)
 
 	slog.Info("push notification dispatcher started")
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -44,6 +45,7 @@ func (d *Dispatcher) Start(ctx context.Context) {
 			if !ok {
 				return
 			}
+
 			if event.GetType() == taskguildv1.EventType_EVENT_TYPE_INTERACTION_CREATED {
 				d.handleInteractionCreated(ctx, event)
 			}
@@ -76,7 +78,9 @@ func (d *Dispatcher) handleInteractionCreated(ctx context.Context, event *taskgu
 
 	// Build notification payload.
 	title := "TaskGuild"
+
 	var payloadType string
+
 	switch inter.Type {
 	case interaction.TypePermissionRequest:
 		title = "Permission Request"
@@ -87,6 +91,7 @@ func (d *Dispatcher) handleInteractionCreated(ctx context.Context, event *taskgu
 	}
 
 	var url string
+
 	if inter.TaskID != "" {
 		t, err := d.taskRepo.Get(ctx, inter.TaskID)
 		if err == nil {
@@ -131,6 +136,7 @@ func (d *Dispatcher) buildActions(inter *interaction.Interaction) []Notification
 			if i >= 2 {
 				break
 			}
+
 			actions = append(actions, NotificationAction{
 				Action: opt.Value,
 				Title:  opt.Label,
@@ -146,6 +152,7 @@ func (d *Dispatcher) buildActions(inter *interaction.Interaction) []Notification
 				Type:   "text",
 			})
 		}
+
 		return actions
 
 	default:

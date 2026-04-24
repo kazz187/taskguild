@@ -81,6 +81,7 @@ func runTask(
 	if currentMode == "" {
 		currentMode = string(claudeagent.PermissionModeDefault)
 	}
+
 	var modeMu sync.Mutex
 
 	logger.Info("runTask started", "agent_name", metadata["_agent_name"], "use_worktree", metadata["_use_worktree"], "claude_mode", currentMode)
@@ -90,12 +91,14 @@ func runTask(
 	// Initialize task logger for structured log streaming.
 	tl := newTaskLogger(ctx, client, taskID)
 	defer tl.Close()
+
 	tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO, "Task started", nil)
 
 	// Resolve worktree name: reuse persisted name or generate a new one.
 	worktreeName := metadata["worktree"]
 	if worktreeName == "" && metadata["_use_worktree"] == "true" {
 		logger.Info("generating worktree name")
+
 		worktreeName = generateWorktreeName(ctx, taskID, metadata["_task_title"], workDir, queryRunner)
 		logger.Info("worktree name generated", "worktree_name", worktreeName)
 		saveWorktreeName(ctx, taskClient, taskID, worktreeName)
@@ -113,6 +116,7 @@ func runTask(
 	// Cwd is set to the worktree from the very first turn.
 	if metadata["_use_worktree"] == "true" && worktreeName != "" {
 		logger.Info("ensuring worktree directory", "worktree_name", worktreeName)
+
 		if _, err := ensureWorktree(ctx, workDir, worktreeName, taskID); err != nil {
 			logger.Warn("failed to ensure worktree", "error", err)
 		}
@@ -126,6 +130,7 @@ func runTask(
 				return wtDir
 			}
 		}
+
 		return workDir
 	}
 
@@ -136,9 +141,11 @@ func runTask(
 	// It is called explicitly before status transitions and deferred as a
 	// safety-net for all other return paths so hooks always execute.
 	afterHooksExecuted := false
+
 	afterHooks := func() {
 		if !afterHooksExecuted {
 			afterHooksExecuted = true
+
 			executeHooks(ctx, taskID, "after_task_execution", metadata, resolveHookDir(), taskClient, tl, queryRunner, sessionID)
 		}
 	}
@@ -154,6 +161,7 @@ func runTask(
 		if ctx.Err() == context.Canceled && isUserStopped() {
 			bgCtx, bgCancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer bgCancel()
+
 			reportTaskResult(bgCtx, client, taskID, "", "stopped by user")
 			reportAgentStatus(bgCtx, client, agentManagerID, taskID,
 				v1.AgentStatus_AGENT_STATUS_IDLE, "stopped by user")
@@ -167,15 +175,19 @@ func runTask(
 
 	// Start interaction stream listener for this task.
 	waiter := newInteractionWaiter()
+
 	var listenerWg conc.WaitGroup
 	listenerWg.Go(func() {
 		runInteractionListener(ctx, interClient, taskID, waiter)
 	})
+
 	prompt, err := buildUserPromptWithImages(ctx, metadata, workDir, taskClient, taskID)
 	if err != nil {
 		logger.Error("failed to build prompt with images, falling back to text-only", "error", err)
+
 		prompt = buildUserPrompt(metadata, workDir)
 	}
+
 	hasTransitions := metadata["_available_transitions"] != "" && metadata["_available_transitions"] != "null"
 	logger.Info("task setup complete, entering turn loop", "has_session", sessionID != "", "has_transitions", hasTransitions)
 
@@ -193,6 +205,7 @@ func runTask(
 			old := currentMode
 			currentMode = newMode
 			modeMu.Unlock()
+
 			if old != newMode {
 				logger.Info("claude mode changed", "old_mode", old, "new_mode", newMode)
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
@@ -216,6 +229,7 @@ func runTask(
 			map[string]string{"turn": strconv.Itoa(turn), "claude_mode": turnMode})
 		logger.Info("starting Claude CLI", "turn", turn, "session_id", sessionID, "claude_mode", turnMode)
 		logger.Debug("Claude SDK input", "turn", turn)
+
 		if turn == 0 {
 			// Log the actual system prompt from opts (after buildWorkflowContext appends).
 			switch sp := opts.SystemPrompt.(type) {
@@ -226,13 +240,17 @@ func runTask(
 			default:
 				logger.Debug("system prompt", "prompt", fmt.Sprintf("%v", opts.SystemPrompt))
 			}
+
 			if opts.Agent != "" {
 				logger.Debug("agent", "name", opts.Agent)
 			}
+
 			logger.Debug("metadata", "metadata", fmt.Sprintf("%v", metadata))
 			logger.Debug("work directory", "work_dir", workDir)
 		}
+
 		logger.Debug("user prompt", "prompt", prompt)
+
 		if sessionID != "" {
 			logger.Debug("resuming session", "session_id", sessionID)
 		}
@@ -244,6 +262,7 @@ func runTask(
 		modeMu.Unlock()
 
 		logger.Info("Claude CLI finished", "turn", turn, "has_error", err != nil, "claude_mode", endMode)
+
 		if err != nil {
 			logger.Error("Claude SDK error", "turn", turn, "error", err)
 		} else if result.Result != nil {
@@ -277,6 +296,7 @@ func runTask(
 		} else {
 			newSessionID = extractSessionIDFromMessages(result.Messages)
 		}
+
 		if newSessionID != "" {
 			sessionID = newSessionID
 			saveSessionIDBestEffort(ctx, taskClient, taskID, sessionID, metadata)
@@ -288,6 +308,7 @@ func runTask(
 
 		// Handle errors with backoff retry.
 		isError := false
+
 		var errMsg string
 
 		if err != nil {
@@ -295,6 +316,7 @@ func runTask(
 			errMsg = err.Error()
 		} else if result.Result != nil && result.Result.IsError {
 			isError = true
+
 			errMsg = result.Result.Result
 			if errMsg == "" {
 				errMsg = "Claude returned an error"
@@ -312,6 +334,7 @@ func runTask(
 					authErrMsg, nil)
 				reportTaskResult(ctx, client, taskID, "", authErrMsg)
 				reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_ERROR, authErrMsg)
+
 				return
 			}
 
@@ -323,11 +346,14 @@ func runTask(
 				logger.Warn("resume failed, clearing session to start fresh", "consecutive_errors", consecutiveErrors)
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_STATUS_CHANGE, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 					"Resume failed, restarting with fresh session", nil)
+
 				sessionID = ""
 				consecutiveErrors = 0
 				backoff = initialBackoff
+
 				reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING,
 					"resume failed, restarting with fresh session")
+
 				continue
 			}
 
@@ -337,6 +363,7 @@ func runTask(
 					"Max consecutive errors reached, giving up: "+errMsg, nil)
 				reportTaskResult(ctx, client, taskID, "", errMsg)
 				reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_ERROR, errMsg)
+
 				return
 			}
 
@@ -354,12 +381,14 @@ func runTask(
 			if backoff > maxBackoff {
 				backoff = maxBackoff
 			}
+
 			continue
 		}
 
 		// Success — reset error tracking.
 		consecutiveErrors = 0
 		backoff = initialBackoff
+
 		logger.Info("processing successful result", "turn", turn, "result_len", len(result.Result.Result))
 
 		// Extract and persist task description updates from agent output.
@@ -381,6 +410,7 @@ func runTask(
 				if len(descPreview) > 200 {
 					descPreview = descPreview[:200] + "..."
 				}
+
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_RESULT, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 					descPreview,
 					map[string]string{
@@ -413,6 +443,7 @@ func runTask(
 			wtDir := filepath.Join(workDir, ".claude", "worktrees", worktreeName)
 			if info, err := os.Stat(wtDir); err == nil && info.IsDir() {
 				worktreeHookFired = true
+
 				executeHooks(ctx, taskID, "after_worktree_creation", metadata, wtDir, taskClient, tl, queryRunner, sessionID)
 			}
 		}
@@ -429,10 +460,12 @@ func runTask(
 			agentText := stripNextStatus(summary)
 			if agentText != "" {
 				preview := truncateText(agentText, 200)
+
 				fullText := agentText
 				if len(fullText) > maxToolOutputSize {
 					fullText = fullText[:maxToolOutputSize] + "... (truncated)"
 				}
+
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_AGENT_OUTPUT, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 					preview,
 					map[string]string{
@@ -445,6 +478,7 @@ func runTask(
 		// Check completion: NEXT_STATUS present means task is done.
 		nextStatusID := parseNextStatus(summary)
 		logger.Info("parsed directives", "turn", turn, "next_status", nextStatusID, "summary_len", len(summary))
+
 		if nextStatusID != "" {
 			// Log the NEXT_STATUS directive to timeline.
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_DIRECTIVE, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
@@ -471,17 +505,22 @@ func runTask(
 					logger.Warn("max status transition retries reached, completing without transition")
 					tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 						"Max status transition retries reached, completing without transition", nil)
+
 					displaySummary := stripNextStatus(summary)
+
 					afterHooks()
 					reportTaskResult(ctx, client, taskID, displaySummary, "")
 					reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (invalid transition after retries)")
 					maybeRunSkillHarness(ctx, metadata, taskID, displaySummary, workDir, tl, client, queryRunner, sessionID)
+
 					return
 				}
 
 				// Retry with a corrective prompt.
 				reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "retrying: invalid status transition")
+
 				prompt = buildTransitionRetryPrompt(nextStatusID, metadata)
+
 				continue
 			}
 
@@ -489,7 +528,9 @@ func runTask(
 			if resolvedID != "" {
 				nextStatusID = resolvedID
 			}
+
 			displaySummary := stripNextStatus(summary)
+
 			logger.Info("completed with NEXT_STATUS", "next_status", nextStatusID, "turn", turn)
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Task completed with status transition (turn %d)", turn),
@@ -500,6 +541,7 @@ func runTask(
 			isSelfTransition := strings.EqualFold(nextStatusID, metadata["_current_status_name"])
 			if isSelfTransition {
 				logger.Info("skipping after hooks for self-transition", "status", nextStatusID)
+
 				afterHooksExecuted = true // prevent deferred call from running
 			} else {
 				// Run after hooks while the task remains ASSIGNED so that hooks
@@ -517,6 +559,7 @@ func runTask(
 			logger.Info("reporting agent status IDLE")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed")
 			logger.Info("calling handleStatusTransition", "next_status", nextStatusID)
+
 			if err := handleStatusTransition(ctx, taskClient, taskID, nextStatusID, metadata, tl); err != nil {
 				logger.Error("status transition failed", "error", err)
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
@@ -524,6 +567,7 @@ func runTask(
 			} else {
 				logger.Info("status transition succeeded", "next_status", nextStatusID)
 			}
+
 			return
 		}
 
@@ -536,6 +580,7 @@ func runTask(
 			runSkillHarnessAndWait(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner, sessionID)
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed")
+
 			return
 		}
 
@@ -547,19 +592,23 @@ func runTask(
 				"next_status_name", autoName, "turn", turn)
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				"No NEXT_STATUS output; auto-transitioning to "+autoName, nil)
+
 			if strings.EqualFold(autoName, metadata["_current_status_name"]) {
 				afterHooksExecuted = true
 			} else {
 				afterHooks()
 			}
+
 			runSkillHarnessAndWait(ctx, metadata, taskID, summary, workDir, tl, client, queryRunner, sessionID)
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (auto-transition)")
+
 			if err := handleStatusTransition(ctx, taskClient, taskID, autoName, metadata, tl); err != nil {
 				logger.Error("auto status transition failed", "error", err)
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 					fmt.Sprintf("Auto status transition to %q failed: %v", autoName, err), nil)
 			}
+
 			return
 		}
 
@@ -579,38 +628,48 @@ func runTask(
 				afterHooks()
 				reportTaskResult(ctx, client, taskID, summary, "")
 				reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task force-completed (no NEXT_STATUS after retries)")
+
 				if err := handleStatusTransition(ctx, taskClient, taskID, "", metadata, tl); err != nil {
 					logger.Warn("auto-transition on force-complete failed", "error", err)
 					tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 						fmt.Sprintf("Auto-transition on force-complete failed: %v", err), nil)
 				}
+
 				return
 			}
+
 			logger.Warn("user response timeout, prompting for NEXT_STATUS", "retry", userResponseRetries, "max_retries", maxUserResponseRetries)
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 				fmt.Sprintf("User response timeout, retrying with NEXT_STATUS prompt (retry %d/%d)", userResponseRetries, maxUserResponseRetries), nil)
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "retrying: requesting NEXT_STATUS")
+
 			prompt = "You appear to have completed your work but did not output a NEXT_STATUS directive. " +
 				"Please review the available status transitions and output your chosen next status on the LAST LINE of your response in the format:\n" +
 				"NEXT_STATUS: <status>\n\n" +
 				"If you still need user input, clearly state what you need."
+
 			continue
 		}
+
 		if err != nil {
 			logger.Error("user response error, completing task", "error", err)
 			// Attempt auto-transition so the task does not remain stuck.
 			afterHooks()
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (no user response)")
+
 			if transErr := handleStatusTransition(ctx, taskClient, taskID, "", metadata, tl); transErr != nil {
 				logger.Warn("auto-transition on user response error failed", "error", transErr)
 			}
+
 			return
 		}
 
 		// Got a valid user response — reset the retry counter.
 		userResponseRetries = 0
+
 		reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "continuing task")
+
 		prompt = userResponse
 	}
 }
@@ -628,6 +687,7 @@ func runTask(
 // sub-skill during task execution.
 func collectStatusSkills(metadata map[string]string) map[string]bool {
 	out := map[string]bool{}
+
 	if names := metadata["_skill_names"]; names != "" {
 		for n := range strings.SplitSeq(names, ",") {
 			if n = strings.TrimSpace(n); n != "" {
@@ -635,6 +695,7 @@ func collectStatusSkills(metadata map[string]string) map[string]bool {
 			}
 		}
 	}
+
 	if hooksJSON := metadata["_hooks"]; hooksJSON != "" {
 		var hooks []struct {
 			Name       string `json:"name"`
@@ -645,12 +706,14 @@ func collectStatusSkills(metadata map[string]string) map[string]bool {
 				if h.Name == "" {
 					continue
 				}
+
 				if h.ActionType == "" || h.ActionType == "skill" {
 					out[h.Name] = true
 				}
 			}
 		}
 	}
+
 	return out
 }
 
@@ -696,6 +759,7 @@ func extractSessionIDFromMessages(messages []claudeagent.Message) string {
 			}
 		}
 	}
+
 	return ""
 }
 
@@ -773,12 +837,14 @@ func buildClaudeOptions(
 		if m := metadata["_model"]; m != "" {
 			opts.Model = m
 		}
+
 		if toolsJSON := metadata["_tools"]; toolsJSON != "" {
 			var tools []string
 			if json.Unmarshal([]byte(toolsJSON), &tools) == nil {
 				opts.AllowedTools = tools
 			}
 		}
+
 		if dtJSON := metadata["_disallowed_tools"]; dtJSON != "" {
 			var dt []string
 			if json.Unmarshal([]byte(dtJSON), &dt) == nil {
@@ -824,6 +890,7 @@ func reportTaskResult(
 	errMsg string,
 ) {
 	logger := clog.LoggerFromContext(ctx)
+
 	_, err := client.ReportTaskResult(ctx, connect.NewRequest(&v1.ReportTaskResultRequest{
 		TaskId:       taskID,
 		Summary:      summary,
@@ -843,6 +910,7 @@ func reportAgentStatus(
 	message string,
 ) {
 	logger := clog.LoggerFromContext(ctx)
+
 	_, err := client.ReportAgentStatus(ctx, connect.NewRequest(&v1.ReportAgentStatusRequest{
 		AgentManagerId: agentManagerID,
 		TaskId:         taskID,
@@ -860,6 +928,7 @@ func reportAgentStatus(
 // run 'claude login' to re-authenticate.
 func isAuthenticationError(errMsg string) bool {
 	lower := strings.ToLower(errMsg)
+
 	authPatterns := []string{
 		"authentication_error",
 		"authentication_failed",
@@ -871,5 +940,6 @@ func isAuthenticationError(errMsg string) bool {
 			return true
 		}
 	}
+
 	return false
 }

@@ -9,10 +9,12 @@ func resolveTask(ctx context.Context, repo Repository, id string) *Task {
 	if err == nil {
 		return t
 	}
+
 	t, err = repo.GetArchived(ctx, id)
 	if err == nil {
 		return t
 	}
+
 	return nil
 }
 
@@ -23,12 +25,14 @@ func ResolveTitles(ctx context.Context, repo Repository, ids []string) map[strin
 	if len(ids) == 0 {
 		return nil
 	}
+
 	titles := make(map[string]string, len(ids))
 	for _, id := range ids {
 		if t := resolveTask(ctx, repo, id); t != nil {
 			titles[id] = t.Title
 		}
 	}
+
 	return titles
 }
 
@@ -39,12 +43,14 @@ func ResolveProjectIDs(ctx context.Context, repo Repository, ids []string) map[s
 	if len(ids) == 0 {
 		return nil
 	}
+
 	projectIDs := make(map[string]string, len(ids))
 	for _, id := range ids {
 		if t := resolveTask(ctx, repo, id); t != nil {
 			projectIDs[id] = t.ProjectID
 		}
 	}
+
 	return projectIDs
 }
 
@@ -54,7 +60,9 @@ func ResolveAll(ctx context.Context, repo Repository, ids []string) (titles map[
 	if len(ids) == 0 {
 		return nil, nil
 	}
+
 	titles = make(map[string]string, len(ids))
+
 	projectIDs = make(map[string]string, len(ids))
 	for _, id := range ids {
 		if t := resolveTask(ctx, repo, id); t != nil {
@@ -62,5 +70,6 @@ func ResolveAll(ctx context.Context, repo Repository, ids []string) (titles map[
 			projectIDs[id] = t.ProjectID
 		}
 	}
+
 	return titles, projectIDs
 }

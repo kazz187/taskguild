@@ -53,6 +53,7 @@ func (s *Server) GetClaudeSettings(ctx context.Context, req *connect.Request[tas
 	if err != nil {
 		return nil, err
 	}
+
 	return connect.NewResponse(&taskguildv1.GetClaudeSettingsResponse{
 		Settings: toProto(cs),
 	}), nil
@@ -69,7 +70,9 @@ func (s *Server) UpdateClaudeSettings(ctx context.Context, req *connect.Request[
 	if err := s.repo.Upsert(ctx, cs); err != nil {
 		return nil, err
 	}
+
 	s.notifyChange(cs.ProjectID)
+
 	return connect.NewResponse(&taskguildv1.UpdateClaudeSettingsResponse{
 		Settings: toProto(cs),
 	}), nil
@@ -84,11 +87,14 @@ func (s *Server) SyncClaudeSettingsFromDir(ctx context.Context, req *connect.Req
 		if err != nil {
 			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("failed to resolve work directory: %w", err))
 		}
+
 		dir = resolved
 	}
+
 	if dir == "" {
 		dir = "."
 	}
+
 	settingsPath := filepath.Join(dir, ".claude", "settings.json")
 
 	localLanguage, localAttribution, err := readSettingsFromFile(settingsPath)
@@ -103,28 +109,34 @@ func (s *Server) SyncClaudeSettingsFromDir(ctx context.Context, req *connect.Req
 
 	// Merge: local value takes precedence if non-nil and stored is nil.
 	changed := false
+
 	if localLanguage != nil && stored.Language == nil {
 		stored.Language = localLanguage
 		changed = true
 	}
+
 	if localAttribution != nil {
 		if stored.Attribution == nil {
 			stored.Attribution = &Attribution{}
 		}
+
 		if localAttribution.Commit != nil && stored.Attribution.Commit == nil {
 			stored.Attribution.Commit = localAttribution.Commit
 			changed = true
 		}
+
 		if localAttribution.Pr != nil && stored.Attribution.Pr == nil {
 			stored.Attribution.Pr = localAttribution.Pr
 			changed = true
 		}
 	}
+
 	if changed {
 		stored.UpdatedAt = time.Now()
 		if err := s.repo.Upsert(ctx, stored); err != nil {
 			return nil, err
 		}
+
 		s.notifyChange(stored.ProjectID)
 	}
 
@@ -141,6 +153,7 @@ func readSettingsFromFile(path string) (*string, *Attribution, error) {
 		if os.IsNotExist(readErr) {
 			return nil, nil, nil
 		}
+
 		return nil, nil, readErr
 	}
 
@@ -150,6 +163,7 @@ func readSettingsFromFile(path string) (*string, *Attribution, error) {
 	}
 
 	var lang *string
+
 	if v, exists := raw["language"]; exists {
 		if s, ok := v.(string); ok {
 			lang = &s
@@ -159,11 +173,13 @@ func readSettingsFromFile(path string) (*string, *Attribution, error) {
 	var attr *Attribution
 	if attrRaw, ok := raw["attribution"].(map[string]any); ok {
 		attr = &Attribution{}
+
 		if v, exists := attrRaw["commit"]; exists {
 			if s, ok := v.(string); ok {
 				attr.Commit = &s
 			}
 		}
+
 		if v, exists := attrRaw["pr"]; exists {
 			if s, ok := v.(string); ok {
 				attr.Pr = &s
@@ -178,6 +194,7 @@ func attributionFromProto(a *taskguildv1.Attribution) *Attribution {
 	if a == nil {
 		return nil
 	}
+
 	return &Attribution{
 		Commit: a.Commit,
 		Pr:     a.Pr,
@@ -188,6 +205,7 @@ func attributionToProto(a *Attribution) *taskguildv1.Attribution {
 	if a == nil {
 		return nil
 	}
+
 	return &taskguildv1.Attribution{
 		Commit: a.Commit,
 		Pr:     a.Pr,

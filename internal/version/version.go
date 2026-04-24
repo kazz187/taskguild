@@ -17,6 +17,7 @@ func Commit() string {
 	if commit != "" {
 		return commit
 	}
+
 	if info, ok := debug.ReadBuildInfo(); ok {
 		for _, s := range info.Settings {
 			if s.Key == "vcs.revision" {
@@ -24,6 +25,7 @@ func Commit() string {
 			}
 		}
 	}
+
 	return "unknown"
 }
 
@@ -34,5 +36,6 @@ func Short() string {
 	if len(c) > 8 {
 		return c[:8]
 	}
+
 	return c
 }

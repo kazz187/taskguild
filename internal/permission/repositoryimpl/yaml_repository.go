@@ -34,19 +34,23 @@ func (r *YAMLRepository) Get(ctx context.Context, projectID string) (*permission
 	if err != nil {
 		return nil, cerr.WrapStorageReadError("permission", err)
 	}
+
 	if !exists {
 		return &permission.PermissionSet{
 			ProjectID: projectID,
 		}, nil
 	}
+
 	data, err := r.storage.Read(ctx, path(projectID))
 	if err != nil {
 		return nil, cerr.WrapStorageReadError("permission", err)
 	}
+
 	var ps permission.PermissionSet
 	if err := yaml.Unmarshal(data, &ps); err != nil {
 		return nil, cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to unmarshal permission: %w", err))
 	}
+
 	return &ps, nil
 }
 
@@ -56,8 +60,10 @@ func (r *YAMLRepository) Upsert(ctx context.Context, ps *permission.PermissionSe
 	if err != nil {
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal permission: %w", err))
 	}
+
 	if err := r.storage.Write(ctx, path(ps.ProjectID), data); err != nil {
 		return cerr.WrapStorageWriteError("permission", err)
 	}
+
 	return nil
 }

@@ -8,5 +8,6 @@ func runSentinel() {
 	if *sentinelProf {
 		extraArgs = append(extraArgs, "--prof")
 	}
+
 	sentinel.Run(extraArgs...)
 }

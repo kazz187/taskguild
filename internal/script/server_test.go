@@ -27,54 +27,67 @@ func newFakeRepository() *fakeRepository {
 func (r *fakeRepository) Create(_ context.Context, s *Script) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
 	r.scripts[s.ID] = s
+
 	return nil
 }
 
 func (r *fakeRepository) Get(_ context.Context, id string) (*Script, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
 	s, ok := r.scripts[id]
 	if !ok {
 		return nil, fmt.Errorf("script not found: %s", id)
 	}
+
 	return s, nil
 }
 
 func (r *fakeRepository) List(_ context.Context, projectID string, limit, offset int) ([]*Script, int, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
 	var result []*Script
+
 	for _, s := range r.scripts {
 		if s.ProjectID == projectID {
 			result = append(result, s)
 		}
 	}
+
 	return result, len(result), nil
 }
 
 func (r *fakeRepository) FindByName(_ context.Context, projectID, name string) (*Script, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
 	for _, s := range r.scripts {
 		if s.ProjectID == projectID && s.Name == name {
 			return s, nil
 		}
 	}
+
 	return nil, errors.New("script not found")
 }
 
 func (r *fakeRepository) Update(_ context.Context, s *Script) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
 	r.scripts[s.ID] = s
+
 	return nil
 }
 
 func (r *fakeRepository) Delete(_ context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
 	delete(r.scripts, id)
+
 	return nil
 }
 
@@ -100,21 +113,25 @@ type stopRequest struct {
 func (f *fakeExecutionRequester) RequestScriptExecution(requestID string, projectID string, sc *Script) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+
 	f.execRequests = append(f.execRequests, execRequest{
 		RequestID: requestID,
 		ProjectID: projectID,
 		Script:    sc,
 	})
+
 	return f.execErr
 }
 
 func (f *fakeExecutionRequester) RequestScriptStop(projectID string, requestID string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+
 	f.stopRequests = append(f.stopRequests, stopRequest{
 		ProjectID: projectID,
 		RequestID: requestID,
 	})
+
 	return f.stopErr
 }
 
@@ -129,6 +146,7 @@ func seedScript(repo *fakeRepository, id, projectID, name string) *Script {
 		Content:   "#!/bin/sh\necho hello",
 	}
 	repo.scripts[id] = sc
+
 	return sc
 }
 
@@ -137,6 +155,7 @@ func newTestServer() (*Server, *fakeRepository, *fakeExecutionRequester, *Script
 	execReq := &fakeExecutionRequester{}
 	broker := NewScriptExecutionBroker()
 	srv := NewServer(repo, execReq, broker, nil, nil)
+
 	return srv, repo, execReq, broker
 }
 
@@ -161,6 +180,7 @@ func TestExecuteScript_Success(t *testing.T) {
 	// Verify broker has registered the execution
 	ch, unsub := broker.Subscribe(requestID)
 	defer unsub()
+
 	if ch == nil {
 		t.Fatal("expected execution to be registered in broker")
 	}
@@ -168,12 +188,15 @@ func TestExecuteScript_Success(t *testing.T) {
 	// Verify execution request was sent to agent
 	execReq.mu.Lock()
 	defer execReq.mu.Unlock()
+
 	if len(execReq.execRequests) != 1 {
 		t.Fatalf("expected 1 exec request, got %d", len(execReq.execRequests))
 	}
+
 	if execReq.execRequests[0].RequestID != requestID {
 		t.Errorf("exec request has wrong requestID: %q", execReq.execRequests[0].RequestID)
 	}
+
 	if execReq.execRequests[0].ProjectID != "proj-1" {
 		t.Errorf("exec request has wrong projectID: %q", execReq.execRequests[0].ProjectID)
 	}
@@ -238,12 +261,15 @@ func TestStopScriptExecution_Success(t *testing.T) {
 
 	execReq.mu.Lock()
 	defer execReq.mu.Unlock()
+
 	if len(execReq.stopRequests) != 1 {
 		t.Fatalf("expected 1 stop request, got %d", len(execReq.stopRequests))
 	}
+
 	if execReq.stopRequests[0].ProjectID != "proj-1" {
 		t.Errorf("stop request has wrong projectID: %q", execReq.stopRequests[0].ProjectID)
 	}
+
 	if execReq.stopRequests[0].RequestID != "req-1" {
 		t.Errorf("stop request has wrong requestID: %q", execReq.stopRequests[0].RequestID)
 	}
@@ -286,6 +312,7 @@ func TestListActiveExecutions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListActiveExecutions failed: %v", err)
 	}
+
 	if len(resp.Msg.GetExecutions()) != 2 {
 		t.Fatalf("expected 2 executions for proj-1, got %d", len(resp.Msg.GetExecutions()))
 	}
@@ -304,12 +331,14 @@ func TestEndToEnd_ExecuteAndReceiveViaSubscriber(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ExecuteScript failed: %v", err)
 	}
+
 	requestID := execResp.Msg.GetRequestId()
 
 	// 2. Frontend subscribes to the stream (via broker directly, since
 	//    connect.ServerStream requires HTTP infrastructure to construct)
 	ch, unsub := broker.Subscribe(requestID)
 	defer unsub()
+
 	if ch == nil {
 		t.Fatal("expected non-nil channel for new execution")
 	}
@@ -335,18 +364,22 @@ func TestEndToEnd_ExecuteAndReceiveViaSubscriber(t *testing.T) {
 
 	// 5. Collect all events from the subscriber channel
 	var events []*taskguildv1.ScriptExecutionEvent
+
 	timeout := time.After(2 * time.Second)
+
 	for {
 		select {
 		case evt, ok := <-ch:
 			if !ok {
 				goto done
 			}
+
 			events = append(events, evt)
 		case <-timeout:
 			t.Fatal("timed out waiting for events")
 		}
 	}
+
 done:
 
 	// 6. Verify: 3 output events + 1 completion event = 4 total
@@ -361,17 +394,21 @@ done:
 		taskguildv1.ScriptLogStream_SCRIPT_LOG_STREAM_STDERR,
 		taskguildv1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT,
 	}
+
 	for i := range 3 {
 		out, ok := events[i].GetEvent().(*taskguildv1.ScriptExecutionEvent_Output)
 		if !ok {
 			t.Fatalf("event %d: expected output event", i)
 		}
+
 		if len(out.Output.GetEntries()) != 1 {
 			t.Fatalf("event %d: expected 1 entry, got %d", i, len(out.Output.GetEntries()))
 		}
+
 		if out.Output.GetEntries()[0].GetText() != expectedTexts[i] {
 			t.Errorf("event %d: expected text %q, got %q", i, expectedTexts[i], out.Output.GetEntries()[0].GetText())
 		}
+
 		if out.Output.GetEntries()[0].GetStream() != expectedStreams[i] {
 			t.Errorf("event %d: expected stream %v, got %v", i, expectedStreams[i], out.Output.GetEntries()[0].GetStream())
 		}
@@ -382,12 +419,15 @@ done:
 	if !ok {
 		t.Fatal("event 3: expected complete event")
 	}
+
 	if !comp.Complete.GetSuccess() {
 		t.Error("expected success=true")
 	}
+
 	if comp.Complete.GetExitCode() != 0 {
 		t.Errorf("expected exitCode=0, got %d", comp.Complete.GetExitCode())
 	}
+
 	if len(comp.Complete.GetLogEntries()) != 3 {
 		t.Errorf("expected 3 log entries in completion, got %d", len(comp.Complete.GetLogEntries()))
 	}
@@ -399,9 +439,11 @@ done:
 	if err != nil {
 		t.Fatalf("ListActiveExecutions failed: %v", err)
 	}
+
 	if len(listResp.Msg.GetExecutions()) != 1 {
 		t.Fatalf("expected 1 execution in list, got %d", len(listResp.Msg.GetExecutions()))
 	}
+
 	if !listResp.Msg.GetExecutions()[0].GetCompleted() {
 		t.Error("expected execution to be marked completed")
 	}
@@ -418,6 +460,7 @@ func TestEndToEnd_ExecuteFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ExecuteScript failed: %v", err)
 	}
+
 	requestID := execResp.Msg.GetRequestId()
 
 	// Subscribe
@@ -432,18 +475,22 @@ func TestEndToEnd_ExecuteFailure(t *testing.T) {
 
 	// Collect events
 	var events []*taskguildv1.ScriptExecutionEvent
+
 	timeout := time.After(2 * time.Second)
+
 	for {
 		select {
 		case evt, ok := <-ch:
 			if !ok {
 				goto done
 			}
+
 			events = append(events, evt)
 		case <-timeout:
 			t.Fatal("timed out waiting for events")
 		}
 	}
+
 done:
 
 	if len(events) != 2 {
@@ -454,12 +501,15 @@ done:
 	if !ok {
 		t.Fatal("event 1: expected complete event")
 	}
+
 	if comp.Complete.GetSuccess() {
 		t.Error("expected success=false")
 	}
+
 	if comp.Complete.GetExitCode() != 126 {
 		t.Errorf("expected exitCode=126, got %d", comp.Complete.GetExitCode())
 	}
+
 	if comp.Complete.GetErrorMessage() != "permission denied" {
 		t.Errorf("expected errorMessage=%q, got %q", "permission denied", comp.Complete.GetErrorMessage())
 	}
@@ -476,6 +526,7 @@ func TestEndToEnd_StoppedByUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ExecuteScript failed: %v", err)
 	}
+
 	requestID := execResp.Msg.GetRequestId()
 
 	// Subscribe
@@ -487,18 +538,22 @@ func TestEndToEnd_StoppedByUser(t *testing.T) {
 
 	// Collect events
 	var events []*taskguildv1.ScriptExecutionEvent
+
 	timeout := time.After(2 * time.Second)
+
 	for {
 		select {
 		case evt, ok := <-ch:
 			if !ok {
 				goto done
 			}
+
 			events = append(events, evt)
 		case <-timeout:
 			t.Fatal("timed out waiting for events")
 		}
 	}
+
 done:
 
 	if len(events) != 1 {
@@ -509,9 +564,11 @@ done:
 	if !ok {
 		t.Fatal("event 0: expected complete event")
 	}
+
 	if comp.Complete.GetSuccess() {
 		t.Error("expected success=false")
 	}
+
 	if !comp.Complete.GetStoppedByUser() {
 		t.Error("expected stoppedByUser=true")
 	}
@@ -528,6 +585,7 @@ func TestEndToEnd_LateJoinerGetsFullReplay(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ExecuteScript failed: %v", err)
 	}
+
 	requestID := execResp.Msg.GetRequestId()
 
 	// Agent sends output and completes BEFORE anyone subscribes
@@ -546,18 +604,22 @@ func TestEndToEnd_LateJoinerGetsFullReplay(t *testing.T) {
 	}
 
 	var events []*taskguildv1.ScriptExecutionEvent
+
 	timeout := time.After(2 * time.Second)
+
 	for {
 		select {
 		case evt, ok := <-ch:
 			if !ok {
 				goto done
 			}
+
 			events = append(events, evt)
 		case <-timeout:
 			t.Fatal("timed out waiting for events")
 		}
 	}
+
 done:
 
 	// Should get all 3 events: 2 output + 1 complete
@@ -568,9 +630,11 @@ done:
 	if _, ok := events[0].GetEvent().(*taskguildv1.ScriptExecutionEvent_Output); !ok {
 		t.Error("event 0: expected output")
 	}
+
 	if _, ok := events[1].GetEvent().(*taskguildv1.ScriptExecutionEvent_Output); !ok {
 		t.Error("event 1: expected output")
 	}
+
 	if _, ok := events[2].GetEvent().(*taskguildv1.ScriptExecutionEvent_Complete); !ok {
 		t.Error("event 2: expected complete")
 	}

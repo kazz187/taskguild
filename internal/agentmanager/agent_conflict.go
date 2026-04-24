@@ -166,6 +166,7 @@ func (s *Server) ResolveAgentConflict(ctx context.Context, req *connect.Request[
 			if parseErr != nil {
 				return nil, cerr.NewError(cerr.InvalidArgument, fmt.Sprintf("failed to parse agent content: %v", parseErr), nil).ConnectError()
 			}
+
 			resultAgent.Description = parsed.Description
 			resultAgent.Prompt = parsed.Prompt
 			resultAgent.Tools = parsed.Tools
@@ -175,6 +176,7 @@ func (s *Server) ResolveAgentConflict(ctx context.Context, req *connect.Request[
 			resultAgent.Skills = parsed.Skills
 			resultAgent.Memory = parsed.Memory
 			resultAgent.IsSynced = true
+
 			resultAgent.UpdatedAt = time.Now()
 			if err := s.agentRepo.Update(ctx, resultAgent); err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)
@@ -185,7 +187,9 @@ func (s *Server) ResolveAgentConflict(ctx context.Context, req *connect.Request[
 			if parseErr != nil {
 				return nil, cerr.NewError(cerr.InvalidArgument, fmt.Sprintf("failed to parse agent content: %v", parseErr), nil).ConnectError()
 			}
+
 			now := time.Now()
+
 			resultAgent = &agent.Agent{
 				ID:              ulid.Make().String(),
 				ProjectID:       req.Msg.GetProjectId(),
@@ -247,11 +251,14 @@ func (s *Server) removeAgentDiff(projectID, agentID, filename string) {
 		if agentID != "" && d.GetAgentId() == agentID {
 			continue // remove this diff
 		}
+
 		if agentID == "" && filename != "" && d.GetFilename() == filename {
 			continue // remove agent-only diff by filename
 		}
+
 		filtered = append(filtered, d)
 	}
+
 	s.agentDiffCache[projectID] = filtered
 }
 
@@ -269,12 +276,14 @@ func parseAgentMDContent(content string) (*parsedAgentMD, error) {
 
 	// Find closing ---.
 	closingIdx := -1
+
 	for i := 1; i < len(lines); i++ {
 		if strings.TrimSpace(lines[i]) == "---" {
 			closingIdx = i
 			break
 		}
 	}
+
 	if closingIdx == -1 {
 		result.Prompt = content
 		return result, nil

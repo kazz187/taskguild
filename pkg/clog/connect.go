@@ -51,18 +51,23 @@ func NewSlogConnectUnaryInterceptor(opts ...ConnectOption) connect.UnaryIntercep
 				"stream_type":       req.Spec().StreamType.String(),
 				"idempotency_level": req.Spec().IdempotencyLevel.String(),
 			})
+
 			resp, err := next(newCtx, req)
 			if cfg.Filter != nil && !cfg.Filter(req.Spec()) {
 				return resp, err
 			}
+
 			codeStr := "ok"
+
 			var cerr *connect.Error
 			if err != nil {
 				if !errors.As(err, &cerr) {
 					cerr = connect.NewError(connect.CodeUnknown, err)
 				}
+
 				codeStr = cerr.Code().String()
 			}
+
 			AddAttributes(newCtx, map[string]any{
 				"code":     codeStr,
 				"duration": time.Since(startTime),
@@ -73,6 +78,7 @@ func NewSlogConnectUnaryInterceptor(opts ...ConnectOption) connect.UnaryIntercep
 			} else {
 				logConnectError(newCtx, cerr)
 			}
+
 			return resp, err
 		}
 	}
@@ -108,7 +114,9 @@ func (s *slogConnectInterceptor) WrapStreamingHandler(next connect.StreamingHand
 		if s.cfg.Filter != nil && !s.cfg.Filter(conn.Spec()) {
 			return err
 		}
+
 		codeStr := "ok"
+
 		var cerr *connect.Error
 		if err != nil {
 			if errors.As(err, &cerr) {
@@ -118,15 +126,18 @@ func (s *slogConnectInterceptor) WrapStreamingHandler(next connect.StreamingHand
 				codeStr = cerr.Code().String()
 			}
 		}
+
 		AddAttributes(newCtx, map[string]any{
 			"code":     codeStr,
 			"duration": time.Since(startTime),
 		})
+
 		if cerr == nil {
 			slog.InfoContext(newCtx, "Finished")
 		} else {
 			logConnectError(newCtx, cerr)
 		}
+
 		return err
 	}
 }
@@ -152,8 +163,10 @@ func logConnectError(ctx context.Context, cerr *connect.Error) {
 				slog.ErrorContext(ctx, "failed to convert detail value", ErrorAttributeKey, err)
 				continue
 			}
+
 			details = append(details, val)
 		}
+
 		AddAttribute(ctx, "err_details", details)
 	}
 

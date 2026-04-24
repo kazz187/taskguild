@@ -50,6 +50,7 @@ func newTurnLog(workDir, projectID, taskID, label string) *turnLog {
 	if projectDir == "" {
 		projectDir = "_system"
 	}
+
 	taskDir := taskID
 	if taskDir == "" {
 		taskDir = "_system"
@@ -70,6 +71,7 @@ func newTurnLog(workDir, projectID, taskID, label string) *turnLog {
 			if entries[i].IsDir() {
 				continue
 			}
+
 			_ = os.Remove(filepath.Join(logDir, entries[i].Name()))
 		}
 	}
@@ -86,6 +88,7 @@ func newTurnLog(workDir, projectID, taskID, label string) *turnLog {
 
 	tl := &turnLog{file: f}
 	tl.write(fmt.Sprintf("# Turn log: %s\n# Project: %s\n# Task: %s\n# Label: %s\n", ts, projectID, taskID, label))
+
 	return tl
 }
 
@@ -93,6 +96,7 @@ func newTurnLog(workDir, projectID, taskID, label string) *turnLog {
 func (tl *turnLog) Close() {
 	tl.mu.Lock()
 	defer tl.mu.Unlock()
+
 	if tl.file != nil {
 		tl.file.Close()
 		tl.file = nil
@@ -104,6 +108,7 @@ func (tl *turnLog) write(s string) {
 	if tl.file == nil {
 		return
 	}
+
 	if _, err := tl.file.WriteString(s); err != nil {
 		slog.Warn("failed to write to turn-log", "error", err)
 	}
@@ -113,6 +118,7 @@ func (tl *turnLog) write(s string) {
 func (tl *turnLog) writeLocked(s string) {
 	tl.mu.Lock()
 	defer tl.mu.Unlock()
+
 	tl.write(s)
 }
 
@@ -129,13 +135,16 @@ func (tl *turnLog) LogCommandArgs(args []string) {
 	if tl.file == nil || len(args) == 0 {
 		return
 	}
+
 	var sb strings.Builder
 	sb.WriteString(separator())
 	sb.WriteString(fmt.Sprintf("[%s] ## Command Args\n\n", ts()))
+
 	for _, arg := range args {
 		sb.WriteString(arg)
 		sb.WriteString("\n")
 	}
+
 	sb.WriteString(fmt.Sprintf("\n# Full command:\n%s\n", strings.Join(args, " ")))
 	tl.writeLocked(sb.String())
 }
@@ -145,6 +154,7 @@ func (tl *turnLog) LogStdinMessage(jsonData []byte) {
 	if tl.file == nil {
 		return
 	}
+
 	var sb strings.Builder
 	sb.WriteString(separator())
 	sb.WriteString(fmt.Sprintf("[%s] ## Stdin Message\n\n", ts()))
@@ -155,6 +165,7 @@ func (tl *turnLog) LogStdinMessage(jsonData []byte) {
 	} else {
 		sb.Write(jsonData)
 	}
+
 	sb.WriteString("\n")
 	tl.writeLocked(sb.String())
 }
@@ -164,6 +175,7 @@ func (tl *turnLog) LogMessage(msg claudeagent.Message) {
 	if tl.file == nil {
 		return
 	}
+
 	tl.mu.Lock()
 	idx := tl.idx
 	tl.idx++
@@ -177,12 +189,14 @@ func (tl *turnLog) LogMessage(msg claudeagent.Message) {
 
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("\n[%s] ## Message[%d]\n", ts(), idx))
+
 	var prettyJSON bytes.Buffer
 	if err := json.Indent(&prettyJSON, data, "", "  "); err == nil {
 		sb.WriteString(prettyJSON.String())
 	} else {
 		sb.Write(data)
 	}
+
 	sb.WriteString("\n")
 	tl.writeLocked(sb.String())
 }
@@ -192,6 +206,7 @@ func (tl *turnLog) LogResult(result *claudeagent.ResultMessage, queryErr error) 
 	if tl.file == nil {
 		return
 	}
+
 	var sb strings.Builder
 	sb.WriteString(separator())
 	sb.WriteString(fmt.Sprintf("[%s] ## Final Result\n\n", ts()))
@@ -205,16 +220,20 @@ func (tl *turnLog) LogResult(result *claudeagent.ResultMessage, queryErr error) 
 	} else {
 		sb.WriteString(fmt.Sprintf("Session ID: %s\n", result.SessionID))
 		sb.WriteString(fmt.Sprintf("Is Error: %v\n", result.IsError))
+
 		if result.StopReason != "" {
 			sb.WriteString(fmt.Sprintf("Stop Reason: %s\n", result.StopReason))
 		}
+
 		if len(result.Errors) > 0 {
 			sb.WriteString(fmt.Sprintf("Errors: %v\n", result.Errors))
 		}
+
 		sb.WriteString(fmt.Sprintf("Result Text (%d chars):\n", len(result.Result)))
 		sb.WriteString(result.Result)
 		sb.WriteString("\n")
 	}
+
 	tl.writeLocked(sb.String())
 }
 
@@ -240,6 +259,7 @@ func runQuerySyncWithLog(
 		if opts.PermissionPromptToolName != "" {
 			return nil, errors.New("CanUseTool callback cannot be used with PermissionPromptToolName")
 		}
+
 		opts.PermissionPromptToolName = "stdio"
 	}
 
@@ -263,6 +283,7 @@ func runQuerySyncWithLog(
 
 	// Calculate initialize timeout (matching RunQuery behavior).
 	initTimeout := 60 * time.Second
+
 	if timeoutStr := os.Getenv("CLAUDE_CODE_INIT_TIMEOUT"); timeoutStr != "" {
 		if ms, err := strconv.ParseInt(timeoutStr, 10, 64); err == nil {
 			initTimeout = time.Duration(ms) * time.Millisecond
@@ -295,17 +316,21 @@ func runQuerySyncWithLog(
 		},
 		SessionID: "default",
 	}
+
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return nil, err
 	}
+
 	if err := transport.Write(ctx, string(data)+"\n"); err != nil {
 		return nil, err
 	}
+
 	tl.LogStdinMessage(data)
 
 	// Handle stdin closure.
 	hasHooks := len(opts.Hooks) > 0
+
 	hasCanUseTool := opts.CanUseTool != nil
 	if !hasHooks && !hasCanUseTool {
 		// No control protocol needed after sending the message.
@@ -336,7 +361,9 @@ func runQuerySyncWithLog(
 					tl.LogResult(result.Result, nil)
 					return result, nil
 				}
+
 				tl.LogResult(result.Result, err)
+
 				return result, err
 			}
 		case rawMsg, ok := <-rawMsgChan:
@@ -351,9 +378,12 @@ func runQuerySyncWithLog(
 				if _, isParseErr := err.(*claudeagent.MessageParseError); isParseErr {
 					continue
 				}
+
 				tl.LogResult(result.Result, err)
+
 				return result, err
 			}
+
 			if parsed == nil {
 				continue
 			}
@@ -363,10 +393,12 @@ func runQuerySyncWithLog(
 
 			if rm, ok := parsed.(*claudeagent.ResultMessage); ok {
 				result.Result = rm
+
 				slog.Info("ResultMessage received, starting cleanup")
 				// Close stdin to signal CLI that no more input is coming.
 				if !stdinClosed {
 					transport.EndInput()
+
 					stdinClosed = true
 				}
 				// Cancel the transport context so exec.CommandContext's
@@ -379,6 +411,7 @@ func runQuerySyncWithLog(
 				// waits for the process to exit via cmd.Wait().
 				transport.Close()
 				tl.LogResult(result.Result, nil)
+
 				return result, nil
 			}
 		}

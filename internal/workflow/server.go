@@ -28,6 +28,7 @@ func NewServer(repo Repository) *Server {
 
 func (s *Server) CreateWorkflow(ctx context.Context, req *connect.Request[taskguildv1.CreateWorkflowRequest]) (*connect.Response[taskguildv1.CreateWorkflowResponse], error) {
 	now := time.Now()
+
 	w := &Workflow{
 		ID:                    ulid.Make().String(),
 		ProjectID:             req.Msg.GetProjectId(),
@@ -42,15 +43,19 @@ func (s *Server) CreateWorkflow(ctx context.Context, req *connect.Request[taskgu
 	if err := validateStatuses(req.Msg.GetStatuses()); err != nil {
 		return nil, err
 	}
+
 	for _, ps := range req.Msg.GetStatuses() {
 		w.Statuses = append(w.Statuses, statusFromProto(ps))
 	}
+
 	for _, pa := range req.Msg.GetAgentConfigs() {
 		w.AgentConfigs = append(w.AgentConfigs, agentConfigFromProto(pa))
 	}
+
 	if err := s.repo.Create(ctx, w); err != nil {
 		return nil, err
 	}
+
 	return connect.NewResponse(&taskguildv1.CreateWorkflowResponse{
 		Workflow: toProto(w),
 	}), nil
@@ -61,6 +66,7 @@ func (s *Server) GetWorkflow(ctx context.Context, req *connect.Request[taskguild
 	if err != nil {
 		return nil, err
 	}
+
 	return connect.NewResponse(&taskguildv1.GetWorkflowResponse{
 		Workflow: toProto(w),
 	}), nil
@@ -68,20 +74,25 @@ func (s *Server) GetWorkflow(ctx context.Context, req *connect.Request[taskguild
 
 func (s *Server) ListWorkflows(ctx context.Context, req *connect.Request[taskguildv1.ListWorkflowsRequest]) (*connect.Response[taskguildv1.ListWorkflowsResponse], error) {
 	limit, offset := int32(50), int32(0)
+
 	if req.Msg.GetPagination() != nil {
 		if req.Msg.GetPagination().GetLimit() > 0 {
 			limit = req.Msg.GetPagination().GetLimit()
 		}
+
 		offset = req.Msg.GetPagination().GetOffset()
 	}
+
 	workflows, total, err := s.repo.List(ctx, req.Msg.GetProjectId(), int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}
+
 	protos := make([]*taskguildv1.Workflow, len(workflows))
 	for i, w := range workflows {
 		protos[i] = toProto(w)
 	}
+
 	return connect.NewResponse(&taskguildv1.ListWorkflowsResponse{
 		Workflows: protos,
 		Pagination: &taskguildv1.PaginationResponse{
@@ -97,21 +108,26 @@ func (s *Server) UpdateWorkflow(ctx context.Context, req *connect.Request[taskgu
 	if err != nil {
 		return nil, err
 	}
+
 	if req.Msg.GetName() != "" {
 		w.Name = req.Msg.GetName()
 	}
+
 	if req.Msg.GetDescription() != "" {
 		w.Description = req.Msg.GetDescription()
 	}
+
 	if req.Msg.Statuses != nil {
 		if err := validateStatuses(req.Msg.GetStatuses()); err != nil {
 			return nil, err
 		}
+
 		w.Statuses = nil
 		for _, ps := range req.Msg.GetStatuses() {
 			w.Statuses = append(w.Statuses, statusFromProto(ps))
 		}
 	}
+
 	if req.Msg.AgentConfigs != nil {
 		w.AgentConfigs = nil
 		for _, pa := range req.Msg.GetAgentConfigs() {
@@ -122,10 +138,12 @@ func (s *Server) UpdateWorkflow(ctx context.Context, req *connect.Request[taskgu
 	w.DefaultPermissionMode = req.Msg.GetDefaultPermissionMode()
 	w.DefaultUseWorktree = req.Msg.GetDefaultUseWorktree()
 	w.CustomPrompt = req.Msg.GetCustomPrompt()
+
 	w.UpdatedAt = time.Now()
 	if err := s.repo.Update(ctx, w); err != nil {
 		return nil, err
 	}
+
 	return connect.NewResponse(&taskguildv1.UpdateWorkflowResponse{
 		Workflow: toProto(w),
 	}), nil
@@ -135,6 +153,7 @@ func (s *Server) DeleteWorkflow(ctx context.Context, req *connect.Request[taskgu
 	if err := s.repo.Delete(ctx, req.Msg.GetId()); err != nil {
 		return nil, err
 	}
+
 	return connect.NewResponse(&taskguildv1.DeleteWorkflowResponse{}), nil
 }
 
@@ -153,9 +172,11 @@ func toProto(w *Workflow) *taskguildv1.Workflow {
 	for _, st := range w.Statuses {
 		pb.Statuses = append(pb.Statuses, statusToProto(st))
 	}
+
 	for _, ac := range w.AgentConfigs {
 		pb.AgentConfigs = append(pb.AgentConfigs, agentConfigToProto(ac))
 	}
+
 	return pb
 }
 
@@ -181,6 +202,7 @@ func statusToProto(s Status) *taskguildv1.WorkflowStatus {
 	for _, h := range s.Hooks {
 		pb.Hooks = append(pb.Hooks, hookToProto(h))
 	}
+
 	return pb
 }
 
@@ -224,16 +246,20 @@ func agentConfigToProto(a AgentConfig) *taskguildv1.AgentConfig {
 
 func validateStatuses(statuses []*taskguildv1.WorkflowStatus) error {
 	seen := make(map[string]bool)
+
 	for _, s := range statuses {
 		name := s.GetName()
 		if !alphanumericRe.MatchString(name) {
 			return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("status name %q must be alphanumeric", name))
 		}
+
 		if seen[name] {
 			return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("duplicate status name %q", name))
 		}
+
 		seen[name] = true
 	}
+
 	return nil
 }
 
@@ -258,6 +284,7 @@ func statusFromProto(ps *taskguildv1.WorkflowStatus) Status {
 	for _, ph := range ps.GetHooks() {
 		s.Hooks = append(s.Hooks, hookFromProto(ph))
 	}
+
 	return s
 }
 
@@ -266,6 +293,7 @@ func hookFromProto(ph *taskguildv1.StatusHook) StatusHook {
 	if id == "" {
 		id = ulid.Make().String()
 	}
+
 	return StatusHook{
 		ID:         id,
 		SkillID:    ph.GetSkillId(),
@@ -319,6 +347,7 @@ func agentConfigFromProto(pa *taskguildv1.AgentConfig) AgentConfig {
 	if id == "" {
 		id = ulid.Make().String()
 	}
+
 	return AgentConfig{
 		ID:               id,
 		WorkflowStatusID: pa.GetWorkflowStatusId(),

@@ -30,11 +30,13 @@ func NewRegistry() *Registry {
 
 func (r *Registry) Register(agentManagerID string, maxConcurrentTasks int32, projectName string, workDir string) chan *taskguildv1.AgentCommand {
 	ch := make(chan *taskguildv1.AgentCommand, 64)
+
 	r.mu.Lock()
 	// Close existing connection if re-registering.
 	if old, ok := r.conns[agentManagerID]; ok {
 		close(old.commandCh)
 	}
+
 	r.conns[agentManagerID] = &connection{
 		agentManagerID:     agentManagerID,
 		maxConcurrentTasks: maxConcurrentTasks,
@@ -44,6 +46,7 @@ func (r *Registry) Register(agentManagerID string, maxConcurrentTasks int32, pro
 		commandCh:          ch,
 	}
 	r.mu.Unlock()
+
 	return ch
 }
 
@@ -59,12 +62,15 @@ func (r *Registry) Unregister(agentManagerID string) {
 func (r *Registry) UpdateHeartbeat(agentManagerID string, activeTasks int32) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
 	conn, ok := r.conns[agentManagerID]
 	if !ok {
 		return false
 	}
+
 	conn.lastHeartbeat = time.Now()
 	conn.activeTasks = activeTasks
+
 	return true
 }
 
@@ -73,9 +79,11 @@ func (r *Registry) SendCommand(agentManagerID string, cmd *taskguildv1.AgentComm
 	r.mu.RLock()
 	conn, ok := r.conns[agentManagerID]
 	r.mu.RUnlock()
+
 	if !ok {
 		return false
 	}
+
 	select {
 	case conn.commandCh <- cmd:
 		return true
@@ -91,20 +99,26 @@ func (r *Registry) FindAvailable() (string, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	var bestID string
-	var bestActive int32 = -1
+	var (
+		bestID     string
+		bestActive int32 = -1
+	)
+
 	for _, conn := range r.conns {
 		if conn.activeTasks >= conn.maxConcurrentTasks {
 			continue
 		}
+
 		if bestActive < 0 || conn.activeTasks < bestActive {
 			bestID = conn.agentManagerID
 			bestActive = conn.activeTasks
 		}
 	}
+
 	if bestActive < 0 {
 		return "", false
 	}
+
 	return bestID, true
 }
 
@@ -112,6 +126,7 @@ func (r *Registry) FindAvailable() (string, bool) {
 func (r *Registry) BroadcastCommand(cmd *taskguildv1.AgentCommand) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
+
 	for _, conn := range r.conns {
 		select {
 		case conn.commandCh <- cmd:
@@ -126,10 +141,12 @@ func (r *Registry) BroadcastCommand(cmd *taskguildv1.AgentCommand) {
 func (r *Registry) BroadcastCommandToProject(projectName string, cmd *taskguildv1.AgentCommand) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
+
 	for _, conn := range r.conns {
 		if conn.projectName != "" && conn.projectName != projectName {
 			continue
 		}
+
 		select {
 		case conn.commandCh <- cmd:
 		default:
@@ -146,12 +163,15 @@ func (r *Registry) BroadcastCommandToProject(projectName string, cmd *taskguildv
 func (r *Registry) UnregisterIfMatch(agentManagerID string, ch chan *taskguildv1.AgentCommand) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
 	conn, ok := r.conns[agentManagerID]
 	if !ok || conn.commandCh != ch {
 		return false
 	}
+
 	close(conn.commandCh)
 	delete(r.conns, agentManagerID)
+
 	return true
 }
 
@@ -159,10 +179,12 @@ func (r *Registry) UnregisterIfMatch(agentManagerID string, ch chan *taskguildv1
 func (r *Registry) GetProjectName(agentManagerID string) (string, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
+
 	conn, ok := r.conns[agentManagerID]
 	if !ok {
 		return "", false
 	}
+
 	return conn.projectName, true
 }
 
@@ -172,11 +194,13 @@ func (r *Registry) GetProjectName(agentManagerID string) (string, bool) {
 func (r *Registry) HasConnectedAgentForProject(projectName string) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
+
 	for _, conn := range r.conns {
 		if conn.projectName == "" || conn.projectName == projectName {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -186,10 +210,12 @@ func (r *Registry) HasConnectedAgentForProject(projectName string) bool {
 func (r *Registry) GetWorkDirForProject(projectName string) (string, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
+
 	for _, conn := range r.conns {
 		if conn.projectName == projectName && conn.workDir != "" {
 			return conn.workDir, true
 		}
 	}
+
 	return "", false
 }

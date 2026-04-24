@@ -41,11 +41,13 @@ func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[task
 
 	// When project_id is provided, resolve to task IDs for filtering.
 	var taskIDs []string
+
 	if req.Msg.GetProjectId() != "" {
 		tasks, _, err := s.taskRepo.List(ctx, req.Msg.GetProjectId(), "", "", 0, 0)
 		if err != nil {
 			return nil, err
 		}
+
 		taskIDs = make([]string, len(tasks))
 		for i, t := range tasks {
 			taskIDs[i] = t.ID
@@ -62,16 +64,19 @@ func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[task
 	for _, inter := range interactions {
 		uniqueTaskIDs[inter.TaskID] = struct{}{}
 	}
+
 	ids := make([]string, 0, len(uniqueTaskIDs))
 	for id := range uniqueTaskIDs {
 		ids = append(ids, id)
 	}
+
 	taskTitles, taskProjectIDs := task.ResolveAll(ctx, s.taskRepo, ids)
 
 	protos := make([]*taskguildv1.Interaction, len(interactions))
 	for i, inter := range interactions {
 		protos[i] = ToProto(inter)
 	}
+
 	return connect.NewResponse(&taskguildv1.ListInteractionsResponse{
 		Interactions: protos,
 		Pagination: &taskguildv1.PaginationResponse{
@@ -120,6 +125,7 @@ func (s *Server) RespondToInteractionByToken(ctx context.Context, req *connect.R
 	if req.Msg.GetToken() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "token is required", nil).ConnectError()
 	}
+
 	if req.Msg.GetResponse() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "response is required", nil).ConnectError()
 	}
@@ -192,6 +198,7 @@ func (s *Server) SendMessage(ctx context.Context, req *connect.Request[taskguild
 	if req.Msg.GetTaskId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "task_id is required", nil).ConnectError()
 	}
+
 	if req.Msg.GetMessage() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "message is required", nil).ConnectError()
 	}
@@ -264,8 +271,10 @@ func (s *Server) SubscribeInteractions(ctx context.Context, req *connect.Request
 					slog.Warn("failed to get interaction for stream", "id", event.GetResourceId(), "error", err)
 					continue
 				}
+
 				interProto = ToProto(inter)
 			}
+
 			if err := stream.Send(&taskguildv1.InteractionEvent{
 				Interaction: interProto,
 			}); err != nil {
@@ -296,8 +305,10 @@ func ToProto(i *Interaction) *taskguildv1.Interaction {
 			Description: opt.Description,
 		})
 	}
+
 	if i.RespondedAt != nil {
 		pb.RespondedAt = timestamppb.New(*i.RespondedAt)
 	}
+
 	return pb
 }

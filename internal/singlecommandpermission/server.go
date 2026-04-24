@@ -23,10 +23,12 @@ func validateWildcardPattern(pattern string) error {
 	if pattern == "" {
 		return errors.New("pattern must not be empty")
 	}
+
 	regex := wildcardToRegex(pattern)
 	if _, err := regexp.Compile(regex); err != nil {
 		return fmt.Errorf("invalid wildcard pattern: %s", err)
 	}
+
 	return nil
 }
 
@@ -36,6 +38,7 @@ func wildcardToRegex(pattern string) string {
 	for i, p := range parts {
 		parts[i] = regexp.QuoteMeta(p)
 	}
+
 	return "^" + strings.Join(parts, ".*") + "$"
 }
 

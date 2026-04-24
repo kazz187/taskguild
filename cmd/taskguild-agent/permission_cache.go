@@ -38,6 +38,7 @@ func newPermissionCache(projectName string, client taskguildv1connect.AgentManag
 func (c *permissionCache) Update(rules []string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	c.allowRules = make([]string, len(rules))
 	copy(c.allowRules, rules)
 	slog.Info("permission cache updated", "allow_rules", len(rules))
@@ -53,6 +54,7 @@ func (c *permissionCache) Check(toolName string, input map[string]any) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -83,6 +85,7 @@ func (c *permissionCache) AddAndSync(ctx context.Context, newRules []string) {
 
 	// Replace cache with the backend's authoritative merged list.
 	merged := resp.Msg.GetPermissions()
+
 	c.mu.Lock()
 	c.allowRules = merged.GetAllow()
 	c.mu.Unlock()
@@ -98,11 +101,13 @@ func (c *permissionCache) AddAndSync(ctx context.Context, newRules []string) {
 //   - PermissionRuleValue{ToolName: "Bash", RuleContent: "git *"} → "Bash(git *)"
 func extractRuleStrings(updates []*claudeagent.PermissionUpdate) []string {
 	var rules []string
+
 	for _, u := range updates {
 		for _, rule := range u.Rules {
 			rules = append(rules, ruleValueToString(rule))
 		}
 	}
+
 	return rules
 }
 
@@ -112,12 +117,14 @@ func ruleValueToString(rule *claudeagent.PermissionRuleValue) string {
 	if rule.RuleContent == "" {
 		return rule.ToolName
 	}
+
 	return fmt.Sprintf("%s(%s)", rule.ToolName, rule.RuleContent)
 }
 
 // unionDedupRules merges two string slices, removing duplicates while preserving order.
 func unionDedupRules(a, b []string) []string {
 	seen := make(map[string]bool, len(a)+len(b))
+
 	result := make([]string, 0, len(a)+len(b))
 	for _, s := range a {
 		if !seen[s] {
@@ -125,12 +132,14 @@ func unionDedupRules(a, b []string) []string {
 			result = append(result, s)
 		}
 	}
+
 	for _, s := range b {
 		if !seen[s] {
 			seen[s] = true
 			result = append(result, s)
 		}
 	}
+
 	return result
 }
 
@@ -182,6 +191,7 @@ func parsePermissionRule(rule string) (toolName, pattern string, hasPattern bool
 	if !strings.HasSuffix(rule, ")") {
 		return rule, "", false
 	}
+
 	return rule[:idx], rule[idx+1 : len(rule)-1], true
 }
 
@@ -192,9 +202,11 @@ func matchGlob(pattern, value string) bool {
 	if pattern == "*" {
 		return true
 	}
+
 	if pattern == "" {
 		return value == ""
 	}
+
 	if !strings.Contains(pattern, "*") {
 		return pattern == value
 	}
@@ -205,6 +217,7 @@ func matchGlob(pattern, value string) bool {
 	if !strings.HasPrefix(value, parts[0]) {
 		return false
 	}
+
 	remaining := value[len(parts[0]):]
 
 	// Middle segments must appear in order.
@@ -213,10 +226,12 @@ func matchGlob(pattern, value string) bool {
 		if idx < 0 {
 			return false
 		}
+
 		remaining = remaining[idx+len(parts[i]):]
 	}
 
 	// Last segment must match as a suffix.
 	last := parts[len(parts)-1]
+
 	return strings.HasSuffix(remaining, last)
 }

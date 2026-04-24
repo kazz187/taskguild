@@ -43,18 +43,22 @@ func (r *YAMLRepository) ensureIndex(ctx context.Context) {
 	r.indexOnce.Do(func() {
 		r.indexMu.Lock()
 		defer r.indexMu.Unlock()
+
 		r.idToProject = make(map[string]string)
 
 		dirs, err := r.storage.ListDirs(ctx, projectsPrefix)
 		if err != nil {
 			return
 		}
+
 		for _, d := range dirs {
 			pid := filepath.Base(d)
+
 			files, err := r.storage.List(ctx, entityPrefix(pid))
 			if err != nil {
 				continue
 			}
+
 			for _, f := range files {
 				id := strings.TrimSuffix(filepath.Base(f), ".yaml")
 				r.idToProject[id] = pid
@@ -69,6 +73,7 @@ func (r *YAMLRepository) Create(ctx context.Context, s *script.Script) error {
 	r.indexMu.RLock()
 	_, exists := r.idToProject[s.ID]
 	r.indexMu.RUnlock()
+
 	if exists {
 		return cerr.NewError(cerr.AlreadyExists, "script already exists", nil)
 	}
@@ -77,6 +82,7 @@ func (r *YAMLRepository) Create(ctx context.Context, s *script.Script) error {
 	if err != nil {
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal script: %w", err))
 	}
+
 	if err := r.storage.Write(ctx, entityPath(s.ProjectID, s.ID), data); err != nil {
 		return cerr.WrapStorageWriteError("script", err)
 	}
@@ -84,6 +90,7 @@ func (r *YAMLRepository) Create(ctx context.Context, s *script.Script) error {
 	r.indexMu.Lock()
 	r.idToProject[s.ID] = s.ProjectID
 	r.indexMu.Unlock()
+
 	return nil
 }
 
@@ -93,6 +100,7 @@ func (r *YAMLRepository) Get(ctx context.Context, id string) (*script.Script, er
 	r.indexMu.RLock()
 	pid, ok := r.idToProject[id]
 	r.indexMu.RUnlock()
+
 	if !ok {
 		return nil, cerr.NewError(cerr.NotFound, "script not found", nil)
 	}
@@ -101,10 +109,12 @@ func (r *YAMLRepository) Get(ctx context.Context, id string) (*script.Script, er
 	if err != nil {
 		return nil, cerr.WrapStorageReadError("script", err)
 	}
+
 	var s script.Script
 	if err := yaml.Unmarshal(data, &s); err != nil {
 		return nil, cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to unmarshal script: %w", err))
 	}
+
 	return &s, nil
 }
 
@@ -112,32 +122,39 @@ func (r *YAMLRepository) List(ctx context.Context, projectID string, limit, offs
 	r.ensureIndex(ctx)
 
 	var filePaths []string
+
 	if projectID != "" {
 		paths, err := r.storage.List(ctx, entityPrefix(projectID))
 		if err != nil {
 			return nil, 0, cerr.WrapStorageReadError("scripts", err)
 		}
+
 		filePaths = paths
 	} else {
 		r.indexMu.RLock()
+
 		for id, pid := range r.idToProject {
 			filePaths = append(filePaths, entityPath(pid, id))
 		}
+
 		r.indexMu.RUnlock()
 	}
 
 	sort.Strings(filePaths)
 
 	var all []*script.Script
+
 	for _, p := range filePaths {
 		data, err := r.storage.Read(ctx, p)
 		if err != nil {
 			continue
 		}
+
 		var s script.Script
 		if err := yaml.Unmarshal(data, &s); err != nil {
 			continue
 		}
+
 		all = append(all, &s)
 	}
 
@@ -145,10 +162,12 @@ func (r *YAMLRepository) List(ctx context.Context, projectID string, limit, offs
 	if offset >= total {
 		return nil, total, nil
 	}
+
 	all = all[offset:]
 	if limit > 0 && len(all) > limit {
 		all = all[:limit]
 	}
+
 	return all, total, nil
 }
 
@@ -165,14 +184,17 @@ func (r *YAMLRepository) FindByName(ctx context.Context, projectID, name string)
 		if err != nil {
 			continue
 		}
+
 		var s script.Script
 		if err := yaml.Unmarshal(data, &s); err != nil {
 			continue
 		}
+
 		if s.ProjectID == projectID && s.Name == name {
 			return &s, nil
 		}
 	}
+
 	return nil, cerr.NewError(cerr.NotFound, "script not found", nil)
 }
 
@@ -182,6 +204,7 @@ func (r *YAMLRepository) Update(ctx context.Context, s *script.Script) error {
 	r.indexMu.RLock()
 	pid, ok := r.idToProject[s.ID]
 	r.indexMu.RUnlock()
+
 	if !ok {
 		return cerr.NewError(cerr.NotFound, "script not found", nil)
 	}
@@ -194,6 +217,7 @@ func (r *YAMLRepository) Update(ctx context.Context, s *script.Script) error {
 	if err != nil {
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal script: %w", err))
 	}
+
 	if err := r.storage.Write(ctx, entityPath(s.ProjectID, s.ID), data); err != nil {
 		return cerr.WrapStorageWriteError("script", err)
 	}
@@ -201,6 +225,7 @@ func (r *YAMLRepository) Update(ctx context.Context, s *script.Script) error {
 	r.indexMu.Lock()
 	r.idToProject[s.ID] = s.ProjectID
 	r.indexMu.Unlock()
+
 	return nil
 }
 
@@ -210,6 +235,7 @@ func (r *YAMLRepository) Delete(ctx context.Context, id string) error {
 	r.indexMu.RLock()
 	pid, ok := r.idToProject[id]
 	r.indexMu.RUnlock()
+
 	if !ok {
 		return cerr.NewError(cerr.NotFound, "script not found", nil)
 	}
@@ -221,5 +247,6 @@ func (r *YAMLRepository) Delete(ctx context.Context, id string) error {
 	r.indexMu.Lock()
 	delete(r.idToProject, id)
 	r.indexMu.Unlock()
+
 	return nil
 }

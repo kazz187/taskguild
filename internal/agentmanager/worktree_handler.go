@@ -101,6 +101,7 @@ func (s *Server) RequestWorktreeDelete(ctx context.Context, req *connect.Request
 	if req.Msg.GetProjectId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
 	}
+
 	if req.Msg.GetWorktreeName() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "worktree_name is required", nil).ConnectError()
 	}
@@ -157,6 +158,7 @@ func (s *Server) ReportWorktreeDeleteResult(ctx context.Context, req *connect.Re
 					filtered = append(filtered, wt)
 				}
 			}
+
 			s.worktreeCache[proj.ID] = filtered
 		}
 		s.worktreeMu.Unlock()

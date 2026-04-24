@@ -90,6 +90,7 @@ func Parse(input string) *ParseResult {
 // fallbackResult returns a ParseResult treating the whole input as one command.
 func fallbackResult(input string) *ParseResult {
 	parts := strings.Fields(input)
+
 	cmd := ParsedCommand{
 		Raw:        input,
 		Executable: "",
@@ -101,6 +102,7 @@ func fallbackResult(input string) *ParseResult {
 			cmd.Args = parts[1:]
 		}
 	}
+
 	return &ParseResult{
 		Commands: []ParsedCommand{cmd},
 		Original: input,
@@ -117,6 +119,7 @@ type extractor struct {
 func (e *extractor) nodeStr(node syntax.Node) string {
 	var buf bytes.Buffer
 	e.printer.Print(&buf, node)
+
 	return strings.TrimRight(buf.String(), "\n")
 }
 
@@ -158,6 +161,7 @@ func (e *extractor) walkStmt(stmt *syntax.Stmt) {
 		for _, s := range cmd.Cond {
 			e.walkStmt(s)
 		}
+
 		for _, s := range cmd.Do {
 			e.walkStmt(s)
 		}
@@ -248,9 +252,11 @@ func (e *extractor) handleCallExpr(cmd *syntax.CallExpr, outerRedirs []Redirect)
 			for _, a := range cmd.Assigns {
 				parts = append(parts, e.nodeStr(a))
 			}
+
 			raw := strings.Join(parts, " ")
 			e.addCommand(parts[0], parts[1:], raw, outerRedirs)
 		}
+
 		return
 	}
 
@@ -277,6 +283,7 @@ func (e *extractor) handleCallExpr(cmd *syntax.CallExpr, outerRedirs []Redirect)
 	}
 
 	executable := words[0]
+
 	var args []string
 	if len(words) > 1 {
 		args = words[1:]
@@ -296,12 +303,14 @@ func (e *extractor) handleDeclClause(cmd *syntax.DeclClause, redirs []Redirect) 
 	for _, a := range cmd.Args {
 		words = append(words, e.nodeStr(a))
 	}
+
 	raw := strings.Join(words, " ")
 
 	var args []string
 	if len(words) > 1 {
 		args = words[1:]
 	}
+
 	e.addCommand(cmd.Variant.Value, args, raw, redirs)
 }
 
@@ -311,14 +320,17 @@ func (e *extractor) walkWordForCmdSubst(w *syntax.Word) {
 	if w == nil {
 		return
 	}
+
 	syntax.Walk(w, func(node syntax.Node) bool {
 		switch n := node.(type) {
 		case *syntax.CmdSubst:
 			for _, s := range n.Stmts {
 				e.walkStmt(s)
 			}
+
 			return false // Don't descend further; we've already walked the stmts.
 		}
+
 		return true
 	})
 }
@@ -328,12 +340,14 @@ func (e *extractor) extractRedirects(redirs []*syntax.Redirect) []Redirect {
 	if len(redirs) == 0 {
 		return nil
 	}
+
 	result := make([]Redirect, 0, len(redirs))
 	for _, r := range redirs {
 		op := ""
 		if r.N != nil {
 			op = r.N.Value
 		}
+
 		op += r.Op.String()
 
 		path := ""
@@ -346,6 +360,7 @@ func (e *extractor) extractRedirects(redirs []*syntax.Redirect) []Redirect {
 			Path: path,
 		})
 	}
+
 	return result
 }
 

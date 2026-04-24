@@ -31,16 +31,20 @@ func (r *YAMLRepository) Create(ctx context.Context, p *project.Project) error {
 	if err != nil {
 		return cerr.WrapStorageWriteError("project", err)
 	}
+
 	if exists {
 		return cerr.NewError(cerr.AlreadyExists, "project already exists", nil)
 	}
+
 	data, err := yaml.Marshal(p)
 	if err != nil {
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal project: %w", err))
 	}
+
 	if err := r.storage.Write(ctx, path(p.ID), data); err != nil {
 		return cerr.WrapStorageWriteError("project", err)
 	}
+
 	return nil
 }
 
@@ -49,10 +53,12 @@ func (r *YAMLRepository) Get(ctx context.Context, id string) (*project.Project, 
 	if err != nil {
 		return nil, cerr.WrapStorageReadError("project", err)
 	}
+
 	var p project.Project
 	if err := yaml.Unmarshal(data, &p); err != nil {
 		return nil, cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to unmarshal project: %w", err))
 	}
+
 	return &p, nil
 }
 
@@ -61,11 +67,13 @@ func (r *YAMLRepository) FindByName(ctx context.Context, name string) (*project.
 	if err != nil {
 		return nil, err
 	}
+
 	for _, proj := range projects {
 		if proj.Name == name {
 			return proj, nil
 		}
 	}
+
 	return nil, cerr.NewError(cerr.NotFound, "project not found", nil)
 }
 
@@ -75,19 +83,24 @@ func (r *YAMLRepository) readAll(ctx context.Context) ([]*project.Project, error
 	if err != nil {
 		return nil, cerr.WrapStorageReadError("projects", err)
 	}
+
 	projects := make([]*project.Project, 0, len(dirs))
 	for _, d := range dirs {
 		projectPath := d + "/project.yaml"
+
 		data, err := r.storage.Read(ctx, projectPath)
 		if err != nil {
 			continue
 		}
+
 		var proj project.Project
 		if err := yaml.Unmarshal(data, &proj); err != nil {
 			continue
 		}
+
 		projects = append(projects, &proj)
 	}
+
 	return projects, nil
 }
 
@@ -96,9 +109,11 @@ func (r *YAMLRepository) ListAll(ctx context.Context) ([]*project.Project, error
 	if err != nil {
 		return nil, err
 	}
+
 	sort.Slice(projects, func(i, j int) bool {
 		return projects[i].Order < projects[j].Order
 	})
+
 	return projects, nil
 }
 
@@ -107,6 +122,7 @@ func (r *YAMLRepository) List(ctx context.Context, limit, offset int) ([]*projec
 	if err != nil {
 		return nil, 0, err
 	}
+
 	total := len(projects)
 
 	// Sort by Order field.
@@ -118,6 +134,7 @@ func (r *YAMLRepository) List(ctx context.Context, limit, offset int) ([]*projec
 	if offset >= len(projects) {
 		return nil, total, nil
 	}
+
 	projects = projects[offset:]
 	if limit > 0 && len(projects) > limit {
 		projects = projects[:limit]
@@ -131,16 +148,20 @@ func (r *YAMLRepository) Update(ctx context.Context, p *project.Project) error {
 	if err != nil {
 		return cerr.WrapStorageWriteError("project", err)
 	}
+
 	if !exists {
 		return cerr.NewError(cerr.NotFound, "project not found", nil)
 	}
+
 	data, err := yaml.Marshal(p)
 	if err != nil {
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal project: %w", err))
 	}
+
 	if err := r.storage.Write(ctx, path(p.ID), data); err != nil {
 		return cerr.WrapStorageWriteError("project", err)
 	}
+
 	return nil
 }
 
@@ -148,5 +169,6 @@ func (r *YAMLRepository) Delete(ctx context.Context, id string) error {
 	if err := r.storage.Delete(ctx, path(id)); err != nil {
 		return cerr.WrapStorageDeleteError("project", err)
 	}
+
 	return nil
 }

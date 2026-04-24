@@ -53,6 +53,7 @@ func inferLanguageFromPath(path string) string {
 		if strings.HasSuffix(path, "Dockerfile") {
 			return "dockerfile"
 		}
+
 		return ""
 	}
 }
@@ -63,6 +64,7 @@ func inferLanguageFromPath(path string) string {
 func codeBlockFence(content string) string {
 	maxRun := 0
 	cur := 0
+
 	for _, r := range content {
 		if r == '`' {
 			cur++
@@ -73,7 +75,9 @@ func codeBlockFence(content string) string {
 			cur = 0
 		}
 	}
+
 	n := max(maxRun+1, 3)
+
 	return strings.Repeat("`", n)
 }
 
@@ -85,6 +89,7 @@ func formatToolDescription(toolName string, input map[string]any) string {
 				return s
 			}
 		}
+
 		return ""
 	}
 
@@ -93,9 +98,11 @@ func formatToolDescription(toolName string, input map[string]any) string {
 	switch toolName {
 	case "Bash":
 		sb.WriteString("**Tool:** `Bash`\n")
+
 		if desc := str("description"); desc != "" {
 			sb.WriteString(fmt.Sprintf("**Description:** %s\n", desc))
 		}
+
 		if cmd := str("command"); cmd != "" {
 			// Format the command for readability (breaks one-liners into
 			// multi-line with proper indentation). Falls back to the
@@ -104,6 +111,7 @@ func formatToolDescription(toolName string, input map[string]any) string {
 			if formatted == "" {
 				formatted = cmd
 			}
+
 			fence := codeBlockFence(formatted)
 			sb.WriteString(fmt.Sprintf("\n%sbash\n", fence))
 			sb.WriteString(formatted)
@@ -112,35 +120,43 @@ func formatToolDescription(toolName string, input map[string]any) string {
 
 	case "Edit":
 		sb.WriteString("**Tool:** `Edit`\n")
+
 		filePath := str("file_path")
 		if filePath != "" {
 			sb.WriteString(fmt.Sprintf("**File:** `%s`\n", filePath))
 		}
+
 		oldStr := str("old_string")
+
 		newStr := str("new_string")
 		if oldStr != "" || newStr != "" {
 			combined := oldStr + newStr
 			fence := codeBlockFence(combined)
 			sb.WriteString(fmt.Sprintf("\n%sdiff\n", fence))
+
 			for line := range strings.SplitSeq(oldStr, "\n") {
 				sb.WriteString("- ")
 				sb.WriteString(line)
 				sb.WriteString("\n")
 			}
+
 			for line := range strings.SplitSeq(newStr, "\n") {
 				sb.WriteString("+ ")
 				sb.WriteString(line)
 				sb.WriteString("\n")
 			}
+
 			sb.WriteString(fence + "\n")
 		}
 
 	case "Write":
 		sb.WriteString("**Tool:** `Write`\n")
+
 		filePath := str("file_path")
 		if filePath != "" {
 			sb.WriteString(fmt.Sprintf("**File:** `%s`\n", filePath))
 		}
+
 		if content := str("content"); content != "" {
 			lang := inferLanguageFromPath(filePath)
 			fence := codeBlockFence(content)
@@ -151,24 +167,29 @@ func formatToolDescription(toolName string, input map[string]any) string {
 
 	case "Read":
 		sb.WriteString("**Tool:** `Read`\n")
+
 		if filePath := str("file_path"); filePath != "" {
 			sb.WriteString(fmt.Sprintf("**File:** `%s`\n", filePath))
 		}
 
 	case "Glob":
 		sb.WriteString("**Tool:** `Glob`\n")
+
 		if pattern := str("pattern"); pattern != "" {
 			sb.WriteString(fmt.Sprintf("**Pattern:** `%s`\n", pattern))
 		}
+
 		if path := str("path"); path != "" {
 			sb.WriteString(fmt.Sprintf("**Path:** `%s`\n", path))
 		}
 
 	case "Grep":
 		sb.WriteString("**Tool:** `Grep`\n")
+
 		if pattern := str("pattern"); pattern != "" {
 			sb.WriteString(fmt.Sprintf("**Pattern:** `%s`\n", pattern))
 		}
+
 		if path := str("path"); path != "" {
 			sb.WriteString(fmt.Sprintf("**Path:** `%s`\n", path))
 		}
@@ -180,9 +201,12 @@ func formatToolDescription(toolName string, input map[string]any) string {
 		for k := range input {
 			keys = append(keys, k)
 		}
+
 		sort.Strings(keys)
+
 		for _, k := range keys {
 			v := input[k]
+
 			s := fmt.Sprintf("%v", v)
 			if strings.Contains(s, "\n") {
 				fence := codeBlockFence(s)

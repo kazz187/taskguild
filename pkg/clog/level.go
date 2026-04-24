@@ -63,5 +63,6 @@ func ConnectCodeToLevel(code connect.Code) Level {
 	case connect.CodeUnauthenticated:
 		return LevelInfo
 	}
+
 	return LevelError
 }

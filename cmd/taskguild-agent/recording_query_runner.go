@@ -46,6 +46,7 @@ func (r *RecordingQueryRunner) RunQuerySync(
 	if err != nil {
 		entry.Error = err.Error()
 	}
+
 	if result != nil && result.Result != nil {
 		entry.Result = result.Result.Result
 		entry.IsError = result.Result.IsError
@@ -63,8 +64,10 @@ func (r *RecordingQueryRunner) RunQuerySync(
 func (r *RecordingQueryRunner) Entries() []RecordedEntry {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
 	cp := make([]RecordedEntry, len(r.entries))
 	copy(cp, r.entries)
+
 	return cp
 }
 
@@ -79,6 +82,7 @@ func (r *RecordingQueryRunner) SaveToFile(path string) error {
 	if err != nil {
 		return fmt.Errorf("marshal: %w", err)
 	}
+
 	return os.WriteFile(path, data, 0o644)
 }
 

@@ -10,6 +10,7 @@ import (
 func TestContextWithLogger(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil)).With("test_key", "test_value")
 	ctx := ContextWithLogger(context.Background(), logger)
+
 	got := LoggerFromContext(ctx)
 	if got != logger {
 		t.Error("expected same logger instance from context")

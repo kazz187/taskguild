@@ -85,11 +85,13 @@ func (w *Workflow) FindAgentIDForStatus(statusName string) string {
 			return s.AgentID
 		}
 	}
+
 	for _, cfg := range w.AgentConfigs {
 		if cfg.WorkflowStatusID == statusName {
 			return cfg.ID
 		}
 	}
+
 	return ""
 }
 
@@ -101,6 +103,7 @@ func (w *Workflow) FindSkillIDsForStatus(statusName string) []string {
 			return s.SkillIDs
 		}
 	}
+
 	return nil
 }
 

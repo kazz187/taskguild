@@ -44,7 +44,9 @@ func syncSkills(ctx context.Context, client taskguildv1connect.AgentManagerServi
 
 	// serverSkillNames tracks skill directory names known to the server.
 	serverSkillNames := make(map[string]bool)
+
 	var written, skipped int
+
 	for _, sk := range skills {
 		name := sk.GetName()
 		if name == "" {
@@ -69,7 +71,9 @@ func syncSkills(ctx context.Context, client taskguildv1connect.AgentManagerServi
 				slog.Debug("force-overwriting existing skill", "name", name, "skill_id", sk.GetId())
 			} else {
 				slog.Debug("skill file already exists, preserving local version", "name", name)
+
 				skipped++
+
 				continue
 			}
 		}
@@ -85,7 +89,9 @@ func syncSkills(ctx context.Context, client taskguildv1connect.AgentManagerServi
 			slog.Error("failed to write skill file", "path", filePath, "error", err)
 			continue
 		}
+
 		slog.Debug("synced skill", "name", name)
+
 		written++
 	}
 
@@ -103,30 +109,39 @@ func buildSkillMDContent(sk *v1.SkillDefinition) string {
 	if sk.GetName() != "" {
 		sb.WriteString(fmt.Sprintf("name: %s\n", sk.GetName()))
 	}
+
 	if sk.GetDescription() != "" {
 		writeYAMLStringField(&sb, "description", sk.GetDescription())
 	}
+
 	if sk.GetDisableModelInvocation() {
 		sb.WriteString("disable-model-invocation: true\n")
 	}
+
 	if !sk.GetUserInvocable() {
 		sb.WriteString("user-invocable: false\n")
 	}
+
 	if len(sk.GetAllowedTools()) > 0 {
 		sb.WriteString("allowed-tools:\n")
+
 		for _, tool := range sk.GetAllowedTools() {
 			sb.WriteString(fmt.Sprintf("  - %s\n", tool))
 		}
 	}
+
 	if sk.GetModel() != "" {
 		sb.WriteString(fmt.Sprintf("model: %s\n", sk.GetModel()))
 	}
+
 	if sk.GetContext() != "" {
 		sb.WriteString(fmt.Sprintf("context: %s\n", sk.GetContext()))
 	}
+
 	if sk.GetAgent() != "" {
 		sb.WriteString(fmt.Sprintf("agent: %s\n", sk.GetAgent()))
 	}
+
 	if sk.GetArgumentHint() != "" {
 		sb.WriteString(fmt.Sprintf("argument-hint: %s\n", sk.GetArgumentHint()))
 	}
@@ -154,6 +169,7 @@ func cleanupStaleSkillDirs(skillsDir string, serverSkillNames map[string]bool) {
 		if !entry.IsDir() {
 			continue
 		}
+
 		if !serverSkillNames[entry.Name()] {
 			dirPath := filepath.Join(skillsDir, entry.Name())
 			if err := os.RemoveAll(dirPath); err != nil {

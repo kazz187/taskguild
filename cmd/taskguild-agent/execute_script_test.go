@@ -34,38 +34,47 @@ func (m *scriptMockClient) Subscribe(_ context.Context, _ *connect.Request[v1.Ag
 func (m *scriptMockClient) ReportScriptOutputChunk(_ context.Context, req *connect.Request[v1.ReportScriptOutputChunkRequest]) (*connect.Response[v1.ReportScriptOutputChunkResponse], error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	m.chunks = append(m.chunks, req.Msg)
+
 	return connect.NewResponse(&v1.ReportScriptOutputChunkResponse{}), nil
 }
 
 func (m *scriptMockClient) ReportScriptExecutionResult(_ context.Context, req *connect.Request[v1.ReportScriptExecutionResultRequest]) (*connect.Response[v1.ReportScriptExecutionResultResponse], error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	m.result = req.Msg
+
 	return connect.NewResponse(&v1.ReportScriptExecutionResultResponse{}), nil
 }
 
 func (m *scriptMockClient) getChunks() []*v1.ReportScriptOutputChunkRequest {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	result := make([]*v1.ReportScriptOutputChunkRequest, len(m.chunks))
 	copy(result, m.chunks)
+
 	return result
 }
 
 func (m *scriptMockClient) getResult() *v1.ReportScriptExecutionResultRequest {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	return m.result
 }
 
 func (m *scriptMockClient) allChunkEntries() []*v1.ScriptLogEntry {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	var entries []*v1.ScriptLogEntry
 	for _, c := range m.chunks {
 		entries = append(entries, c.GetEntries()...)
 	}
+
 	return entries
 }
 
@@ -80,9 +89,11 @@ func TestChunkBuffer_AppendAndDrain(t *testing.T) {
 	if len(entries) != 2 {
 		t.Fatalf("expected 2 entries, got %d", len(entries))
 	}
+
 	if entries[0].GetText() != "line1\n" || entries[0].GetStream() != v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT {
 		t.Errorf("entry 0: unexpected %v", entries[0])
 	}
+
 	if entries[1].GetText() != "err1\n" || entries[1].GetStream() != v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDERR {
 		t.Errorf("entry 1: unexpected %v", entries[1])
 	}
@@ -96,6 +107,7 @@ func TestChunkBuffer_AppendAndDrain(t *testing.T) {
 
 func TestChunkBuffer_DrainEmpty(t *testing.T) {
 	var cb chunkBuffer
+
 	entries := cb.drain()
 	if entries != nil {
 		t.Errorf("expected nil from draining empty buffer, got %v", entries)
@@ -125,6 +137,7 @@ func TestLogEntryBuffer_AppendAndEntries(t *testing.T) {
 func TestFlushLogEntries_SendsChunk(t *testing.T) {
 	mock := &scriptMockClient{}
 	cfg := &config{ProjectName: "test-proj"}
+
 	var cb chunkBuffer
 	cb.append(v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT, "hello\n")
 
@@ -134,12 +147,15 @@ func TestFlushLogEntries_SendsChunk(t *testing.T) {
 	if len(chunks) != 1 {
 		t.Fatalf("expected 1 chunk, got %d", len(chunks))
 	}
+
 	if chunks[0].GetRequestId() != "req-1" {
 		t.Errorf("expected requestID %q, got %q", "req-1", chunks[0].GetRequestId())
 	}
+
 	if chunks[0].GetProjectName() != "test-proj" {
 		t.Errorf("expected projectName %q, got %q", "test-proj", chunks[0].GetProjectName())
 	}
+
 	if len(chunks[0].GetEntries()) != 1 || chunks[0].GetEntries()[0].GetText() != "hello\n" {
 		t.Errorf("unexpected entries: %v", chunks[0].GetEntries())
 	}
@@ -148,6 +164,7 @@ func TestFlushLogEntries_SendsChunk(t *testing.T) {
 func TestFlushLogEntries_EmptyBuffer_NoRPC(t *testing.T) {
 	mock := &scriptMockClient{}
 	cfg := &config{ProjectName: "test-proj"}
+
 	var cb chunkBuffer
 
 	flushLogEntries(context.Background(), mock, cfg, "req-1", &cb)
@@ -162,6 +179,7 @@ func TestFlushLogEntries_EmptyBuffer_NoRPC(t *testing.T) {
 func TestStreamOutput_StdoutAndStderr(t *testing.T) {
 	mock := &scriptMockClient{}
 	cfg := &config{ProjectName: "test-proj"}
+
 	var fullLog logEntryBuffer
 
 	// Create pipes that simulate script output
@@ -184,6 +202,7 @@ func TestStreamOutput_StdoutAndStderr(t *testing.T) {
 
 	// Collect all text
 	var stdoutTexts, stderrTexts []string
+
 	for _, e := range entries {
 		if e.GetStream() == v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT {
 			stdoutTexts = append(stdoutTexts, e.GetText())
@@ -191,9 +210,11 @@ func TestStreamOutput_StdoutAndStderr(t *testing.T) {
 			stderrTexts = append(stderrTexts, e.GetText())
 		}
 	}
+
 	if len(stdoutTexts) != 2 {
 		t.Errorf("expected 2 stdout entries, got %d", len(stdoutTexts))
 	}
+
 	if len(stderrTexts) != 1 {
 		t.Errorf("expected 1 stderr entry, got %d", len(stderrTexts))
 	}
@@ -208,10 +229,12 @@ func TestStreamOutput_StdoutAndStderr(t *testing.T) {
 func TestStreamOutput_EmptyPipes(t *testing.T) {
 	mock := &scriptMockClient{}
 	cfg := &config{ProjectName: "test-proj"}
+
 	var fullLog logEntryBuffer
 
 	stdoutR, stdoutW, _ := os.Pipe()
 	stderrR, stderrW, _ := os.Pipe()
+
 	stdoutW.Close()
 	stderrW.Close()
 
@@ -226,6 +249,7 @@ func TestStreamOutput_EmptyPipes(t *testing.T) {
 func TestStreamOutput_LargeOutput(t *testing.T) {
 	mock := &scriptMockClient{}
 	cfg := &config{ProjectName: "test-proj"}
+
 	var fullLog logEntryBuffer
 
 	stdoutR, stdoutW, _ := os.Pipe()
@@ -237,6 +261,7 @@ func TestStreamOutput_LargeOutput(t *testing.T) {
 		for range 100 {
 			stdoutW.WriteString("line of output\n")
 		}
+
 		stdoutW.Close()
 	})
 	stderrW.Close()
@@ -258,6 +283,7 @@ func TestStreamOutput_LargeOutput(t *testing.T) {
 func TestStreamOutput_ContextCancelled(t *testing.T) {
 	mock := &scriptMockClient{}
 	cfg := &config{ProjectName: "test-proj"}
+
 	var fullLog logEntryBuffer
 
 	stdoutR, stdoutW, _ := os.Pipe()
@@ -266,6 +292,7 @@ func TestStreamOutput_ContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	done := make(chan struct{})
+
 	var streamWg conc.WaitGroup
 	streamWg.Go(func() {
 		streamOutput(ctx, mock, cfg, "req-1", stdoutR, stderrR, &fullLog)
@@ -303,6 +330,7 @@ func TestResolveScriptPath_LocalFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
 	if path != filepath.Join(scriptsDir, "test.sh") {
 		t.Errorf("expected local path, got %q", path)
 	}
@@ -323,6 +351,7 @@ func TestResolveScriptPath_LocalFileWithoutExecPermission(t *testing.T) {
 	if info.Mode()&0o111 == 0 {
 		t.Error("expected execute permission to be set")
 	}
+
 	_ = path
 }
 
@@ -333,6 +362,7 @@ func TestResolveScriptPath_FileNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for missing file")
 	}
+
 	if !strings.Contains(err.Error(), "not found locally") {
 		t.Errorf("expected 'not found locally' in error, got: %q", err.Error())
 	}
@@ -343,10 +373,12 @@ func TestResolveScriptPath_FileNotFound(t *testing.T) {
 // writeTestScript creates a script file at .taskguild/scripts/{filename} and returns the scripts dir.
 func writeTestScript(t *testing.T, workDir, filename, content string) {
 	t.Helper()
+
 	scriptsDir := filepath.Join(workDir, ".taskguild", "scripts")
 	if err := os.MkdirAll(scriptsDir, 0o755); err != nil {
 		t.Fatalf("failed to create scripts dir: %v", err)
 	}
+
 	if err := os.WriteFile(filepath.Join(scriptsDir, filename), []byte(content), 0o755); err != nil {
 		t.Fatalf("failed to write script: %v", err)
 	}
@@ -377,40 +409,54 @@ func TestHandleExecuteScript_Success(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected result to be reported")
 	}
+
 	if result.GetRequestId() != "req-test-1" {
 		t.Errorf("expected requestID %q, got %q", "req-test-1", result.GetRequestId())
 	}
+
 	if result.GetProjectName() != "test-proj" {
 		t.Errorf("expected projectName %q, got %q", "test-proj", result.GetProjectName())
 	}
+
 	if result.GetScriptId() != "sc-1" {
 		t.Errorf("expected scriptID %q, got %q", "sc-1", result.GetScriptId())
 	}
+
 	if !result.GetSuccess() {
 		t.Errorf("expected success=true, got false. error: %s", result.GetErrorMessage())
 	}
+
 	if result.GetExitCode() != 0 {
 		t.Errorf("expected exitCode=0, got %d", result.GetExitCode())
 	}
 
 	// Verify output was streamed
 	chunkEntries := mock.allChunkEntries()
-	var allText string
-	var allTextSb399 strings.Builder
+
+	var (
+		allText      string
+		allTextSb399 strings.Builder
+	)
+
 	for _, e := range chunkEntries {
 		allTextSb399.WriteString(e.GetText())
 	}
+
 	allText += allTextSb399.String()
 	if !strings.Contains(allText, "hello") || !strings.Contains(allText, "world") {
 		t.Errorf("expected stdout to contain 'hello' and 'world', got: %q", allText)
 	}
 
 	// Verify full log in result
-	var resultText string
-	var resultTextSb408 strings.Builder
+	var (
+		resultText      string
+		resultTextSb408 strings.Builder
+	)
+
 	for _, e := range result.GetLogEntries() {
 		resultTextSb408.WriteString(e.GetText())
 	}
+
 	resultText += resultTextSb408.String()
 	if !strings.Contains(resultText, "hello") || !strings.Contains(resultText, "world") {
 		t.Errorf("expected result log to contain 'hello' and 'world', got: %q", resultText)
@@ -445,24 +491,31 @@ func TestHandleExecuteScript_ScriptFails(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected result to be reported")
 	}
+
 	if result.GetSuccess() {
 		t.Error("expected success=false")
 	}
+
 	if result.GetExitCode() != 42 {
 		t.Errorf("expected exitCode=42, got %d", result.GetExitCode())
 	}
+
 	if result.GetStoppedByUser() {
 		t.Error("expected stoppedByUser=false")
 	}
 
 	// Verify stderr was captured
-	var stderrText string
-	var stderrTextSb456 strings.Builder
+	var (
+		stderrText      string
+		stderrTextSb456 strings.Builder
+	)
+
 	for _, e := range mock.allChunkEntries() {
 		if e.GetStream() == v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDERR {
 			stderrTextSb456.WriteString(e.GetText())
 		}
 	}
+
 	stderrText += stderrTextSb456.String()
 	if !strings.Contains(stderrText, "failing") {
 		t.Errorf("expected stderr to contain 'failing', got: %q", stderrText)
@@ -491,12 +544,14 @@ func TestHandleExecuteScript_StdoutAndStderrInterleaved(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected result to be reported")
 	}
+
 	if !result.GetSuccess() {
 		t.Errorf("expected success=true, error: %s", result.GetErrorMessage())
 	}
 
 	// Verify both streams captured
 	var stdoutCount, stderrCount int
+
 	for _, e := range result.GetLogEntries() {
 		switch e.GetStream() {
 		case v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT:
@@ -505,9 +560,11 @@ func TestHandleExecuteScript_StdoutAndStderrInterleaved(t *testing.T) {
 			stderrCount++
 		}
 	}
+
 	if stdoutCount != 2 {
 		t.Errorf("expected 2 stdout entries in result, got %d", stdoutCount)
 	}
+
 	if stderrCount != 2 {
 		t.Errorf("expected 2 stderr entries in result, got %d", stderrCount)
 	}
@@ -532,6 +589,7 @@ func TestHandleExecuteScript_ParentContextCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	done := make(chan struct{})
+
 	var execWg conc.WaitGroup
 	execWg.Go(func() {
 		handleExecuteScript(ctx, mock, cfg, cmd)
@@ -554,9 +612,11 @@ func TestHandleExecuteScript_ParentContextCancelled(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected result to be reported")
 	}
+
 	if result.GetSuccess() {
 		t.Error("expected success=false for canceled script")
 	}
+
 	if result.GetStoppedByUser() {
 		t.Error("expected stoppedByUser=false for parent context cancellation (not user-initiated)")
 	}
@@ -579,6 +639,7 @@ func TestHandleExecuteScript_StoppedByUser(t *testing.T) {
 	}
 
 	done := make(chan struct{})
+
 	var execWg conc.WaitGroup
 	execWg.Go(func() {
 		handleExecuteScript(context.Background(), mock, cfg, cmd)
@@ -602,9 +663,11 @@ func TestHandleExecuteScript_StoppedByUser(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected result to be reported")
 	}
+
 	if result.GetSuccess() {
 		t.Error("expected success=false for stopped script")
 	}
+
 	if !result.GetStoppedByUser() {
 		t.Error("expected stoppedByUser=true for user-initiated stop")
 	}
@@ -627,6 +690,7 @@ func TestHandleExecuteScript_HotReloadDoesNotSetStoppedByUser(t *testing.T) {
 	}
 
 	done := make(chan struct{})
+
 	var execWg conc.WaitGroup
 	execWg.Go(func() {
 		handleExecuteScript(context.Background(), mock, cfg, cmd)
@@ -641,9 +705,11 @@ func TestHandleExecuteScript_HotReloadDoesNotSetStoppedByUser(t *testing.T) {
 	runningScripts.mu.Lock()
 	cancelFn, ok := runningScripts.cancels["req-hotreload"]
 	runningScripts.mu.Unlock()
+
 	if !ok {
 		t.Fatal("expected script to be tracked in runningScripts")
 	}
+
 	cancelFn()
 
 	select {
@@ -657,9 +723,11 @@ func TestHandleExecuteScript_HotReloadDoesNotSetStoppedByUser(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected result to be reported")
 	}
+
 	if result.GetSuccess() {
 		t.Error("expected success=false for canceled script")
 	}
+
 	if result.GetStoppedByUser() {
 		t.Error("expected stoppedByUser=false for hot-reload cancellation")
 	}
@@ -685,6 +753,7 @@ func TestHandleExecuteScript_RunningScriptsTracked(t *testing.T) {
 
 	started := make(chan struct{})
 	done := make(chan struct{})
+
 	var execWg conc.WaitGroup
 	execWg.Go(func() {
 		// Signal when goroutine has entered handleExecuteScript
@@ -700,6 +769,7 @@ func TestHandleExecuteScript_RunningScriptsTracked(t *testing.T) {
 	runningScripts.mu.Lock()
 	_, tracked := runningScripts.cancels["req-track"]
 	runningScripts.mu.Unlock()
+
 	if !tracked {
 		t.Error("expected script to be tracked in runningScripts")
 	}
@@ -718,6 +788,7 @@ func TestHandleExecuteScript_RunningScriptsTracked(t *testing.T) {
 	runningScripts.mu.Lock()
 	_, stillTracked := runningScripts.cancels["req-track"]
 	runningScripts.mu.Unlock()
+
 	if stillTracked {
 		t.Error("expected script to be removed from runningScripts after completion")
 	}
@@ -735,6 +806,7 @@ func TestHandleExecuteScript_RejectDuringHotReload(t *testing.T) {
 	scriptTracker.mu.Lock()
 	scriptTracker.reject = true
 	scriptTracker.mu.Unlock()
+
 	defer func() {
 		scriptTracker.mu.Lock()
 		scriptTracker.reject = false
@@ -755,9 +827,11 @@ func TestHandleExecuteScript_RejectDuringHotReload(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected result to be reported")
 	}
+
 	if result.GetSuccess() {
 		t.Error("expected success=false for rejected script")
 	}
+
 	if !strings.Contains(result.GetErrorMessage(), "hot reload") {
 		t.Errorf("expected error about hot reload, got: %q", result.GetErrorMessage())
 	}
@@ -788,9 +862,11 @@ func TestHandleExecuteScript_LocalFileNotFound(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected result to be reported")
 	}
+
 	if result.GetSuccess() {
 		t.Error("expected success=false for missing script")
 	}
+
 	if !strings.Contains(result.GetErrorMessage(), "not found locally") {
 		t.Errorf("expected error about script not found, got: %q", result.GetErrorMessage())
 	}
@@ -801,6 +877,7 @@ func TestHandleExecuteScript_LocalFileNotFound(t *testing.T) {
 func TestStreamOutput_PeriodicFlush(t *testing.T) {
 	mock := &scriptMockClient{}
 	cfg := &config{ProjectName: "test-proj"}
+
 	var fullLog logEntryBuffer
 
 	stdoutR, stdoutW, _ := os.Pipe()
@@ -808,6 +885,7 @@ func TestStreamOutput_PeriodicFlush(t *testing.T) {
 	stderrW.Close()
 
 	done := make(chan struct{})
+
 	var streamWg conc.WaitGroup
 	streamWg.Go(func() {
 		streamOutput(context.Background(), mock, cfg, "req-1", stdoutR, stderrR, &fullLog)

@@ -23,9 +23,11 @@ func New() *Bus {
 func (b *Bus) Subscribe(bufSize int) (string, <-chan *taskguildv1.Event) {
 	id := ulid.Make().String()
 	ch := make(chan *taskguildv1.Event, bufSize)
+
 	b.mu.Lock()
 	b.subscribers[id] = ch
 	b.mu.Unlock()
+
 	return id, ch
 }
 
@@ -41,6 +43,7 @@ func (b *Bus) Unsubscribe(id string) {
 func (b *Bus) Publish(event *taskguildv1.Event) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
+
 	for _, ch := range b.subscribers {
 		select {
 		case ch <- event:

@@ -39,6 +39,7 @@ func (n *Notifier) Start(ctx context.Context) {
 	defer n.eventBus.Unsubscribe(subID)
 
 	slog.Info("chat notifier started")
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -48,6 +49,7 @@ func (n *Notifier) Start(ctx context.Context) {
 			if !ok {
 				return
 			}
+
 			switch event.GetType() {
 			case taskguildv1.EventType_EVENT_TYPE_TASK_STATUS_CHANGED:
 				n.handleTaskStatusChanged(ctx, event)
@@ -68,6 +70,7 @@ func (n *Notifier) handleTaskStatusChanged(ctx context.Context, event *taskguild
 
 	// Resolve the new status name from the workflow.
 	statusName := newStatusID
+
 	wf, err := n.workflowRepo.Get(ctx, t.WorkflowID)
 	if err != nil {
 		slog.Warn("chat notifier: failed to get workflow, using status ID", "workflow_id", t.WorkflowID, "error", err)

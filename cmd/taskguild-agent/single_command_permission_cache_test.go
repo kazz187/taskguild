@@ -45,6 +45,7 @@ func TestWildcardToRegex(t *testing.T) {
 			if err != nil {
 				t.Fatalf("compileWildcard(%q) error: %v", tt.pattern, err)
 			}
+
 			matched := re.MatchString(tt.input)
 			if matched != tt.expected {
 				t.Errorf("compileWildcard(%q).MatchString(%q) = %v, want %v", tt.pattern, tt.input, matched, tt.expected)
@@ -131,10 +132,12 @@ func TestSingleCommandPermissionCache_CheckAllCommands(t *testing.T) {
 
 	t.Run("all matched", func(t *testing.T) {
 		parsed := shellparse.Parse("cd /home/user && git status")
+
 		allMatched, meta := cache.CheckAllCommands(parsed)
 		if !allMatched {
 			t.Error("expected all commands to match")
 		}
+
 		if len(meta.ParsedCommands) != 2 {
 			t.Errorf("expected 2 parsed commands, got %d", len(meta.ParsedCommands))
 		}
@@ -142,10 +145,12 @@ func TestSingleCommandPermissionCache_CheckAllCommands(t *testing.T) {
 
 	t.Run("partial match", func(t *testing.T) {
 		parsed := shellparse.Parse("cd /home/user && npm test")
+
 		allMatched, meta := cache.CheckAllCommands(parsed)
 		if allMatched {
 			t.Error("expected not all commands to match")
 		}
+
 		if len(meta.ParsedCommands) < 2 {
 			t.Fatalf("expected at least 2 commands, got %d", len(meta.ParsedCommands))
 		}
@@ -153,9 +158,11 @@ func TestSingleCommandPermissionCache_CheckAllCommands(t *testing.T) {
 		if !meta.ParsedCommands[0].Matched {
 			t.Error("expected first command (cd) to match")
 		}
+
 		if meta.ParsedCommands[1].Matched {
 			t.Error("expected second command (npm test) to not match")
 		}
+
 		if meta.ParsedCommands[1].SuggestedPattern == "" {
 			t.Error("expected suggested pattern for unmatched command")
 		}
@@ -163,10 +170,12 @@ func TestSingleCommandPermissionCache_CheckAllCommands(t *testing.T) {
 
 	t.Run("with redirect", func(t *testing.T) {
 		parsed := shellparse.Parse("cd /home/user && git status > /dev/null")
+
 		allMatched, meta := cache.CheckAllCommands(parsed)
 		if !allMatched {
 			t.Error("expected all to match (including redirect)")
 		}
+
 		if len(meta.Redirects) < 1 {
 			t.Error("expected at least 1 redirect check")
 		}
@@ -174,16 +183,20 @@ func TestSingleCommandPermissionCache_CheckAllCommands(t *testing.T) {
 
 	t.Run("unmatched redirect", func(t *testing.T) {
 		parsed := shellparse.Parse("echo hello > /etc/output.txt")
+
 		allMatched, meta := cache.CheckAllCommands(parsed)
 		if allMatched {
 			t.Error("expected not all to match (unknown redirect)")
 		}
+
 		hasUnmatchedRedirect := false
+
 		for _, r := range meta.Redirects {
 			if !r.Matched {
 				hasUnmatchedRedirect = true
 			}
 		}
+
 		if !hasUnmatchedRedirect {
 			t.Error("expected at least one unmatched redirect")
 		}
@@ -275,6 +288,7 @@ func TestSingleCommandPermissionCache_EmptyPattern(t *testing.T) {
 	// Should only have 1 valid pattern.
 	cache.mu.RLock()
 	defer cache.mu.RUnlock()
+
 	if len(cache.patterns) != 1 {
 		t.Errorf("expected 1 valid pattern, got %d", len(cache.patterns))
 	}

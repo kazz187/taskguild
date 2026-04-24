@@ -52,16 +52,19 @@ func (s *Server) CreateTemplate(ctx context.Context, req *connect.Request[taskgu
 		if req.Msg.GetAgentConfig() == nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("agent_config is required for entity_type=agent"))
 		}
+
 		t.AgentConfig = agentConfigFromProto(req.Msg.GetAgentConfig())
 	case "skill":
 		if req.Msg.GetSkillConfig() == nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("skill_config is required for entity_type=skill"))
 		}
+
 		t.SkillConfig = skillConfigFromProto(req.Msg.GetSkillConfig())
 	case "script":
 		if req.Msg.GetScriptConfig() == nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("script_config is required for entity_type=script"))
 		}
+
 		t.ScriptConfig = scriptConfigFromProto(req.Msg.GetScriptConfig())
 	default:
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid entity_type: %s", req.Msg.GetEntityType()))
@@ -70,6 +73,7 @@ func (s *Server) CreateTemplate(ctx context.Context, req *connect.Request[taskgu
 	if err := s.repo.Create(ctx, t); err != nil {
 		return nil, err
 	}
+
 	return connect.NewResponse(&taskguildv1.CreateTemplateResponse{
 		Template: toProto(t),
 	}), nil
@@ -81,6 +85,7 @@ func (s *Server) GetTemplate(ctx context.Context, req *connect.Request[taskguild
 	if err != nil {
 		return nil, err
 	}
+
 	return connect.NewResponse(&taskguildv1.GetTemplateResponse{
 		Template: toProto(t),
 	}), nil
@@ -89,20 +94,25 @@ func (s *Server) GetTemplate(ctx context.Context, req *connect.Request[taskguild
 // ListTemplates lists templates, optionally filtered by entity type.
 func (s *Server) ListTemplates(ctx context.Context, req *connect.Request[taskguildv1.ListTemplatesRequest]) (*connect.Response[taskguildv1.ListTemplatesResponse], error) {
 	limit, offset := int32(50), int32(0)
+
 	if req.Msg.GetPagination() != nil {
 		if req.Msg.GetPagination().GetLimit() > 0 {
 			limit = req.Msg.GetPagination().GetLimit()
 		}
+
 		offset = req.Msg.GetPagination().GetOffset()
 	}
+
 	templates, total, err := s.repo.List(ctx, req.Msg.GetEntityType(), int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}
+
 	protos := make([]*taskguildv1.Template, len(templates))
 	for i, t := range templates {
 		protos[i] = toProto(t)
 	}
+
 	return connect.NewResponse(&taskguildv1.ListTemplatesResponse{
 		Templates: protos,
 		Pagination: &taskguildv1.PaginationResponse{
@@ -123,6 +133,7 @@ func (s *Server) UpdateTemplate(ctx context.Context, req *connect.Request[taskgu
 	if req.Msg.GetName() != "" {
 		t.Name = req.Msg.GetName()
 	}
+
 	if req.Msg.GetDescription() != "" {
 		t.Description = req.Msg.GetDescription()
 	}
@@ -146,6 +157,7 @@ func (s *Server) UpdateTemplate(ctx context.Context, req *connect.Request[taskgu
 	if err := s.repo.Update(ctx, t); err != nil {
 		return nil, err
 	}
+
 	return connect.NewResponse(&taskguildv1.UpdateTemplateResponse{
 		Template: toProto(t),
 	}), nil
@@ -156,6 +168,7 @@ func (s *Server) DeleteTemplate(ctx context.Context, req *connect.Request[taskgu
 	if err := s.repo.Delete(ctx, req.Msg.GetId()); err != nil {
 		return nil, err
 	}
+
 	return connect.NewResponse(&taskguildv1.DeleteTemplateResponse{}), nil
 }
 
@@ -163,8 +176,11 @@ func (s *Server) DeleteTemplate(ctx context.Context, req *connect.Request[taskgu
 // For agents, optionally includes referenced skills as dependent templates.
 func (s *Server) SaveAsTemplate(ctx context.Context, req *connect.Request[taskguildv1.SaveAsTemplateRequest]) (*connect.Response[taskguildv1.SaveAsTemplateResponse], error) {
 	now := time.Now()
-	var mainTemplate *Template
-	var dependentTemplates []*Template
+
+	var (
+		mainTemplate       *Template
+		dependentTemplates []*Template
+	)
 
 	switch req.Msg.GetEntityType() {
 	case "agent":
@@ -177,6 +193,7 @@ func (s *Server) SaveAsTemplate(ctx context.Context, req *connect.Request[taskgu
 		if templateName == "" {
 			templateName = a.Name
 		}
+
 		templateDesc := req.Msg.GetTemplateDescription()
 		if templateDesc == "" {
 			templateDesc = a.Description
@@ -209,6 +226,7 @@ func (s *Server) SaveAsTemplate(ctx context.Context, req *connect.Request[taskgu
 				if err != nil {
 					continue // Skip skills that are not found.
 				}
+
 				skillTmpl := &Template{
 					ID:          ulid.Make().String(),
 					Name:        sk.Name,
@@ -232,6 +250,7 @@ func (s *Server) SaveAsTemplate(ctx context.Context, req *connect.Request[taskgu
 				if err := s.repo.Create(ctx, skillTmpl); err != nil {
 					continue
 				}
+
 				dependentTemplates = append(dependentTemplates, skillTmpl)
 			}
 		}
@@ -246,6 +265,7 @@ func (s *Server) SaveAsTemplate(ctx context.Context, req *connect.Request[taskgu
 		if templateName == "" {
 			templateName = sk.Name
 		}
+
 		templateDesc := req.Msg.GetTemplateDescription()
 		if templateDesc == "" {
 			templateDesc = sk.Description
@@ -282,6 +302,7 @@ func (s *Server) SaveAsTemplate(ctx context.Context, req *connect.Request[taskgu
 		if templateName == "" {
 			templateName = sc.Name
 		}
+
 		templateDesc := req.Msg.GetTemplateDescription()
 		if templateDesc == "" {
 			templateDesc = sc.Description
@@ -331,9 +352,12 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 	}
 
 	now := time.Now()
-	var createdEntityID string
-	var dependentSkillIDs []string
-	var warnings []string
+
+	var (
+		createdEntityID   string
+		dependentSkillIDs []string
+		warnings          []string
+	)
 
 	switch tmpl.EntityType {
 	case "agent":
@@ -341,6 +365,7 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 		if req.Msg.GetAgentConfig() != nil {
 			cfg = agentConfigFromProto(req.Msg.GetAgentConfig())
 		}
+
 		if cfg == nil {
 			return nil, connect.NewError(connect.CodeInternal, errors.New("agent template has no config"))
 		}
@@ -364,6 +389,7 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 		if err := s.agentRepo.Create(ctx, a); err != nil {
 			return nil, err
 		}
+
 		createdEntityID = a.ID
 
 		// Create dependent skills from templates.
@@ -389,6 +415,7 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 				}
 
 				sc := skillTmpl.SkillConfig
+
 				sk := &skill.Skill{
 					ID:                     ulid.Make().String(),
 					ProjectID:              req.Msg.GetProjectId(),
@@ -410,6 +437,7 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 					warnings = append(warnings, fmt.Sprintf("Failed to create skill '%s': %v", skillName, err))
 					continue
 				}
+
 				dependentSkillIDs = append(dependentSkillIDs, sk.ID)
 			}
 		}
@@ -419,6 +447,7 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 		if req.Msg.GetSkillConfig() != nil {
 			cfg = skillConfigFromProto(req.Msg.GetSkillConfig())
 		}
+
 		if cfg == nil {
 			return nil, connect.NewError(connect.CodeInternal, errors.New("skill template has no config"))
 		}
@@ -443,6 +472,7 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 		if err := s.skillRepo.Create(ctx, sk); err != nil {
 			return nil, err
 		}
+
 		createdEntityID = sk.ID
 
 	case "script":
@@ -450,6 +480,7 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 		if req.Msg.GetScriptConfig() != nil {
 			cfg = scriptConfigFromProto(req.Msg.GetScriptConfig())
 		}
+
 		if cfg == nil {
 			return nil, connect.NewError(connect.CodeInternal, errors.New("script template has no config"))
 		}
@@ -468,6 +499,7 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 		if err := s.scriptRepo.Create(ctx, sc); err != nil {
 			return nil, err
 		}
+
 		createdEntityID = sc.ID
 
 	default:
@@ -496,12 +528,15 @@ func toProto(t *Template) *taskguildv1.Template {
 	if t.AgentConfig != nil {
 		p.AgentConfig = agentConfigToProto(t.AgentConfig)
 	}
+
 	if t.SkillConfig != nil {
 		p.SkillConfig = skillConfigToProto(t.SkillConfig)
 	}
+
 	if t.ScriptConfig != nil {
 		p.ScriptConfig = scriptConfigToProto(t.ScriptConfig)
 	}
+
 	return p
 }
 
@@ -509,6 +544,7 @@ func agentConfigFromProto(p *taskguildv1.AgentTemplateConfig) *AgentConfig {
 	if p == nil {
 		return nil
 	}
+
 	return &AgentConfig{
 		Name:            p.GetName(),
 		Description:     p.GetDescription(),
@@ -526,6 +562,7 @@ func agentConfigToProto(c *AgentConfig) *taskguildv1.AgentTemplateConfig {
 	if c == nil {
 		return nil
 	}
+
 	return &taskguildv1.AgentTemplateConfig{
 		Name:            c.Name,
 		Description:     c.Description,
@@ -543,6 +580,7 @@ func skillConfigFromProto(p *taskguildv1.SkillTemplateConfig) *SkillConfig {
 	if p == nil {
 		return nil
 	}
+
 	return &SkillConfig{
 		Name:                   p.GetName(),
 		Description:            p.GetDescription(),
@@ -561,6 +599,7 @@ func skillConfigToProto(c *SkillConfig) *taskguildv1.SkillTemplateConfig {
 	if c == nil {
 		return nil
 	}
+
 	return &taskguildv1.SkillTemplateConfig{
 		Name:                   c.Name,
 		Description:            c.Description,
@@ -579,6 +618,7 @@ func scriptConfigFromProto(p *taskguildv1.ScriptTemplateConfig) *ScriptConfig {
 	if p == nil {
 		return nil
 	}
+
 	return &ScriptConfig{
 		Name:        p.GetName(),
 		Description: p.GetDescription(),
@@ -591,6 +631,7 @@ func scriptConfigToProto(c *ScriptConfig) *taskguildv1.ScriptTemplateConfig {
 	if c == nil {
 		return nil
 	}
+
 	return &taskguildv1.ScriptTemplateConfig{
 		Name:        c.Name,
 		Description: c.Description,
