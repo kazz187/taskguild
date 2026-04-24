@@ -54,7 +54,7 @@ func TestMultiTurnCreateAndList(t *testing.T) {
 
 	allIDs = append(allIDs, log.ID)
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		log = createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TOOL_USE), fmt.Sprintf("Turn 0 tool %d", i))
 		err := repo.Create(ctx, log)
 		if err != nil {
@@ -79,7 +79,7 @@ func TestMultiTurnCreateAndList(t *testing.T) {
 
 	allIDs = append(allIDs, log.ID)
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		log = createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TOOL_USE), fmt.Sprintf("Turn 1 tool %d", i))
 		err := repo.Create(ctx, log)
 		if err != nil {
@@ -148,7 +148,7 @@ func TestMultiTurnPagination(t *testing.T) {
 	totalEntries := 0
 
 	// Create 2 turns with 5 entries each (including TURN_START/END).
-	for turn := 0; turn < 2; turn++ {
+	for turn := range 2 {
 		log := createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_START), fmt.Sprintf("Turn %d started", turn))
 		err := repo.Create(ctx, log)
 		if err != nil {
@@ -157,7 +157,7 @@ func TestMultiTurnPagination(t *testing.T) {
 
 		totalEntries++
 
-		for i := 0; i < 3; i++ {
+		for i := range 3 {
 			log = createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TOOL_USE), fmt.Sprintf("Turn %d tool %d", turn, i))
 			err := repo.Create(ctx, log)
 			if err != nil {
@@ -231,7 +231,7 @@ func TestMultiTurnServerRestart(t *testing.T) {
 	{
 		repo := NewJSONLRepository(dir, nil)
 
-		for turn := 0; turn < 2; turn++ {
+		for turn := range 2 {
 			log := createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_START), fmt.Sprintf("Turn %d started", turn))
 			err := repo.Create(ctx, log)
 			if err != nil {
