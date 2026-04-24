@@ -17,11 +17,12 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/oklog/ulid/v2"
+	"github.com/sourcegraph/conc"
+
 	"github.com/kazz187/taskguild/internal/version"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/oklog/ulid/v2"
-	"github.com/sourcegraph/conc"
 )
 
 // scriptTracker tracks running script executions for graceful hot-reload.
@@ -29,9 +30,9 @@ import (
 // prevent new script executions and waits for running ones to complete
 // (via scriptWg) before shutting down.
 var scriptTracker struct {
-	mu      sync.Mutex
-	wg      sync.WaitGroup
-	reject  bool // true once SIGUSR1 is received; prevents new script starts
+	mu     sync.Mutex
+	wg     sync.WaitGroup
+	reject bool // true once SIGUSR1 is received; prevents new script starts
 }
 
 // userStoppedTasks tracks which tasks were explicitly stopped by the user
@@ -270,9 +271,9 @@ func runAgent() {
 
 	// Subscribe loop with reconnection and exponential backoff.
 	const (
-		subscribeInitialBackoff  = 5 * time.Second
-		subscribeMaxBackoff      = 5 * time.Minute
-		subscribeReceiveTimeout  = 3 * time.Minute
+		subscribeInitialBackoff = 5 * time.Second
+		subscribeMaxBackoff     = 5 * time.Minute
+		subscribeReceiveTimeout = 3 * time.Minute
 	)
 	subscribeBackoff := subscribeInitialBackoff
 

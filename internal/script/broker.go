@@ -6,8 +6,9 @@ import (
 	"sync"
 	"time"
 
-	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/sourcegraph/conc"
+
+	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 )
 
 const (
@@ -290,11 +291,11 @@ func (b *ScriptExecutionBroker) ListExecutions(projectID string) []*taskguildv1.
 			continue
 		}
 		info := &taskguildv1.ScriptExecutionInfo{
-			RequestId: reqID,
-			ScriptId:  es.scriptID,
-			Completed: es.completed,
-			Success:   es.success,
-			ExitCode:  es.exitCode,
+			RequestId:    reqID,
+			ScriptId:     es.scriptID,
+			Completed:    es.completed,
+			Success:      es.success,
+			ExitCode:     es.exitCode,
 			ErrorMessage: es.errMessage,
 		}
 		es.mu.Unlock()

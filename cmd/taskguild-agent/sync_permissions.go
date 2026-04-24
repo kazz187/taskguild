@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"connectrpc.com/connect"
+
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -95,7 +96,7 @@ func writeLocalPermissions(path string, raw map[string]interface{}, merged *v1.P
 
 	// Ensure .claude directory exists.
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		slog.Error("failed to create .claude directory", "error", err)
 		return
 	}
@@ -128,7 +129,7 @@ func writeLocalPermissions(path string, raw map[string]interface{}, merged *v1.P
 		return
 	}
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		slog.Error("failed to write settings.json", "error", err)
 		return
 	}

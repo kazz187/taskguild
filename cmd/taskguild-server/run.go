@@ -13,6 +13,7 @@ import (
 
 	"github.com/sourcegraph/conc"
 
+	server "github.com/kazz187/taskguild/internal"
 	"github.com/kazz187/taskguild/internal/agent"
 	agentrepo "github.com/kazz187/taskguild/internal/agent/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/agentmanager"
@@ -27,31 +28,28 @@ import (
 	"github.com/kazz187/taskguild/internal/orchestrator"
 	"github.com/kazz187/taskguild/internal/permission"
 	permissionrepo "github.com/kazz187/taskguild/internal/permission/repositoryimpl"
-	"github.com/kazz187/taskguild/internal/singlecommandpermission"
-	scprepo "github.com/kazz187/taskguild/internal/singlecommandpermission/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/project"
 	projectrepo "github.com/kazz187/taskguild/internal/project/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/pushnotification"
 	pushsubrepo "github.com/kazz187/taskguild/internal/pushsubscription/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/script"
 	scriptrepo "github.com/kazz187/taskguild/internal/script/repositoryimpl"
+	"github.com/kazz187/taskguild/internal/singlecommandpermission"
+	scprepo "github.com/kazz187/taskguild/internal/singlecommandpermission/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/skill"
 	skillrepo "github.com/kazz187/taskguild/internal/skill/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/task"
-	tmpl "github.com/kazz187/taskguild/internal/template"
-	tmplrepo "github.com/kazz187/taskguild/internal/template/repositoryimpl"
 	taskrepo "github.com/kazz187/taskguild/internal/task/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/tasklog"
 	tasklogrepo "github.com/kazz187/taskguild/internal/tasklog/repositoryimpl"
+	tmpl "github.com/kazz187/taskguild/internal/template"
+	tmplrepo "github.com/kazz187/taskguild/internal/template/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/version"
 	"github.com/kazz187/taskguild/internal/workflow"
 	workflowrepo "github.com/kazz187/taskguild/internal/workflow/repositoryimpl"
 	"github.com/kazz187/taskguild/pkg/clog"
 	"github.com/kazz187/taskguild/pkg/storage"
-
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-
-	server "github.com/kazz187/taskguild/internal"
 )
 
 // agentChangeNotifier implements agent.ChangeNotifier by broadcasting
@@ -235,7 +233,6 @@ func runServer() {
 			os.Exit(1)
 		}
 	}
-
 
 	// Setup event bus
 	bus := eventbus.New()

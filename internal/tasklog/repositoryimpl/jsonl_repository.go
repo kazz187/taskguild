@@ -13,10 +13,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/oklog/ulid/v2"
+
 	"github.com/kazz187/taskguild/internal/tasklog"
 	"github.com/kazz187/taskguild/pkg/cerr"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	"github.com/oklog/ulid/v2"
 )
 
 // knownSubdirs contains directory names under a project that are NOT task directories.

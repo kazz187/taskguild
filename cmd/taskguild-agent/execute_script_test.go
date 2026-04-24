@@ -11,9 +11,10 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/sourcegraph/conc"
+
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/sourcegraph/conc"
 )
 
 // --- mock client ---
@@ -295,8 +296,8 @@ func TestStreamOutput_ContextCancelled(t *testing.T) {
 func TestResolveScriptPath_LocalFile(t *testing.T) {
 	workDir := t.TempDir()
 	scriptsDir := filepath.Join(workDir, ".taskguild", "scripts")
-	os.MkdirAll(scriptsDir, 0755)
-	os.WriteFile(filepath.Join(scriptsDir, "test.sh"), []byte("#!/bin/sh\necho ok"), 0755)
+	os.MkdirAll(scriptsDir, 0o755)
+	os.WriteFile(filepath.Join(scriptsDir, "test.sh"), []byte("#!/bin/sh\necho ok"), 0o755)
 
 	path, err := resolveScriptPath(workDir, "test.sh")
 	if err != nil {
@@ -310,8 +311,8 @@ func TestResolveScriptPath_LocalFile(t *testing.T) {
 func TestResolveScriptPath_LocalFileWithoutExecPermission(t *testing.T) {
 	workDir := t.TempDir()
 	scriptsDir := filepath.Join(workDir, ".taskguild", "scripts")
-	os.MkdirAll(scriptsDir, 0755)
-	os.WriteFile(filepath.Join(scriptsDir, "test.sh"), []byte("#!/bin/sh\necho ok"), 0644)
+	os.MkdirAll(scriptsDir, 0o755)
+	os.WriteFile(filepath.Join(scriptsDir, "test.sh"), []byte("#!/bin/sh\necho ok"), 0o644)
 
 	path, err := resolveScriptPath(workDir, "test.sh")
 	if err != nil {
@@ -319,7 +320,7 @@ func TestResolveScriptPath_LocalFileWithoutExecPermission(t *testing.T) {
 	}
 	// Verify execute permission was added
 	info, _ := os.Stat(path)
-	if info.Mode()&0111 == 0 {
+	if info.Mode()&0o111 == 0 {
 		t.Error("expected execute permission to be set")
 	}
 	_ = path
@@ -343,10 +344,10 @@ func TestResolveScriptPath_FileNotFound(t *testing.T) {
 func writeTestScript(t *testing.T, workDir, filename, content string) {
 	t.Helper()
 	scriptsDir := filepath.Join(workDir, ".taskguild", "scripts")
-	if err := os.MkdirAll(scriptsDir, 0755); err != nil {
+	if err := os.MkdirAll(scriptsDir, 0o755); err != nil {
 		t.Fatalf("failed to create scripts dir: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(scriptsDir, filename), []byte(content), 0755); err != nil {
+	if err := os.WriteFile(filepath.Join(scriptsDir, filename), []byte(content), 0o755); err != nil {
 		t.Fatalf("failed to write script: %v", err)
 	}
 }

@@ -161,12 +161,12 @@ func toProto(w *Workflow) *taskguildv1.Workflow {
 
 func statusToProto(s Status) *taskguildv1.WorkflowStatus {
 	pb := &taskguildv1.WorkflowStatus{
-		Id:            s.Name, // Deprecated: populated with Name for backward compat
-		Name:          s.Name,
-		Order:         s.Order,
-		IsInitial:     s.IsInitial,
-		IsTerminal:    s.IsTerminal,
-		TransitionsTo: s.TransitionsTo,
+		Id:                             s.Name, // Deprecated: populated with Name for backward compat
+		Name:                           s.Name,
+		Order:                          s.Order,
+		IsInitial:                      s.IsInitial,
+		IsTerminal:                     s.IsTerminal,
+		TransitionsTo:                  s.TransitionsTo,
 		AgentId:                        s.AgentID,
 		PermissionMode:                 s.PermissionMode,
 		InheritSessionFrom:             s.InheritSessionFrom,
@@ -239,11 +239,11 @@ func validateStatuses(statuses []*taskguildv1.WorkflowStatus) error {
 
 func statusFromProto(ps *taskguildv1.WorkflowStatus) Status {
 	s := Status{
-		Name:          ps.Name,
-		Order:         ps.Order,
-		IsInitial:     ps.IsInitial,
-		IsTerminal:    ps.IsTerminal,
-		TransitionsTo: ps.TransitionsTo,
+		Name:                           ps.Name,
+		Order:                          ps.Order,
+		IsInitial:                      ps.IsInitial,
+		IsTerminal:                     ps.IsTerminal,
+		TransitionsTo:                  ps.TransitionsTo,
 		AgentID:                        ps.AgentId,
 		PermissionMode:                 ps.PermissionMode,
 		InheritSessionFrom:             ps.InheritSessionFrom,

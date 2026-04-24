@@ -54,10 +54,10 @@ type YAMLRepository struct {
 
 	indexOnce     sync.Once
 	indexMu       sync.RWMutex
-	taskIndex     map[string][]string          // taskID -> sorted []interactionID
-	tokenIndex    map[string]string            // responseToken -> interactionID (pending only)
-	locationIndex map[string]entityLocation    // interactionID -> {projectID, taskID}
-	allIDs        []string                     // all interaction IDs in sorted order
+	taskIndex     map[string][]string       // taskID -> sorted []interactionID
+	tokenIndex    map[string]string         // responseToken -> interactionID (pending only)
+	locationIndex map[string]entityLocation // interactionID -> {projectID, taskID}
+	allIDs        []string                  // all interaction IDs in sorted order
 }
 
 func NewYAMLRepository(s storage.Storage) *YAMLRepository {

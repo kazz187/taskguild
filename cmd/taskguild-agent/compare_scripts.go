@@ -8,9 +8,10 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+
+	"github.com/kazz187/taskguild/internal/script"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/kazz187/taskguild/internal/script"
 )
 
 // handleCompareScripts compares local .taskguild/scripts/* files with server-side

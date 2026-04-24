@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -35,7 +36,7 @@ func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServ
 	slog.Info("syncing scripts from server", "count", len(scripts))
 
 	scriptsDir := filepath.Join(cfg.WorkDir, ".taskguild", "scripts")
-	if err := os.MkdirAll(scriptsDir, 0755); err != nil {
+	if err := os.MkdirAll(scriptsDir, 0o755); err != nil {
 		slog.Error("failed to create scripts directory", "error", err)
 		return
 	}
@@ -70,7 +71,7 @@ func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServ
 			}
 		}
 
-		if err := os.WriteFile(filePath, []byte(sc.GetContent()), 0755); err != nil {
+		if err := os.WriteFile(filePath, []byte(sc.GetContent()), 0o755); err != nil {
 			slog.Error("failed to write script file", "path", filePath, "error", err)
 			continue
 		}

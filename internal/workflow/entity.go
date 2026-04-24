@@ -23,9 +23,9 @@ type Workflow struct {
 type HookTrigger string
 
 const (
-	HookTriggerUnspecified          HookTrigger = ""
-	HookTriggerBeforeTaskExecution  HookTrigger = "before_task_execution"
-	HookTriggerAfterTaskExecution   HookTrigger = "after_task_execution"
+	HookTriggerUnspecified            HookTrigger = ""
+	HookTriggerBeforeTaskExecution    HookTrigger = "before_task_execution"
+	HookTriggerAfterTaskExecution     HookTrigger = "after_task_execution"
 	HookTriggerAfterWorktreeCreation  HookTrigger = "after_worktree_creation"
 	HookTriggerBeforeWorktreeCreation HookTrigger = "before_worktree_creation"
 )

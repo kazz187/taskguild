@@ -21,9 +21,9 @@ const (
 )
 
 type YAMLRepository struct {
-	storage   storage.Storage
-	indexOnce sync.Once
-	indexMu   sync.RWMutex
+	storage     storage.Storage
+	indexOnce   sync.Once
+	indexMu     sync.RWMutex
 	idToProject map[string]string // agentID -> projectID
 }
 

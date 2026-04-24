@@ -22,15 +22,15 @@ import (
 var _ taskguildv1connect.AgentManagerServiceHandler = (*Server)(nil)
 
 type Server struct {
-	registry        *Registry
-	taskRepo        task.Repository
-	workflowRepo    workflow.Repository
-	agentRepo       agent.Repository
-	interactionRepo interaction.Repository
-	projectRepo     project.Repository
-	skillRepo       skill.Repository
-	scriptRepo      script.Repository
-	taskLogRepo     tasklog.Repository
+	registry           *Registry
+	taskRepo           task.Repository
+	workflowRepo       workflow.Repository
+	agentRepo          agent.Repository
+	interactionRepo    interaction.Repository
+	projectRepo        project.Repository
+	skillRepo          skill.Repository
+	scriptRepo         script.Repository
+	taskLogRepo        tasklog.Repository
 	permissionRepo     permission.Repository
 	scpRepo            scp.Repository
 	claudeSettingsRepo claudesettings.Repository
@@ -80,10 +80,10 @@ func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workfl
 		scpRepo:            scpRepo,
 		claudeSettingsRepo: claudeSettingsRepo,
 		eventBus:           eventBus,
-		scriptBroker:    scriptBroker,
-		worktreeCache:   make(map[string][]*taskguildv1.WorktreeInfo),
-		scriptDiffCache: make(map[string][]*taskguildv1.ScriptDiff),
-		agentDiffCache:  make(map[string][]*taskguildv1.AgentDiff),
-		skillDiffCache:  make(map[string][]*taskguildv1.SkillDiff),
+		scriptBroker:       scriptBroker,
+		worktreeCache:      make(map[string][]*taskguildv1.WorktreeInfo),
+		scriptDiffCache:    make(map[string][]*taskguildv1.ScriptDiff),
+		agentDiffCache:     make(map[string][]*taskguildv1.AgentDiff),
+		skillDiffCache:     make(map[string][]*taskguildv1.SkillDiff),
 	}
 }

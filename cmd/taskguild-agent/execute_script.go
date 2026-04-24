@@ -14,10 +14,11 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 	"github.com/sourcegraph/conc"
 	"github.com/sourcegraph/conc/pool"
+
+	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
+	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
 
 const (
@@ -242,8 +243,8 @@ func resolveScriptPath(workDir, filename string) (string, error) {
 		return "", fmt.Errorf("script file not found locally: %s; run sync first", filename)
 	}
 	// Ensure the local file is executable.
-	if info.Mode()&0111 == 0 {
-		if chmodErr := os.Chmod(localPath, 0755); chmodErr != nil {
+	if info.Mode()&0o111 == 0 {
+		if chmodErr := os.Chmod(localPath, 0o755); chmodErr != nil {
 			slog.Warn("failed to set execute permission on script", "path", localPath, "error", chmodErr)
 		}
 	}
@@ -253,8 +254,8 @@ func resolveScriptPath(workDir, filename string) (string, error) {
 
 // logEntryBuffer accumulates log entries in order for the final report.
 type logEntryBuffer struct {
-	mu      sync.Mutex
-	buf     []*v1.ScriptLogEntry
+	mu  sync.Mutex
+	buf []*v1.ScriptLogEntry
 }
 
 func (b *logEntryBuffer) append(stream v1.ScriptLogStream, text string) {

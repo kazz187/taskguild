@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
-	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 )
 
 // TestRunTask_PlanToDevelop verifies that when the agent outputs

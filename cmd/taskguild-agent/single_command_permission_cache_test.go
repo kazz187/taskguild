@@ -3,8 +3,8 @@ package main
 import (
 	"testing"
 
-	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/pkg/shellparse"
+	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 )
 
 func TestWildcardToRegex(t *testing.T) {
@@ -268,7 +268,7 @@ func TestSuggestRedirectPattern(t *testing.T) {
 func TestSingleCommandPermissionCache_EmptyPattern(t *testing.T) {
 	cache := newSingleCommandPermissionCache("test-project", nil)
 	cache.Update([]*v1.SingleCommandPermission{
-		{Id: "1", Pattern: "", Type: "command"},     // empty - should be skipped
+		{Id: "1", Pattern: "", Type: "command"},      // empty - should be skipped
 		{Id: "2", Pattern: "git *", Type: "command"}, // valid
 	})
 

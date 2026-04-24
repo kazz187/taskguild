@@ -10,9 +10,9 @@ var (
 	app = kingpin.New("taskguild-agent", "TaskGuild agent manager").
 		UsageWriter(os.Stderr)
 
-	runCmd             = app.Command("run", "Run the agent manager (connects to server, executes tasks)")
+	runCmd              = app.Command("run", "Run the agent manager (connects to server, executes tasks)")
 	overrideAgentMDFlag = runCmd.Flag("override-agent-md", "Overwrite all local agent MD files from server on startup").Bool()
-	sentinelCmd        = app.Command("sentinel", "Supervisor that manages 'run' with auto-restart and binary watching")
+	sentinelCmd         = app.Command("sentinel", "Supervisor that manages 'run' with auto-restart and binary watching")
 )
 
 func main() {

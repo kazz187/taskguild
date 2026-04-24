@@ -197,7 +197,7 @@ func attributionToProto(a *Attribution) *taskguildv1.Attribution {
 func toProto(cs *ClaudeSettings) *taskguildv1.ClaudeSettings {
 	return &taskguildv1.ClaudeSettings{
 		ProjectId:   cs.ProjectID,
-		Language:    cs.Language,  // both are *string
+		Language:    cs.Language, // both are *string
 		Attribution: attributionToProto(cs.Attribution),
 		UpdatedAt:   timestamppb.New(cs.UpdatedAt),
 	}

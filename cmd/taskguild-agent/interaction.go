@@ -9,11 +9,12 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
-	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 	"github.com/kazz187/taskguild/pkg/clog"
 	"github.com/kazz187/taskguild/pkg/shellparse"
+	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
+	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
 
 // interactionWaiter dispatches streamed interaction responses to waiting goroutines.
@@ -23,7 +24,7 @@ type interactionWaiter struct {
 	mu        sync.Mutex
 	waiters   map[string]chan *v1.Interaction // interaction_id -> ch
 	pending   map[string]*v1.Interaction      // arrived before Register()
-	userMsgCh chan *v1.Interaction             // task-level channel for user-initiated messages
+	userMsgCh chan *v1.Interaction            // task-level channel for user-initiated messages
 }
 
 func newInteractionWaiter() *interactionWaiter {

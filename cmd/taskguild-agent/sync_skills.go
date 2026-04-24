@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -36,7 +37,7 @@ func syncSkills(ctx context.Context, client taskguildv1connect.AgentManagerServi
 	slog.Info("syncing skills from server", "count", len(skills))
 
 	skillsDir := filepath.Join(cfg.WorkDir, ".claude", "skills")
-	if err := os.MkdirAll(skillsDir, 0755); err != nil {
+	if err := os.MkdirAll(skillsDir, 0o755); err != nil {
 		slog.Error("failed to create skills directory", "error", err)
 		return
 	}
@@ -74,13 +75,13 @@ func syncSkills(ctx context.Context, client taskguildv1connect.AgentManagerServi
 		}
 
 		// Ensure the skill subdirectory exists.
-		if err := os.MkdirAll(skillDir, 0755); err != nil {
+		if err := os.MkdirAll(skillDir, 0o755); err != nil {
 			slog.Error("failed to create skill directory", "path", skillDir, "error", err)
 			continue
 		}
 
 		content := buildSkillMDContent(sk)
-		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
 			slog.Error("failed to write skill file", "path", filePath, "error", err)
 			continue
 		}

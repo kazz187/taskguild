@@ -9,9 +9,10 @@ import (
 	"sync"
 
 	"connectrpc.com/connect"
+
+	"github.com/kazz187/taskguild/pkg/shellparse"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/kazz187/taskguild/pkg/shellparse"
 )
 
 // wildcardToRegex converts a wildcard (glob-like) pattern to a Go regular expression.

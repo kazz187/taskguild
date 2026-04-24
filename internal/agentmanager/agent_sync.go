@@ -2,11 +2,10 @@ package agentmanager
 
 import (
 	"context"
+	"time"
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
-
-	"time"
 
 	"github.com/kazz187/taskguild/internal/agent"
 	"github.com/kazz187/taskguild/internal/claudesettings"
@@ -136,7 +135,7 @@ func (s *Server) SyncClaudeSettings(ctx context.Context, req *connect.Request[ta
 	return connect.NewResponse(&taskguildv1.SyncClaudeSettingsAgentResponse{
 		Settings: &taskguildv1.ClaudeSettings{
 			ProjectId:   proj.ID,
-			Language:    merged.Language,  // both are *string
+			Language:    merged.Language, // both are *string
 			Attribution: attributionToProto(merged.Attribution),
 			UpdatedAt:   timestamppb.New(merged.UpdatedAt),
 		},

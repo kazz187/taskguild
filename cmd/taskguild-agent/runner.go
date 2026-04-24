@@ -13,11 +13,12 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/sourcegraph/conc"
+
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	"github.com/kazz187/taskguild/pkg/clog"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/sourcegraph/conc"
 )
 
 func init() {
@@ -27,7 +28,6 @@ func init() {
 	if os.Getenv("CLAUDE_CODE_STREAM_CLOSE_TIMEOUT") == "" {
 		os.Setenv("CLAUDE_CODE_STREAM_CLOSE_TIMEOUT", "2592000000") // 30 days in ms
 	}
-
 }
 
 const (

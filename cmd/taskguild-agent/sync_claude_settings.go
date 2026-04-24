@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"connectrpc.com/connect"
+
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -29,7 +30,7 @@ func syncClaudeSettings(ctx context.Context, client taskguildv1connect.AgentMana
 	// Call SyncClaudeSettings RPC.
 	resp, err := client.SyncClaudeSettings(ctx, connect.NewRequest(&v1.SyncClaudeSettingsAgentRequest{
 		ProjectName:      cfg.ProjectName,
-		LocalLanguage:    localLanguage,  // *string, matches proto optional
+		LocalLanguage:    localLanguage, // *string, matches proto optional
 		LocalAttribution: localAttribution,
 	}))
 	if err != nil {
@@ -93,7 +94,7 @@ func writeLocalClaudeSettings(path string, raw map[string]interface{}, merged *v
 
 	// Ensure .claude directory exists.
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		slog.Error("failed to create .claude directory", "error", err)
 		return
 	}
@@ -126,7 +127,7 @@ func writeLocalClaudeSettings(path string, raw map[string]interface{}, merged *v
 		return
 	}
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		slog.Error("failed to write settings.json", "error", err)
 		return
 	}

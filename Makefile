@@ -1,4 +1,4 @@
-.PHONY: build build-server build-agent run run-direct test tidy clean
+.PHONY: build build-server build-agent run run-direct test tidy clean fmt lint lint-fix
 
 COMMIT ?= $(shell git rev-parse --short HEAD)
 LDFLAGS := -X github.com/kazz187/taskguild/internal/version.commit=$(COMMIT)
@@ -25,3 +25,12 @@ tidy:
 
 clean:
 	rm -rf bin/
+
+fmt:
+	go tool golangci-lint fmt
+
+lint:
+	go tool golangci-lint run
+
+lint-fix:
+	go tool golangci-lint run --fix

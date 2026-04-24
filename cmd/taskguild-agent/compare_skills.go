@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"connectrpc.com/connect"
+
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )

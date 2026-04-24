@@ -17,38 +17,38 @@ import (
 	"github.com/kazz187/taskguild/internal/agent"
 	"github.com/kazz187/taskguild/internal/agentmanager"
 	"github.com/kazz187/taskguild/internal/claudesettings"
+	"github.com/kazz187/taskguild/internal/config"
 	"github.com/kazz187/taskguild/internal/event"
 	"github.com/kazz187/taskguild/internal/interaction"
 	"github.com/kazz187/taskguild/internal/permission"
 	"github.com/kazz187/taskguild/internal/project"
 	"github.com/kazz187/taskguild/internal/pushnotification"
 	"github.com/kazz187/taskguild/internal/script"
+	"github.com/kazz187/taskguild/internal/singlecommandpermission"
 	"github.com/kazz187/taskguild/internal/skill"
 	"github.com/kazz187/taskguild/internal/task"
 	"github.com/kazz187/taskguild/internal/tasklog"
-	"github.com/kazz187/taskguild/internal/singlecommandpermission"
 	tmpl "github.com/kazz187/taskguild/internal/template"
 	"github.com/kazz187/taskguild/internal/workflow"
-	"github.com/kazz187/taskguild/internal/config"
 	"github.com/kazz187/taskguild/pkg/cerr"
 	"github.com/kazz187/taskguild/pkg/clog"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
 
 type Server struct {
-	server                 *http.Server
-	env                    *config.Env
-	projectServer          *project.Server
-	workflowServer         *workflow.Server
-	taskServer             *task.Server
-	interactionServer      *interaction.Server
-	agentManagerServer     *agentmanager.Server
-	agentServer            *agent.Server
-	skillServer            *skill.Server
-	scriptServer           *script.Server
-	eventServer            *event.Server
-	taskLogServer          *tasklog.Server
-	pushNotificationServer *pushnotification.Server
+	server                        *http.Server
+	env                           *config.Env
+	projectServer                 *project.Server
+	workflowServer                *workflow.Server
+	taskServer                    *task.Server
+	interactionServer             *interaction.Server
+	agentManagerServer            *agentmanager.Server
+	agentServer                   *agent.Server
+	skillServer                   *skill.Server
+	scriptServer                  *script.Server
+	eventServer                   *event.Server
+	taskLogServer                 *tasklog.Server
+	pushNotificationServer        *pushnotification.Server
 	permissionServer              *permission.Server
 	singleCommandPermissionServer *singlecommandpermission.Server
 	templateServer                *tmpl.Server

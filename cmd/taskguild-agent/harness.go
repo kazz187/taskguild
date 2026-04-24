@@ -9,12 +9,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pmezard/go-difflib/difflib"
+	"github.com/sourcegraph/conc"
+
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	"github.com/kazz187/taskguild/pkg/clog"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/pmezard/go-difflib/difflib"
-	"github.com/sourcegraph/conc"
 )
 
 const (

@@ -223,10 +223,10 @@ func TestValidateAndResolveTransition(t *testing.T) {
 
 func TestParseAvailableTransitions_FiltersSelfTransitions(t *testing.T) {
 	tests := []struct {
-		name       string
-		metadata   map[string]string
-		wantNames  []string
-		wantErr    bool
+		name      string
+		metadata  map[string]string
+		wantNames []string
+		wantErr   bool
 	}{
 		{
 			name: "filters out current status",

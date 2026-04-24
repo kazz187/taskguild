@@ -11,9 +11,9 @@ import (
 	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/kazz187/taskguild/pkg/cerr"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/kazz187/taskguild/pkg/cerr"
 )
 
 // validateWildcardPattern checks that a wildcard pattern is valid.

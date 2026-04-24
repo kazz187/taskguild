@@ -12,7 +12,6 @@ import (
 	"github.com/kazz187/taskguild/internal/agent"
 	"github.com/kazz187/taskguild/internal/script"
 	"github.com/kazz187/taskguild/internal/skill"
-
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -475,10 +474,10 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 	}
 
 	return connect.NewResponse(&taskguildv1.CreateFromTemplateResponse{
-		CreatedEntityId:    createdEntityID,
-		EntityType:         tmpl.EntityType,
-		DependentSkillIds:  dependentSkillIDs,
-		Warnings:           warnings,
+		CreatedEntityId:   createdEntityID,
+		EntityType:        tmpl.EntityType,
+		DependentSkillIds: dependentSkillIDs,
+		Warnings:          warnings,
 	}), nil
 }
 

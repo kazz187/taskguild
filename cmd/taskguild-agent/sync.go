@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -36,7 +37,7 @@ func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServi
 	slog.Info("syncing agents from server", "count", len(agents))
 
 	agentsDir := filepath.Join(cfg.WorkDir, ".claude", "agents")
-	if err := os.MkdirAll(agentsDir, 0755); err != nil {
+	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
 		slog.Error("failed to create agents directory", "error", err)
 		return
 	}
@@ -71,7 +72,7 @@ func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServi
 
 		content := buildAgentMDContent(ag)
 
-		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
 			slog.Error("failed to write agent file", "path", filePath, "error", err)
 			continue
 		}

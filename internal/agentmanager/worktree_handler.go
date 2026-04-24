@@ -68,8 +68,8 @@ func (s *Server) ReportWorktreeList(ctx context.Context, req *connect.Request[ta
 		req.Msg.RequestId,
 		"",
 		map[string]string{
-			"project_id":  proj.ID,
-			"request_id":  req.Msg.RequestId,
+			"project_id": proj.ID,
+			"request_id": req.Msg.RequestId,
 		},
 	)
 

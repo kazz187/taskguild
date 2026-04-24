@@ -9,11 +9,11 @@ import (
 
 func TestResolveEffort(t *testing.T) {
 	tests := []struct {
-		name          string
-		taskEffort    string
-		statusEffort  string
-		nilStatus     bool
-		expected      string
+		name         string
+		taskEffort   string
+		statusEffort string
+		nilStatus    bool
+		expected     string
 	}{
 		{
 			name:         "task effort overrides status effort",

@@ -10,7 +10,7 @@ func writeTempAgentMD(t *testing.T, content string) string {
 	t.Helper()
 	dir := t.TempDir()
 	fp := filepath.Join(dir, "test-agent.md")
-	if err := os.WriteFile(fp, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(fp, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	return fp

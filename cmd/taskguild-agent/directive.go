@@ -9,9 +9,10 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+
+	"github.com/kazz187/taskguild/pkg/clog"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/kazz187/taskguild/pkg/clog"
 )
 
 // errInvalidTransition is returned when the agent outputs a NEXT_STATUS

@@ -15,7 +15,7 @@ func TestHashFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "testfile")
 	content := []byte("hello world")
-	if err := os.WriteFile(path, content, 0644); err != nil {
+	if err := os.WriteFile(path, content, 0o644); err != nil {
 		t.Fatalf("failed to write temp file: %v", err)
 	}
 
@@ -35,10 +35,10 @@ func TestHashFileDifferentContent(t *testing.T) {
 
 	path1 := filepath.Join(dir, "file1")
 	path2 := filepath.Join(dir, "file2")
-	if err := os.WriteFile(path1, []byte("content A"), 0644); err != nil {
+	if err := os.WriteFile(path1, []byte("content A"), 0o644); err != nil {
 		t.Fatalf("failed to write file1: %v", err)
 	}
-	if err := os.WriteFile(path2, []byte("content B"), 0644); err != nil {
+	if err := os.WriteFile(path2, []byte("content B"), 0o644); err != nil {
 		t.Fatalf("failed to write file2: %v", err)
 	}
 
@@ -69,10 +69,10 @@ func TestHashFileSameContent(t *testing.T) {
 	path1 := filepath.Join(dir, "file1")
 	path2 := filepath.Join(dir, "file2")
 	content := []byte("identical content")
-	if err := os.WriteFile(path1, content, 0644); err != nil {
+	if err := os.WriteFile(path1, content, 0o644); err != nil {
 		t.Fatalf("failed to write file1: %v", err)
 	}
-	if err := os.WriteFile(path2, content, 0644); err != nil {
+	if err := os.WriteFile(path2, content, 0o644); err != nil {
 		t.Fatalf("failed to write file2: %v", err)
 	}
 

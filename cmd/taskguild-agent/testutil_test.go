@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"connectrpc.com/connect"
+
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
@@ -147,10 +148,10 @@ func (h *testAgentManagerHandler) CreateInteraction(ctx context.Context, req *co
 type testTaskHandler struct {
 	taskguildv1connect.UnimplementedTaskServiceHandler
 
-	mu                    sync.Mutex
-	updateTaskReqs        []*v1.UpdateTaskRequest
-	updateTaskStatusReqs  []*v1.UpdateTaskStatusRequest
-	createTaskReqs        []*v1.CreateTaskRequest
+	mu                   sync.Mutex
+	updateTaskReqs       []*v1.UpdateTaskRequest
+	updateTaskStatusReqs []*v1.UpdateTaskStatusRequest
+	createTaskReqs       []*v1.CreateTaskRequest
 }
 
 func (h *testTaskHandler) UpdateTask(ctx context.Context, req *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.UpdateTaskResponse], error) {
@@ -263,7 +264,7 @@ func baseMetadata(statusName string, transitions string) map[string]string {
 		"_current_status_name":   statusName,
 		"_available_transitions": transitions,
 		"_workflow_id":           "wf-test",
-		"_project_id":           "proj-test",
+		"_project_id":            "proj-test",
 		"_workflow_statuses":     `[{"name":"Plan"},{"name":"Develop"},{"name":"Review"},{"name":"Done"}]`,
 	}
 }

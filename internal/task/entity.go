@@ -12,10 +12,10 @@ const (
 
 // Pending reason metadata keys and values.
 const (
-	MetaPendingReason          = "_pending_reason"
-	MetaPendingBlockerTaskID   = "_pending_blocker_task_id"
+	MetaPendingReason           = "_pending_reason"
+	MetaPendingBlockerTaskID    = "_pending_blocker_task_id"
 	MetaPendingBlockerTaskTitle = "_pending_blocker_task_title"
-	MetaPendingRetryAfter      = "_pending_retry_after"
+	MetaPendingRetryAfter       = "_pending_retry_after"
 
 	PendingReasonWorktreeOccupied = "worktree_occupied"
 	PendingReasonWaitingAgent     = "waiting_agent"

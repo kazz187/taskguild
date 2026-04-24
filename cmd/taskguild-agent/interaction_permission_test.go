@@ -7,10 +7,11 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/sourcegraph/conc"
+
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/sourcegraph/conc"
 )
 
 // mockAgentManagerClient is a minimal mock for testing handlePermissionRequest.
@@ -127,7 +128,6 @@ func TestHandlePermissionRequest_BashAutoAllow(t *testing.T) {
 		claudeagent.ToolPermissionContext{},
 		nil, scpCache, nil,
 	)
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

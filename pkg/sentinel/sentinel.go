@@ -46,8 +46,8 @@ const (
 // Sentinel manages the lifecycle of a child process with the "run" subcommand.
 type Sentinel struct {
 	binaryPath string
-	childArgs  []string // extra arguments appended after "run"
-	hashMu     sync.RWMutex         // protects lastHash
+	childArgs  []string     // extra arguments appended after "run"
+	hashMu     sync.RWMutex // protects lastHash
 	lastHash   [sha256.Size]byte
 	backoff    time.Duration
 	stopCh     chan struct{} // closed when sentinel should exit

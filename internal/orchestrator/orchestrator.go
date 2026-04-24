@@ -248,4 +248,3 @@ func (o *Orchestrator) setPendingReason(ctx context.Context, t *task.Task, proje
 		}
 	}
 }
-
