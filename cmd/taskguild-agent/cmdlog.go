@@ -358,7 +358,8 @@ func runQuerySyncWithLog(
 		case err, ok := <-queryErrChan:
 			if ok && err != nil {
 				// Exit code 0 is normal termination.
-				if pe, ok := err.(*claudeagent.ProcessError); ok && pe.ExitCode == 0 {
+				pe := &claudeagent.ProcessError{}
+				if errors.As(err, &pe) {
 					tl.LogResult(result.Result, nil)
 					return result, nil
 				}
@@ -376,7 +377,8 @@ func runQuerySyncWithLog(
 			parsed, err := claudeagent.ParseMessage(rawMsg)
 			if err != nil {
 				// MessageParseError is non-fatal.
-				if _, isParseErr := err.(*claudeagent.MessageParseError); isParseErr {
+				messageParseError := &claudeagent.MessageParseError{}
+				if errors.As(err, &messageParseError) {
 					continue
 				}
 

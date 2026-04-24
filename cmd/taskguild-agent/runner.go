@@ -618,7 +618,7 @@ func runTask(
 		reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_RUNNING, "waiting for user input")
 
 		userResponse, err := waitForUserResponse(ctx, client, interClient, taskID, agentManagerID, summary, waiter)
-		if err == errWaitTimeout {
+		if errors.Is(err, errWaitTimeout) {
 			userResponseRetries++
 			if userResponseRetries > maxUserResponseRetries {
 				logger.Warn("max user response retries reached, force-completing task", "retries", userResponseRetries-1)

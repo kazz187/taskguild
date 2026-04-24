@@ -26,7 +26,7 @@ func validateWildcardPattern(pattern string) error {
 
 	regex := wildcardToRegex(pattern)
 	if _, err := regexp.Compile(regex); err != nil {
-		return fmt.Errorf("invalid wildcard pattern: %s", err)
+		return fmt.Errorf("invalid wildcard pattern: %w", err)
 	}
 
 	return nil

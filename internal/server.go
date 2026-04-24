@@ -192,7 +192,7 @@ func (s *Server) apiKeyMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		apiKey := r.Header.Get("X-API-Key")
+		apiKey := r.Header.Get("X-Api-Key")
 		if apiKey == "" {
 			apiKey = r.Header.Get("Authorization")
 			if len(apiKey) > 7 && apiKey[:7] == "Bearer " {

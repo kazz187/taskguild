@@ -98,29 +98,7 @@ func (ht *harnessTracker) launchOrReplace(key string, fn func(ctx context.Contex
 // Skill-based harness
 // ---------------------------------------------------------------------------
 
-const skillHarnessPrompt = `You are a failure pattern analyst. Your job is to review the work just completed on a task and append non-obvious failure patterns to a single shared file so the same mistakes are not repeated on future tasks.
-
-## What to Record
-
-Record ONLY concrete, specific, recurrence-worthy failure patterns:
-- Bash commands that failed (non-zero exit) and the correct command
-- Commands that were tried, corrected, and retried (trial-and-error traces)
-- Code edits that caused build/test failures and required fixing
-- Files that were missed in a cross-cutting change (propagation path gaps)
-
-## What NOT to Record
-
-- Architectural knowledge (already documented in skill files / docs)
-- Abstract lessons ("always write tests", "be careful with X")
-- Anything already recorded in HARNESS.md
-- Task-specific details that won't recur on a different task
-- The fact that a task completed successfully
-
-## Where to Record
-
-There is exactly ONE target file. Its absolute path is provided in the user message under "## Harness File".
-
-Append entries to the ` + "`" + `## 失敗パターン（自動追記）` + "`" + ` section at the end of that file. If the file or section does not exist yet, create it (the file may also be empty).
+const skillHarnessPrompt = "You are a failure pattern analyst. Your job is to review the work just completed on a task and append non-obvious failure patterns to a single shared file so the same mistakes are not repeated on future tasks.\n\n## What to Record\n\nONLY concrete, specific, recurrence-worthy failure patterns:\n- Bash commands that failed (non-zero exit) and the correct command\n- Commands that were tried, corrected, and retried (trial-and-error traces)\n- Code edits that caused build/test failures and required fixing\n- Files that were missed in a cross-cutting change (propagation path gaps)\n\n## What NOT to Record\n\n- Architectural knowledge (already documented in skill files / docs)\n- Abstract lessons (\"always write tests\", \"be careful with X\")\n- Anything already recorded in HARNESS.md\n- Task-specific details that won't recur on a different task\n- The fact that a task completed successfully\n\n## Where to Record\n\nThere is exactly ONE target file. Its absolute path is provided in the user message under \"## Harness File\".\n\nAppend entries to" + "`" + `## 失敗パターン（自動追記）` + "`" + ` section at the end of that file. If the file or section does not exist yet, create it (the file may also be empty).
 
 ## Format
 

@@ -2,6 +2,7 @@ package script
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -438,7 +439,7 @@ func TestDrain_ContextCancelled(t *testing.T) {
 		t.Fatal("expected context error, got nil")
 	}
 
-	if err != context.DeadlineExceeded {
+	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("expected DeadlineExceeded, got %v", err)
 	}
 }

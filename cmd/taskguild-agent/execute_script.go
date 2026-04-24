@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -229,7 +230,8 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 
 	if cmdErr != nil {
 		exitCode := int32(-1)
-		if exitErr, ok := cmdErr.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(cmdErr, &exitErr) {
 			exitCode = int32(exitErr.ExitCode())
 		}
 
