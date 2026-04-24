@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
-import { createClient } from '@connectrpc/connect'
-import { create } from '@bufbuild/protobuf'
 import { Link } from '@tanstack/react-router'
 import {
   requestWorktreeList,
@@ -13,9 +11,8 @@ import type { WorktreeInfo } from '@taskguild/proto/taskguild/v1/agent_manager_p
 import { listTasks } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { listWorkflows } from '@taskguild/proto/taskguild/v1/workflow-WorkflowService_connectquery.ts'
-import { EventService, EventType, SubscribeEventsRequestSchema } from '@taskguild/proto/taskguild/v1/event_pb.ts'
+import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
-import { transport } from '@/lib/transport'
 import { GitFork, GitBranch, RefreshCw, Trash2, AlertTriangle, FileText, Home, Download, CheckCircle2, XCircle, ClipboardList, Sparkles, ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
 import { Button, Badge } from '../atoms/index.ts'
 import { Card, Modal, PageHeading } from '../molecules/index.ts'
@@ -35,41 +32,20 @@ function useGitPullMainResult(projectId: string): {
 } {
   const [result, setResult] = useState<PullResult | null>(null)
 
-  useEffect(() => {
-    if (!projectId) return
-    const client = createClient(EventService, transport)
-    const controller = new AbortController()
+  const gitPullEventTypes = useMemo(() => [EventType.GIT_PULL_MAIN_RESULT], [])
+  const onGitPullEvent = useCallback((event: { type: EventType; metadata: { [k: string]: string } }) => {
+    if (event.type !== EventType.GIT_PULL_MAIN_RESULT) return
+    setResult({
+      success: event.metadata['success'] === 'true',
+      output: event.metadata['output'] || '',
+      errorMessage: event.metadata['error_message'] || '',
+      timestamp: new Date(),
+    })
+  }, [])
+  useEventSubscription(gitPullEventTypes, projectId, onGitPullEvent)
 
-    async function subscribe() {
-      try {
-        const req = create(SubscribeEventsRequestSchema, {
-          eventTypes: [EventType.GIT_PULL_MAIN_RESULT],
-          projectId,
-        })
-        for await (const event of client.subscribeEvents(req, {
-          signal: controller.signal,
-        })) {
-          if (event.type === EventType.GIT_PULL_MAIN_RESULT) {
-            setResult({
-              success: event.metadata['success'] === 'true',
-              output: event.metadata['output'] || '',
-              errorMessage: event.metadata['error_message'] || '',
-              timestamp: new Date(),
-            })
-          }
-        }
-      } catch (e) {
-        if (!controller.signal.aborted) {
-          console.error('Git pull main event subscription error:', e)
-        }
-      }
-    }
-
-    subscribe()
-    return () => controller.abort()
-  }, [projectId])
-
-  return { result, clearResult: () => setResult(null) }
+  const clearResult = useCallback(() => setResult(null), [])
+  return { result, clearResult }
 }
 
 export function WorktreeList({ projectId }: { projectId: string }) {

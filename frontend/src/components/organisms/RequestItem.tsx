@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { memo, useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { InteractionType, InteractionStatus } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import type { Interaction } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import { Shield, MessageSquare, Bell, CheckCircle, X, Check, XCircle, FileText } from 'lucide-react'
@@ -170,7 +170,7 @@ function BashPatternEditor({
 
 // --- Main Component ---
 
-export function RequestItem({
+function RequestItemImpl({
   interaction,
   onRespond,
   isRespondPending,
@@ -409,3 +409,8 @@ export function RequestItem({
     </div>
   )
 }
+
+// Memoized so unrelated parent re-renders (from event-driven refetches on
+// other queries) do not blow away local state like the BashPatternEditor
+// input focus. Props are stable references from the panel above.
+export const RequestItem = memo(RequestItemImpl)

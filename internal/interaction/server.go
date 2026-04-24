@@ -52,7 +52,8 @@ func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[task
 		}
 	}
 
-	interactions, total, err := s.repo.List(ctx, req.Msg.TaskId, taskIDs, int(limit), int(offset))
+	statusFilter := InteractionStatus(req.Msg.GetStatusFilter())
+	interactions, total, err := s.repo.List(ctx, req.Msg.TaskId, taskIDs, statusFilter, int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}
