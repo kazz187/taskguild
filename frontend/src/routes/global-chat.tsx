@@ -2,6 +2,7 @@ import { useCallback, useRef, useEffect } from 'react'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMutation } from '@connectrpc/connect-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { respondToInteraction, expireInteraction } from '@taskguild/proto/taskguild/v1/interaction-InteractionService_connectquery.ts'
 import { useGlobalTimeline } from '@/hooks/useGlobalTimeline'
 import { useNotificationSound } from '@/hooks/useNotificationSound'
@@ -10,6 +11,11 @@ import { PendingRequestsPanel } from '@/components/organisms/PendingRequestsPane
 import { ConnectionIndicator } from '@/components/organisms/ConnectionIndicator'
 import { shortId } from '@/lib/id'
 import { ChevronUp, Loader } from 'lucide-react'
+import {
+  optimisticallyExpire,
+  optimisticallyRespond,
+  revertInteractionCache,
+} from '@/lib/interaction-cache'
 
 export const Route = createFileRoute('/global-chat')({
   component: GlobalChatPage,
@@ -32,8 +38,10 @@ function GlobalChatPage() {
     loadMore,
     projectCount,
     taskCount,
+    recentSelfMutatedIds,
   } = useGlobalTimeline()
 
+  const queryClient = useQueryClient()
   const respondMut = useMutation(respondToInteraction)
   const expireMut = useMutation(expireInteraction)
 
@@ -53,28 +61,42 @@ function GlobalChatPage() {
   const handleRespond = useCallback((interactionId: string, response: string) => {
     if (respondedIdsRef.current.has(interactionId)) return
     respondedIdsRef.current.add(interactionId)
+    // Optimistic: flip status in every cached listInteractions query so the
+    // pending panel hides the item instantly.
+    const snapshot = optimisticallyRespond(queryClient, interactionId, response)
+    // Tell the event hook to ignore the INTERACTION_RESPONDED event that
+    // comes back for this ID; the cache is already up to date.
+    recentSelfMutatedIds.current.add(interactionId)
+
     respondMut.mutate(
       { id: interactionId, response },
       {
         onError: () => {
           respondedIdsRef.current.delete(interactionId)
+          recentSelfMutatedIds.current.delete(interactionId)
+          revertInteractionCache(queryClient, snapshot)
         },
       },
     )
-  }, [respondMut])
+  }, [queryClient, recentSelfMutatedIds, respondMut])
 
   const handleDismiss = useCallback((interactionId: string) => {
     if (respondedIdsRef.current.has(interactionId)) return
     respondedIdsRef.current.add(interactionId)
+    const snapshot = optimisticallyExpire(queryClient, interactionId)
+    recentSelfMutatedIds.current.add(interactionId)
+
     expireMut.mutate(
       { id: interactionId },
       {
         onError: () => {
           respondedIdsRef.current.delete(interactionId)
+          recentSelfMutatedIds.current.delete(interactionId)
+          revertInteractionCache(queryClient, snapshot)
         },
       },
     )
-  }, [expireMut])
+  }, [queryClient, recentSelfMutatedIds, expireMut])
 
   /** Get the taskId for a timeline item. */
   function getTaskId(item: (typeof timelineItems)[number]): string {

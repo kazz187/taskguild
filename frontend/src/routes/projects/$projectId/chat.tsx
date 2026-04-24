@@ -2,13 +2,14 @@ import { useCallback, useRef, useEffect, useMemo } from 'react'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { listTasks } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import { listInteractions, respondToInteraction, expireInteraction } from '@taskguild/proto/taskguild/v1/interaction-InteractionService_connectquery.ts'
 import { listTaskLogs } from '@taskguild/proto/taskguild/v1/task_log-TaskLogService_connectquery.ts'
 import { InteractionStatus, InteractionType } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import { TaskLogCategory } from '@taskguild/proto/taskguild/v1/task_log_pb.ts'
 import { getProject } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
-import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
+import { EventType, type Event } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
 import { useNotificationSound } from '@/hooks/useNotificationSound'
 import { TimelineEntry, type TimelineItem } from '@/components/organisms/TimelineEntry'
@@ -18,6 +19,11 @@ import { ArrowLeft, MessageSquare } from 'lucide-react'
 import { PageHeading } from '@/components/molecules/index.ts'
 import { Badge } from '@/components/atoms/index.ts'
 import { ConnectionIndicator } from '@/components/organisms/ConnectionIndicator'
+import {
+  optimisticallyExpire,
+  optimisticallyRespond,
+  revertInteractionCache,
+} from '@/lib/interaction-cache'
 
 export const Route = createFileRoute('/projects/$projectId/chat')({
   component: ProjectChatPage,
@@ -37,8 +43,13 @@ function ProjectChatPage() {
     pagination: { limit: 200 },
   })
 
+  const queryClient = useQueryClient()
   const respondMut = useMutation(respondToInteraction)
   const expireMut = useMutation(expireInteraction)
+
+  // IDs the local tab just mutated optimistically — the matching server
+  // event should skip the refetch because the cache is already up to date.
+  const recentSelfMutatedIds = useRef<Set<string>>(new Set())
 
   const project = projectData?.project
   const tasks = tasksData?.tasks ?? []
@@ -89,11 +100,30 @@ function ProjectChatPage() {
     return items
   }, [interactions, filteredLogs])
 
-  const onEvent = useCallback(() => {
-    refetchTasks()
-    refetchInteractions()
-    refetchLogs()
-  }, [refetchTasks, refetchInteractions, refetchLogs])
+  const onEvent = useCallback(
+    (event: Event) => {
+      switch (event.type) {
+        case EventType.INTERACTION_CREATED:
+        case EventType.INTERACTION_RESPONDED:
+          if (recentSelfMutatedIds.current.has(event.resourceId)) {
+            recentSelfMutatedIds.current.delete(event.resourceId)
+            return
+          }
+          void refetchInteractions()
+          return
+        case EventType.TASK_LOG:
+          void refetchLogs()
+          return
+        case EventType.TASK_CREATED:
+        case EventType.TASK_UPDATED:
+          void refetchTasks()
+          return
+        default:
+          return
+      }
+    },
+    [refetchTasks, refetchInteractions, refetchLogs],
+  )
 
   const eventTypes = useMemo(() => [
     EventType.TASK_CREATED, EventType.TASK_UPDATED, EventType.INTERACTION_CREATED, EventType.INTERACTION_RESPONDED,
@@ -131,31 +161,36 @@ function ProjectChatPage() {
   const handleRespond = useCallback((interactionId: string, response: string) => {
     if (respondedIdsRef.current.has(interactionId)) return
     respondedIdsRef.current.add(interactionId)
+    const snapshot = optimisticallyRespond(queryClient, interactionId, response)
+    recentSelfMutatedIds.current.add(interactionId)
     respondMut.mutate(
       { id: interactionId, response },
       {
-        onSuccess: () => refetchInteractions(),
         onError: () => {
-          // Allow retry on failure
           respondedIdsRef.current.delete(interactionId)
+          recentSelfMutatedIds.current.delete(interactionId)
+          revertInteractionCache(queryClient, snapshot)
         },
       },
     )
-  }, [respondMut, refetchInteractions])
+  }, [queryClient, respondMut])
 
   const handleDismiss = useCallback((interactionId: string) => {
     if (respondedIdsRef.current.has(interactionId)) return
     respondedIdsRef.current.add(interactionId)
+    const snapshot = optimisticallyExpire(queryClient, interactionId)
+    recentSelfMutatedIds.current.add(interactionId)
     expireMut.mutate(
       { id: interactionId },
       {
-        onSuccess: () => refetchInteractions(),
         onError: () => {
           respondedIdsRef.current.delete(interactionId)
+          recentSelfMutatedIds.current.delete(interactionId)
+          revertInteractionCache(queryClient, snapshot)
         },
       },
     )
-  }, [expireMut, refetchInteractions])
+  }, [queryClient, expireMut])
 
   return (
     <div className="flex flex-col h-dvh">

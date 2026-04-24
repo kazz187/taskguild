@@ -2,14 +2,20 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { getTask, listTasks, updateTaskStatus, stopTask, resumeTask } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import { getProject } from '@taskguild/proto/taskguild/v1/project-ProjectService_connectquery.ts'
 import { listWorkflows } from '@taskguild/proto/taskguild/v1/workflow-WorkflowService_connectquery.ts'
 import { listInteractions, respondToInteraction, expireInteraction, sendMessage } from '@taskguild/proto/taskguild/v1/interaction-InteractionService_connectquery.ts'
 import { TaskAssignmentStatus } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { InteractionStatus, InteractionType } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
-import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
+import { EventType, type Event } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
+import {
+  optimisticallyExpire,
+  optimisticallyRespond,
+  revertInteractionCache,
+} from '@/lib/interaction-cache'
 import { useTaskLogs } from '@/hooks/useTaskLogs'
 import { TaskLogCategory } from '@taskguild/proto/taskguild/v1/task_log_pb.ts'
 import { useNotificationSound } from '@/hooks/useNotificationSound'
@@ -60,12 +66,17 @@ function TaskDetailPage() {
   const { data: workflowsData } = useQuery(listWorkflows, { projectId })
   const { data: interactionsData, refetch: refetchInteractions } = useQuery(listInteractions, { taskId, pagination: { limit: 0 } })
 
+  const queryClient = useQueryClient()
   const statusMut = useMutation(updateTaskStatus)
   const respondMut = useMutation(respondToInteraction)
   const expireMut = useMutation(expireInteraction)
   const sendMut = useMutation(sendMessage)
   const stopMut = useMutation(stopTask)
   const resumeMut = useMutation(resumeTask)
+
+  // IDs the local tab just mutated optimistically — the matching server
+  // event should skip the refetch because the cache is already up to date.
+  const recentSelfMutatedIds = useRef<Set<string>>(new Set())
 
   const task = taskData?.task
   const project = projectData?.project
@@ -170,11 +181,32 @@ function TaskDetailPage() {
 
   const pendingInteraction = interactions.find((i) => i.status === InteractionStatus.PENDING)
 
-  const onEvent = useCallback(() => {
-    refetchTask()
-    refetchInteractions()
-    refetchAllTasks()
-  }, [refetchTask, refetchInteractions, refetchAllTasks])
+  const onEvent = useCallback(
+    (event: Event) => {
+      switch (event.type) {
+        case EventType.INTERACTION_CREATED:
+        case EventType.INTERACTION_RESPONDED:
+          if (recentSelfMutatedIds.current.has(event.resourceId)) {
+            recentSelfMutatedIds.current.delete(event.resourceId)
+            return
+          }
+          void refetchInteractions()
+          return
+        case EventType.TASK_UPDATED:
+        case EventType.TASK_STATUS_CHANGED:
+        case EventType.AGENT_ASSIGNED:
+        case EventType.AGENT_STATUS_CHANGED:
+          void refetchTask()
+          return
+        case EventType.TASK_CREATED:
+          void refetchAllTasks()
+          return
+        default:
+          return
+      }
+    },
+    [refetchTask, refetchInteractions, refetchAllTasks],
+  )
 
   // TASK_LOG is handled separately by useTaskLogs; excluded here to avoid a refetch
   // storm (ListTasks/GetTask/ListInteractions fire per log line otherwise).
@@ -247,32 +279,36 @@ function TaskDetailPage() {
   const handleRespond = useCallback((interactionId: string, response: string) => {
     if (respondedIdsRef.current.has(interactionId)) return
     respondedIdsRef.current.add(interactionId)
+    const snapshot = optimisticallyRespond(queryClient, interactionId, response)
+    recentSelfMutatedIds.current.add(interactionId)
     respondMut.mutate(
       { id: interactionId, response },
       {
-        onSuccess: () => refetchInteractions(),
         onError: () => {
-          // Allow retry on failure
           respondedIdsRef.current.delete(interactionId)
+          recentSelfMutatedIds.current.delete(interactionId)
+          revertInteractionCache(queryClient, snapshot)
         },
       },
     )
-  }, [respondMut, refetchInteractions])
+  }, [queryClient, respondMut])
 
   const handleDismiss = useCallback((interactionId: string) => {
     if (respondedIdsRef.current.has(interactionId)) return
     respondedIdsRef.current.add(interactionId)
+    const snapshot = optimisticallyExpire(queryClient, interactionId)
+    recentSelfMutatedIds.current.add(interactionId)
     expireMut.mutate(
       { id: interactionId },
       {
-        onSuccess: () => refetchInteractions(),
         onError: () => {
-          // Allow retry on failure
           respondedIdsRef.current.delete(interactionId)
+          recentSelfMutatedIds.current.delete(interactionId)
+          revertInteractionCache(queryClient, snapshot)
         },
       },
     )
-  }, [expireMut, refetchInteractions])
+  }, [queryClient, expireMut])
 
   const handleStopTask = () => {
     if (!task) return

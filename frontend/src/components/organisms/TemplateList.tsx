@@ -2,14 +2,13 @@ import { useState } from 'react'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { listTemplates, createTemplate, updateTemplate, deleteTemplate } from '@taskguild/proto/taskguild/v1/template-TemplateService_connectquery.ts'
 import type { Template } from '@taskguild/proto/taskguild/v1/template_pb.ts'
-import { Layers, Plus, X, Save } from 'lucide-react'
-import { Button, Input, MutationError } from '../atoms/index.ts'
-import { Card, FormField, EmptyState } from '../molecules/index.ts'
-import { toggleArrayItem } from '@/lib/arrays.ts'
+import { Layers, Plus } from 'lucide-react'
+import { Button } from '../atoms/index.ts'
+import { EmptyState } from '../molecules/index.ts'
 import type { EntityType, TemplateFormData } from './TemplateListTypes.ts'
 import { TABS, emptyTemplateForm, templateToForm } from './TemplateListTypes.ts'
 import { TemplateCard } from './TemplateCard.tsx'
-import { AgentConfigForm, SkillConfigForm, ScriptConfigForm } from './TemplateConfigForms.tsx'
+import { TemplateFormModal } from './TemplateFormModal.tsx'
 
 export function TemplateList() {
   const [activeTab, setActiveTab] = useState<EntityType>('agent')
@@ -87,45 +86,6 @@ export function TemplateList() {
   const mutation = formMode === 'create' ? createMut : updateMut
   const activeTabInfo = TABS.find(t => t.type === activeTab)!
 
-  const toggleTool = (tool: string) => {
-    setForm(prev => ({
-      ...prev,
-      agentConfig: { ...prev.agentConfig, tools: toggleArrayItem(prev.agentConfig.tools, tool) },
-    }))
-  }
-
-  const toggleDisallowedTool = (tool: string) => {
-    setForm(prev => ({
-      ...prev,
-      agentConfig: { ...prev.agentConfig, disallowedTools: toggleArrayItem(prev.agentConfig.disallowedTools, tool) },
-    }))
-  }
-
-  const addSkill = () => {
-    const trimmed = skillInput.trim()
-    if (trimmed && !form.agentConfig.skills.includes(trimmed)) {
-      setForm(prev => ({
-        ...prev,
-        agentConfig: { ...prev.agentConfig, skills: [...prev.agentConfig.skills, trimmed] },
-      }))
-      setSkillInput('')
-    }
-  }
-
-  const removeSkill = (skill: string) => {
-    setForm(prev => ({
-      ...prev,
-      agentConfig: { ...prev.agentConfig, skills: prev.agentConfig.skills.filter(s => s !== skill) },
-    }))
-  }
-
-  const toggleAllowedTool = (tool: string) => {
-    setForm(prev => ({
-      ...prev,
-      skillConfig: { ...prev.skillConfig, allowedTools: toggleArrayItem(prev.skillConfig.allowedTools, tool) },
-    }))
-  }
-
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
       {/* Header */}
@@ -167,69 +127,20 @@ export function TemplateList() {
         })}
       </div>
 
-      {/* Form */}
+      {/* Form Modal */}
       {formMode && (
-        <form onSubmit={handleSubmit}>
-          <Card className="p-4 md:p-5 mb-4 md:mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">
-                {formMode === 'create' ? 'New' : 'Edit'} {activeTabInfo.label.slice(0, -1)} Template
-              </h3>
-              <Button variant="ghost" size="sm" iconOnly onClick={closeForm} type="button" icon={<X className="w-5 h-5" />} />
-            </div>
-
-            <div className="space-y-4">
-              {/* Template Name & Description */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <FormField label="Template Name *">
-                  <Input
-                    type="text"
-                    required
-                    value={form.templateName}
-                    onChange={e => setForm(prev => ({ ...prev, templateName: e.target.value }))}
-                    className="focus:border-amber-500"
-                    placeholder="e.g. My Code Reviewer Template"
-                  />
-                </FormField>
-                <FormField label="Template Description">
-                  <Input
-                    type="text"
-                    value={form.templateDescription}
-                    onChange={e => setForm(prev => ({ ...prev, templateDescription: e.target.value }))}
-                    className="focus:border-amber-500"
-                    placeholder="Description of this template"
-                  />
-                </FormField>
-              </div>
-
-              <div className="border-t border-slate-800 pt-4">
-                <p className="text-xs text-gray-500 mb-3">Configuration</p>
-              </div>
-
-              {/* Entity-specific config form */}
-              {activeTab === 'agent' && <AgentConfigForm form={form} setForm={setForm} skillInput={skillInput} setSkillInput={setSkillInput} toggleTool={toggleTool} toggleDisallowedTool={toggleDisallowedTool} addSkill={addSkill} removeSkill={removeSkill} />}
-              {activeTab === 'skill' && <SkillConfigForm form={form} setForm={setForm} toggleAllowedTool={toggleAllowedTool} />}
-              {activeTab === 'script' && <ScriptConfigForm form={form} setForm={setForm} />}
-            </div>
-
-            <MutationError error={mutation.error} />
-
-            <div className="flex justify-end gap-2 mt-4">
-              <Button type="button" variant="secondary" size="sm" onClick={closeForm}>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                variant="danger"
-                size="sm"
-                disabled={mutation.isPending || !form.templateName}
-                icon={<Save className="w-3.5 h-3.5" />}
-              >
-                {mutation.isPending ? 'Saving...' : formMode === 'create' ? 'Create' : 'Save'}
-              </Button>
-            </div>
-          </Card>
-        </form>
+        <TemplateFormModal
+          formMode={formMode}
+          entityType={activeTab}
+          form={form}
+          setForm={setForm}
+          skillInput={skillInput}
+          setSkillInput={setSkillInput}
+          onSubmit={handleSubmit}
+          onClose={closeForm}
+          isPending={mutation.isPending}
+          error={mutation.error}
+        />
       )}
 
       {/* Template Cards */}

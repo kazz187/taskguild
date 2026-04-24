@@ -7,13 +7,12 @@ import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import type { WorkflowStatus } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
-import { Bot, Clock, GitBranch, Loader, Trash2, ArrowRight, AlertTriangle, RefreshCw, CopyPlus, ArrowUpRight, Layers } from 'lucide-react'
+import { Bot, Clock, Loader, Trash2, ArrowRight, AlertTriangle, CopyPlus, ArrowUpRight, Layers } from 'lucide-react'
 import { ForceTransitionDialog } from './ForceTransitionDialog'
 import { shortId } from '@/lib/id'
-import { Button, Select, Checkbox, Badge, Tooltip } from '../atoms/index.ts'
+import { Button, Badge, Tooltip } from '../atoms/index.ts'
 import { pendingReasonText } from '@/lib/pendingReason'
-import { Modal, TaskFormModal, Card, ImageUploadTextarea, FormField } from '../molecules/index.ts'
-import { EFFORT_OPTIONS } from '@/lib/constants.ts'
+import { Modal, TaskFormModal, Card, TaskFormFields } from '../molecules/index.ts'
 
 const TASK_DETAIL_EVENT_TYPES = [
   EventType.TASK_UPDATED,
@@ -258,72 +257,24 @@ export function TaskDetailModal({
           </Card>
         )}
 
-        <ImageUploadTextarea
-          value={descDraft}
-          onChange={setDescDraft}
+        <TaskFormFields
+          description={descDraft}
+          onDescriptionChange={setDescDraft}
+          descriptionDisabled={isTaskLocked}
           taskId={task?.id}
-          textareaSize="md"
-          placeholder="Add description..."
-          disabled={isTaskLocked}
+          effort={effortDraft}
+          onEffortChange={setEffortDraft}
+          effortDisabled={isTaskLocked}
+          useWorktree={worktreeDraft}
+          onUseWorktreeChange={setWorktreeDraft}
+          useWorktreeDisabled={isTaskLocked}
+          selectedWorktree={selectedWorktree}
+          onSelectedWorktreeChange={setSelectedWorktree}
+          worktrees={worktrees}
+          onRequestWorktrees={() => requestWtMut.mutate({ projectId })}
+          worktreeRequestPending={requestWtMut.isPending}
+          lockedWorktreeValue={isTaskLocked ? (task?.metadata?.['worktree'] ?? null) : null}
         />
-
-        {/* Agent settings */}
-        <FormField label="Effort" labelSize="xs">
-          <Select
-            value={effortDraft}
-            onChange={(e) => setEffortDraft(e.target.value)}
-            selectSize="xs"
-            className="rounded"
-            disabled={isTaskLocked}
-          >
-            {EFFORT_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </Select>
-        </FormField>
-
-        <Checkbox
-          label="Use Worktree (isolate changes in a git worktree)"
-          checked={worktreeDraft}
-          onChange={(e) => setWorktreeDraft(e.target.checked)}
-          disabled={isTaskLocked}
-        />
-
-        {/* Worktree selection / display */}
-        {isTaskLocked && task.metadata?.['worktree'] ? (
-          // Read-only display when task is assigned/pending
-          <div className="flex items-center gap-1.5 text-xs text-gray-400 bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5">
-            <GitBranch className="w-3 h-3 text-gray-500 shrink-0" />
-            <span className="font-mono truncate">{task.metadata['worktree']}</span>
-          </div>
-        ) : !isTaskLocked && worktreeDraft ? (
-          // Editable dropdown when worktree is enabled and task is not locked
-          <div className="pl-6">
-            <div className="flex items-center gap-2 mb-1">
-              <GitBranch className="w-3.5 h-3.5 text-gray-500" />
-              <label className="text-xs text-gray-400">Worktree</label>
-              <button
-                type="button"
-                onClick={() => requestWtMut.mutate({ projectId })}
-                className="text-gray-500 hover:text-gray-300 transition-colors"
-                title="Refresh worktree list"
-              >
-                <RefreshCw className={`w-3 h-3 ${requestWtMut.isPending ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
-            <Select
-              value={selectedWorktree}
-              onChange={(e) => setSelectedWorktree(e.target.value)}
-            >
-              <option value="">New worktree (auto-generated)</option>
-              {worktrees.map((wt) => (
-                <option key={wt.name} value={wt.name}>
-                  {wt.name} ({wt.branch})
-                </option>
-              ))}
-            </Select>
-          </div>
-        ) : null}
 
         {/* Status + Agent + Transitions row */}
         <div className="flex items-center gap-2 flex-wrap">
