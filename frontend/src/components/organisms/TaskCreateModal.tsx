@@ -4,10 +4,7 @@ import { createTask, uploadTaskImage } from '@taskguild/proto/taskguild/v1/task-
 import { requestWorktreeList, getWorktreeList } from '@taskguild/proto/taskguild/v1/agent_manager-AgentManagerService_connectquery.ts'
 import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
-import { GitBranch, RefreshCw } from 'lucide-react'
-import { Select, Checkbox } from '../atoms/index.ts'
-import { TaskFormModal, ImageUploadTextarea, FormField, type PendingImage } from '../molecules/index.ts'
-import { EFFORT_OPTIONS } from '@/lib/constants.ts'
+import { TaskFormModal, TaskFormFields, type PendingImage } from '../molecules/index.ts'
 
 interface TaskCreateModalProps {
   projectId: string
@@ -101,63 +98,21 @@ export function TaskCreateModal({ projectId, workflowId, defaultUseWorktree, onC
       isSubmitting={createMut.isPending || uploadMut.isPending}
       submitDisabled={!title.trim()}
     >
-      <ImageUploadTextarea
-        value={description}
-        onChange={setDescription}
+      <TaskFormFields
+        description={description}
+        onDescriptionChange={setDescription}
         pendingImages={pendingImages}
         onPendingImagesChange={setPendingImages}
-        textareaSize="md"
-        placeholder="Add description..."
+        effort={effort}
+        onEffortChange={setEffort}
+        useWorktree={useWorktree}
+        onUseWorktreeChange={setUseWorktree}
+        selectedWorktree={selectedWorktree}
+        onSelectedWorktreeChange={setSelectedWorktree}
+        worktrees={worktrees}
+        onRequestWorktrees={() => requestWtMut.mutate({ projectId })}
+        worktreeRequestPending={requestWtMut.isPending}
       />
-
-      {/* Effort */}
-      <FormField label="Effort" labelSize="xs">
-        <Select
-          value={effort}
-          onChange={(e) => setEffort(e.target.value)}
-          selectSize="xs"
-          className="rounded"
-        >
-          {EFFORT_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </Select>
-      </FormField>
-
-      <Checkbox
-        label="Use Worktree (isolate changes in a git worktree)"
-        checked={useWorktree}
-        onChange={(e) => setUseWorktree(e.target.checked)}
-      />
-
-      {/* Worktree selection */}
-      {useWorktree && (
-        <div className="pl-6">
-          <div className="flex items-center gap-2 mb-1">
-            <GitBranch className="w-3.5 h-3.5 text-gray-500" />
-            <label className="text-xs text-gray-400">Worktree</label>
-            <button
-              type="button"
-              onClick={() => requestWtMut.mutate({ projectId })}
-              className="text-gray-500 hover:text-gray-300 transition-colors"
-              title="Refresh worktree list"
-            >
-              <RefreshCw className={`w-3 h-3 ${requestWtMut.isPending ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-          <Select
-            value={selectedWorktree}
-            onChange={(e) => setSelectedWorktree(e.target.value)}
-          >
-            <option value="">New worktree (auto-generated)</option>
-            {worktrees.map((wt) => (
-              <option key={wt.name} value={wt.name}>
-                {wt.name} ({wt.branch})
-              </option>
-            ))}
-          </Select>
-        </div>
-      )}
     </TaskFormModal>
   )
 }
