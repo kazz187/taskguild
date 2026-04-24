@@ -9,7 +9,9 @@ func ResolveTitles(ctx context.Context, repo Repository, ids []string) map[strin
 	if len(ids) == 0 {
 		return nil
 	}
+
 	titles, _ := ResolveAll(ctx, repo, ids)
+
 	return titles
 }
 
@@ -20,7 +22,9 @@ func ResolveProjectIDs(ctx context.Context, repo Repository, ids []string) map[s
 	if len(ids) == 0 {
 		return nil
 	}
+
 	_, projectIDs := ResolveAll(ctx, repo, ids)
+
 	return projectIDs
 }
 
@@ -34,6 +38,7 @@ func ResolveAll(ctx context.Context, repo Repository, ids []string) (titles map[
 	if len(ids) == 0 {
 		return nil, nil
 	}
+
 	titles = make(map[string]string, len(ids))
 	projectIDs = make(map[string]string, len(ids))
 
@@ -51,6 +56,7 @@ func ResolveAll(ctx context.Context, repo Repository, ids []string) (titles map[
 			if _, ok := wanted[t.ID]; !ok {
 				continue
 			}
+
 			titles[t.ID] = t.Title
 			projectIDs[t.ID] = t.ProjectID
 		}
@@ -68,9 +74,11 @@ func ResolveAll(ctx context.Context, repo Repository, ids []string) (titles map[
 			if _, ok := wanted[t.ID]; !ok {
 				continue
 			}
+
 			if _, done := titles[t.ID]; done {
 				continue
 			}
+
 			titles[t.ID] = t.Title
 			projectIDs[t.ID] = t.ProjectID
 		}
