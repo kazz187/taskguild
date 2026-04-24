@@ -112,7 +112,8 @@ func (h *ConnectTextHandler) Handle(ctx context.Context, record slog.Record) err
 	})
 
 	for _, key := range []string{"method", "stream_type", "procedure"} {
-		if err := printColumn(c, kv, key); err != nil {
+		err := printColumn(c, kv, key)
+		if err != nil {
 			return err
 		}
 	}

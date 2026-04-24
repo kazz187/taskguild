@@ -603,7 +603,8 @@ func runTask(
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (auto-transition)")
 
-			if err := handleStatusTransition(ctx, taskClient, taskID, autoName, metadata, tl); err != nil {
+			err := handleStatusTransition(ctx, taskClient, taskID, autoName, metadata, tl)
+			if err != nil {
 				logger.Error("auto status transition failed", "error", err)
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 					fmt.Sprintf("Auto status transition to %q failed: %v", autoName, err), nil)
@@ -629,7 +630,8 @@ func runTask(
 				reportTaskResult(ctx, client, taskID, summary, "")
 				reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task force-completed (no NEXT_STATUS after retries)")
 
-				if err := handleStatusTransition(ctx, taskClient, taskID, "", metadata, tl); err != nil {
+				err := handleStatusTransition(ctx, taskClient, taskID, "", metadata, tl)
+				if err != nil {
 					logger.Warn("auto-transition on force-complete failed", "error", err)
 					tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 						fmt.Sprintf("Auto-transition on force-complete failed: %v", err), nil)
@@ -658,7 +660,8 @@ func runTask(
 			reportTaskResult(ctx, client, taskID, summary, "")
 			reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_IDLE, "task completed (no user response)")
 
-			if transErr := handleStatusTransition(ctx, taskClient, taskID, "", metadata, tl); transErr != nil {
+			transErr := handleStatusTransition(ctx, taskClient, taskID, "", metadata, tl)
+			if transErr != nil {
 				logger.Warn("auto-transition on user response error failed", "error", transErr)
 			}
 
@@ -701,7 +704,8 @@ func collectStatusSkills(metadata map[string]string) map[string]bool {
 			Name       string `json:"name"`
 			ActionType string `json:"action_type"`
 		}
-		if err := json.Unmarshal([]byte(hooksJSON), &hooks); err == nil {
+		err := json.Unmarshal([]byte(hooksJSON), &hooks)
+		if err == nil {
 			for _, h := range hooks {
 				if h.Name == "" {
 					continue

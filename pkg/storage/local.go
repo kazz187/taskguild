@@ -57,17 +57,18 @@ func (s *LocalStorage) Write(_ context.Context, path string, data []byte) error 
 	full := s.resolve(path)
 
 	dir := filepath.Dir(full)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	err := os.MkdirAll(dir, 0o755)
+	if err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
 
 	// Atomic write: write to temp file then rename.
 	tmp := full + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+	if err = os.WriteFile(tmp, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write temp file: %w", err)
 	}
 
-	if err := os.Rename(tmp, full); err != nil {
+	if err = os.Rename(tmp, full); err != nil {
 		_ = os.Remove(tmp)
 		return fmt.Errorf("failed to rename temp file: %w", err)
 	}
@@ -77,7 +78,8 @@ func (s *LocalStorage) Write(_ context.Context, path string, data []byte) error 
 
 func (s *LocalStorage) Delete(_ context.Context, path string) error {
 	full := s.resolve(path)
-	if err := os.Remove(full); err != nil {
+	err := os.Remove(full)
+	if err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("%s: %w", path, ErrNotFound)
 		}
@@ -143,11 +145,12 @@ func (s *LocalStorage) MoveDir(_ context.Context, oldPrefix, newPrefix string) e
 	newFull := s.resolve(newPrefix)
 
 	// Ensure parent directory of destination exists.
-	if err := os.MkdirAll(filepath.Dir(newFull), 0o755); err != nil {
+	err := os.MkdirAll(filepath.Dir(newFull), 0o755)
+	if err != nil {
 		return fmt.Errorf("failed to create parent directory for %s: %w", newPrefix, err)
 	}
 
-	if err := os.Rename(oldFull, newFull); err != nil {
+	if err = os.Rename(oldFull, newFull); err != nil {
 		return fmt.Errorf("failed to move %s to %s: %w", oldPrefix, newPrefix, err)
 	}
 

@@ -262,7 +262,8 @@ func (s *Sentinel) startChild() (*exec.Cmd, error) {
 	// Child inherits environment (env vars like TASKGUILD_*).
 	cmd.Env = os.Environ()
 
-	if err := cmd.Start(); err != nil {
+	err := cmd.Start()
+	if err != nil {
 		return nil, fmt.Errorf("exec %s run: %w", s.binaryPath, err)
 	}
 
@@ -282,7 +283,8 @@ func (s *Sentinel) stopChild(cmd *exec.Cmd) {
 	pid := cmd.Process.Pid
 	slog.Info("sending SIGTERM to child", "pid", pid)
 
-	if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
+	err := cmd.Process.Signal(syscall.SIGTERM)
+	if err != nil {
 		slog.Warn("failed to send SIGTERM (process may have already exited)", "pid", pid, "error", err)
 		return
 	}
@@ -292,10 +294,12 @@ func (s *Sentinel) stopChild(cmd *exec.Cmd) {
 	killWg.Go(func() {
 		time.Sleep(GracePeriod)
 		// Check if process is still alive by trying to signal it.
-		if err := cmd.Process.Signal(syscall.Signal(0)); err == nil {
+		err := cmd.Process.Signal(syscall.Signal(0))
+		if err == nil {
 			slog.Warn("grace period expired, sending SIGKILL to child", "pid", pid)
 
-			if err := cmd.Process.Kill(); err != nil {
+			err := cmd.Process.Kill()
+			if err != nil {
 				slog.Error("failed to send SIGKILL", "pid", pid, "error", err)
 			}
 		}
@@ -319,7 +323,8 @@ func (s *Sentinel) requestGracefulRestart(cmd *exec.Cmd) {
 	pid := cmd.Process.Pid
 	slog.Info("sending SIGUSR1 to child for graceful restart", "pid", pid)
 
-	if err := cmd.Process.Signal(syscall.SIGUSR1); err != nil {
+	err := cmd.Process.Signal(syscall.SIGUSR1)
+	if err != nil {
 		slog.Warn("failed to send SIGUSR1 (process may have already exited)", "pid", pid, "error", err)
 	}
 }

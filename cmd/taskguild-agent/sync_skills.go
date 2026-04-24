@@ -79,13 +79,14 @@ func syncSkills(ctx context.Context, client taskguildv1connect.AgentManagerServi
 		}
 
 		// Ensure the skill subdirectory exists.
-		if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		err := os.MkdirAll(skillDir, 0o755)
+		if err != nil {
 			slog.Error("failed to create skill directory", "path", skillDir, "error", err)
 			continue
 		}
 
 		content := buildSkillMDContent(sk)
-		if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
+		if err = os.WriteFile(filePath, []byte(content), 0o644); err != nil {
 			slog.Error("failed to write skill file", "path", filePath, "error", err)
 			continue
 		}
@@ -172,7 +173,8 @@ func cleanupStaleSkillDirs(skillsDir string, serverSkillNames map[string]bool) {
 
 		if !serverSkillNames[entry.Name()] {
 			dirPath := filepath.Join(skillsDir, entry.Name())
-			if err := os.RemoveAll(dirPath); err != nil {
+			err := os.RemoveAll(dirPath)
+			if err != nil {
 				slog.Error("failed to remove stale skill directory", "path", dirPath, "error", err)
 			} else {
 				slog.Info("removed stale skill directory", "name", entry.Name())

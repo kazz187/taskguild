@@ -165,7 +165,8 @@ func (s *Server) ResolveScriptConflict(ctx context.Context, req *connect.Request
 			resultScript.IsSynced = true
 
 			resultScript.UpdatedAt = time.Now()
-			if err := s.scriptRepo.Update(ctx, resultScript); err != nil {
+			err := s.scriptRepo.Update(ctx, resultScript)
+			if err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)
 			}
 		} else {
@@ -187,7 +188,8 @@ func (s *Server) ResolveScriptConflict(ctx context.Context, req *connect.Request
 				CreatedAt: now,
 				UpdatedAt: now,
 			}
-			if err := s.scriptRepo.Create(ctx, resultScript); err != nil {
+			err := s.scriptRepo.Create(ctx, resultScript)
+			if err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)
 			}
 		}

@@ -178,7 +178,8 @@ func (s *Server) ResolveAgentConflict(ctx context.Context, req *connect.Request[
 			resultAgent.IsSynced = true
 
 			resultAgent.UpdatedAt = time.Now()
-			if err := s.agentRepo.Update(ctx, resultAgent); err != nil {
+			err := s.agentRepo.Update(ctx, resultAgent)
+			if err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)
 			}
 		} else {
@@ -206,7 +207,8 @@ func (s *Server) ResolveAgentConflict(ctx context.Context, req *connect.Request[
 				CreatedAt:       now,
 				UpdatedAt:       now,
 			}
-			if err := s.agentRepo.Create(ctx, resultAgent); err != nil {
+			err := s.agentRepo.Create(ctx, resultAgent)
+			if err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)
 			}
 		}

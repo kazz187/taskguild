@@ -69,7 +69,8 @@ func (s *Server) CreateSkill(ctx context.Context, req *connect.Request[taskguild
 		CreatedAt:              now,
 		UpdatedAt:              now,
 	}
-	if err := s.repo.Create(ctx, sk); err != nil {
+	err := s.repo.Create(ctx, sk)
+	if err != nil {
 		return nil, err
 	}
 
@@ -251,7 +252,8 @@ func (s *Server) SyncSkillsFromDir(ctx context.Context, req *connect.Request[tas
 			existing.IsSynced = true
 
 			existing.UpdatedAt = time.Now()
-			if err := s.repo.Update(ctx, existing); err != nil {
+			err := s.repo.Update(ctx, existing)
+			if err != nil {
 				continue
 			}
 
@@ -278,7 +280,8 @@ func (s *Server) SyncSkillsFromDir(ctx context.Context, req *connect.Request[tas
 				CreatedAt:              now,
 				UpdatedAt:              now,
 			}
-			if err := s.repo.Create(ctx, sk); err != nil {
+			err := s.repo.Create(ctx, sk)
+			if err != nil {
 				continue
 			}
 

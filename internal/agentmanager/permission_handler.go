@@ -92,7 +92,8 @@ func (s *Server) AddSingleCommandPermission(ctx context.Context, req *connect.Re
 			Type:      req.Msg.GetType(),
 			CreatedAt: time.Now(),
 		}
-		if err := s.scpRepo.Create(ctx, p); err != nil {
+		err := s.scpRepo.Create(ctx, p)
+		if err != nil {
 			return nil, fmt.Errorf("failed to create single command permission: %w", err)
 		}
 	}

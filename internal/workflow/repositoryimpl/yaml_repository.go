@@ -213,7 +213,8 @@ func (r *YAMLRepository) Delete(ctx context.Context, id string) error {
 		return cerr.NewError(cerr.NotFound, "workflow not found", nil)
 	}
 
-	if err := r.storage.Delete(ctx, entityPath(pid, id)); err != nil {
+	err := r.storage.Delete(ctx, entityPath(pid, id))
+	if err != nil {
 		return cerr.WrapStorageDeleteError("workflow", err)
 	}
 

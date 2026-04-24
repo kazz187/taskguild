@@ -11,12 +11,13 @@ func writeTempSkillMD(t *testing.T, content string) (filePath string, dirName st
 	dir := t.TempDir()
 
 	skillDir := filepath.Join(dir, "test-skill")
-	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+	err := os.MkdirAll(skillDir, 0o755)
+	if err != nil {
 		t.Fatal(err)
 	}
 
 	fp := filepath.Join(skillDir, "SKILL.md")
-	if err := os.WriteFile(fp, []byte(content), 0o644); err != nil {
+	if err = os.WriteFile(fp, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

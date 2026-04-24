@@ -160,7 +160,8 @@ func (tl *turnLog) LogStdinMessage(jsonData []byte) {
 	sb.WriteString(fmt.Sprintf("[%s] ## Stdin Message\n\n", ts()))
 
 	var prettyJSON bytes.Buffer
-	if err := json.Indent(&prettyJSON, jsonData, "", "  "); err == nil {
+	err := json.Indent(&prettyJSON, jsonData, "", "  ")
+	if err == nil {
 		sb.WriteString(prettyJSON.String())
 	} else {
 		sb.Write(jsonData)

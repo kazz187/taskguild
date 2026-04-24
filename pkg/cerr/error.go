@@ -169,7 +169,8 @@ func writeJSON(ctx context.Context, rw http.ResponseWriter, response any) {
 	enc := json.NewEncoder(buf)
 	enc.SetEscapeHTML(true)
 
-	if err := enc.Encode(response); err != nil {
+	err := enc.Encode(response)
+	if err != nil {
 		writeJSONError(ctx, rw, NewError(Internal, "server error", err))
 	}
 
@@ -188,7 +189,8 @@ func writeJSONError(ctx context.Context, rw http.ResponseWriter, origErr *Error)
 	enc := json.NewEncoder(buf)
 	enc.SetEscapeHTML(true)
 
-	if err := enc.Encode(httpError{Code: origErr.Code.String(), Message: origErr.Msg}); err != nil {
+	err := enc.Encode(httpError{Code: origErr.Code.String(), Message: origErr.Msg})
+	if err != nil {
 		buf = bytes.NewBufferString(`{"code":"internal","message":"server error"}`)
 		origErr.Err = errors.Join(origErr.Err, err)
 		clog.AddError(ctx, origErr)

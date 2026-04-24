@@ -210,7 +210,8 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 		}
 
 		var statuses []statusEntry
-		if err := json.Unmarshal([]byte(statusesJSON), &statuses); err == nil && len(statuses) > 0 {
+		err := json.Unmarshal([]byte(statusesJSON), &statuses)
+		if err == nil && len(statuses) > 0 {
 			currentName := metadata["_current_status_name"]
 
 			sb.WriteString("\n### Workflow\n")
@@ -235,7 +236,8 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 
 		currentName := metadata["_current_status_name"]
 
-		if err := json.Unmarshal([]byte(transitionsJSON), &raw); err == nil {
+		err := json.Unmarshal([]byte(transitionsJSON), &raw)
+		if err == nil {
 			var transitions []transitionEntry
 
 			for _, t := range raw {
@@ -266,7 +268,8 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 		}
 
 		var hooks []hookEntry
-		if err := json.Unmarshal([]byte(hooksJSON), &hooks); err == nil && len(hooks) > 0 {
+		err := json.Unmarshal([]byte(hooksJSON), &hooks)
+		if err == nil && len(hooks) > 0 {
 			sb.WriteString("\n### Hooks\n")
 
 			for _, h := range hooks {
@@ -291,7 +294,8 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 		}
 
 		var statuses []statusEntry
-		if err := json.Unmarshal([]byte(statusesJSON), &statuses); err == nil && len(statuses) > 0 {
+		err := json.Unmarshal([]byte(statusesJSON), &statuses)
+		if err == nil && len(statuses) > 0 {
 			names := make([]string, len(statuses))
 			for i, s := range statuses {
 				names[i] = s.Name

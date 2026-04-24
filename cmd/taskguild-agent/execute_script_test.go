@@ -375,11 +375,12 @@ func writeTestScript(t *testing.T, workDir, filename, content string) {
 	t.Helper()
 
 	scriptsDir := filepath.Join(workDir, ".taskguild", "scripts")
-	if err := os.MkdirAll(scriptsDir, 0o755); err != nil {
+	err := os.MkdirAll(scriptsDir, 0o755)
+	if err != nil {
 		t.Fatalf("failed to create scripts dir: %v", err)
 	}
 
-	if err := os.WriteFile(filepath.Join(scriptsDir, filename), []byte(content), 0o755); err != nil {
+	if err = os.WriteFile(filepath.Join(scriptsDir, filename), []byte(content), 0o755); err != nil {
 		t.Fatalf("failed to write script: %v", err)
 	}
 }

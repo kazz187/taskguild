@@ -26,9 +26,10 @@ func (s *Server) SubscribeEvents(ctx context.Context, req *connect.Request[taskg
 
 	// Send an initial event to signal that the stream connection is established.
 	// This allows the client to immediately transition from "connecting" to "connected".
-	if err := stream.Send(&taskguildv1.Event{
+	err := stream.Send(&taskguildv1.Event{
 		Type: taskguildv1.EventType_EVENT_TYPE_UNSPECIFIED,
-	}); err != nil {
+	})
+	if err != nil {
 		return err
 	}
 
@@ -61,7 +62,8 @@ func (s *Server) SubscribeEvents(ctx context.Context, req *connect.Request[taskg
 				}
 			}
 
-			if err := stream.Send(event); err != nil {
+			err := stream.Send(event)
+			if err != nil {
 				return err
 			}
 		}

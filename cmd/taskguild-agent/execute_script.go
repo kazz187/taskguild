@@ -260,7 +260,8 @@ func resolveScriptPath(workDir, filename string) (string, error) {
 	}
 	// Ensure the local file is executable.
 	if info.Mode()&0o111 == 0 {
-		if chmodErr := os.Chmod(localPath, 0o755); chmodErr != nil {
+		chmodErr := os.Chmod(localPath, 0o755)
+		if chmodErr != nil {
 			slog.Warn("failed to set execute permission on script", "path", localPath, "error", chmodErr)
 		}
 	}
@@ -343,7 +344,8 @@ func streamOutput(
 			fullLog.append(v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT, line)
 		}
 
-		if err := scanner.Err(); err != nil {
+		err := scanner.Err()
+		if err != nil {
 			slog.Warn("[STREAM-TRACE] agent: stdout scanner error", "request_id", requestID, "error", err)
 		}
 
@@ -364,7 +366,8 @@ func streamOutput(
 			fullLog.append(v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDERR, line)
 		}
 
-		if err := scanner.Err(); err != nil {
+		err := scanner.Err()
+		if err != nil {
 			slog.Warn("[STREAM-TRACE] agent: stderr scanner error", "request_id", requestID, "error", err)
 		}
 

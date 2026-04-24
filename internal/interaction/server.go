@@ -275,9 +275,10 @@ func (s *Server) SubscribeInteractions(ctx context.Context, req *connect.Request
 				interProto = ToProto(inter)
 			}
 
-			if err := stream.Send(&taskguildv1.InteractionEvent{
+			err := stream.Send(&taskguildv1.InteractionEvent{
 				Interaction: interProto,
-			}); err != nil {
+			})
+			if err != nil {
 				return err
 			}
 		}

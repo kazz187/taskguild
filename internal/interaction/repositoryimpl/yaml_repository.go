@@ -450,7 +450,8 @@ func (r *YAMLRepository) DeleteByTaskID(ctx context.Context, taskID string) (int
 			continue
 		}
 
-		if err := r.storage.Delete(ctx, loc.interactionPath(id)); err != nil {
+		err := r.storage.Delete(ctx, loc.interactionPath(id))
+		if err != nil {
 			return count, cerr.WrapStorageDeleteError("interaction", err)
 		}
 
@@ -479,7 +480,8 @@ func (r *YAMLRepository) ExpirePendingByTask(ctx context.Context, taskID string)
 		i.Status = interaction.StatusExpired
 
 		i.RespondedAt = &now
-		if err := r.Update(ctx, i); err != nil {
+		err := r.Update(ctx, i)
+		if err != nil {
 			return count, fmt.Errorf("failed to expire interaction %s: %w", i.ID, err)
 		}
 

@@ -70,7 +70,8 @@ func (s *Server) CreateTemplate(ctx context.Context, req *connect.Request[taskgu
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid entity_type: %s", req.Msg.GetEntityType()))
 	}
 
-	if err := s.repo.Create(ctx, t); err != nil {
+	err := s.repo.Create(ctx, t)
+	if err != nil {
 		return nil, err
 	}
 
@@ -165,7 +166,8 @@ func (s *Server) UpdateTemplate(ctx context.Context, req *connect.Request[taskgu
 
 // DeleteTemplate deletes a template by ID.
 func (s *Server) DeleteTemplate(ctx context.Context, req *connect.Request[taskguildv1.DeleteTemplateRequest]) (*connect.Response[taskguildv1.DeleteTemplateResponse], error) {
-	if err := s.repo.Delete(ctx, req.Msg.GetId()); err != nil {
+	err := s.repo.Delete(ctx, req.Msg.GetId())
+	if err != nil {
 		return nil, err
 	}
 
@@ -327,7 +329,8 @@ func (s *Server) SaveAsTemplate(ctx context.Context, req *connect.Request[taskgu
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid entity_type: %s", req.Msg.GetEntityType()))
 	}
 
-	if err := s.repo.Create(ctx, mainTemplate); err != nil {
+	err := s.repo.Create(ctx, mainTemplate)
+	if err != nil {
 		return nil, err
 	}
 
@@ -386,7 +389,8 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 			CreatedAt:       now,
 			UpdatedAt:       now,
 		}
-		if err := s.agentRepo.Create(ctx, a); err != nil {
+		err := s.agentRepo.Create(ctx, a)
+		if err != nil {
 			return nil, err
 		}
 
@@ -469,7 +473,8 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 			CreatedAt:              now,
 			UpdatedAt:              now,
 		}
-		if err := s.skillRepo.Create(ctx, sk); err != nil {
+		err := s.skillRepo.Create(ctx, sk)
+		if err != nil {
 			return nil, err
 		}
 
@@ -496,7 +501,8 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 			CreatedAt:   now,
 			UpdatedAt:   now,
 		}
-		if err := s.scriptRepo.Create(ctx, sc); err != nil {
+		err := s.scriptRepo.Create(ctx, sc)
+		if err != nil {
 			return nil, err
 		}
 

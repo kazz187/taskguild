@@ -102,11 +102,13 @@ func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1
 				return nil
 			}
 
-			if err := stream.Send(cmd); err != nil {
+			err := stream.Send(cmd)
+			if err != nil {
 				return err
 			}
 		case <-pingTicker.C:
-			if err := stream.Send(pingCmd); err != nil {
+			err := stream.Send(pingCmd)
+			if err != nil {
 				return err
 			}
 		}
@@ -286,7 +288,8 @@ func (s *Server) sendPendingTasksToStream(ctx context.Context, projectName strin
 				},
 			},
 		}
-		if err := stream.Send(cmd); err != nil {
+		err := stream.Send(cmd)
+		if err != nil {
 			slog.Error("sendPendingTasks: failed to send command",
 				"task_id", t.ID, "error", err)
 
@@ -337,7 +340,8 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 		delete(t.Metadata, "_stopped_by_user")
 
 		t.UpdatedAt = time.Now()
-		if err := s.taskRepo.Update(ctx, t); err != nil {
+		err := s.taskRepo.Update(ctx, t)
+		if err != nil {
 			return nil, err
 		}
 
@@ -375,7 +379,8 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 			task.ClearPendingReason(t.Metadata)
 			t.AssignmentStatus = task.AssignmentStatusUnassigned
 
-			if err := s.taskRepo.Update(ctx, t); err != nil {
+			err := s.taskRepo.Update(ctx, t)
+			if err != nil {
 				return nil, err
 			}
 
@@ -406,7 +411,8 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 			t.Metadata[task.MetaPendingReason] = task.PendingReasonRetryBackoff
 			t.Metadata[task.MetaPendingRetryAfter] = time.Now().Add(delay).Format(time.RFC3339)
 
-			if err := s.taskRepo.Update(ctx, t); err != nil {
+			err := s.taskRepo.Update(ctx, t)
+			if err != nil {
 				return nil, err
 			}
 
@@ -575,7 +581,8 @@ func (s *Server) emitResultLog(ctx context.Context, t *task.Task, summary, errMs
 		CreatedAt: now,
 	}
 
-	if err := s.taskLogRepo.Create(ctx, l); err != nil {
+	err := s.taskLogRepo.Create(ctx, l)
+	if err != nil {
 		slog.Error("failed to create result log", "task_id", t.ID, "error", err)
 		return
 	}

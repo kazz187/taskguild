@@ -47,7 +47,8 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 	}
 
 	var hooks []hookEntry
-	if err := json.Unmarshal([]byte(hooksJSON), &hooks); err != nil {
+	err := json.Unmarshal([]byte(hooksJSON), &hooks)
+	if err != nil {
 		logger.Error("failed to parse _hooks metadata", "error", err)
 		return
 	}
@@ -145,14 +146,15 @@ func detectDefaultBranch(ctx context.Context, workDir string) string {
 	cmd := exec.CommandContext(ctx, "git", "rev-parse", "--verify", "--quiet", "main")
 
 	cmd.Dir = workDir
-	if err := cmd.Run(); err == nil {
+	err := cmd.Run()
+	if err == nil {
 		return "main"
 	}
 
 	cmd2 := exec.CommandContext(ctx, "git", "rev-parse", "--verify", "--quiet", "master")
 
 	cmd2.Dir = workDir
-	if err := cmd2.Run(); err == nil {
+	if err = cmd2.Run(); err == nil {
 		return "master"
 	}
 
@@ -249,7 +251,8 @@ func ensureWorktree(ctx context.Context, workDir, worktreeName, taskID string) (
 		return wtDir, nil
 	}
 
-	if err := os.MkdirAll(filepath.Join(workDir, ".claude", "worktrees"), 0o755); err != nil {
+	err := os.MkdirAll(filepath.Join(workDir, ".claude", "worktrees"), 0o755)
+	if err != nil {
 		return "", fmt.Errorf("mkdir: %w", err)
 	}
 
@@ -311,7 +314,8 @@ func syncClaudeDirToWorktree(logger *slog.Logger, workDir, wtDir string) {
 		src := filepath.Join(srcClaude, dir)
 
 		dst := filepath.Join(dstClaude, dir)
-		if err := syncDir(src, dst); err != nil {
+		err := syncDir(src, dst)
+		if err != nil {
 			logger.Warn("failed to sync .claude/"+dir, "error", err)
 		} else {
 			logger.Info("synced .claude/" + dir + " to worktree")
@@ -323,7 +327,8 @@ func syncClaudeDirToWorktree(logger *slog.Logger, workDir, wtDir string) {
 		src := filepath.Join(srcClaude, name)
 
 		dst := filepath.Join(dstClaude, name)
-		if err := copyFile(src, dst); err != nil {
+		err := copyFile(src, dst)
+		if err != nil {
 			logger.Warn("failed to sync .claude/"+name, "error", err)
 		} else {
 			logger.Info("synced .claude/" + name + " to worktree")

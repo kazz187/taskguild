@@ -67,7 +67,8 @@ func (s *Server) UpdateClaudeSettings(ctx context.Context, req *connect.Request[
 		Attribution: attributionFromProto(req.Msg.GetAttribution()),
 		UpdatedAt:   time.Now(),
 	}
-	if err := s.repo.Upsert(ctx, cs); err != nil {
+	err := s.repo.Upsert(ctx, cs)
+	if err != nil {
 		return nil, err
 	}
 
@@ -133,7 +134,8 @@ func (s *Server) SyncClaudeSettingsFromDir(ctx context.Context, req *connect.Req
 
 	if changed {
 		stored.UpdatedAt = time.Now()
-		if err := s.repo.Upsert(ctx, stored); err != nil {
+		err := s.repo.Upsert(ctx, stored)
+		if err != nil {
 			return nil, err
 		}
 
@@ -158,7 +160,8 @@ func readSettingsFromFile(path string) (*string, *Attribution, error) {
 	}
 
 	var raw map[string]any
-	if err := json.Unmarshal(data, &raw); err != nil {
+	err := json.Unmarshal(data, &raw)
+	if err != nil {
 		return nil, nil, fmt.Errorf("invalid JSON in %s: %w", path, err)
 	}
 

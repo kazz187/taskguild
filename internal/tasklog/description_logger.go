@@ -41,7 +41,8 @@ func (a *DescriptionLoggerAdapter) LogDescriptionChange(ctx context.Context, pro
 		CreatedAt: time.Now(),
 	}
 
-	if err := a.repo.Create(ctx, l); err != nil {
+	err := a.repo.Create(ctx, l)
+	if err != nil {
 		return err
 	}
 

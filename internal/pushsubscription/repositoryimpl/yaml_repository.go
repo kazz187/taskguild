@@ -90,7 +90,8 @@ func (r *YAMLRepository) List(ctx context.Context) ([]*pushsubscription.Subscrip
 }
 
 func (r *YAMLRepository) Delete(ctx context.Context, id string) error {
-	if err := r.storage.Delete(ctx, path(id)); err != nil {
+	err := r.storage.Delete(ctx, path(id))
+	if err != nil {
 		return cerr.WrapStorageDeleteError("push_subscription", err)
 	}
 

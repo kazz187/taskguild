@@ -383,7 +383,8 @@ func runServer() {
 			drainCtx, drainCancel := context.WithTimeout(context.Background(), 5*time.Minute+30*time.Second)
 			defer drainCancel()
 
-			if err := scriptBroker.Drain(drainCtx); err != nil {
+			err := scriptBroker.Drain(drainCtx)
+			if err != nil {
 				slog.Warn("drain timed out, forcing shutdown", "active_executions", scriptBroker.ActiveCount())
 			} else {
 				slog.Info("all script executions completed, shutting down for hot reload")
@@ -401,7 +402,8 @@ func runServer() {
 			pprofAddr := ":6060"
 			slog.Info("starting pprof server", "addr", pprofAddr)
 
-			if err := http.ListenAndServe(pprofAddr, nil); err != nil {
+			err := http.ListenAndServe(pprofAddr, nil)
+			if err != nil {
 				slog.Error("pprof server error", "error", err)
 			}
 		})
@@ -431,7 +433,8 @@ func runServer() {
 	})
 
 	svcWg.Go(func() {
-		if err := srv.ListenAndServe(ctx); err != nil && err != http.ErrServerClosed {
+		err := srv.ListenAndServe(ctx)
+		if err != nil && err != http.ErrServerClosed {
 			slog.Error("server error", "error", err)
 			cancel()
 		}

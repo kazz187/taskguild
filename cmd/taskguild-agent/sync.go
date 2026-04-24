@@ -73,7 +73,8 @@ func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServi
 
 		content := buildAgentMDContent(ag)
 
-		if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
+		err := os.WriteFile(filePath, []byte(content), 0o644)
+		if err != nil {
 			slog.Error("failed to write agent file", "path", filePath, "error", err)
 			continue
 		}
@@ -171,7 +172,8 @@ func cleanupStaleAgentFiles(agentsDir string, serverFiles map[string]bool) {
 
 		if !serverFiles[entry.Name()] {
 			filePath := filepath.Join(agentsDir, entry.Name())
-			if err := os.Remove(filePath); err != nil {
+			err := os.Remove(filePath)
+			if err != nil {
 				slog.Error("failed to remove stale agent file", "path", filePath, "error", err)
 			} else {
 				slog.Info("removed stale agent file", "filename", entry.Name())

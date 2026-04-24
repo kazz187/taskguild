@@ -359,7 +359,8 @@ func (r *JSONLRepository) DeleteByTaskID(ctx context.Context, taskID string) (in
 		return 0, nil
 	}
 
-	if err := os.RemoveAll(r.logsDir(projectID, taskID)); err != nil {
+	err := os.RemoveAll(r.logsDir(projectID, taskID))
+	if err != nil {
 		return 0, cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to remove logs dir: %w", err))
 	}
 
@@ -433,7 +434,8 @@ func (r *JSONLRepository) CleanupOlderThan(ctx context.Context, maxAge time.Dura
 					absPath := filepath.Join(logsPath, lf.Name())
 
 					ids := r.scanJSONLIDs(absPath)
-					if err := os.Remove(absPath); err != nil {
+					err := os.Remove(absPath)
+					if err != nil {
 						continue
 					}
 
@@ -475,7 +477,8 @@ func (r *JSONLRepository) readJSONLFile(absPath, projectID, taskID string) ([]*t
 		}
 
 		var e jsonlEntry
-		if err := json.Unmarshal(line, &e); err != nil {
+		err := json.Unmarshal(line, &e)
+		if err != nil {
 			continue
 		}
 
@@ -511,7 +514,8 @@ func (r *JSONLRepository) scanJSONLIDs(absPath string) []string {
 		var partial struct {
 			ID string `json:"id"`
 		}
-		if err := json.Unmarshal(line, &partial); err != nil {
+		err := json.Unmarshal(line, &partial)
+		if err != nil {
 			continue
 		}
 

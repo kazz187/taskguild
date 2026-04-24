@@ -239,7 +239,8 @@ func (r *YAMLRepository) Delete(ctx context.Context, id string) error {
 		return cerr.NewError(cerr.NotFound, "task not found", nil)
 	}
 
-	if err := r.storage.Delete(ctx, taskPath(cached.ProjectID, id)); err != nil {
+	err := r.storage.Delete(ctx, taskPath(cached.ProjectID, id))
+	if err != nil {
 		return cerr.WrapStorageDeleteError("task", err)
 	}
 
@@ -276,7 +277,8 @@ func (r *YAMLRepository) ReleaseByAgent(ctx context.Context, agentID string) ([]
 		t.AssignmentStatus = task.AssignmentStatusPending
 
 		t.UpdatedAt = now
-		if err := r.Update(ctx, t); err != nil {
+		err := r.Update(ctx, t)
+		if err != nil {
 			continue
 		}
 
@@ -318,7 +320,8 @@ func (r *YAMLRepository) ReleaseByAgentExcept(ctx context.Context, agentID strin
 		t.AssignmentStatus = task.AssignmentStatusPending
 
 		t.UpdatedAt = now
-		if err := r.Update(ctx, t); err != nil {
+		err := r.Update(ctx, t)
+		if err != nil {
 			continue
 		}
 
@@ -368,7 +371,8 @@ func (r *YAMLRepository) Archive(ctx context.Context, id string) error {
 	src := taskDirPath(pid, id)
 	dst := archivedTaskDirPath(pid, id)
 
-	if err := r.storage.MoveDir(ctx, src, dst); err != nil {
+	err := r.storage.MoveDir(ctx, src, dst)
+	if err != nil {
 		return cerr.WrapStorageWriteError("archived task", err)
 	}
 
@@ -425,7 +429,8 @@ func (r *YAMLRepository) Unarchive(ctx context.Context, id string) error {
 	data, err := r.storage.Read(ctx, taskPath(foundPID, id))
 	if err == nil {
 		var t task.Task
-		if err := yaml.Unmarshal(data, &t); err == nil {
+		err := yaml.Unmarshal(data, &t)
+		if err == nil {
 			r.cacheMu.Lock()
 			r.tasks[t.ID] = &t
 			r.cacheMu.Unlock()

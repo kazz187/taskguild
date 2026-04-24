@@ -81,7 +81,8 @@ func (s *Server) CreateScript(ctx context.Context, req *connect.Request[taskguil
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
-	if err := s.repo.Create(ctx, sc); err != nil {
+	err := s.repo.Create(ctx, sc)
+	if err != nil {
 		return nil, err
 	}
 
@@ -250,7 +251,8 @@ func (s *Server) SyncScriptsFromDir(ctx context.Context, req *connect.Request[ta
 			existing.IsSynced = true
 
 			existing.UpdatedAt = time.Now()
-			if err := s.repo.Update(ctx, existing); err != nil {
+			err := s.repo.Update(ctx, existing)
+			if err != nil {
 				continue
 			}
 
@@ -270,7 +272,8 @@ func (s *Server) SyncScriptsFromDir(ctx context.Context, req *connect.Request[ta
 				CreatedAt: now,
 				UpdatedAt: now,
 			}
-			if err := s.repo.Create(ctx, sc); err != nil {
+			err := s.repo.Create(ctx, sc)
+			if err != nil {
 				continue
 			}
 
@@ -327,7 +330,8 @@ func (s *Server) StopScriptExecution(ctx context.Context, req *connect.Request[t
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("unknown execution request_id: %s", requestID))
 	}
 
-	if err := s.execReq.RequestScriptStop(projectID, requestID); err != nil {
+	err := s.execReq.RequestScriptStop(projectID, requestID)
+	if err != nil {
 		return nil, fmt.Errorf("failed to request script stop: %w", err)
 	}
 
@@ -373,7 +377,8 @@ func (s *Server) StreamScriptExecution(ctx context.Context, req *connect.Request
 				slog.Info("[STREAM-TRACE] server->frontend: sending complete event", "request_id", req.Msg.GetRequestId(), "success", e.Complete.GetSuccess(), "exit_code", e.Complete.GetExitCode())
 			}
 
-			if err := stream.Send(event); err != nil {
+			err := stream.Send(event)
+			if err != nil {
 				slog.Warn("[STREAM-TRACE] server->frontend: send error", "request_id", req.Msg.GetRequestId(), "error", err)
 				return err
 			}

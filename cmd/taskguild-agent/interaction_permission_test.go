@@ -203,7 +203,8 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 	}
 
 	var meta bashPermissionMetadata
-	if err := json.Unmarshal([]byte(inter.GetMetadata()), &meta); err != nil {
+	err := json.Unmarshal([]byte(inter.GetMetadata()), &meta)
+	if err != nil {
 		t.Fatalf("failed to parse metadata: %v", err)
 	}
 
@@ -232,7 +233,7 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 
 	result := <-resultCh
 
-	if err := <-errCh; err != nil {
+	if err = <-errCh; err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -336,7 +337,8 @@ func TestHandlePermissionRequest_AlwaysAllowCommand(t *testing.T) {
 
 	result := <-resultCh
 
-	if err := <-errCh; err != nil {
+	err := <-errCh
+	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -401,7 +403,8 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_InvalidJSON(t *testing.T) {
 
 	result := <-resultCh
 
-	if err := <-errCh; err != nil {
+	err := <-errCh
+	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -454,7 +457,8 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_WithRedirects(t *testing.T) 
 	}
 
 	var meta bashPermissionMetadata
-	if err := json.Unmarshal([]byte(inter.GetMetadata()), &meta); err != nil {
+	err := json.Unmarshal([]byte(inter.GetMetadata()), &meta)
+	if err != nil {
 		t.Fatalf("failed to parse metadata: %v", err)
 	}
 
@@ -484,7 +488,7 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_WithRedirects(t *testing.T) 
 
 	result := <-resultCh
 
-	if err := <-errCh; err != nil {
+	if err = <-errCh; err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 

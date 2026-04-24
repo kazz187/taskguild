@@ -59,11 +59,13 @@ func (s *Server) RegisterPushSubscription(ctx context.Context, req *connect.Requ
 		existing.P256dhKey = req.Msg.GetP256DhKey()
 
 		existing.AuthKey = req.Msg.GetAuthKey()
-		if delErr := s.repo.Delete(ctx, existing.ID); delErr != nil {
+		delErr := s.repo.Delete(ctx, existing.ID)
+		if delErr != nil {
 			return nil, delErr
 		}
 
-		if crErr := s.repo.Create(ctx, existing); crErr != nil {
+		crErr := s.repo.Create(ctx, existing)
+		if crErr != nil {
 			return nil, crErr
 		}
 
@@ -89,7 +91,8 @@ func (s *Server) UnregisterPushSubscription(ctx context.Context, req *connect.Re
 		return nil, cerr.NewError(cerr.InvalidArgument, "endpoint is required", nil).ConnectError()
 	}
 
-	if err := s.repo.DeleteByEndpoint(ctx, req.Msg.GetEndpoint()); err != nil {
+	err := s.repo.DeleteByEndpoint(ctx, req.Msg.GetEndpoint())
+	if err != nil {
 		return nil, err
 	}
 

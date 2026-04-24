@@ -205,7 +205,8 @@ func (s *Server) UpdateTask(ctx context.Context, req *connect.Request[taskguildv
 
 	if req.Msg.GetDescription() != "" && req.Msg.GetDescription() != t.Description {
 		if s.descLogger != nil && t.Description != "" {
-			if err := s.descLogger.LogDescriptionChange(ctx, t.ProjectID, t.ID, t.Description); err != nil {
+			err := s.descLogger.LogDescriptionChange(ctx, t.ProjectID, t.ID, t.Description)
+			if err != nil {
 				slog.Warn("failed to log description change", "task_id", t.ID, "error", err)
 			}
 		}
@@ -520,7 +521,8 @@ func (s *Server) ArchiveTask(ctx context.Context, req *connect.Request[taskguild
 	}
 
 	for _, a := range s.cascadeArchivers {
-		if err := a.NotifyTaskArchived(ctx, t.ProjectID, t.ID); err != nil {
+		err := a.NotifyTaskArchived(ctx, t.ProjectID, t.ID)
+		if err != nil {
 			slog.Warn("cascade archive notification failed", "task_id", t.ID, "error", err)
 		}
 	}
@@ -575,13 +577,15 @@ func (s *Server) ArchiveTerminalTasks(ctx context.Context, req *connect.Request[
 			continue
 		}
 
-		if err := s.repo.Archive(ctx, t.ID); err != nil {
+		err := s.repo.Archive(ctx, t.ID)
+		if err != nil {
 			skipped = append(skipped, toProto(t))
 			continue
 		}
 
 		for _, a := range s.cascadeArchivers {
-			if err := a.NotifyTaskArchived(ctx, t.ProjectID, t.ID); err != nil {
+			err := a.NotifyTaskArchived(ctx, t.ProjectID, t.ID)
+			if err != nil {
 				slog.Warn("cascade archive notification failed", "task_id", t.ID, "error", err)
 			}
 		}
@@ -614,7 +618,8 @@ func (s *Server) UnarchiveTask(ctx context.Context, req *connect.Request[taskgui
 	}
 
 	for _, a := range s.cascadeArchivers {
-		if err := a.NotifyTaskUnarchived(ctx, t.ProjectID, t.ID); err != nil {
+		err := a.NotifyTaskUnarchived(ctx, t.ProjectID, t.ID)
+		if err != nil {
 			slog.Warn("cascade unarchive notification failed", "task_id", t.ID, "error", err)
 		}
 	}

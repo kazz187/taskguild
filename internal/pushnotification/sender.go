@@ -94,7 +94,8 @@ func (s *Sender) sendToSubscription(ctx context.Context, sub *pushsubscription.S
 	if resp.StatusCode == http.StatusGone {
 		slog.Info("push notification: subscription expired, removing", "endpoint", sub.Endpoint)
 
-		if err := s.repo.Delete(ctx, sub.ID); err != nil {
+		err := s.repo.Delete(ctx, sub.ID)
+		if err != nil {
 			slog.Error("push notification: failed to delete expired subscription", "id", sub.ID, "error", err)
 		}
 

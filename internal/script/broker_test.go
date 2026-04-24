@@ -383,7 +383,8 @@ func TestDrain_NoActiveExecutions(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	if err := b.Drain(ctx); err != nil {
+	err := b.Drain(ctx)
+	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
 }

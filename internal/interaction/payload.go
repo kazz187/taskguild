@@ -28,7 +28,8 @@ func UnmarshalInteractionPayload(payload string) *taskguildv1.Interaction {
 	}
 
 	pb := &taskguildv1.Interaction{}
-	if err := protojson.Unmarshal([]byte(payload), pb); err != nil {
+	err := protojson.Unmarshal([]byte(payload), pb)
+	if err != nil {
 		slog.Warn("failed to unmarshal interaction payload", "error", err)
 		return nil
 	}

@@ -75,7 +75,8 @@ func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServ
 			}
 		}
 
-		if err := os.WriteFile(filePath, []byte(sc.GetContent()), 0o755); err != nil {
+		err := os.WriteFile(filePath, []byte(sc.GetContent()), 0o755)
+		if err != nil {
 			slog.Error("failed to write script file", "path", filePath, "error", err)
 			continue
 		}
@@ -104,7 +105,8 @@ func cleanupStaleScriptFiles(scriptsDir string, serverFiles map[string]bool) {
 
 		if !serverFiles[entry.Name()] {
 			filePath := filepath.Join(scriptsDir, entry.Name())
-			if err := os.Remove(filePath); err != nil {
+			err := os.Remove(filePath)
+			if err != nil {
 				slog.Error("failed to remove stale script file", "path", filePath, "error", err)
 			} else {
 				slog.Info("removed stale script file", "filename", entry.Name())

@@ -214,7 +214,8 @@ func (r *YAMLRepository) Update(ctx context.Context, p *singlecommandpermission.
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal single command permission: %w", merr))
 	}
 
-	if err := r.storage.Write(ctx, entityPath(p.ProjectID, p.ID), data); err != nil {
+	err := r.storage.Write(ctx, entityPath(p.ProjectID, p.ID), data)
+	if err != nil {
 		return cerr.WrapStorageWriteError("single_command_permission", err)
 	}
 
@@ -237,7 +238,8 @@ func (r *YAMLRepository) Delete(ctx context.Context, id string) error {
 		return cerr.NewError(cerr.NotFound, "single command permission not found", nil)
 	}
 
-	if err := r.storage.Delete(ctx, entityPath(pid, id)); err != nil {
+	err := r.storage.Delete(ctx, entityPath(pid, id))
+	if err != nil {
 		return cerr.WrapStorageWriteError("single_command_permission", err)
 	}
 

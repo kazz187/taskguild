@@ -119,7 +119,8 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 		def.CreatedAt = now
 
 		def.UpdatedAt = now
-		if err := s.skillRepo.Create(ctx, def); err != nil {
+		err := s.skillRepo.Create(ctx, def)
+		if err != nil {
 			return err
 		}
 
@@ -208,7 +209,8 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 		CreatedAt:          now,
 		UpdatedAt:          now,
 	}
-	if err := s.workflowRepo.Create(ctx, wf); err != nil {
+	err := s.workflowRepo.Create(ctx, wf)
+	if err != nil {
 		return err
 	}
 
@@ -240,7 +242,8 @@ func (s *Seeder) UpsertSkills(ctx context.Context, projectID string) error {
 			def.CreatedAt = now
 
 			def.UpdatedAt = now
-			if err := s.skillRepo.Create(ctx, def); err != nil {
+			err := s.skillRepo.Create(ctx, def)
+			if err != nil {
 				return err
 			}
 

@@ -126,7 +126,8 @@ func (r *YAMLRepository) Update(ctx context.Context, t *template.Template) error
 }
 
 func (r *YAMLRepository) Delete(ctx context.Context, id string) error {
-	if err := r.storage.Delete(ctx, path(id)); err != nil {
+	err := r.storage.Delete(ctx, path(id))
+	if err != nil {
 		return cerr.WrapStorageDeleteError("template", err)
 	}
 

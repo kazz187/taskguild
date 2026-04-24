@@ -55,7 +55,8 @@ func (s *Server) CreateProject(ctx context.Context, req *connect.Request[taskgui
 
 	// Seed default workflow, agents, and skills for the new project.
 	if s.seeder != nil {
-		if err := s.seeder.Seed(ctx, p.ID); err != nil {
+		err := s.seeder.Seed(ctx, p.ID)
+		if err != nil {
 			// Clean up the project if seeding fails.
 			_ = s.repo.Delete(ctx, p.ID)
 			return nil, err
@@ -146,7 +147,8 @@ func (s *Server) UpdateProject(ctx context.Context, req *connect.Request[taskgui
 }
 
 func (s *Server) DeleteProject(ctx context.Context, req *connect.Request[taskguildv1.DeleteProjectRequest]) (*connect.Response[taskguildv1.DeleteProjectResponse], error) {
-	if err := s.repo.Delete(ctx, req.Msg.GetId()); err != nil {
+	err := s.repo.Delete(ctx, req.Msg.GetId())
+	if err != nil {
 		return nil, err
 	}
 

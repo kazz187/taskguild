@@ -40,7 +40,8 @@ func (s *Server) CreateWorkflow(ctx context.Context, req *connect.Request[taskgu
 		CreatedAt:             now,
 		UpdatedAt:             now,
 	}
-	if err := validateStatuses(req.Msg.GetStatuses()); err != nil {
+	err := validateStatuses(req.Msg.GetStatuses())
+	if err != nil {
 		return nil, err
 	}
 
@@ -52,7 +53,7 @@ func (s *Server) CreateWorkflow(ctx context.Context, req *connect.Request[taskgu
 		w.AgentConfigs = append(w.AgentConfigs, agentConfigFromProto(pa))
 	}
 
-	if err := s.repo.Create(ctx, w); err != nil {
+	if err = s.repo.Create(ctx, w); err != nil {
 		return nil, err
 	}
 
@@ -118,7 +119,8 @@ func (s *Server) UpdateWorkflow(ctx context.Context, req *connect.Request[taskgu
 	}
 
 	if req.Msg.Statuses != nil {
-		if err := validateStatuses(req.Msg.GetStatuses()); err != nil {
+		err := validateStatuses(req.Msg.GetStatuses())
+		if err != nil {
 			return nil, err
 		}
 
@@ -150,7 +152,8 @@ func (s *Server) UpdateWorkflow(ctx context.Context, req *connect.Request[taskgu
 }
 
 func (s *Server) DeleteWorkflow(ctx context.Context, req *connect.Request[taskguildv1.DeleteWorkflowRequest]) (*connect.Response[taskguildv1.DeleteWorkflowResponse], error) {
-	if err := s.repo.Delete(ctx, req.Msg.GetId()); err != nil {
+	err := s.repo.Delete(ctx, req.Msg.GetId())
+	if err != nil {
 		return nil, err
 	}
 
