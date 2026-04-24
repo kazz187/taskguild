@@ -2,6 +2,7 @@ package script
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -63,35 +64,42 @@ func (s *Server) notifyChange(projectID string, changedScriptIDs []string) {
 
 func (s *Server) CreateScript(ctx context.Context, req *connect.Request[taskguildv1.CreateScriptRequest]) (*connect.Response[taskguildv1.CreateScriptResponse], error) {
 	now := time.Now()
-	filename := req.Msg.Filename
+
+	filename := req.Msg.GetFilename()
 	if filename == "" {
-		filename = req.Msg.Name + ".sh"
+		filename = req.Msg.GetName() + ".sh"
 	}
+
 	sc := &Script{
 		ID:          ulid.Make().String(),
-		ProjectID:   req.Msg.ProjectId,
-		Name:        req.Msg.Name,
-		Description: req.Msg.Description,
+		ProjectID:   req.Msg.GetProjectId(),
+		Name:        req.Msg.GetName(),
+		Description: req.Msg.GetDescription(),
 		Filename:    filename,
-		Content:     req.Msg.Content,
+		Content:     req.Msg.GetContent(),
 		IsSynced:    false,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
-	if err := s.repo.Create(ctx, sc); err != nil {
+
+	err := s.repo.Create(ctx, sc)
+	if err != nil {
 		return nil, err
 	}
+
 	s.notifyChange(sc.ProjectID, []string{sc.ID})
+
 	return connect.NewResponse(&taskguildv1.CreateScriptResponse{
 		Script: toProto(sc),
 	}), nil
 }
 
 func (s *Server) GetScript(ctx context.Context, req *connect.Request[taskguildv1.GetScriptRequest]) (*connect.Response[taskguildv1.GetScriptResponse], error) {
-	sc, err := s.repo.Get(ctx, req.Msg.Id)
+	sc, err := s.repo.Get(ctx, req.Msg.GetId())
 	if err != nil {
 		return nil, err
 	}
+
 	return connect.NewResponse(&taskguildv1.GetScriptResponse{
 		Script: toProto(sc),
 	}), nil
@@ -99,20 +107,25 @@ func (s *Server) GetScript(ctx context.Context, req *connect.Request[taskguildv1
 
 func (s *Server) ListScripts(ctx context.Context, req *connect.Request[taskguildv1.ListScriptsRequest]) (*connect.Response[taskguildv1.ListScriptsResponse], error) {
 	limit, offset := int32(50), int32(0)
-	if req.Msg.Pagination != nil {
-		if req.Msg.Pagination.Limit > 0 {
-			limit = req.Msg.Pagination.Limit
+
+	if req.Msg.GetPagination() != nil {
+		if req.Msg.GetPagination().GetLimit() > 0 {
+			limit = req.Msg.GetPagination().GetLimit()
 		}
-		offset = req.Msg.Pagination.Offset
+
+		offset = req.Msg.GetPagination().GetOffset()
 	}
-	scripts, total, err := s.repo.List(ctx, req.Msg.ProjectId, int(limit), int(offset))
+
+	scripts, total, err := s.repo.List(ctx, req.Msg.GetProjectId(), int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}
+
 	protos := make([]*taskguildv1.ScriptDefinition, len(scripts))
 	for i, sc := range scripts {
 		protos[i] = toProto(sc)
 	}
+
 	return connect.NewResponse(&taskguildv1.ListScriptsResponse{
 		Scripts: protos,
 		Pagination: &taskguildv1.PaginationResponse{
@@ -124,57 +137,70 @@ func (s *Server) ListScripts(ctx context.Context, req *connect.Request[taskguild
 }
 
 func (s *Server) UpdateScript(ctx context.Context, req *connect.Request[taskguildv1.UpdateScriptRequest]) (*connect.Response[taskguildv1.UpdateScriptResponse], error) {
-	sc, err := s.repo.Get(ctx, req.Msg.Id)
+	sc, err := s.repo.Get(ctx, req.Msg.GetId())
 	if err != nil {
 		return nil, err
 	}
-	if req.Msg.Name != "" {
-		sc.Name = req.Msg.Name
+
+	if req.Msg.GetName() != "" {
+		sc.Name = req.Msg.GetName()
 	}
-	if req.Msg.Description != "" {
-		sc.Description = req.Msg.Description
+
+	if req.Msg.GetDescription() != "" {
+		sc.Description = req.Msg.GetDescription()
 	}
-	if req.Msg.Filename != "" {
-		sc.Filename = req.Msg.Filename
+
+	if req.Msg.GetFilename() != "" {
+		sc.Filename = req.Msg.GetFilename()
 	}
-	if req.Msg.Content != "" {
-		sc.Content = req.Msg.Content
+
+	if req.Msg.GetContent() != "" {
+		sc.Content = req.Msg.GetContent()
 	}
+
 	sc.UpdatedAt = time.Now()
 	if err := s.repo.Update(ctx, sc); err != nil {
 		return nil, err
 	}
+
 	s.notifyChange(sc.ProjectID, []string{sc.ID})
+
 	return connect.NewResponse(&taskguildv1.UpdateScriptResponse{
 		Script: toProto(sc),
 	}), nil
 }
 
 func (s *Server) DeleteScript(ctx context.Context, req *connect.Request[taskguildv1.DeleteScriptRequest]) (*connect.Response[taskguildv1.DeleteScriptResponse], error) {
-	sc, err := s.repo.Get(ctx, req.Msg.Id)
+	sc, err := s.repo.Get(ctx, req.Msg.GetId())
 	if err != nil {
 		return nil, err
 	}
-	if err := s.repo.Delete(ctx, req.Msg.Id); err != nil {
+
+	if err := s.repo.Delete(ctx, req.Msg.GetId()); err != nil {
 		return nil, err
 	}
+
 	s.notifyChange(sc.ProjectID, nil)
+
 	return connect.NewResponse(&taskguildv1.DeleteScriptResponse{}), nil
 }
 
 // SyncScriptsFromDir scans a directory for .taskguild/scripts/* files and syncs them.
 func (s *Server) SyncScriptsFromDir(ctx context.Context, req *connect.Request[taskguildv1.SyncScriptsFromDirRequest]) (*connect.Response[taskguildv1.SyncScriptsFromDirResponse], error) {
-	dir := req.Msg.Directory
+	dir := req.Msg.GetDirectory()
 	if (dir == "" || dir == ".") && s.resolver != nil {
-		resolved, err := s.resolver.ResolveWorkDir(req.Msg.ProjectId)
+		resolved, err := s.resolver.ResolveWorkDir(req.Msg.GetProjectId())
 		if err != nil {
 			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("failed to resolve work directory: %w", err))
 		}
+
 		dir = resolved
 	}
+
 	if dir == "" {
 		dir = "."
 	}
+
 	scriptsDir := filepath.Join(dir, ".taskguild", "scripts")
 
 	entries, err := os.ReadDir(scriptsDir)
@@ -182,6 +208,7 @@ func (s *Server) SyncScriptsFromDir(ctx context.Context, req *connect.Request[ta
 		if os.IsNotExist(err) {
 			return connect.NewResponse(&taskguildv1.SyncScriptsFromDirResponse{}), nil
 		}
+
 		return nil, fmt.Errorf("failed to read scripts directory: %w", err)
 	}
 
@@ -217,24 +244,29 @@ func (s *Server) SyncScriptsFromDir(ctx context.Context, req *connect.Request[ta
 		}
 
 		// Try to find existing script with same name in this project.
-		existing, err := s.repo.FindByName(ctx, req.Msg.ProjectId, name)
+		existing, err := s.repo.FindByName(ctx, req.Msg.GetProjectId(), name)
 		if err == nil && existing != nil {
 			// Update existing script.
 			existing.Filename = filename
 			existing.Content = string(content)
 			existing.IsSynced = true
+
 			existing.UpdatedAt = time.Now()
-			if err := s.repo.Update(ctx, existing); err != nil {
+
+			err := s.repo.Update(ctx, existing)
+			if err != nil {
 				continue
 			}
+
 			synced = append(synced, toProto(existing))
 			updated++
 		} else {
 			// Create new script.
 			now := time.Now()
+
 			sc := &Script{
 				ID:        ulid.Make().String(),
-				ProjectID: req.Msg.ProjectId,
+				ProjectID: req.Msg.GetProjectId(),
 				Name:      name,
 				Filename:  filename,
 				Content:   string(content),
@@ -242,9 +274,12 @@ func (s *Server) SyncScriptsFromDir(ctx context.Context, req *connect.Request[ta
 				CreatedAt: now,
 				UpdatedAt: now,
 			}
-			if err := s.repo.Create(ctx, sc); err != nil {
+
+			err := s.repo.Create(ctx, sc)
+			if err != nil {
 				continue
 			}
+
 			synced = append(synced, toProto(sc))
 			created++
 		}
@@ -260,10 +295,10 @@ func (s *Server) SyncScriptsFromDir(ctx context.Context, req *connect.Request[ta
 // ExecuteScript triggers execution of a script on a connected agent-manager.
 func (s *Server) ExecuteScript(ctx context.Context, req *connect.Request[taskguildv1.ExecuteScriptRequest]) (*connect.Response[taskguildv1.ExecuteScriptResponse], error) {
 	if s.broker.IsDraining() {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("server is shutting down; cannot accept new script executions"))
+		return nil, connect.NewError(connect.CodeUnavailable, errors.New("server is shutting down; cannot accept new script executions"))
 	}
 
-	sc, err := s.repo.Get(ctx, req.Msg.ScriptId)
+	sc, err := s.repo.Get(ctx, req.Msg.GetScriptId())
 	if err != nil {
 		return nil, err
 	}
@@ -288,9 +323,9 @@ func (s *Server) ExecuteScript(ctx context.Context, req *connect.Request[taskgui
 
 // StopScriptExecution stops a running script execution by sending a stop command to the agent.
 func (s *Server) StopScriptExecution(ctx context.Context, req *connect.Request[taskguildv1.StopScriptExecutionRequest]) (*connect.Response[taskguildv1.StopScriptExecutionResponse], error) {
-	requestID := req.Msg.RequestId
+	requestID := req.Msg.GetRequestId()
 	if requestID == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("request_id is required"))
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("request_id is required"))
 	}
 
 	projectID := s.broker.GetProjectID(requestID)
@@ -298,7 +333,8 @@ func (s *Server) StopScriptExecution(ctx context.Context, req *connect.Request[t
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("unknown execution request_id: %s", requestID))
 	}
 
-	if err := s.execReq.RequestScriptStop(projectID, requestID); err != nil {
+	err := s.execReq.RequestScriptStop(projectID, requestID)
+	if err != nil {
 		return nil, fmt.Errorf("failed to request script stop: %w", err)
 	}
 
@@ -307,7 +343,8 @@ func (s *Server) StopScriptExecution(ctx context.Context, req *connect.Request[t
 
 // ListActiveExecutions returns currently running and recently completed executions.
 func (s *Server) ListActiveExecutions(ctx context.Context, req *connect.Request[taskguildv1.ListActiveExecutionsRequest]) (*connect.Response[taskguildv1.ListActiveExecutionsResponse], error) {
-	executions := s.broker.ListExecutions(req.Msg.ProjectId)
+	executions := s.broker.ListExecutions(req.Msg.GetProjectId())
+
 	return connect.NewResponse(&taskguildv1.ListActiveExecutionsResponse{
 		Executions: executions,
 	}), nil
@@ -315,37 +352,41 @@ func (s *Server) ListActiveExecutions(ctx context.Context, req *connect.Request[
 
 // StreamScriptExecution streams real-time output from a script execution.
 func (s *Server) StreamScriptExecution(ctx context.Context, req *connect.Request[taskguildv1.StreamScriptExecutionRequest], stream *connect.ServerStream[taskguildv1.ScriptExecutionEvent]) error {
-	slog.Info("frontend subscribed to script execution stream", "request_id", req.Msg.RequestId)
+	slog.Info("frontend subscribed to script execution stream", "request_id", req.Msg.GetRequestId())
 
-	ch, unsubscribe := s.broker.Subscribe(req.Msg.RequestId)
+	ch, unsubscribe := s.broker.Subscribe(req.Msg.GetRequestId())
 	if ch == nil {
-		slog.Warn("script execution stream: unknown request_id", "request_id", req.Msg.RequestId)
-		return connect.NewError(connect.CodeNotFound, fmt.Errorf("unknown execution request_id: %s", req.Msg.RequestId))
+		slog.Warn("script execution stream: unknown request_id", "request_id", req.Msg.GetRequestId())
+		return connect.NewError(connect.CodeNotFound, fmt.Errorf("unknown execution request_id: %s", req.Msg.GetRequestId()))
 	}
 	defer unsubscribe()
 
 	for {
 		select {
 		case <-ctx.Done():
-			slog.Info("script execution stream ended: client disconnected", "request_id", req.Msg.RequestId)
+			slog.Info("script execution stream ended: client disconnected", "request_id", req.Msg.GetRequestId())
 			return nil
 		case event, ok := <-ch:
 			if !ok {
 				// Channel closed — execution completed and all events sent.
-				slog.Info("[STREAM-TRACE] server->frontend: stream ended (channel closed)", "request_id", req.Msg.RequestId)
+				slog.Info("[STREAM-TRACE] server->frontend: stream ended (channel closed)", "request_id", req.Msg.GetRequestId())
 				return nil
 			}
-			switch e := event.Event.(type) {
+
+			switch e := event.GetEvent().(type) {
 			case *taskguildv1.ScriptExecutionEvent_Output:
-				slog.Info("[STREAM-TRACE] server->frontend: sending output event", "request_id", req.Msg.RequestId, "entry_count", len(e.Output.Entries))
+				slog.Info("[STREAM-TRACE] server->frontend: sending output event", "request_id", req.Msg.GetRequestId(), "entry_count", len(e.Output.GetEntries()))
 			case *taskguildv1.ScriptExecutionEvent_Complete:
-				slog.Info("[STREAM-TRACE] server->frontend: sending complete event", "request_id", req.Msg.RequestId, "success", e.Complete.Success, "exit_code", e.Complete.ExitCode)
+				slog.Info("[STREAM-TRACE] server->frontend: sending complete event", "request_id", req.Msg.GetRequestId(), "success", e.Complete.GetSuccess(), "exit_code", e.Complete.GetExitCode())
 			}
-			if err := stream.Send(event); err != nil {
-				slog.Warn("[STREAM-TRACE] server->frontend: send error", "request_id", req.Msg.RequestId, "error", err)
+
+			err := stream.Send(event)
+			if err != nil {
+				slog.Warn("[STREAM-TRACE] server->frontend: send error", "request_id", req.Msg.GetRequestId(), "error", err)
 				return err
 			}
-			slog.Info("[STREAM-TRACE] server->frontend: event sent successfully", "request_id", req.Msg.RequestId)
+
+			slog.Info("[STREAM-TRACE] server->frontend: event sent successfully", "request_id", req.Msg.GetRequestId())
 		}
 	}
 }

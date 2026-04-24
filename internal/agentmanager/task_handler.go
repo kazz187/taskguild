@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"maps"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,21 +23,21 @@ import (
 )
 
 func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1.AgentManagerSubscribeRequest], stream *connect.ServerStream[taskguildv1.AgentCommand]) error {
-	agentManagerID := req.Msg.AgentManagerId
+	agentManagerID := req.Msg.GetAgentManagerId()
 	if agentManagerID == "" {
 		return cerr.NewError(cerr.InvalidArgument, "agent_manager_id is required", nil).ConnectError()
 	}
 
-	projectName := req.Msg.ProjectName
-	activeTaskIDs := req.Msg.ActiveTaskIds
-	agentVersion := req.Msg.AgentVersion
+	projectName := req.Msg.GetProjectName()
+	activeTaskIDs := req.Msg.GetActiveTaskIds()
+	agentVersion := req.Msg.GetAgentVersion()
 	serverVersion := version.Short()
 
 	slog.Info("agent-manager connected",
 		"agent_manager_id", agentManagerID,
 		"agent_version", agentVersion,
 		"server_version", serverVersion,
-		"max_concurrent_tasks", req.Msg.MaxConcurrentTasks,
+		"max_concurrent_tasks", req.Msg.GetMaxConcurrentTasks(),
 		"project_name", projectName,
 		"active_tasks", len(activeTaskIDs),
 	)
@@ -55,7 +56,8 @@ func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1
 	// transient stream disconnection.
 	s.releaseAgentTasksExcept(ctx, agentManagerID, activeTaskIDs)
 
-	commandCh := s.registry.Register(agentManagerID, req.Msg.MaxConcurrentTasks, projectName, req.Msg.WorkDir)
+	commandCh := s.registry.Register(agentManagerID, req.Msg.GetMaxConcurrentTasks(), projectName, req.Msg.GetWorkDir())
+
 	defer func() {
 		wasActive := s.registry.UnregisterIfMatch(agentManagerID, commandCh)
 		if wasActive {
@@ -84,6 +86,7 @@ func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1
 	// silently closing the stream.
 	pingTicker := time.NewTicker(30 * time.Second)
 	defer pingTicker.Stop()
+
 	pingCmd := &taskguildv1.AgentCommand{
 		Command: &taskguildv1.AgentCommand_Ping{
 			Ping: &taskguildv1.PingCommand{},
@@ -98,11 +101,14 @@ func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1
 			if !ok {
 				return nil
 			}
-			if err := stream.Send(cmd); err != nil {
+
+			err := stream.Send(cmd)
+			if err != nil {
 				return err
 			}
 		case <-pingTicker.C:
-			if err := stream.Send(pingCmd); err != nil {
+			err := stream.Send(pingCmd)
+			if err != nil {
 				return err
 			}
 		}
@@ -128,6 +134,7 @@ func (s *Server) releaseAgentTasksExcept(ctx context.Context, agentManagerID str
 	if err != nil {
 		slog.Error("failed to release tasks for agent (except active)",
 			"agent_manager_id", agentManagerID, "error", err)
+
 		return
 	}
 
@@ -150,6 +157,7 @@ func (s *Server) releaseAgentTasks(ctx context.Context, agentManagerID string) {
 		slog.Error("failed to release tasks for agent", "agent_manager_id", agentManagerID, "error", err)
 		return
 	}
+
 	for _, t := range released {
 		s.handleReleasedTask(ctx, agentManagerID, t)
 	}
@@ -189,6 +197,7 @@ func (s *Server) handleReleasedTask(ctx context.Context, agentManagerID string, 
 		slog.Error("failed to get workflow for released task", "task_id", t.ID, "error", err)
 		return
 	}
+
 	agentConfigID := wf.FindAgentIDForStatus(t.StatusID)
 
 	// Resolve project name for filtered broadcast.
@@ -257,8 +266,10 @@ func (s *Server) sendPendingTasksToStream(ctx context.Context, projectName strin
 			if err != nil {
 				slog.Error("sendPendingTasks: failed to get workflow",
 					"workflow_id", t.WorkflowID, "error", err)
+
 				continue
 			}
+
 			wfCache[t.WorkflowID] = wf
 		}
 
@@ -277,11 +288,15 @@ func (s *Server) sendPendingTasksToStream(ctx context.Context, projectName strin
 				},
 			},
 		}
-		if err := stream.Send(cmd); err != nil {
+
+		err := stream.Send(cmd)
+		if err != nil {
 			slog.Error("sendPendingTasks: failed to send command",
 				"task_id", t.ID, "error", err)
+
 			return // stream broken, abort
 		}
+
 		sentCount++
 	}
 
@@ -292,12 +307,14 @@ func (s *Server) sendPendingTasksToStream(ctx context.Context, projectName strin
 }
 
 func (s *Server) Heartbeat(ctx context.Context, req *connect.Request[taskguildv1.HeartbeatRequest]) (*connect.Response[taskguildv1.HeartbeatResponse], error) {
-	if req.Msg.AgentManagerId == "" {
+	if req.Msg.GetAgentManagerId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "agent_manager_id is required", nil).ConnectError()
 	}
-	if !s.registry.UpdateHeartbeat(req.Msg.AgentManagerId, req.Msg.ActiveTasks) {
+
+	if !s.registry.UpdateHeartbeat(req.Msg.GetAgentManagerId(), req.Msg.GetActiveTasks()) {
 		return nil, cerr.NewError(cerr.NotFound, "agent-manager not connected", nil).ConnectError()
 	}
+
 	return connect.NewResponse(&taskguildv1.HeartbeatResponse{}), nil
 }
 
@@ -309,7 +326,7 @@ const (
 )
 
 func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[taskguildv1.ReportTaskResultRequest]) (*connect.Response[taskguildv1.ReportTaskResultResponse], error) {
-	t, err := s.taskRepo.Get(ctx, req.Msg.TaskId)
+	t, err := s.taskRepo.Get(ctx, req.Msg.GetTaskId())
 	if err != nil {
 		return nil, err
 	}
@@ -320,13 +337,19 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 		if t.Metadata == nil {
 			t.Metadata = make(map[string]string)
 		}
+
 		delete(t.Metadata, "_stopped_by_user")
+
 		t.UpdatedAt = time.Now()
-		if err := s.taskRepo.Update(ctx, t); err != nil {
+
+		err := s.taskRepo.Update(ctx, t)
+		if err != nil {
 			return nil, err
 		}
+
 		slog.Info("task already unassigned, updated metadata only", "task_id", t.ID)
-		s.emitResultLog(ctx, t, req.Msg.Summary, req.Msg.ErrorMessage)
+		s.emitResultLog(ctx, t, req.Msg.GetSummary(), req.Msg.GetErrorMessage())
+
 		return connect.NewResponse(&taskguildv1.ReportTaskResultResponse{}), nil
 	}
 
@@ -340,14 +363,14 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 
 	// Emit a chronological RESULT log entry (append-only).
 	// Result data is no longer stored in metadata to avoid overwrites.
-	s.emitResultLog(ctx, t, req.Msg.Summary, req.Msg.ErrorMessage)
+	s.emitResultLog(ctx, t, req.Msg.GetSummary(), req.Msg.GetErrorMessage())
 
 	eventMeta := map[string]string{
 		"project_id":  t.ProjectID,
 		"workflow_id": t.WorkflowID,
 	}
 
-	if req.Msg.ErrorMessage != "" {
+	if req.Msg.GetErrorMessage() != "" {
 		// If stopped by user, skip retry and go straight to UNASSIGNED.
 		if t.Metadata["_stopped_by_user"] == "true" {
 			slog.Info("task stopped by user, skipping retry",
@@ -358,7 +381,8 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 			task.ClearPendingReason(t.Metadata)
 			t.AssignmentStatus = task.AssignmentStatusUnassigned
 
-			if err := s.taskRepo.Update(ctx, t); err != nil {
+			err := s.taskRepo.Update(ctx, t)
+			if err != nil {
 				return nil, err
 			}
 
@@ -389,7 +413,8 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 			t.Metadata[task.MetaPendingReason] = task.PendingReasonRetryBackoff
 			t.Metadata[task.MetaPendingRetryAfter] = time.Now().Add(delay).Format(time.RFC3339)
 
-			if err := s.taskRepo.Update(ctx, t); err != nil {
+			err := s.taskRepo.Update(ctx, t)
+			if err != nil {
 				return nil, err
 			}
 
@@ -459,6 +484,7 @@ func (s *Server) delayedRebroadcast(taskID, projectID, workflowID string, delay 
 	if err != nil {
 		slog.Error("retry rebroadcast: failed to get task",
 			"task_id", taskID, "error", err)
+
 		return
 	}
 
@@ -468,6 +494,7 @@ func (s *Server) delayedRebroadcast(taskID, projectID, workflowID string, delay 
 			"task_id", taskID,
 			"assignment_status", string(t.AssignmentStatus),
 		)
+
 		return
 	}
 
@@ -476,14 +503,17 @@ func (s *Server) delayedRebroadcast(taskID, projectID, workflowID string, delay 
 	if err != nil {
 		slog.Error("retry rebroadcast: failed to get workflow",
 			"workflow_id", workflowID, "error", err)
+
 		return
 	}
 
 	agentConfigID := wf.FindAgentIDForStatus(t.StatusID)
+
 	skillIDs := wf.FindSkillIDsForStatus(t.StatusID)
 	if agentConfigID == "" && len(skillIDs) == 0 {
 		slog.Info("retry rebroadcast: no executor (skill or agent) for status, skipping",
 			"task_id", taskID, "status_id", t.StatusID)
+
 		return
 	}
 
@@ -553,7 +583,8 @@ func (s *Server) emitResultLog(ctx context.Context, t *task.Task, summary, errMs
 		CreatedAt: now,
 	}
 
-	if err := s.taskLogRepo.Create(ctx, l); err != nil {
+	err := s.taskLogRepo.Create(ctx, l)
+	if err != nil {
 		slog.Error("failed to create result log", "task_id", t.ID, "error", err)
 		return
 	}
@@ -567,12 +598,12 @@ func (s *Server) emitResultLog(ctx context.Context, t *task.Task, summary, errMs
 }
 
 func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1.ClaimTaskRequest]) (*connect.Response[taskguildv1.ClaimTaskResponse], error) {
-	if req.Msg.TaskId == "" || req.Msg.AgentManagerId == "" {
+	if req.Msg.GetTaskId() == "" || req.Msg.GetAgentManagerId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "task_id and agent_manager_id are required", nil).ConnectError()
 	}
 
 	// Pre-read the task to check worktree occupancy before claiming.
-	taskForCheck, err := s.taskRepo.Get(ctx, req.Msg.TaskId)
+	taskForCheck, err := s.taskRepo.Get(ctx, req.Msg.GetTaskId())
 	if err != nil {
 		return nil, cerr.ExtractConnectError(ctx, err)
 	}
@@ -591,6 +622,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 			if taskForCheck.Metadata == nil {
 				taskForCheck.Metadata = make(map[string]string)
 			}
+
 			task.ClearPendingReason(taskForCheck.Metadata)
 			taskForCheck.Metadata[task.MetaPendingReason] = task.PendingReasonWorktreeOccupied
 			taskForCheck.Metadata[task.MetaPendingBlockerTaskID] = occupantID
@@ -603,14 +635,16 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 				"worktree", worktreeName,
 				"occupant_task_id", occupantID,
 			)
+
 			return connect.NewResponse(&taskguildv1.ClaimTaskResponse{
 				Success: false,
 			}), nil
 		}
-		t, err = s.taskRepo.Claim(ctx, req.Msg.TaskId, req.Msg.AgentManagerId)
+
+		t, err = s.taskRepo.Claim(ctx, req.Msg.GetTaskId(), req.Msg.GetAgentManagerId())
 		mu.Unlock()
 	} else {
-		t, err = s.taskRepo.Claim(ctx, req.Msg.TaskId, req.Msg.AgentManagerId)
+		t, err = s.taskRepo.Claim(ctx, req.Msg.GetTaskId(), req.Msg.GetAgentManagerId())
 	}
 
 	if err != nil {
@@ -619,15 +653,17 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 				Success: false,
 			}), nil
 		}
+
 		return nil, cerr.ExtractConnectError(ctx, err)
 	}
 
 	// Validate project name: if the agent declared a project, verify it matches.
-	if agentProject, ok := s.registry.GetProjectName(req.Msg.AgentManagerId); ok && agentProject != "" {
+	if agentProject, ok := s.registry.GetProjectName(req.Msg.GetAgentManagerId()); ok && agentProject != "" {
 		var taskProjectName string
 		if p, pErr := s.projectRepo.Get(ctx, t.ProjectID); pErr == nil {
 			taskProjectName = p.Name
 		}
+
 		if taskProjectName != "" && agentProject != taskProjectName {
 			// Mismatch: unclaim the task and reject.
 			t.AssignedAgentID = ""
@@ -639,6 +675,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 				"agent_project", agentProject,
 				"task_project", taskProjectName,
 			)
+
 			return connect.NewResponse(&taskguildv1.ClaimTaskResponse{
 				Success: false,
 			}), nil
@@ -651,13 +688,16 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		return nil, cerr.ExtractConnectError(ctx, err)
 	}
 
-	var instructions string
-	var agentConfigID string
-	var agentName string
-	var skillNames []string
+	var (
+		instructions  string
+		agentConfigID string
+		agentName     string
+		skillNames    []string
+	)
 
 	// Resolve the current status to find execution configuration.
 	var currentStatus *workflow.Status
+
 	for i, st := range wf.Statuses {
 		if st.Name == t.StatusID {
 			currentStatus = &wf.Statuses[i]
@@ -699,6 +739,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 				if cfg.WorkflowStatusID == t.StatusID {
 					instructions = cfg.Instructions
 					agentConfigID = cfg.ID
+
 					break
 				}
 			}
@@ -720,12 +761,11 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 
 	// Build enriched metadata with task info and available transitions.
 	enrichedMetadata := make(map[string]string)
-	for k, v := range t.Metadata {
-		enrichedMetadata[k] = v
-	}
+	maps.Copy(enrichedMetadata, t.Metadata)
 	enrichedMetadata["_task_title"] = t.Title
 	enrichedMetadata["_task_description"] = t.Description
 	enrichedMetadata["_project_id"] = t.ProjectID
+
 	enrichedMetadata["_workflow_id"] = t.WorkflowID
 	if t.UseWorktree {
 		enrichedMetadata["_use_worktree"] = "true"
@@ -737,9 +777,11 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 			break
 		}
 	}
+
 	if _, ok := enrichedMetadata["_permission_mode"]; !ok && wf.DefaultPermissionMode != "" {
 		enrichedMetadata["_permission_mode"] = wf.DefaultPermissionMode
 	}
+
 	if agentName != "" {
 		enrichedMetadata["_agent_name"] = agentName
 	}
@@ -748,15 +790,18 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	if len(skillNames) > 0 {
 		enrichedMetadata["_skill_names"] = strings.Join(skillNames, ",")
 	}
+
 	if currentStatus != nil {
 		if currentStatus.Model != "" {
 			enrichedMetadata["_model"] = currentStatus.Model
 		}
+
 		if len(currentStatus.Tools) > 0 {
 			if b, err := json.Marshal(currentStatus.Tools); err == nil {
 				enrichedMetadata["_tools"] = string(b)
 			}
 		}
+
 		if len(currentStatus.DisallowedTools) > 0 {
 			if b, err := json.Marshal(currentStatus.DisallowedTools); err == nil {
 				enrichedMetadata["_disallowed_tools"] = string(b)
@@ -775,20 +820,24 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 			if st.InheritSessionFrom != "" {
 				enrichedMetadata["_inherit_session_from"] = st.InheritSessionFrom
 			}
+
 			type transitionEntry struct {
 				Name string `json:"name"`
 			}
+
 			var transitions []transitionEntry
 			for _, targetName := range st.TransitionsTo {
 				transitions = append(transitions, transitionEntry{
 					Name: targetName,
 				})
 			}
+
 			if len(transitions) > 0 {
 				if b, err := json.Marshal(transitions); err == nil {
 					enrichedMetadata["_available_transitions"] = string(b)
 				}
 			}
+
 			break
 		}
 	}
@@ -800,6 +849,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 			Name               string `json:"name"`
 			InheritSessionFrom string `json:"inherit_session_from,omitempty"`
 		}
+
 		var allStatuses []statusInfo
 		for _, st := range wf.Statuses {
 			allStatuses = append(allStatuses, statusInfo{
@@ -807,6 +857,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 				InheritSessionFrom: st.InheritSessionFrom,
 			})
 		}
+
 		if b, err := json.Marshal(allStatuses); err == nil {
 			enrichedMetadata["_workflow_statuses"] = string(b)
 		}
@@ -825,7 +876,9 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 				Name       string `json:"name"`
 				Content    string `json:"content"`
 			}
+
 			var hooks []hookEntry
+
 			for _, h := range st.Hooks {
 				entry := hookEntry{
 					ID:         h.ID,
@@ -868,11 +921,13 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 
 				hooks = append(hooks, entry)
 			}
+
 			if len(hooks) > 0 {
 				if b, err := json.Marshal(hooks); err == nil {
 					enrichedMetadata["_hooks"] = string(b)
 				}
 			}
+
 			break
 		}
 	}
@@ -884,6 +939,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		if currentStatus.SkillHarnessExplicitlyDisabled {
 			skillHarnessEnabled = currentStatus.EnableSkillHarness
 		}
+
 		if skillHarnessEnabled {
 			enrichedMetadata["_enable_skill_harness"] = "true"
 		} else {
@@ -898,17 +954,21 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 			Text       string `json:"text"`
 			CreatedAt  string `json:"created_at"`
 		}
+
 		var history []resultEntry
+
 		for _, l := range logs {
 			if l.Category != int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_RESULT) {
 				continue
 			}
+
 			history = append(history, resultEntry{
 				ResultType: l.Metadata["result_type"],
 				Text:       l.Metadata["full_text"],
 				CreatedAt:  l.CreatedAt.Format(time.RFC3339),
 			})
 		}
+
 		if len(history) > 0 {
 			if b, err := json.Marshal(history); err == nil {
 				enrichedMetadata["_result_history"] = string(b)
@@ -922,7 +982,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		t.ID,
 		"",
 		map[string]string{
-			"agent_manager_id": req.Msg.AgentManagerId,
+			"agent_manager_id": req.Msg.GetAgentManagerId(),
 			"agent_config_id":  agentConfigID,
 			"project_id":       t.ProjectID,
 			"workflow_id":      t.WorkflowID,
@@ -931,7 +991,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 
 	slog.Info("agent claimed task",
 		"task_id", t.ID,
-		"agent_manager_id", req.Msg.AgentManagerId,
+		"agent_manager_id", req.Msg.GetAgentManagerId(),
 		"agent_config_id", agentConfigID,
 	)
 
@@ -950,17 +1010,21 @@ func (s *Server) isWorktreeOccupied(ctx context.Context, projectID, worktreeName
 	if err != nil {
 		return false, "", ""
 	}
+
 	for _, t := range tasks {
 		if t.ID == excludeTaskID {
 			continue
 		}
+
 		if t.Metadata["worktree"] != worktreeName {
 			continue
 		}
+
 		if t.AssignmentStatus == task.AssignmentStatusAssigned {
 			return true, t.ID, t.Title
 		}
 	}
+
 	return false, "", ""
 }
 
@@ -982,6 +1046,7 @@ func (s *Server) rebroadcastWorktreeWaiters(ctx context.Context, projectID, work
 		if t.ID == completedTaskID || t.AssignmentStatus != task.AssignmentStatusPending {
 			continue
 		}
+
 		if t.Metadata["worktree"] != worktreeName {
 			continue
 		}
@@ -991,10 +1056,12 @@ func (s *Server) rebroadcastWorktreeWaiters(ctx context.Context, projectID, work
 			t.UpdatedAt = time.Now()
 			_ = s.taskRepo.Update(ctx, t)
 		}
+
 		wf, wfErr := s.workflowRepo.Get(ctx, t.WorkflowID)
 		if wfErr != nil {
 			continue
 		}
+
 		agentConfigID := wf.FindAgentIDForStatus(t.StatusID)
 		s.registry.BroadcastCommandToProject(projectName, &taskguildv1.AgentCommand{
 			Command: &taskguildv1.AgentCommand_TaskAvailable{
@@ -1027,10 +1094,12 @@ func (s *Server) RequestTaskStop(taskID string, assignedAgentID string) error {
 	if !sent {
 		return fmt.Errorf("agent %s not connected", assignedAgentID)
 	}
+
 	slog.Info("task stop command sent",
 		"task_id", taskID,
 		"agent_id", assignedAgentID,
 	)
+
 	return nil
 }
 
@@ -1038,17 +1107,21 @@ func (s *Server) RequestTaskStop(taskID string, assignedAgentID string) error {
 // to PENDING and broadcasting a TaskAvailableCommand.
 func (s *Server) RequestTaskResume(ctx context.Context, t *task.Task) error {
 	t.AssignmentStatus = task.AssignmentStatusPending
+
 	t.UpdatedAt = time.Now()
 	if t.Metadata == nil {
 		t.Metadata = make(map[string]string)
 	}
+
 	task.ClearPendingReason(t.Metadata)
 
 	wf, err := s.workflowRepo.Get(ctx, t.WorkflowID)
 	if err != nil {
 		return err
 	}
+
 	agentConfigID := wf.FindAgentIDForStatus(t.StatusID)
+
 	skillIDs := wf.FindSkillIDsForStatus(t.StatusID)
 	if agentConfigID == "" && len(skillIDs) == 0 {
 		return fmt.Errorf("no executor (skill or agent) configured for status %s", t.StatusID)
@@ -1090,6 +1163,7 @@ func (s *Server) RequestTaskResume(ctx context.Context, t *task.Task) error {
 		"agent_config_id", agentConfigID,
 		"project_name", projectName,
 	)
+
 	return nil
 }
 
@@ -1101,8 +1175,10 @@ func resolveEffort(t *task.Task, currentStatus *workflow.Status) string {
 	if currentStatus != nil {
 		effort = currentStatus.Effort
 	}
+
 	if t != nil && t.Effort != "" {
 		effort = t.Effort
 	}
+
 	return effort
 }

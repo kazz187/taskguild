@@ -70,6 +70,7 @@ func (s *storageImageStore) Upload(ctx context.Context, projectID, taskID string
 	}
 
 	nextID := 1
+
 	for _, img := range existing {
 		n, _ := strconv.Atoi(img.ID)
 		if n >= nextID {
@@ -96,6 +97,7 @@ func (s *storageImageStore) Upload(ctx context.Context, projectID, taskID string
 	if err != nil {
 		return nil, fmt.Errorf("marshal image meta: %w", err)
 	}
+
 	if err := s.store.Write(ctx, imageMetaPath(projectID, taskID, id), metaBytes); err != nil {
 		return nil, fmt.Errorf("write image meta: %w", err)
 	}
@@ -130,14 +132,17 @@ func (s *storageImageStore) List(ctx context.Context, projectID, taskID string) 
 	}
 
 	var metas []*ImageMeta
+
 	for _, f := range files {
 		if !strings.HasSuffix(f, ".meta.yaml") {
 			continue
 		}
+
 		metaBytes, err := s.store.Read(ctx, f)
 		if err != nil {
 			continue
 		}
+
 		var meta ImageMeta
 		if yaml.Unmarshal(metaBytes, &meta) == nil {
 			metas = append(metas, &meta)
@@ -147,6 +152,7 @@ func (s *storageImageStore) List(ctx context.Context, projectID, taskID string) 
 	sort.Slice(metas, func(i, j int) bool {
 		ni, _ := strconv.Atoi(metas[i].ID)
 		nj, _ := strconv.Atoi(metas[j].ID)
+
 		return ni < nj
 	})
 
@@ -155,11 +161,16 @@ func (s *storageImageStore) List(ctx context.Context, projectID, taskID string) 
 
 func (s *storageImageStore) Delete(ctx context.Context, projectID, taskID, imageID string) error {
 	var firstErr error
-	if err := s.store.Delete(ctx, imageDataPath(projectID, taskID, imageID)); err != nil {
+
+	err := s.store.Delete(ctx, imageDataPath(projectID, taskID, imageID))
+	if err != nil {
 		firstErr = fmt.Errorf("delete image data: %w", err)
 	}
-	if err := s.store.Delete(ctx, imageMetaPath(projectID, taskID, imageID)); err != nil && firstErr == nil {
+
+	err = s.store.Delete(ctx, imageMetaPath(projectID, taskID, imageID))
+	if err != nil && firstErr == nil {
 		firstErr = fmt.Errorf("delete image meta: %w", err)
 	}
+
 	return firstErr
 }

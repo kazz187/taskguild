@@ -13,12 +13,12 @@ import (
 )
 
 func (s *Server) ReportTaskLog(ctx context.Context, req *connect.Request[taskguildv1.ReportTaskLogRequest]) (*connect.Response[taskguildv1.ReportTaskLogResponse], error) {
-	if req.Msg.TaskId == "" {
+	if req.Msg.GetTaskId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "task_id is required", nil).ConnectError()
 	}
 
 	// Look up the task to get ProjectID for storage path construction.
-	t, err := s.taskRepo.Get(ctx, req.Msg.TaskId)
+	t, err := s.taskRepo.Get(ctx, req.Msg.GetTaskId())
 	if err != nil {
 		return nil, err
 	}
@@ -27,11 +27,11 @@ func (s *Server) ReportTaskLog(ctx context.Context, req *connect.Request[taskgui
 	l := &tasklog.TaskLog{
 		ID:        ulid.Make().String(),
 		ProjectID: t.ProjectID,
-		TaskID:    req.Msg.TaskId,
-		Level:     int32(req.Msg.Level),
-		Category:  int32(req.Msg.Category),
-		Message:   req.Msg.Message,
-		Metadata:  req.Msg.Metadata,
+		TaskID:    req.Msg.GetTaskId(),
+		Level:     int32(req.Msg.GetLevel()),
+		Category:  int32(req.Msg.GetCategory()),
+		Message:   req.Msg.GetMessage(),
+		Metadata:  req.Msg.GetMetadata(),
 		CreatedAt: now,
 	}
 
@@ -39,7 +39,7 @@ func (s *Server) ReportTaskLog(ctx context.Context, req *connect.Request[taskgui
 		return nil, err
 	}
 
-	eventMeta := map[string]string{"task_id": req.Msg.TaskId, "project_id": t.ProjectID}
+	eventMeta := map[string]string{"task_id": req.Msg.GetTaskId(), "project_id": t.ProjectID}
 
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_TASK_LOG,

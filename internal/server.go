@@ -17,38 +17,38 @@ import (
 	"github.com/kazz187/taskguild/internal/agent"
 	"github.com/kazz187/taskguild/internal/agentmanager"
 	"github.com/kazz187/taskguild/internal/claudesettings"
+	"github.com/kazz187/taskguild/internal/config"
 	"github.com/kazz187/taskguild/internal/event"
 	"github.com/kazz187/taskguild/internal/interaction"
 	"github.com/kazz187/taskguild/internal/permission"
 	"github.com/kazz187/taskguild/internal/project"
 	"github.com/kazz187/taskguild/internal/pushnotification"
 	"github.com/kazz187/taskguild/internal/script"
+	"github.com/kazz187/taskguild/internal/singlecommandpermission"
 	"github.com/kazz187/taskguild/internal/skill"
 	"github.com/kazz187/taskguild/internal/task"
 	"github.com/kazz187/taskguild/internal/tasklog"
-	"github.com/kazz187/taskguild/internal/singlecommandpermission"
 	tmpl "github.com/kazz187/taskguild/internal/template"
 	"github.com/kazz187/taskguild/internal/workflow"
-	"github.com/kazz187/taskguild/internal/config"
 	"github.com/kazz187/taskguild/pkg/cerr"
 	"github.com/kazz187/taskguild/pkg/clog"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
 
 type Server struct {
-	server                 *http.Server
-	env                    *config.Env
-	projectServer          *project.Server
-	workflowServer         *workflow.Server
-	taskServer             *task.Server
-	interactionServer      *interaction.Server
-	agentManagerServer     *agentmanager.Server
-	agentServer            *agent.Server
-	skillServer            *skill.Server
-	scriptServer           *script.Server
-	eventServer            *event.Server
-	taskLogServer          *tasklog.Server
-	pushNotificationServer *pushnotification.Server
+	server                        *http.Server
+	env                           *config.Env
+	projectServer                 *project.Server
+	workflowServer                *workflow.Server
+	taskServer                    *task.Server
+	interactionServer             *interaction.Server
+	agentManagerServer            *agentmanager.Server
+	agentServer                   *agent.Server
+	skillServer                   *skill.Server
+	scriptServer                  *script.Server
+	eventServer                   *event.Server
+	taskLogServer                 *tasklog.Server
+	pushNotificationServer        *pushnotification.Server
 	permissionServer              *permission.Server
 	singleCommandPermissionServer *singlecommandpermission.Server
 	templateServer                *tmpl.Server
@@ -95,8 +95,8 @@ func NewServer(
 
 // ListenAndServe starts the HTTP server. The provided context is used as the
 // base context for all incoming requests via http.Server.BaseContext. When ctx
-// is cancelled (e.g. on shutdown signal), all streaming RPC contexts are also
-// cancelled, allowing the server to shut down without waiting for streams.
+// is canceled (e.g. on shutdown signal), all streaming RPC contexts are also
+// canceled, allowing the server to shut down without waiting for streams.
 func (s *Server) ListenAndServe(ctx context.Context) error {
 	r := chi.NewRouter()
 	r.Route("/api", func(r chi.Router) {
@@ -191,17 +191,20 @@ func (s *Server) apiKeyMiddleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		apiKey := r.Header.Get("X-API-Key")
+
+		apiKey := r.Header.Get("X-Api-Key")
 		if apiKey == "" {
 			apiKey = r.Header.Get("Authorization")
 			if len(apiKey) > 7 && apiKey[:7] == "Bearer " {
 				apiKey = apiKey[7:]
 			}
 		}
+
 		if apiKey != s.env.APIKey {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
+
 		next.ServeHTTP(w, r)
 	})
 }

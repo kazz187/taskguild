@@ -23,10 +23,12 @@ func (e *BaseEnv) GetPublicURL() string {
 	if e.PublicURL != "" {
 		return e.PublicURL
 	}
+
 	host := e.HTTPHost
 	if host == "" || host == "0.0.0.0" {
 		host = "localhost"
 	}
+
 	return "http://" + net.JoinHostPort(host, e.HTTPPort)
 }
 
@@ -55,9 +57,12 @@ const namespace = "TASKGUILD"
 
 func LoadEnv() (*Env, error) {
 	var env Env
-	if err := envconfig.Process(namespace, &env); err != nil {
+
+	err := envconfig.Process(namespace, &env)
+	if err != nil {
 		return nil, fmt.Errorf("failed to load env: %w", err)
 	}
+
 	return &env, nil
 }
 
@@ -65,10 +70,14 @@ func (e *BaseEnv) SlogLevel() slog.Level {
 	if e == nil {
 		return slog.LevelDebug
 	}
+
 	var level slog.Level
-	if err := level.UnmarshalText([]byte(e.LogLevel)); err != nil {
+
+	err := level.UnmarshalText([]byte(e.LogLevel))
+	if err != nil {
 		return slog.LevelDebug
 	}
+
 	return level
 }
 

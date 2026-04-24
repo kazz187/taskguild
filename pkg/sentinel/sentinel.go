@@ -2,6 +2,7 @@ package sentinel
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log/slog"
@@ -46,8 +47,8 @@ const (
 // Sentinel manages the lifecycle of a child process with the "run" subcommand.
 type Sentinel struct {
 	binaryPath string
-	childArgs  []string // extra arguments appended after "run"
-	hashMu     sync.RWMutex         // protects lastHash
+	childArgs  []string     // extra arguments appended after "run"
+	hashMu     sync.RWMutex // protects lastHash
 	lastHash   [sha256.Size]byte
 	backoff    time.Duration
 	stopCh     chan struct{} // closed when sentinel should exit
@@ -70,11 +71,14 @@ func Run(extraArgs ...string) {
 	if env == "" {
 		env = "local"
 	}
+
 	levelStr := os.Getenv("TASKGUILD_LOG_LEVEL")
 	if levelStr == "" {
 		levelStr = "debug"
 	}
+
 	var level slog.Level
+
 	switch strings.ToLower(levelStr) {
 	case "debug":
 		level = slog.LevelDebug
@@ -87,13 +91,16 @@ func Run(extraArgs ...string) {
 	default:
 		level = slog.LevelDebug
 	}
+
 	handlerOpts := &slog.HandlerOptions{Level: level}
+
 	var handler slog.Handler
 	if env == "local" {
 		handler = slog.NewTextHandler(os.Stderr, handlerOpts)
 	} else {
 		handler = slog.NewJSONHandler(os.Stderr, handlerOpts)
 	}
+
 	slog.SetDefault(slog.New(handler).With("component", "sentinel"))
 
 	// Resolve own binary path.
@@ -124,8 +131,9 @@ func Run(extraArgs ...string) {
 		slog.Error("failed to hash binary", "error", err)
 		os.Exit(1)
 	}
+
 	s.lastHash = initialHash
-	slog.Info("initial binary hash computed", "hash", fmt.Sprintf("%x", initialHash[:8]))
+	slog.Info("initial binary hash computed", "hash", hex.EncodeToString(initialHash[:8]))
 
 	// Set up OS signal handler.
 	sigCh := make(chan os.Signal, 1)
@@ -133,6 +141,7 @@ func Run(extraArgs ...string) {
 
 	// Start fsnotify watcher in a goroutine.
 	updateCh := make(chan struct{}, 1)
+
 	var watchWg conc.WaitGroup
 	watchWg.Go(func() { s.watchBinary(updateCh) })
 
@@ -157,6 +166,7 @@ func (s *Sentinel) mainLoop(sigCh <-chan os.Signal, updateCh <-chan struct{}) {
 			slog.Error("failed to start child", "error", err)
 			s.sleepBackoff()
 			s.increaseBackoff()
+
 			continue
 		}
 
@@ -164,6 +174,7 @@ func (s *Sentinel) mainLoop(sigCh <-chan os.Signal, updateCh <-chan struct{}) {
 
 		// Wait for child exit in a goroutine.
 		childDone := make(chan error, 1)
+
 		var childWg conc.WaitGroup
 		childWg.Go(func() {
 			childDone <- child.Wait()
@@ -176,17 +187,21 @@ func (s *Sentinel) mainLoop(sigCh <-chan os.Signal, updateCh <-chan struct{}) {
 			elapsed := time.Since(startTime)
 			if err != nil {
 				slog.Error("child exited with error", "elapsed", elapsed, "error", err)
+
 				if elapsed >= SuccessRunTime {
 					// Ran long enough — reset backoff.
 					s.backoff = InitialBackoff
 				}
+
 				s.sleepBackoff()
 				s.increaseBackoff()
 			} else {
 				// Clean exit. The "run" subcommand normally runs forever,
 				// so a clean exit is unexpected and warrants a restart.
 				slog.Info("child exited cleanly", "elapsed", elapsed)
+
 				s.backoff = InitialBackoff
+
 				time.Sleep(1 * time.Second)
 			}
 
@@ -195,9 +210,10 @@ func (s *Sentinel) mainLoop(sigCh <-chan os.Signal, updateCh <-chan struct{}) {
 			// restart so the child can finish running scripts before exiting.
 			// If the child does not handle SIGUSR1 (e.g. old binary or
 			// taskguild-server), the default OS action terminates the process
-			// immediately — same as the previous SIGTERM behaviour.
+			// immediately — same as the previous SIGTERM behavior.
 			slog.Info("binary update detected, requesting graceful restart")
 			s.requestGracefulRestart(child)
+
 			select {
 			case <-childDone:
 				slog.Info("child exited gracefully after completing scripts")
@@ -211,6 +227,7 @@ func (s *Sentinel) mainLoop(sigCh <-chan os.Signal, updateCh <-chan struct{}) {
 				s.stopChild(child)
 				<-childDone
 				slog.Info("sentinel exiting")
+
 				return
 			}
 			// Refresh the hash for the new binary.
@@ -218,8 +235,9 @@ func (s *Sentinel) mainLoop(sigCh <-chan os.Signal, updateCh <-chan struct{}) {
 				s.hashMu.Lock()
 				s.lastHash = h
 				s.hashMu.Unlock()
-				slog.Info("new binary hash", "hash", fmt.Sprintf("%x", h[:8]))
+				slog.Info("new binary hash", "hash", hex.EncodeToString(h[:8]))
 			}
+
 			s.backoff = InitialBackoff
 
 		case sig := <-sigCh:
@@ -229,6 +247,7 @@ func (s *Sentinel) mainLoop(sigCh <-chan os.Signal, updateCh <-chan struct{}) {
 			// Wait for child to actually exit.
 			<-childDone
 			slog.Info("sentinel exiting")
+
 			return
 		}
 	}
@@ -243,11 +262,13 @@ func (s *Sentinel) startChild() (*exec.Cmd, error) {
 	// Child inherits environment (env vars like TASKGUILD_*).
 	cmd.Env = os.Environ()
 
-	if err := cmd.Start(); err != nil {
+	err := cmd.Start()
+	if err != nil {
 		return nil, fmt.Errorf("exec %s run: %w", s.binaryPath, err)
 	}
 
 	slog.Info("started child process", "pid", cmd.Process.Pid)
+
 	return cmd, nil
 }
 
@@ -261,7 +282,9 @@ func (s *Sentinel) stopChild(cmd *exec.Cmd) {
 
 	pid := cmd.Process.Pid
 	slog.Info("sending SIGTERM to child", "pid", pid)
-	if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
+
+	err := cmd.Process.Signal(syscall.SIGTERM)
+	if err != nil {
 		slog.Warn("failed to send SIGTERM (process may have already exited)", "pid", pid, "error", err)
 		return
 	}
@@ -271,9 +294,12 @@ func (s *Sentinel) stopChild(cmd *exec.Cmd) {
 	killWg.Go(func() {
 		time.Sleep(GracePeriod)
 		// Check if process is still alive by trying to signal it.
-		if err := cmd.Process.Signal(syscall.Signal(0)); err == nil {
+		err := cmd.Process.Signal(syscall.Signal(0))
+		if err == nil {
 			slog.Warn("grace period expired, sending SIGKILL to child", "pid", pid)
-			if err := cmd.Process.Kill(); err != nil {
+
+			err := cmd.Process.Kill()
+			if err != nil {
 				slog.Error("failed to send SIGKILL", "pid", pid, "error", err)
 			}
 		}
@@ -288,7 +314,7 @@ func (s *Sentinel) stopChild(cmd *exec.Cmd) {
 //
 // If the child does not handle SIGUSR1 (e.g. old binary or taskguild-server),
 // the default OS action is to terminate the process — which is equivalent to
-// the previous immediate-SIGTERM behaviour.
+// the previous immediate-SIGTERM behavior.
 func (s *Sentinel) requestGracefulRestart(cmd *exec.Cmd) {
 	if cmd == nil || cmd.Process == nil {
 		return
@@ -296,7 +322,9 @@ func (s *Sentinel) requestGracefulRestart(cmd *exec.Cmd) {
 
 	pid := cmd.Process.Pid
 	slog.Info("sending SIGUSR1 to child for graceful restart", "pid", pid)
-	if err := cmd.Process.Signal(syscall.SIGUSR1); err != nil {
+
+	err := cmd.Process.Signal(syscall.SIGUSR1)
+	if err != nil {
 		slog.Warn("failed to send SIGUSR1 (process may have already exited)", "pid", pid, "error", err)
 	}
 }
@@ -322,6 +350,7 @@ func (s *Sentinel) watchBinary(updateCh chan<- struct{}) {
 		slog.Error("failed to watch directory", "dir", watchDir, "error", err)
 		return
 	}
+
 	slog.Info("watching directory for changes", "dir", watchDir, "binary", binaryName)
 
 	// Debounce timer: after a relevant event, wait before computing the checksum
@@ -349,19 +378,22 @@ func (s *Sentinel) watchBinary(updateCh chan<- struct{}) {
 			if debounceTimer != nil {
 				debounceTimer.Stop()
 			}
+
 			debounceTimer = time.AfterFunc(DebounceInterval, func() {
 				newHash, err := HashFile(s.binaryPath)
 				if err != nil {
 					slog.Error("failed to hash binary after event", "error", err)
 					return
 				}
+
 				s.hashMu.RLock()
 				currentHash := s.lastHash
 				s.hashMu.RUnlock()
+
 				if newHash != currentHash {
 					slog.Info("binary checksum changed",
-						"old_hash", fmt.Sprintf("%x", currentHash[:8]),
-						"new_hash", fmt.Sprintf("%x", newHash[:8]))
+						"old_hash", hex.EncodeToString(currentHash[:8]),
+						"new_hash", hex.EncodeToString(newHash[:8]))
 					// Non-blocking send.
 					select {
 					case updateCh <- struct{}{}:
@@ -376,6 +408,7 @@ func (s *Sentinel) watchBinary(updateCh chan<- struct{}) {
 			if !ok {
 				return
 			}
+
 			slog.Error("fsnotify error", "error", err)
 
 		case <-s.stopCh:
@@ -399,6 +432,7 @@ func HashFile(path string) ([sha256.Size]byte, error) {
 
 	var result [sha256.Size]byte
 	copy(result[:], h.Sum(nil))
+
 	return result, nil
 }
 
@@ -406,6 +440,7 @@ func HashFile(path string) ([sha256.Size]byte, error) {
 // It can be interrupted by closing stopCh.
 func (s *Sentinel) sleepBackoff() {
 	slog.Info("waiting before restart", "backoff", s.backoff)
+
 	select {
 	case <-time.After(s.backoff):
 	case <-s.stopCh:
@@ -414,8 +449,5 @@ func (s *Sentinel) sleepBackoff() {
 
 // increaseBackoff multiplies the backoff by the factor, capping at the maximum.
 func (s *Sentinel) increaseBackoff() {
-	s.backoff = time.Duration(float64(s.backoff) * BackoffFactor)
-	if s.backoff > MaxBackoff {
-		s.backoff = MaxBackoff
-	}
+	s.backoff = min(time.Duration(float64(s.backoff)*BackoffFactor), MaxBackoff)
 }

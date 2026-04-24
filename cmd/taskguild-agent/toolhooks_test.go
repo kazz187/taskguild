@@ -6,9 +6,10 @@ import (
 	"testing"
 	"time"
 
-	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 )
 
 // TestLogToolUse_StringToolResponseNotDoubleEncoded verifies that when
@@ -38,24 +39,26 @@ func TestLogToolUse_StringToolResponseNotDoubleEncoded(t *testing.T) {
 	require.Eventually(t, func() bool {
 		tc.agentHandler.mu.Lock()
 		defer tc.agentHandler.mu.Unlock()
+
 		return len(tc.agentHandler.reportTaskLogReqs) >= 1
 	}, 2*time.Second, 10*time.Millisecond)
 
 	tc.agentHandler.mu.Lock()
 	defer tc.agentHandler.mu.Unlock()
+
 	req := tc.agentHandler.reportTaskLogReqs[0]
-	out, ok := req.Metadata["tool_output"]
+	out, ok := req.GetMetadata()["tool_output"]
 	require.True(t, ok, "tool_output should be present")
 
 	assert.Equal(t, raw, out, "tool_output must be stored verbatim (no double encoding)")
-	assert.False(t, strings.Contains(out, `\u003c`), "tool_output must not unicode-escape `<`")
+	assert.NotContains(t, out, `\u003c`, "tool_output must not unicode-escape `<`")
 	// It must also not be wrapped in an extra pair of JSON quotes.
 	assert.False(t, strings.HasPrefix(out, `"`) && strings.HasSuffix(out, `"`),
 		"tool_output must not be wrapped in extra JSON quotes")
 }
 
 // TestLogToolUse_NonStringToolResponseMarshaled verifies that non-string
-// ToolResponse values are still json.Marshaled (the existing behaviour).
+// ToolResponse values are still json.Marshaled (the existing behavior).
 func TestLogToolUse_NonStringToolResponseMarshaled(t *testing.T) {
 	tc := newTestClients()
 	defer tc.Close()
@@ -80,13 +83,15 @@ func TestLogToolUse_NonStringToolResponseMarshaled(t *testing.T) {
 	require.Eventually(t, func() bool {
 		tc.agentHandler.mu.Lock()
 		defer tc.agentHandler.mu.Unlock()
+
 		return len(tc.agentHandler.reportTaskLogReqs) >= 1
 	}, 2*time.Second, 10*time.Millisecond)
 
 	tc.agentHandler.mu.Lock()
 	defer tc.agentHandler.mu.Unlock()
+
 	req := tc.agentHandler.reportTaskLogReqs[0]
-	out, ok := req.Metadata["tool_output"]
+	out, ok := req.GetMetadata()["tool_output"]
 	require.True(t, ok, "tool_output should be present")
 
 	// Should be valid JSON containing the map fields.

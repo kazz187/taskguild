@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -35,14 +36,16 @@ func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServ
 	slog.Info("syncing scripts from server", "count", len(scripts))
 
 	scriptsDir := filepath.Join(cfg.WorkDir, ".taskguild", "scripts")
-	if err := os.MkdirAll(scriptsDir, 0755); err != nil {
+	if err := os.MkdirAll(scriptsDir, 0o755); err != nil {
 		slog.Error("failed to create scripts directory", "error", err)
 		return
 	}
 
 	// serverFiles tracks filenames known to the server.
 	serverFiles := make(map[string]bool)
+
 	var written, skipped int
+
 	for _, sc := range scripts {
 		filename := sc.GetFilename()
 		if filename == "" {
@@ -65,16 +68,21 @@ func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServ
 				slog.Debug("force-overwriting existing script", "filename", filename, "script_id", sc.GetId())
 			} else {
 				slog.Debug("script file already exists, preserving local version", "filename", filename)
+
 				skipped++
+
 				continue
 			}
 		}
 
-		if err := os.WriteFile(filePath, []byte(sc.GetContent()), 0755); err != nil {
+		err := os.WriteFile(filePath, []byte(sc.GetContent()), 0o755)
+		if err != nil {
 			slog.Error("failed to write script file", "path", filePath, "error", err)
 			continue
 		}
+
 		slog.Debug("synced script", "filename", filename)
+
 		written++
 	}
 
@@ -94,9 +102,12 @@ func cleanupStaleScriptFiles(scriptsDir string, serverFiles map[string]bool) {
 		if entry.IsDir() {
 			continue
 		}
+
 		if !serverFiles[entry.Name()] {
 			filePath := filepath.Join(scriptsDir, entry.Name())
-			if err := os.Remove(filePath); err != nil {
+
+			err := os.Remove(filePath)
+			if err != nil {
 				slog.Error("failed to remove stale script file", "path", filePath, "error", err)
 			} else {
 				slog.Info("removed stale script file", "filename", entry.Name())

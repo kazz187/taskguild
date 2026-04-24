@@ -109,6 +109,7 @@ func TestRaceCondition_ConcurrentRegisterUnregister(t *testing.T) {
 	if !r.SendCommand("agent-1", cmd) {
 		t.Fatal("handler B's connection should still be active")
 	}
+
 	received := <-chB
 	if received.GetPing() == nil {
 		t.Fatal("expected ping on handler B's channel")
@@ -161,6 +162,7 @@ func TestGetWorkDirForProject(t *testing.T) {
 	if !ok {
 		t.Fatal("expected to find work_dir for connected agent")
 	}
+
 	if dir != "/home/user/myproject" {
 		t.Fatalf("expected /home/user/myproject, got %s", dir)
 	}
@@ -172,6 +174,7 @@ func TestGetWorkDirForProject(t *testing.T) {
 
 	// Agent with empty work_dir should be skipped.
 	r.Register("agent-2", 2, "proj2", "")
+
 	if _, ok := r.GetWorkDirForProject("proj2"); ok {
 		t.Fatal("expected no work_dir when agent has empty work_dir")
 	}

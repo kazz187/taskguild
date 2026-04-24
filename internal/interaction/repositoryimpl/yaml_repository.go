@@ -33,6 +33,7 @@ func (loc entityLocation) interactionPath(id string) string {
 	if loc.archived {
 		return fmt.Sprintf("%s/%s/archived/%s/interactions/%s.yaml", projectsPrefix, loc.projectID, loc.taskID, id)
 	}
+
 	return fmt.Sprintf("%s/%s/%s/interactions/%s.yaml", projectsPrefix, loc.projectID, loc.taskID, id)
 }
 
@@ -40,6 +41,7 @@ func (loc entityLocation) interactionPrefix() string {
 	if loc.archived {
 		return fmt.Sprintf("%s/%s/archived/%s/interactions", projectsPrefix, loc.projectID, loc.taskID)
 	}
+
 	return fmt.Sprintf("%s/%s/%s/interactions", projectsPrefix, loc.projectID, loc.taskID)
 }
 
@@ -64,10 +66,10 @@ type YAMLRepository struct {
 	taskRepo task.Repository
 
 	mu            sync.RWMutex
-	taskIndex     map[string][]string                   // taskID -> sorted []interactionID
-	locationIndex map[string]entityLocation             // interactionID -> location
-	tokenIndex    map[string]string                     // responseToken -> interactionID (pending only)
-	dataCache     map[string]*interaction.Interaction   // interactionID -> decoded interaction
+	taskIndex     map[string][]string                 // taskID -> sorted []interactionID
+	locationIndex map[string]entityLocation           // interactionID -> location
+	tokenIndex    map[string]string                   // responseToken -> interactionID (pending only)
+	dataCache     map[string]*interaction.Interaction // interactionID -> decoded interaction
 
 	loadStates sync.Map // taskID -> *loadState (lazy per-task load)
 
@@ -100,15 +102,18 @@ func cloneInteraction(i *interaction.Interaction) *interaction.Interaction {
 	if i == nil {
 		return nil
 	}
+
 	cp := *i
 	if i.Options != nil {
 		cp.Options = make([]interaction.Option, len(i.Options))
 		copy(cp.Options, i.Options)
 	}
+
 	if i.RespondedAt != nil {
 		t := *i.RespondedAt
 		cp.RespondedAt = &t
 	}
+
 	return &cp
 }
 
@@ -119,12 +124,15 @@ func (r *YAMLRepository) locateTask(ctx context.Context, taskID string) (project
 	if r.taskRepo == nil {
 		return "", false, false
 	}
+
 	if t, err := r.taskRepo.Get(ctx, taskID); err == nil && t != nil {
 		return t.ProjectID, false, true
 	}
+
 	if t, err := r.taskRepo.GetArchived(ctx, taskID); err == nil && t != nil {
 		return t.ProjectID, true, true
 	}
+
 	return "", false, false
 }
 
@@ -134,11 +142,13 @@ func (r *YAMLRepository) loadTaskInteractions(ctx context.Context, taskID string
 	if taskID == "" {
 		return nil
 	}
+
 	v, _ := r.loadStates.LoadOrStore(taskID, &loadState{})
 	state := v.(*loadState)
 	state.once.Do(func() {
 		state.err = r.doLoadTaskInteractions(ctx, taskID)
 	})
+
 	return state.err
 }
 
@@ -151,6 +161,7 @@ func (r *YAMLRepository) doLoadTaskInteractions(ctx context.Context, taskID stri
 	}
 
 	loc := entityLocation{projectID: projectID, taskID: taskID, archived: archived}
+
 	files, err := r.storage.List(ctx, loc.interactionPrefix())
 	if err != nil {
 		return cerr.WrapStorageReadError("interaction", err)
@@ -160,38 +171,46 @@ func (r *YAMLRepository) doLoadTaskInteractions(ctx context.Context, taskID stri
 		id    string
 		inter *interaction.Interaction
 	}
+
 	entries := make([]loaded, 0, len(files))
 	for _, f := range files {
 		id := pathToID(f)
 		if id == "" {
 			continue
 		}
+
 		data, err := r.storage.Read(ctx, f)
 		if err != nil {
 			// Individual read failures are tolerated: stale / partially
 			// written files should not prevent loading the rest.
 			continue
 		}
+
 		var i interaction.Interaction
 		if err := yaml.Unmarshal(data, &i); err != nil {
 			continue
 		}
+
 		entries = append(entries, loaded{id, &i})
 	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
 	ids := make([]string, 0, len(entries))
 	for _, e := range entries {
 		r.locationIndex[e.id] = loc
 		r.dataCache[e.id] = e.inter
+
 		ids = append(ids, e.id)
 		if e.inter.ResponseToken != "" && e.inter.Status == interaction.StatusPending {
 			r.tokenIndex[e.inter.ResponseToken] = e.id
 		}
 	}
+
 	sort.Strings(ids)
 	r.taskIndex[taskID] = ids
+
 	return nil
 }
 
@@ -201,6 +220,7 @@ func (r *YAMLRepository) loadTasksInteractions(ctx context.Context, taskIDs []st
 	if len(taskIDs) == 0 {
 		return
 	}
+
 	p := pool.New().WithContext(ctx).WithMaxGoroutines(listLoadConcurrency)
 	for _, tid := range taskIDs {
 		p.Go(func(ctx context.Context) error {
@@ -210,6 +230,7 @@ func (r *YAMLRepository) loadTasksInteractions(ctx context.Context, taskIDs []st
 			return nil
 		})
 	}
+
 	_ = p.Wait()
 }
 
@@ -220,15 +241,18 @@ func (r *YAMLRepository) warmActiveTasks(ctx context.Context) {
 		if r.taskRepo == nil {
 			return
 		}
+
 		tasks, _, err := r.taskRepo.List(ctx, "", "", "", 0, 0)
 		if err != nil {
 			r.warmActiveErr = err
 			return
 		}
+
 		ids := make([]string, 0, len(tasks))
 		for _, t := range tasks {
 			ids = append(ids, t.ID)
 		}
+
 		r.loadTasksInteractions(ctx, ids)
 	})
 }
@@ -241,6 +265,7 @@ func (r *YAMLRepository) Create(ctx context.Context, i *interaction.Interaction)
 	r.mu.RLock()
 	_, exists := r.locationIndex[i.ID]
 	r.mu.RUnlock()
+
 	if exists {
 		return cerr.NewError(cerr.AlreadyExists, "interaction already exists", nil)
 	}
@@ -249,6 +274,7 @@ func (r *YAMLRepository) Create(ctx context.Context, i *interaction.Interaction)
 	if err != nil {
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal interaction: %w", err))
 	}
+
 	loc := entityLocation{projectID: i.ProjectID, taskID: i.TaskID}
 	if err := r.storage.Write(ctx, loc.interactionPath(i.ID), data); err != nil {
 		return cerr.WrapStorageWriteError("interaction", err)
@@ -260,22 +286,28 @@ func (r *YAMLRepository) Create(ctx context.Context, i *interaction.Interaction)
 	ids := r.taskIndex[i.TaskID]
 	ids = append(ids, i.ID)
 	sort.Strings(ids)
+
 	r.taskIndex[i.TaskID] = ids
 	if i.ResponseToken != "" && i.Status == interaction.StatusPending {
 		r.tokenIndex[i.ResponseToken] = i.ID
 	}
 	r.mu.Unlock()
+
 	return nil
 }
 
 func (r *YAMLRepository) Get(ctx context.Context, id string) (*interaction.Interaction, error) {
 	// Fast path: already cached.
 	r.mu.RLock()
+
 	if cached, ok := r.dataCache[id]; ok {
 		out := cloneInteraction(cached)
+
 		r.mu.RUnlock()
+
 		return out, nil
 	}
+
 	r.mu.RUnlock()
 
 	// The interaction may exist under a task we haven't loaded yet. Since the
@@ -286,10 +318,12 @@ func (r *YAMLRepository) Get(ctx context.Context, id string) (*interaction.Inter
 
 	r.mu.RLock()
 	defer r.mu.RUnlock()
+
 	cached, ok := r.dataCache[id]
 	if !ok {
 		return nil, cerr.NewError(cerr.NotFound, "interaction not found", nil)
 	}
+
 	return cloneInteraction(cached), nil
 }
 
@@ -299,6 +333,7 @@ func (r *YAMLRepository) Get(ctx context.Context, id string) (*interaction.Inter
 func (r *YAMLRepository) List(ctx context.Context, taskID string, taskIDs []string, statusFilter interaction.InteractionStatus, limit, offset int) ([]*interaction.Interaction, int, error) {
 	// Decide which tasks to load.
 	var targetTaskIDs []string
+
 	switch {
 	case taskID != "":
 		targetTaskIDs = []string{taskID}
@@ -312,6 +347,7 @@ func (r *YAMLRepository) List(ctx context.Context, taskID string, taskIDs []stri
 			if err != nil {
 				return nil, 0, err
 			}
+
 			targetTaskIDs = make([]string, 0, len(tasks))
 			for _, t := range tasks {
 				targetTaskIDs = append(targetTaskIDs, t.ID)
@@ -327,20 +363,25 @@ func (r *YAMLRepository) List(ctx context.Context, taskID string, taskIDs []stri
 	// Gather candidate interactions (by decoded cache) applying status filter.
 	results := make([]*interaction.Interaction, 0, 64)
 	seen := make(map[string]struct{})
+
 	for _, tid := range targetTaskIDs {
 		ids := r.taskIndex[tid]
 		for _, id := range ids {
 			if _, dup := seen[id]; dup {
 				continue
 			}
+
 			seen[id] = struct{}{}
+
 			cached, ok := r.dataCache[id]
 			if !ok {
 				continue
 			}
+
 			if statusFilter != interaction.StatusUnspecified && cached.Status != statusFilter {
 				continue
 			}
+
 			results = append(results, cached)
 		}
 	}
@@ -351,14 +392,17 @@ func (r *YAMLRepository) List(ctx context.Context, taskID string, taskIDs []stri
 	if offset >= total {
 		return nil, total, nil
 	}
+
 	results = results[offset:]
 	if limit > 0 && len(results) > limit {
 		results = results[:limit]
 	}
+
 	cloned := make([]*interaction.Interaction, len(results))
 	for i, v := range results {
 		cloned[i] = cloneInteraction(v)
 	}
+
 	return cloned, total, nil
 }
 
@@ -369,11 +413,14 @@ func (r *YAMLRepository) Update(ctx context.Context, i *interaction.Interaction)
 
 	r.mu.RLock()
 	loc, ok := r.locationIndex[i.ID]
+
 	var prevToken string
 	if prev, exists := r.dataCache[i.ID]; exists {
 		prevToken = prev.ResponseToken
 	}
+
 	r.mu.RUnlock()
+
 	if !ok {
 		return cerr.NewError(cerr.NotFound, "interaction not found", nil)
 	}
@@ -382,6 +429,7 @@ func (r *YAMLRepository) Update(ctx context.Context, i *interaction.Interaction)
 	if err != nil {
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal interaction: %w", err))
 	}
+
 	if err := r.storage.Write(ctx, loc.interactionPath(i.ID), data); err != nil {
 		return cerr.WrapStorageWriteError("interaction", err)
 	}
@@ -396,10 +444,12 @@ func (r *YAMLRepository) Update(ctx context.Context, i *interaction.Interaction)
 			delete(r.tokenIndex, prevToken)
 		}
 	}
+
 	if i.ResponseToken != "" && i.Status == interaction.StatusPending {
 		r.tokenIndex[i.ResponseToken] = i.ID
 	}
 	r.mu.Unlock()
+
 	return nil
 }
 
@@ -407,9 +457,11 @@ func (r *YAMLRepository) GetByResponseToken(ctx context.Context, token string) (
 	if token == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "token is required", nil)
 	}
+
 	r.mu.RLock()
 	id, ok := r.tokenIndex[token]
 	r.mu.RUnlock()
+
 	if ok {
 		return r.Get(ctx, id)
 	}
@@ -422,37 +474,46 @@ func (r *YAMLRepository) GetByResponseToken(ctx context.Context, token string) (
 	r.mu.RLock()
 	id, ok = r.tokenIndex[token]
 	r.mu.RUnlock()
+
 	if !ok {
 		return nil, cerr.NewError(cerr.NotFound, "interaction not found for token", nil)
 	}
+
 	return r.Get(ctx, id)
 }
 
 func (r *YAMLRepository) DeleteByTaskID(ctx context.Context, taskID string) (int, error) {
-	if err := r.loadTaskInteractions(ctx, taskID); err != nil {
+	err := r.loadTaskInteractions(ctx, taskID)
+	if err != nil {
 		return 0, err
 	}
 
 	r.mu.RLock()
 	ids := make([]string, len(r.taskIndex[taskID]))
 	copy(ids, r.taskIndex[taskID])
+
 	locs := make(map[string]entityLocation, len(ids))
 	for _, id := range ids {
 		if loc, ok := r.locationIndex[id]; ok {
 			locs[id] = loc
 		}
 	}
+
 	r.mu.RUnlock()
 
 	count := 0
+
 	for _, id := range ids {
 		loc, ok := locs[id]
 		if !ok {
 			continue
 		}
-		if err := r.storage.Delete(ctx, loc.interactionPath(id)); err != nil {
+
+		err := r.storage.Delete(ctx, loc.interactionPath(id))
+		if err != nil {
 			return count, cerr.WrapStorageDeleteError("interaction", err)
 		}
+
 		r.mu.Lock()
 		if cached, ok := r.dataCache[id]; ok {
 			if cached.ResponseToken != "" {
@@ -461,15 +522,18 @@ func (r *YAMLRepository) DeleteByTaskID(ctx context.Context, taskID string) (int
 				}
 			}
 		}
+
 		delete(r.dataCache, id)
 		delete(r.locationIndex, id)
 		r.mu.Unlock()
+
 		count++
 	}
 
 	r.mu.Lock()
 	delete(r.taskIndex, taskID)
 	r.mu.Unlock()
+
 	return count, nil
 }
 
@@ -481,14 +545,19 @@ func (r *YAMLRepository) ExpirePendingByTask(ctx context.Context, taskID string)
 
 	now := time.Now()
 	count := 0
+
 	for _, i := range all {
 		i.Status = interaction.StatusExpired
+
 		i.RespondedAt = &now
-		if err := r.Update(ctx, i); err != nil {
+		err := r.Update(ctx, i)
+		if err != nil {
 			return count, fmt.Errorf("failed to expire interaction %s: %w", i.ID, err)
 		}
+
 		count++
 	}
+
 	return count, nil
 }
 
@@ -497,12 +566,14 @@ func (r *YAMLRepository) ExpirePendingByTask(ctx context.Context, taskID string)
 func (r *YAMLRepository) NotifyTaskArchived(ctx context.Context, projectID, taskID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
 	for _, id := range r.taskIndex[taskID] {
 		if loc, ok := r.locationIndex[id]; ok {
 			loc.archived = true
 			r.locationIndex[id] = loc
 		}
 	}
+
 	return nil
 }
 
@@ -511,11 +582,13 @@ func (r *YAMLRepository) NotifyTaskArchived(ctx context.Context, projectID, task
 func (r *YAMLRepository) NotifyTaskUnarchived(ctx context.Context, projectID, taskID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
 	for _, id := range r.taskIndex[taskID] {
 		if loc, ok := r.locationIndex[id]; ok {
 			loc.archived = false
 			r.locationIndex[id] = loc
 		}
 	}
+
 	return nil
 }

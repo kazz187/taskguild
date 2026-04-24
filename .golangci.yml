@@ -1,0 +1,75 @@
+version: "2"
+
+run:
+  tests: true
+
+linters:
+  default: all
+  disable:
+    - exhaustruct
+    - wrapcheck
+    - varnamelen
+    - ireturn
+    - nlreturn
+    - wsl
+    - tagalign
+    - godot
+    - godox
+    - gochecknoglobals
+    - gochecknoinits
+    - depguard
+    - gocyclo
+    - funlen
+
+  settings:
+    cyclop:
+      max-complexity: 20
+      package-average: 10.0
+
+    gocognit:
+      min-complexity: 25
+
+    dupl:
+      threshold: 100
+
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+
+    govet:
+      enable-all: true
+
+    revive:
+      severity: warning
+      rules:
+        - name: exported
+          disabled: true
+
+    staticcheck:
+      checks:
+        - all
+
+    misspell:
+      locale: US
+
+  exclusions:
+    paths:
+      - proto/gen
+
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+    - gci
+
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/kazz187)
+
+  exclusions:
+    paths:
+      - proto/gen

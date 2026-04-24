@@ -106,6 +106,7 @@ func Format(input string, opts ...Option) (string, error) {
 	}
 
 	f.file(prog)
+
 	return strings.TrimRight(f.buf.String(), "\n"), nil
 }
 
@@ -122,6 +123,7 @@ type formatter struct {
 func (f *formatter) nodeStr(node syntax.Node) string {
 	var buf bytes.Buffer
 	f.printer.Print(&buf, node)
+
 	return strings.TrimRight(buf.String(), "\n")
 }
 
@@ -137,10 +139,7 @@ func (f *formatter) writeIndent() {
 
 // availWidth returns the available width at the current indentation.
 func (f *formatter) availWidth() int {
-	w := f.maxW - f.indent*f.width
-	if w < 20 {
-		w = 20
-	}
+	w := max(f.maxW-f.indent*f.width, 20)
 	return w
 }
 
@@ -150,6 +149,7 @@ func (f *formatter) file(prog *syntax.File) {
 		if i > 0 {
 			f.buf.WriteByte('\n')
 		}
+
 		f.stmt(stmt)
 	}
 }
@@ -162,6 +162,7 @@ func (f *formatter) stmt(s *syntax.Stmt) {
 	// For compound commands that always benefit from expansion,
 	// skip the inline check and go straight to expansion.
 	needsExpansion := false
+
 	switch s.Cmd.(type) {
 	case *syntax.BinaryCmd:
 		needsExpansion = true
@@ -232,6 +233,7 @@ type chainElem struct {
 func flattenBinaryCmd(cmd *syntax.BinaryCmd) []chainElem {
 	var chain []chainElem
 	collectBinary(cmd, &chain)
+
 	return chain
 }
 
@@ -249,6 +251,7 @@ func collectBinary(cmd *syntax.BinaryCmd, chain *[]chainElem) {
 	if rightBin, ok := cmd.Y.Cmd.(*syntax.BinaryCmd); ok && isBareBinaryStmt(cmd.Y) {
 		var rightChain []chainElem
 		collectBinary(rightBin, &rightChain)
+
 		if len(rightChain) > 0 {
 			rightChain[0].op = op
 			*chain = append(*chain, rightChain...)
@@ -273,6 +276,7 @@ func hasCompoundElement(chain []chainElem) bool {
 		if elem.stmt.Cmd == nil {
 			continue
 		}
+
 		switch elem.stmt.Cmd.(type) {
 		case *syntax.Subshell, *syntax.Block,
 			*syntax.IfClause, *syntax.ForClause,
@@ -281,6 +285,7 @@ func hasCompoundElement(chain []chainElem) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -291,10 +296,12 @@ func (f *formatter) binaryCmd(cmd *syntax.BinaryCmd) {
 
 	// Estimate inline length.
 	totalLen := 0
+
 	for i, elem := range chain {
 		if i > 0 {
 			totalLen += 1 + len(elem.op) + 1 // " OP "
 		}
+
 		totalLen += len(f.nodeStr(elem.stmt))
 	}
 
@@ -309,8 +316,10 @@ func (f *formatter) binaryCmd(cmd *syntax.BinaryCmd) {
 				f.buf.WriteString(elem.op)
 				f.buf.WriteByte(' ')
 			}
+
 			f.buf.WriteString(f.nodeStr(elem.stmt))
 		}
+
 		return
 	}
 
@@ -344,6 +353,7 @@ func (f *formatter) stmtInChain(s *syntax.Stmt) {
 	if s.Negated {
 		f.buf.WriteString("! ")
 	}
+
 	if s.Cmd != nil {
 		switch cmd := s.Cmd.(type) {
 		case *syntax.Subshell:
@@ -362,10 +372,12 @@ func (f *formatter) stmtInChain(s *syntax.Stmt) {
 			f.buf.WriteString(f.nodeStr(s.Cmd))
 		}
 	}
+
 	for _, r := range s.Redirs {
 		f.buf.WriteByte(' ')
 		f.writeRedirect(r)
 	}
+
 	if s.Background {
 		f.buf.WriteString(" &")
 	}
@@ -376,11 +388,14 @@ func (f *formatter) writeRedirect(r *syntax.Redirect) {
 	if r.N != nil {
 		f.buf.WriteString(r.N.Value)
 	}
+
 	f.buf.WriteString(r.Op.String())
 	f.buf.WriteByte(' ')
+
 	if r.Word != nil {
 		f.buf.WriteString(f.nodeStr(r.Word))
 	}
+
 	if r.Hdoc != nil {
 		f.buf.WriteString(f.nodeStr(r.Hdoc))
 	}
@@ -392,6 +407,7 @@ func (f *formatter) stmtList(stmts []*syntax.Stmt) {
 		if i > 0 {
 			f.buf.WriteByte('\n')
 		}
+
 		f.writeIndent()
 		f.stmt(s)
 	}
@@ -415,10 +431,13 @@ func (f *formatter) ifClauseInner(cmd *syntax.IfClause, keyword string) {
 			if i > 0 {
 				f.buf.WriteString("; ")
 			}
+
 			f.buf.WriteString(f.nodeStr(s))
 		}
+
 		f.buf.WriteString("; then")
 	}
+
 	f.buf.WriteByte('\n')
 
 	// Body
@@ -430,6 +449,7 @@ func (f *formatter) ifClauseInner(cmd *syntax.IfClause, keyword string) {
 	if cmd.Else != nil {
 		f.buf.WriteByte('\n')
 		f.writeIndent()
+
 		if len(cmd.Else.Cond) > 0 {
 			f.ifClauseInner(cmd.Else, "elif")
 		} else {
@@ -456,8 +476,10 @@ func (f *formatter) forClause(cmd *syntax.ForClause) {
 	switch loop := cmd.Loop.(type) {
 	case *syntax.WordIter:
 		f.buf.WriteString(loop.Name.Value)
+
 		if loop.InPos.IsValid() {
 			f.buf.WriteString(" in")
+
 			for _, w := range loop.Items {
 				f.buf.WriteByte(' ')
 				f.buf.WriteString(f.nodeStr(w))
@@ -492,8 +514,10 @@ func (f *formatter) whileClause(cmd *syntax.WhileClause) {
 		if i > 0 {
 			f.buf.WriteString("; ")
 		}
+
 		f.buf.WriteString(f.nodeStr(s))
 	}
+
 	f.buf.WriteString("; do")
 	f.buf.WriteByte('\n')
 
@@ -520,8 +544,10 @@ func (f *formatter) caseClause(cmd *syntax.CaseClause) {
 			if i > 0 {
 				f.buf.WriteString(" | ")
 			}
+
 			f.buf.WriteString(f.nodeStr(pat))
 		}
+
 		f.buf.WriteByte(')')
 
 		if len(item.Stmts) > 0 {
@@ -552,6 +578,7 @@ func (f *formatter) block(cmd *syntax.Block) {
 		f.buf.WriteByte('\n')
 		f.writeIndent()
 	}
+
 	f.buf.WriteString("}")
 }
 
@@ -574,6 +601,7 @@ func (f *formatter) subshell(cmd *syntax.Subshell) {
 		f.buf.WriteByte('\n')
 		f.writeIndent()
 	}
+
 	f.buf.WriteString(")")
 }
 
@@ -582,10 +610,13 @@ func (f *formatter) funcDecl(cmd *syntax.FuncDecl) {
 	if cmd.RsrvWord {
 		f.buf.WriteString("function ")
 	}
+
 	f.buf.WriteString(cmd.Name.Value)
+
 	if cmd.Parens {
 		f.buf.WriteString("()")
 	}
+
 	f.buf.WriteByte(' ')
 
 	// The body is a *Stmt which usually contains a Block.
@@ -595,6 +626,7 @@ func (f *formatter) funcDecl(cmd *syntax.FuncDecl) {
 		} else {
 			f.buf.WriteString(f.nodeStr(cmd.Body))
 		}
+
 		for _, r := range cmd.Body.Redirs {
 			f.buf.WriteByte(' ')
 			f.writeRedirect(r)

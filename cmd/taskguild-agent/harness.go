@@ -9,12 +9,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pmezard/go-difflib/difflib"
+	"github.com/sourcegraph/conc"
+
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	"github.com/kazz187/taskguild/pkg/clog"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/pmezard/go-difflib/difflib"
-	"github.com/sourcegraph/conc"
 )
 
 const (
@@ -40,17 +41,21 @@ func resolveClaudeCwd(workDir string, metadata map[string]string, sessionID stri
 	if sessionID == "" {
 		return workDir
 	}
+
 	if metadata["_use_worktree"] != "true" {
 		return workDir
 	}
+
 	wt := metadata["worktree"]
 	if wt == "" {
 		return workDir
 	}
+
 	wtDir := filepath.Join(workDir, ".claude", "worktrees", wt)
 	if info, err := os.Stat(wtDir); err == nil && info.IsDir() {
 		return wtDir
 	}
+
 	return workDir
 }
 
@@ -60,10 +65,12 @@ func (ht *harnessTracker) launchOrReplace(key string, fn func(ctx context.Contex
 	if prev, ok := ht.running[key]; ok {
 		prev.cancel()
 		ht.mu.Unlock()
+
 		select {
 		case <-prev.done:
 		case <-time.After(harnessReplaceTimeout):
 		}
+
 		ht.mu.Lock()
 	}
 
@@ -82,6 +89,7 @@ func (ht *harnessTracker) launchOrReplace(key string, fn func(ctx context.Contex
 			}
 			ht.mu.Unlock()
 		}()
+
 		fn(ctx)
 	})
 }
@@ -90,29 +98,7 @@ func (ht *harnessTracker) launchOrReplace(key string, fn func(ctx context.Contex
 // Skill-based harness
 // ---------------------------------------------------------------------------
 
-const skillHarnessPrompt = `You are a failure pattern analyst. Your job is to review the work just completed on a task and append non-obvious failure patterns to a single shared file so the same mistakes are not repeated on future tasks.
-
-## What to Record
-
-Record ONLY concrete, specific, recurrence-worthy failure patterns:
-- Bash commands that failed (non-zero exit) and the correct command
-- Commands that were tried, corrected, and retried (trial-and-error traces)
-- Code edits that caused build/test failures and required fixing
-- Files that were missed in a cross-cutting change (propagation path gaps)
-
-## What NOT to Record
-
-- Architectural knowledge (already documented in skill files / docs)
-- Abstract lessons ("always write tests", "be careful with X")
-- Anything already recorded in HARNESS.md
-- Task-specific details that won't recur on a different task
-- The fact that a task completed successfully
-
-## Where to Record
-
-There is exactly ONE target file. Its absolute path is provided in the user message under "## Harness File".
-
-Append entries to the ` + "`" + `## 失敗パターン（自動追記）` + "`" + ` section at the end of that file. If the file or section does not exist yet, create it (the file may also be empty).
+const skillHarnessPrompt = "You are a failure pattern analyst. Your job is to review the work just completed on a task and append non-obvious failure patterns to a single shared file so the same mistakes are not repeated on future tasks.\n\n## What to Record\n\nONLY concrete, specific, recurrence-worthy failure patterns:\n- Bash commands that failed (non-zero exit) and the correct command\n- Commands that were tried, corrected, and retried (trial-and-error traces)\n- Code edits that caused build/test failures and required fixing\n- Files that were missed in a cross-cutting change (propagation path gaps)\n\n## What NOT to Record\n\n- Architectural knowledge (already documented in skill files / docs)\n- Abstract lessons (\"always write tests\", \"be careful with X\")\n- Anything already recorded in HARNESS.md\n- Task-specific details that won't recur on a different task\n- The fact that a task completed successfully\n\n## Where to Record\n\nThere is exactly ONE target file. Its absolute path is provided in the user message under \"## Harness File\".\n\nAppend entries to" + "`" + `## 失敗パターン（自動追記）` + "`" + ` section at the end of that file. If the file or section does not exist yet, create it (the file may also be empty).
 
 ## Format
 
@@ -191,6 +177,7 @@ func runSkillHarnessAndWait(
 	if prev, ok := globalHarnessTracker.running["skill-harness"]; ok {
 		prev.cancel()
 		globalHarnessTracker.mu.Unlock()
+
 		select {
 		case <-prev.done:
 		case <-time.After(harnessReplaceTimeout):
@@ -232,6 +219,7 @@ func runSkillHarness(
 	defer cancel()
 
 	maxTurns := harnessMaxTurns
+
 	opts := &claudeagent.ClaudeAgentOptions{
 		SystemPrompt:   skillHarnessPrompt,
 		Cwd:            claudeCwd,
@@ -248,13 +236,15 @@ func runSkillHarness(
 		logger.Error("skill harness failed", "task_id", taskID, "error", err)
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 			fmt.Sprintf("Skill harness failed: %v", err), nil)
+
 		return
 	}
 
 	if result.Result != nil && result.Result.IsError {
 		logger.Error("skill harness returned error", "task_id", taskID, "result", result.Result.Result)
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
-			fmt.Sprintf("Skill harness error: %s", result.Result.Result), nil)
+			"Skill harness error: "+result.Result.Result, nil)
+
 		return
 	}
 
@@ -268,7 +258,7 @@ func runSkillHarness(
 	} else {
 		logger.Info("skill harness completed with changes", "task_id", taskID)
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-			fmt.Sprintf("Skill harness completed\n\n%s", diff), nil)
+			"Skill harness completed\n\n"+diff, nil)
 	}
 }
 
@@ -297,6 +287,7 @@ func readFileOrEmpty(path string) string {
 	if err != nil {
 		return ""
 	}
+
 	return string(data)
 }
 
@@ -311,5 +302,6 @@ func computeUnifiedDiff(filename, before, after string) string {
 	if err != nil {
 		return fmt.Sprintf("(failed to compute diff: %v)", err)
 	}
+
 	return strings.TrimRight(diff, "\n")
 }

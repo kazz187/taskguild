@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -16,7 +17,7 @@ import (
 // --- Script sync & execution RPCs ---
 
 func (s *Server) SyncScripts(ctx context.Context, req *connect.Request[taskguildv1.SyncScriptsRequest]) (*connect.Response[taskguildv1.SyncScriptsResponse], error) {
-	projectName := req.Msg.ProjectName
+	projectName := req.Msg.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -42,7 +43,7 @@ func (s *Server) SyncScripts(ctx context.Context, req *connect.Request[taskguild
 }
 
 func (s *Server) ReportScriptExecutionResult(ctx context.Context, req *connect.Request[taskguildv1.ReportScriptExecutionResultRequest]) (*connect.Response[taskguildv1.ReportScriptExecutionResultResponse], error) {
-	projectName := req.Msg.ProjectName
+	projectName := req.Msg.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -54,55 +55,56 @@ func (s *Server) ReportScriptExecutionResult(ctx context.Context, req *connect.R
 
 	// Complete execution in the broker — this sends the completion event
 	// to all streaming subscribers and closes their channels.
-	slog.Info("[STREAM-TRACE] backend(agentmanager): received execution result from agent", "request_id", req.Msg.RequestId, "success", req.Msg.Success, "exit_code", req.Msg.ExitCode, "log_entry_count", len(req.Msg.LogEntries))
+	slog.Info("[STREAM-TRACE] backend(agentmanager): received execution result from agent", "request_id", req.Msg.GetRequestId(), "success", req.Msg.GetSuccess(), "exit_code", req.Msg.GetExitCode(), "log_entry_count", len(req.Msg.GetLogEntries()))
+
 	if s.scriptBroker != nil {
 		s.scriptBroker.CompleteExecution(
-			req.Msg.RequestId,
-			req.Msg.Success,
-			req.Msg.ExitCode,
-			req.Msg.LogEntries,
-			req.Msg.ErrorMessage,
-			req.Msg.StoppedByUser,
+			req.Msg.GetRequestId(),
+			req.Msg.GetSuccess(),
+			req.Msg.GetExitCode(),
+			req.Msg.GetLogEntries(),
+			req.Msg.GetErrorMessage(),
+			req.Msg.GetStoppedByUser(),
 		)
 	}
 
 	// Publish event so other consumers (e.g. notifications) can react.
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_SCRIPT_EXECUTION_RESULT,
-		req.Msg.RequestId,
+		req.Msg.GetRequestId(),
 		"",
 		map[string]string{
 			"project_id":    proj.ID,
-			"request_id":    req.Msg.RequestId,
-			"script_id":     req.Msg.ScriptId,
-			"success":       fmt.Sprintf("%v", req.Msg.Success),
-			"exit_code":     fmt.Sprintf("%d", req.Msg.ExitCode),
-			"error_message": req.Msg.ErrorMessage,
+			"request_id":    req.Msg.GetRequestId(),
+			"script_id":     req.Msg.GetScriptId(),
+			"success":       strconv.FormatBool(req.Msg.GetSuccess()),
+			"exit_code":     strconv.Itoa(int(req.Msg.GetExitCode())),
+			"error_message": req.Msg.GetErrorMessage(),
 		},
 	)
 
 	slog.Info("script execution result reported",
 		"project_id", proj.ID,
-		"script_id", req.Msg.ScriptId,
-		"success", req.Msg.Success,
-		"exit_code", req.Msg.ExitCode,
-		"request_id", req.Msg.RequestId,
+		"script_id", req.Msg.GetScriptId(),
+		"success", req.Msg.GetSuccess(),
+		"exit_code", req.Msg.GetExitCode(),
+		"request_id", req.Msg.GetRequestId(),
 	)
 
 	return connect.NewResponse(&taskguildv1.ReportScriptExecutionResultResponse{}), nil
 }
 
 func (s *Server) ReportScriptOutputChunk(ctx context.Context, req *connect.Request[taskguildv1.ReportScriptOutputChunkRequest]) (*connect.Response[taskguildv1.ReportScriptOutputChunkResponse], error) {
-	if req.Msg.ProjectName == "" {
+	if req.Msg.GetProjectName() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
 
-	slog.Info("[STREAM-TRACE] backend(agentmanager): received output chunk from agent", "request_id", req.Msg.RequestId, "entry_count", len(req.Msg.Entries))
+	slog.Info("[STREAM-TRACE] backend(agentmanager): received output chunk from agent", "request_id", req.Msg.GetRequestId(), "entry_count", len(req.Msg.GetEntries()))
 
 	if s.scriptBroker != nil {
-		s.scriptBroker.PushOutput(req.Msg.RequestId, req.Msg.Entries)
+		s.scriptBroker.PushOutput(req.Msg.GetRequestId(), req.Msg.GetEntries())
 	} else {
-		slog.Warn("[STREAM-TRACE] backend(agentmanager): scriptBroker is nil, cannot push output", "request_id", req.Msg.RequestId)
+		slog.Warn("[STREAM-TRACE] backend(agentmanager): scriptBroker is nil, cannot push output", "request_id", req.Msg.GetRequestId())
 	}
 
 	return connect.NewResponse(&taskguildv1.ReportScriptOutputChunkResponse{}), nil

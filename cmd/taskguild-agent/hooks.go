@@ -16,10 +16,11 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
+	"github.com/kazz187/taskguild/pkg/clog"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/kazz187/taskguild/pkg/clog"
 )
 
 // hookEntry represents a resolved hook from metadata.
@@ -46,18 +47,22 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 	}
 
 	var hooks []hookEntry
-	if err := json.Unmarshal([]byte(hooksJSON), &hooks); err != nil {
+
+	err := json.Unmarshal([]byte(hooksJSON), &hooks)
+	if err != nil {
 		logger.Error("failed to parse _hooks metadata", "error", err)
 		return
 	}
 
 	// Filter by trigger and sort by order.
 	var filtered []hookEntry
+
 	for _, h := range hooks {
 		if h.Trigger == trigger {
 			filtered = append(filtered, h)
 		}
 	}
+
 	sort.Slice(filtered, func(i, j int) bool {
 		return filtered[i].Order < filtered[j].Order
 	})
@@ -70,6 +75,7 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 
 	for _, h := range filtered {
 		logger.Info("running hook", "name", h.Name, "hook_id", h.ID, "skill_id", h.SkillID)
+
 		if tl != nil {
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_HOOK, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Executing hook: %s (%s)", h.Name, trigger), nil)
@@ -89,31 +95,38 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 			opts.ForkSession = true
 		}
 
-		result, err := qr.RunQuerySync(hookCtx, h.Content, opts, workDir, taskID, fmt.Sprintf("hook_%s", h.Name))
+		result, err := qr.RunQuerySync(hookCtx, h.Content, opts, workDir, taskID, "hook_"+h.Name)
+
 		cancel()
 
 		if err != nil {
 			logger.Error("hook failed", "name", h.Name, "error", err)
+
 			if tl != nil {
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_HOOK, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 					fmt.Sprintf("Hook failed: %s: %v", h.Name, err), nil)
 			}
+
 			continue
 		}
+
 		if result.Result != nil && result.Result.IsError {
 			logger.Error("hook returned error", "name", h.Name, "result", result.Result.Result)
+
 			if tl != nil {
 				resultPreview := truncateText(result.Result.Result, 200)
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_HOOK, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
 					fmt.Sprintf("Hook returned error: %s: %s", h.Name, resultPreview), nil)
 			}
+
 			continue
 		}
 
 		logger.Info("hook completed successfully", "name", h.Name)
+
 		if tl != nil {
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_HOOK, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-				fmt.Sprintf("Hook completed: %s", h.Name), nil)
+				"Hook completed: "+h.Name, nil)
 		}
 
 		// Parse TASK_METADATA directives from hook output and update the task.
@@ -132,15 +145,21 @@ func isAfterTrigger(trigger string) bool {
 // by checking which local branch exists. Falls back to "main" if neither exists.
 func detectDefaultBranch(ctx context.Context, workDir string) string {
 	cmd := exec.CommandContext(ctx, "git", "rev-parse", "--verify", "--quiet", "main")
+
 	cmd.Dir = workDir
-	if err := cmd.Run(); err == nil {
+
+	err := cmd.Run()
+	if err == nil {
 		return "main"
 	}
+
 	cmd2 := exec.CommandContext(ctx, "git", "rev-parse", "--verify", "--quiet", "master")
+
 	cmd2.Dir = workDir
-	if err := cmd2.Run(); err == nil {
+	if err = cmd2.Run(); err == nil {
 		return "master"
 	}
+
 	return "main"
 }
 
@@ -158,6 +177,7 @@ func applyHookMetadata(ctx context.Context, taskID string, output string, taskCl
 	}
 
 	meta := make(map[string]string)
+
 	for _, m := range matches {
 		key := strings.TrimSpace(m[1])
 		value := strings.TrimSpace(m[2])
@@ -174,39 +194,28 @@ func applyHookMetadata(ctx context.Context, taskID string, output string, taskCl
 	}
 }
 
-// listLocalWorktrees returns directory names under {workDir}/.claude/worktrees/.
-func listLocalWorktrees(workDir string) []string {
-	dir := filepath.Join(workDir, ".claude", "worktrees")
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil
-	}
-	var names []string
-	for _, e := range entries {
-		if e.IsDir() {
-			names = append(names, e.Name())
-		}
-	}
-	return names
-}
-
 var slugMultiHyphen = regexp.MustCompile(`-{2,}`)
 
 // slugifyASCII extracts ASCII alphanumeric characters from a string, lowercased,
 // with non-ASCII/non-alnum replaced by hyphens (collapsed).
 func slugifyASCII(s string) string {
 	var sb strings.Builder
+
 	prevHyphen := false
 	for _, r := range strings.ToLower(s) {
 		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
 			sb.WriteRune(r)
+
 			prevHyphen = false
 		} else if !prevHyphen {
 			sb.WriteRune('-')
+
 			prevHyphen = true
 		}
 	}
+
 	slug := strings.Trim(sb.String(), "-")
+
 	return slugMultiHyphen.ReplaceAllString(slug, "-")
 }
 
@@ -224,7 +233,8 @@ func ensureWorktree(ctx context.Context, workDir, worktreeName, taskID string) (
 		return wtDir, nil
 	}
 
-	if err := os.MkdirAll(filepath.Join(workDir, ".claude", "worktrees"), 0o755); err != nil {
+	err := os.MkdirAll(filepath.Join(workDir, ".claude", "worktrees"), 0o755)
+	if err != nil {
 		return "", fmt.Errorf("mkdir: %w", err)
 	}
 
@@ -234,6 +244,7 @@ func ensureWorktree(ctx context.Context, workDir, worktreeName, taskID string) (
 	defaultBranch := detectDefaultBranch(ctx, workDir)
 	startPoint := "" // empty means HEAD (fallback)
 	fetchCmd := exec.CommandContext(ctx, "git", "fetch", "origin", defaultBranch)
+
 	fetchCmd.Dir = workDir
 	if out, err := fetchCmd.CombinedOutput(); err != nil {
 		logger.Warn("git fetch origin failed, creating worktree from local HEAD", "error", err, "output", string(out))
@@ -243,21 +254,25 @@ func ensureWorktree(ctx context.Context, workDir, worktreeName, taskID string) (
 	}
 
 	branchName := "worktree-" + worktreeName
+
 	var cmd *exec.Cmd
 	if startPoint != "" {
 		cmd = exec.CommandContext(ctx, "git", "worktree", "add", "-b", branchName, wtDir, startPoint)
 	} else {
 		cmd = exec.CommandContext(ctx, "git", "worktree", "add", "-b", branchName, wtDir)
 	}
+
 	cmd.Dir = workDir
 	if out, err := cmd.CombinedOutput(); err != nil {
 		// Branch may already exist from a previous run; try without -b.
 		cmd2 := exec.CommandContext(ctx, "git", "worktree", "add", wtDir, branchName)
+
 		cmd2.Dir = workDir
 		if out2, err2 := cmd2.CombinedOutput(); err2 != nil {
 			return "", fmt.Errorf("git worktree add: %w: %s / %s", err2, out, out2)
 		}
 	}
+
 	logger.Info("created worktree", "worktree_dir", wtDir, "branch", branchName)
 
 	// Copy .claude/ resources that are not carried over by git worktree add.
@@ -279,8 +294,11 @@ func syncClaudeDirToWorktree(logger *slog.Logger, workDir, wtDir string) {
 	// Directories to copy recursively.
 	for _, dir := range []string{"agents", "skills"} {
 		src := filepath.Join(srcClaude, dir)
+
 		dst := filepath.Join(dstClaude, dir)
-		if err := syncDir(src, dst); err != nil {
+
+		err := syncDir(src, dst)
+		if err != nil {
 			logger.Warn("failed to sync .claude/"+dir, "error", err)
 		} else {
 			logger.Info("synced .claude/" + dir + " to worktree")
@@ -290,8 +308,11 @@ func syncClaudeDirToWorktree(logger *slog.Logger, workDir, wtDir string) {
 	// Single files to copy.
 	for _, name := range []string{"settings.json"} {
 		src := filepath.Join(srcClaude, name)
+
 		dst := filepath.Join(dstClaude, name)
-		if err := copyFile(src, dst); err != nil {
+
+		err := copyFile(src, dst)
+		if err != nil {
 			logger.Warn("failed to sync .claude/"+name, "error", err)
 		} else {
 			logger.Info("synced .claude/" + name + " to worktree")
@@ -307,8 +328,10 @@ func syncDir(src, dst string) error {
 		if os.IsNotExist(err) {
 			return nil // nothing to copy
 		}
+
 		return err
 	}
+
 	if !info.IsDir() {
 		return fmt.Errorf("%s is not a directory", src)
 	}
@@ -322,12 +345,14 @@ func syncDir(src, dst string) error {
 		if err != nil {
 			return err
 		}
+
 		rel, _ := filepath.Rel(src, path)
 		target := filepath.Join(dst, rel)
 
 		if d.IsDir() {
 			return os.MkdirAll(target, 0o755)
 		}
+
 		return copyFile(path, target)
 	})
 }
@@ -358,6 +383,7 @@ func copyFile(src, dst string) error {
 	if _, err := io.Copy(out, in); err != nil {
 		return err
 	}
+
 	return out.Close()
 }
 
@@ -366,6 +392,7 @@ func copyFile(src, dst string) error {
 // to generate an English slug. Format: {taskID first 6 chars}_{slug} (max 50 chars).
 func generateWorktreeName(ctx context.Context, taskID, title, workDir string, qr QueryRunner) string {
 	id := strings.ToLower(taskID)
+
 	prefix := id
 	if len(id) > 6 {
 		prefix = id[len(id)-6:]
@@ -389,6 +416,7 @@ func generateWorktreeName(ctx context.Context, taskID, title, workDir string, qr
 		name = name[:50]
 		name = strings.TrimRight(name, "-_")
 	}
+
 	return name
 }
 
@@ -417,5 +445,6 @@ func translateToEnglishSlug(ctx context.Context, title, workDir string, qr Query
 	}
 
 	raw := strings.TrimSpace(result.Result.Result)
+
 	return slugifyASCII(raw)
 }

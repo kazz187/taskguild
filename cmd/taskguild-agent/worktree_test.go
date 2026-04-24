@@ -39,15 +39,19 @@ func TestPorcelainParsing(t *testing.T) {
 	}, "\n")
 
 	lines := strings.Split(strings.TrimRight(porcelainOutput, "\n"), "\n")
+
 	var changedFiles []string
+
 	for _, line := range lines {
 		if len(line) < 4 {
 			continue
 		}
+
 		filePath := line[3:]
 		if isClaudeInternalPath(filePath) {
 			continue
 		}
+
 		changedFiles = append(changedFiles, filePath)
 	}
 
@@ -56,6 +60,7 @@ func TestPorcelainParsing(t *testing.T) {
 	if len(changedFiles) != len(expected) {
 		t.Fatalf("got %d changed files %v, want %d %v", len(changedFiles), changedFiles, len(expected), expected)
 	}
+
 	for i, f := range changedFiles {
 		if f != expected[i] {
 			t.Errorf("changedFiles[%d] = %q, want %q", i, f, expected[i])

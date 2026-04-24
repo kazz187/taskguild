@@ -26,19 +26,20 @@ func (s *Server) SubscribeEvents(ctx context.Context, req *connect.Request[taskg
 
 	// Send an initial event to signal that the stream connection is established.
 	// This allows the client to immediately transition from "connecting" to "connected".
-	if err := stream.Send(&taskguildv1.Event{
+	err := stream.Send(&taskguildv1.Event{
 		Type: taskguildv1.EventType_EVENT_TYPE_UNSPECIFIED,
-	}); err != nil {
+	})
+	if err != nil {
 		return err
 	}
 
 	// Build event type filter set.
-	typeFilter := make(map[taskguildv1.EventType]struct{}, len(req.Msg.EventTypes))
-	for _, et := range req.Msg.EventTypes {
+	typeFilter := make(map[taskguildv1.EventType]struct{}, len(req.Msg.GetEventTypes()))
+	for _, et := range req.Msg.GetEventTypes() {
 		typeFilter[et] = struct{}{}
 	}
 
-	projectID := req.Msg.ProjectId
+	projectID := req.Msg.GetProjectId()
 
 	for {
 		select {
@@ -50,17 +51,19 @@ func (s *Server) SubscribeEvents(ctx context.Context, req *connect.Request[taskg
 			}
 			// Filter by event type if specified.
 			if len(typeFilter) > 0 {
-				if _, match := typeFilter[event.Type]; !match {
+				if _, match := typeFilter[event.GetType()]; !match {
 					continue
 				}
 			}
 			// Filter by project_id if specified.
 			if projectID != "" {
-				if eventProjectID, ok := event.Metadata["project_id"]; ok && eventProjectID != projectID {
+				if eventProjectID, ok := event.GetMetadata()["project_id"]; ok && eventProjectID != projectID {
 					continue
 				}
 			}
-			if err := stream.Send(event); err != nil {
+
+			err := stream.Send(event)
+			if err != nil {
 				return err
 			}
 		}

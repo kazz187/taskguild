@@ -26,6 +26,7 @@ func NewS3Storage(ctx context.Context, bucket, prefix, region string) (*S3Storag
 	if err != nil {
 		return nil, fmt.Errorf("failed to load AWS config: %w", err)
 	}
+
 	return &S3Storage{
 		client: s3.NewFromConfig(cfg),
 		bucket: bucket,
@@ -47,13 +48,16 @@ func (s *S3Storage) Read(ctx context.Context, path string) ([]byte, error) {
 		if isNoSuchKey(err, nsk) {
 			return nil, fmt.Errorf("%s: %w", path, ErrNotFound)
 		}
+
 		return nil, fmt.Errorf("failed to read s3://%s/%s: %w", s.bucket, s.key(path), err)
 	}
 	defer out.Body.Close()
+
 	data, err := io.ReadAll(out.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read body of s3://%s/%s: %w", s.bucket, s.key(path), err)
 	}
+
 	return data, nil
 }
 
@@ -66,6 +70,7 @@ func (s *S3Storage) Write(ctx context.Context, path string, data []byte) error {
 	if err != nil {
 		return fmt.Errorf("failed to write s3://%s/%s: %w", s.bucket, s.key(path), err)
 	}
+
 	return nil
 }
 
@@ -77,6 +82,7 @@ func (s *S3Storage) Delete(ctx context.Context, path string) error {
 	if err != nil {
 		return fmt.Errorf("failed to delete s3://%s/%s: %w", s.bucket, s.key(path), err)
 	}
+
 	return nil
 }
 
@@ -85,8 +91,12 @@ func (s *S3Storage) List(ctx context.Context, prefix string) ([]string, error) {
 	if !strings.HasSuffix(fullPrefix, "/") {
 		fullPrefix += "/"
 	}
-	var paths []string
-	var continuationToken *string
+
+	var (
+		paths             []string
+		continuationToken *string
+	)
+
 	for {
 		out, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
 			Bucket:            aws.String(s.bucket),
@@ -97,15 +107,19 @@ func (s *S3Storage) List(ctx context.Context, prefix string) ([]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to list s3://%s/%s: %w", s.bucket, fullPrefix, err)
 		}
+
 		for _, obj := range out.Contents {
 			rel := strings.TrimPrefix(aws.ToString(obj.Key), s.prefix)
 			paths = append(paths, rel)
 		}
+
 		if !aws.ToBool(out.IsTruncated) {
 			break
 		}
+
 		continuationToken = out.NextContinuationToken
 	}
+
 	return paths, nil
 }
 
@@ -114,8 +128,12 @@ func (s *S3Storage) ListDirs(ctx context.Context, prefix string) ([]string, erro
 	if !strings.HasSuffix(fullPrefix, "/") {
 		fullPrefix += "/"
 	}
-	var dirs []string
-	var continuationToken *string
+
+	var (
+		dirs              []string
+		continuationToken *string
+	)
+
 	for {
 		out, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
 			Bucket:            aws.String(s.bucket),
@@ -126,16 +144,20 @@ func (s *S3Storage) ListDirs(ctx context.Context, prefix string) ([]string, erro
 		if err != nil {
 			return nil, fmt.Errorf("failed to list dirs s3://%s/%s: %w", s.bucket, fullPrefix, err)
 		}
+
 		for _, cp := range out.CommonPrefixes {
 			rel := strings.TrimPrefix(aws.ToString(cp.Prefix), s.prefix)
 			rel = strings.TrimSuffix(rel, "/")
 			dirs = append(dirs, rel)
 		}
+
 		if !aws.ToBool(out.IsTruncated) {
 			break
 		}
+
 		continuationToken = out.NextContinuationToken
 	}
+
 	return dirs, nil
 }
 
@@ -146,8 +168,11 @@ func (s *S3Storage) MoveDir(ctx context.Context, oldPrefix, newPrefix string) er
 	}
 
 	// List all objects under oldPrefix.
-	var keys []string
-	var continuationToken *string
+	var (
+		keys              []string
+		continuationToken *string
+	)
+
 	for {
 		out, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
 			Bucket:            aws.String(s.bucket),
@@ -157,22 +182,27 @@ func (s *S3Storage) MoveDir(ctx context.Context, oldPrefix, newPrefix string) er
 		if err != nil {
 			return fmt.Errorf("failed to list s3://%s/%s: %w", s.bucket, fullOldPrefix, err)
 		}
+
 		for _, obj := range out.Contents {
 			keys = append(keys, aws.ToString(obj.Key))
 		}
+
 		if !aws.ToBool(out.IsTruncated) {
 			break
 		}
+
 		continuationToken = out.NextContinuationToken
 	}
 
 	// Copy each object to the new prefix, then delete the original.
 	for _, oldKey := range keys {
 		rel := strings.TrimPrefix(oldKey, fullOldPrefix)
+
 		newFullPrefix := s.key(newPrefix)
 		if !strings.HasSuffix(newFullPrefix, "/") {
 			newFullPrefix += "/"
 		}
+
 		newKey := newFullPrefix + rel
 
 		_, err := s.client.CopyObject(ctx, &s3.CopyObjectInput{
@@ -192,6 +222,7 @@ func (s *S3Storage) MoveDir(ctx context.Context, oldPrefix, newPrefix string) er
 			return fmt.Errorf("failed to delete s3://%s/%s after copy: %w", s.bucket, oldKey, err)
 		}
 	}
+
 	return nil
 }
 
@@ -209,8 +240,10 @@ func (s *S3Storage) Exists(ctx context.Context, path string) (bool, error) {
 		if strings.Contains(err.Error(), "NotFound") || strings.Contains(err.Error(), "404") {
 			return false, nil
 		}
+
 		return false, fmt.Errorf("failed to check existence of s3://%s/%s: %w", s.bucket, s.key(path), err)
 	}
+
 	return true, nil
 }
 

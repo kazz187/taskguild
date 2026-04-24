@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"connectrpc.com/connect"
+
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -57,8 +58,8 @@ func syncPermissions(ctx context.Context, client taskguildv1connect.AgentManager
 
 // readLocalPermissions reads the permissions section from a .claude/settings.json file.
 // Returns empty slices and an empty map if the file doesn't exist or has no permissions.
-func readLocalPermissions(path string) (allow, ask, deny []string, raw map[string]interface{}) {
-	raw = make(map[string]interface{})
+func readLocalPermissions(path string) (allow, ask, deny []string, raw map[string]any) {
+	raw = make(map[string]any)
 
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -75,7 +76,8 @@ func readLocalPermissions(path string) (allow, ask, deny []string, raw map[strin
 	if !ok {
 		return nil, nil, nil, raw
 	}
-	permsMap, ok := permsRaw.(map[string]interface{})
+
+	permsMap, ok := permsRaw.(map[string]any)
 	if !ok {
 		return nil, nil, nil, raw
 	}
@@ -83,19 +85,20 @@ func readLocalPermissions(path string) (allow, ask, deny []string, raw map[strin
 	allow = toStringSlice(permsMap["allow"])
 	ask = toStringSlice(permsMap["ask"])
 	deny = toStringSlice(permsMap["deny"])
+
 	return allow, ask, deny, raw
 }
 
 // writeLocalPermissions writes the merged permissions back to settings.json,
 // preserving all other sections (env, hooks, etc.).
-func writeLocalPermissions(path string, raw map[string]interface{}, merged *v1.PermissionSet) {
+func writeLocalPermissions(path string, raw map[string]any, merged *v1.PermissionSet) {
 	if raw == nil {
-		raw = make(map[string]interface{})
+		raw = make(map[string]any)
 	}
 
 	// Ensure .claude directory exists.
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		slog.Error("failed to create .claude directory", "error", err)
 		return
 	}
@@ -106,17 +109,19 @@ func writeLocalPermissions(path string, raw map[string]interface{}, merged *v1.P
 	if allowList == nil {
 		allowList = []string{}
 	}
+
 	askList := merged.GetAsk()
 	if askList == nil {
 		askList = []string{}
 	}
+
 	denyList := merged.GetDeny()
 	if denyList == nil {
 		denyList = []string{}
 	}
 
 	// Update only the permissions section.
-	raw["permissions"] = map[string]interface{}{
+	raw["permissions"] = map[string]any{
 		"allow": allowList,
 		"ask":   askList,
 		"deny":  denyList,
@@ -128,27 +133,31 @@ func writeLocalPermissions(path string, raw map[string]interface{}, merged *v1.P
 		return
 	}
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		slog.Error("failed to write settings.json", "error", err)
 		return
 	}
+
 	slog.Info("updated settings.json with merged permissions", "path", path)
 }
 
 // toStringSlice converts an interface{} (expected to be []interface{}) to []string.
-func toStringSlice(v interface{}) []string {
+func toStringSlice(v any) []string {
 	if v == nil {
 		return nil
 	}
-	arr, ok := v.([]interface{})
+
+	arr, ok := v.([]any)
 	if !ok {
 		return nil
 	}
+
 	result := make([]string, 0, len(arr))
 	for _, item := range arr {
 		if s, ok := item.(string); ok {
 			result = append(result, s)
 		}
 	}
+
 	return result
 }

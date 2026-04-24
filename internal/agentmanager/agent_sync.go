@@ -2,11 +2,10 @@ package agentmanager
 
 import (
 	"context"
+	"time"
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
-
-	"time"
 
 	"github.com/kazz187/taskguild/internal/agent"
 	"github.com/kazz187/taskguild/internal/claudesettings"
@@ -16,7 +15,7 @@ import (
 )
 
 func (s *Server) SyncAgents(ctx context.Context, req *connect.Request[taskguildv1.SyncAgentsRequest]) (*connect.Response[taskguildv1.SyncAgentsResponse], error) {
-	projectName := req.Msg.ProjectName
+	projectName := req.Msg.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -42,7 +41,7 @@ func (s *Server) SyncAgents(ctx context.Context, req *connect.Request[taskguildv
 }
 
 func (s *Server) SyncPermissions(ctx context.Context, req *connect.Request[taskguildv1.SyncPermissionsRequest]) (*connect.Response[taskguildv1.SyncPermissionsResponse], error) {
-	projectName := req.Msg.ProjectName
+	projectName := req.Msg.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -59,7 +58,7 @@ func (s *Server) SyncPermissions(ctx context.Context, req *connect.Request[taskg
 	}
 
 	// Merge local permissions with stored (union strategy).
-	merged := permission.Merge(stored, req.Msg.LocalAllow, req.Msg.LocalAsk, req.Msg.LocalDeny)
+	merged := permission.Merge(stored, req.Msg.GetLocalAllow(), req.Msg.GetLocalAsk(), req.Msg.GetLocalDeny())
 
 	// Save merged result.
 	if err := s.permissionRepo.Upsert(ctx, merged); err != nil {
@@ -99,19 +98,20 @@ func agentToProto(a *agent.Agent) *taskguildv1.AgentDefinition {
 func (s *Server) ReportAgentStatus(ctx context.Context, req *connect.Request[taskguildv1.ReportAgentStatusRequest]) (*connect.Response[taskguildv1.ReportAgentStatusResponse], error) {
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_AGENT_STATUS_CHANGED,
-		req.Msg.TaskId,
+		req.Msg.GetTaskId(),
 		"",
 		map[string]string{
-			"agent_manager_id": req.Msg.AgentManagerId,
-			"agent_status":     req.Msg.Status.String(),
-			"message":          req.Msg.Message,
+			"agent_manager_id": req.Msg.GetAgentManagerId(),
+			"agent_status":     req.Msg.GetStatus().String(),
+			"message":          req.Msg.GetMessage(),
 		},
 	)
+
 	return connect.NewResponse(&taskguildv1.ReportAgentStatusResponse{}), nil
 }
 
 func (s *Server) SyncClaudeSettings(ctx context.Context, req *connect.Request[taskguildv1.SyncClaudeSettingsAgentRequest]) (*connect.Response[taskguildv1.SyncClaudeSettingsAgentResponse], error) {
-	projectName := req.Msg.ProjectName
+	projectName := req.Msg.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -127,7 +127,7 @@ func (s *Server) SyncClaudeSettings(ctx context.Context, req *connect.Request[ta
 	}
 
 	// Merge: local value fills in nil fields.
-	merged := mergeClaudeSettings(stored, req.Msg.LocalLanguage, attributionFromProto(req.Msg.LocalAttribution))
+	merged := mergeClaudeSettings(stored, req.Msg.LocalLanguage, attributionFromProto(req.Msg.GetLocalAttribution()))
 
 	if err := s.claudeSettingsRepo.Upsert(ctx, merged); err != nil {
 		return nil, cerr.ExtractConnectError(ctx, err)
@@ -136,7 +136,7 @@ func (s *Server) SyncClaudeSettings(ctx context.Context, req *connect.Request[ta
 	return connect.NewResponse(&taskguildv1.SyncClaudeSettingsAgentResponse{
 		Settings: &taskguildv1.ClaudeSettings{
 			ProjectId:   proj.ID,
-			Language:    merged.Language,  // both are *string
+			Language:    merged.Language, // both are *string
 			Attribution: attributionToProto(merged.Attribution),
 			UpdatedAt:   timestamppb.New(merged.UpdatedAt),
 		},
@@ -147,6 +147,7 @@ func attributionFromProto(a *taskguildv1.Attribution) *claudesettings.Attributio
 	if a == nil {
 		return nil
 	}
+
 	return &claudesettings.Attribution{
 		Commit: a.Commit,
 		Pr:     a.Pr,
@@ -157,6 +158,7 @@ func attributionToProto(a *claudesettings.Attribution) *taskguildv1.Attribution 
 	if a == nil {
 		return nil
 	}
+
 	return &taskguildv1.Attribution{
 		Commit: a.Commit,
 		Pr:     a.Pr,
@@ -175,16 +177,20 @@ func mergeClaudeSettings(stored *claudesettings.ClaudeSettings, localLanguage *s
 	if result.Language == nil && localLanguage != nil {
 		result.Language = localLanguage
 	}
+
 	if localAttribution != nil {
 		if result.Attribution == nil {
 			result.Attribution = &claudesettings.Attribution{}
 		}
+
 		if result.Attribution.Commit == nil && localAttribution.Commit != nil {
 			result.Attribution.Commit = localAttribution.Commit
 		}
+
 		if result.Attribution.Pr == nil && localAttribution.Pr != nil {
 			result.Attribution.Pr = localAttribution.Pr
 		}
 	}
+
 	return result
 }

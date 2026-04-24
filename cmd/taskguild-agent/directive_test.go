@@ -197,6 +197,7 @@ func TestValidateAndResolveTransition(t *testing.T) {
 				if err == nil {
 					t.Fatalf("expected error wrapping %v, got nil", tt.wantErr)
 				}
+
 				if !errors.Is(err, tt.wantErr) {
 					t.Errorf("expected error wrapping %v, got %v", tt.wantErr, err)
 				}
@@ -205,6 +206,7 @@ func TestValidateAndResolveTransition(t *testing.T) {
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
+
 				if gotName != tt.wantName {
 					t.Errorf("got name %q, want %q", gotName, tt.wantName)
 				}
@@ -213,6 +215,7 @@ func TestValidateAndResolveTransition(t *testing.T) {
 				if err == nil {
 					t.Fatal("expected an error, got nil")
 				}
+
 				if errors.Is(err, errInvalidTransition) {
 					t.Errorf("expected generic error, got errInvalidTransition: %v", err)
 				}
@@ -223,10 +226,10 @@ func TestValidateAndResolveTransition(t *testing.T) {
 
 func TestParseAvailableTransitions_FiltersSelfTransitions(t *testing.T) {
 	tests := []struct {
-		name       string
-		metadata   map[string]string
-		wantNames  []string
-		wantErr    bool
+		name      string
+		metadata  map[string]string
+		wantNames []string
+		wantErr   bool
 	}{
 		{
 			name: "filters out current status",
@@ -268,18 +271,23 @@ func TestParseAvailableTransitions_FiltersSelfTransitions(t *testing.T) {
 				if err == nil {
 					t.Fatal("expected error, got nil")
 				}
+
 				return
 			}
+
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
+
 			var gotNames []string
 			for _, tr := range transitions {
 				gotNames = append(gotNames, tr.Name)
 			}
+
 			if len(gotNames) != len(tt.wantNames) {
 				t.Fatalf("got %v, want %v", gotNames, tt.wantNames)
 			}
+
 			for i, name := range gotNames {
 				if name != tt.wantNames[i] {
 					t.Errorf("got[%d] = %q, want %q", i, name, tt.wantNames[i])
@@ -306,6 +314,7 @@ func TestValidateAndResolveTransition_RejectsSelfTransition(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
 	if name != "Review" {
 		t.Errorf("got %q, want %q", name, "Review")
 	}
@@ -326,6 +335,7 @@ func TestBuildTransitionRetryPrompt(t *testing.T) {
 		if !strings.Contains(prompt, "Review") {
 			t.Error("prompt should contain valid transition name 'Review'")
 		}
+
 		if !strings.Contains(prompt, "Closed") {
 			t.Error("prompt should contain valid transition name 'Closed'")
 		}

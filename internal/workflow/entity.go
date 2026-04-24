@@ -23,9 +23,9 @@ type Workflow struct {
 type HookTrigger string
 
 const (
-	HookTriggerUnspecified          HookTrigger = ""
-	HookTriggerBeforeTaskExecution  HookTrigger = "before_task_execution"
-	HookTriggerAfterTaskExecution   HookTrigger = "after_task_execution"
+	HookTriggerUnspecified            HookTrigger = ""
+	HookTriggerBeforeTaskExecution    HookTrigger = "before_task_execution"
+	HookTriggerAfterTaskExecution     HookTrigger = "after_task_execution"
 	HookTriggerAfterWorktreeCreation  HookTrigger = "after_worktree_creation"
 	HookTriggerBeforeWorktreeCreation HookTrigger = "before_worktree_creation"
 )
@@ -85,11 +85,13 @@ func (w *Workflow) FindAgentIDForStatus(statusName string) string {
 			return s.AgentID
 		}
 	}
+
 	for _, cfg := range w.AgentConfigs {
 		if cfg.WorkflowStatusID == statusName {
 			return cfg.ID
 		}
 	}
+
 	return ""
 }
 
@@ -101,6 +103,7 @@ func (w *Workflow) FindSkillIDsForStatus(statusName string) []string {
 			return s.SkillIDs
 		}
 	}
+
 	return nil
 }
 

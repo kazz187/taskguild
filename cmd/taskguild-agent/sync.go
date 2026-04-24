@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -36,13 +37,14 @@ func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServi
 	slog.Info("syncing agents from server", "count", len(agents))
 
 	agentsDir := filepath.Join(cfg.WorkDir, ".claude", "agents")
-	if err := os.MkdirAll(agentsDir, 0755); err != nil {
+	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
 		slog.Error("failed to create agents directory", "error", err)
 		return
 	}
 
 	// serverFiles tracks filenames known to the server (regardless of whether we wrote them).
 	serverFiles := make(map[string]bool)
+
 	for _, ag := range agents {
 		name := ag.GetName()
 
@@ -71,10 +73,12 @@ func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServi
 
 		content := buildAgentMDContent(ag)
 
-		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		err := os.WriteFile(filePath, []byte(content), 0o644)
+		if err != nil {
 			slog.Error("failed to write agent file", "path", filePath, "error", err)
 			continue
 		}
+
 		slog.Debug("synced agent", "filename", filename)
 	}
 
@@ -89,31 +93,39 @@ func buildAgentMDContent(ag *v1.AgentDefinition) string {
 	sb.WriteString("---\n")
 
 	if ag.GetName() != "" {
-		sb.WriteString(fmt.Sprintf("name: %s\n", ag.GetName()))
+		fmt.Fprintf(&sb, "name: %s\n", ag.GetName())
 	}
+
 	if ag.GetDescription() != "" {
 		writeYAMLStringField(&sb, "description", ag.GetDescription())
 	}
+
 	if len(ag.GetTools()) > 0 {
-		sb.WriteString(fmt.Sprintf("tools: %s\n", strings.Join(ag.GetTools(), ", ")))
+		fmt.Fprintf(&sb, "tools: %s\n", strings.Join(ag.GetTools(), ", "))
 	}
+
 	if len(ag.GetDisallowedTools()) > 0 {
-		sb.WriteString(fmt.Sprintf("disallowedTools: %s\n", strings.Join(ag.GetDisallowedTools(), ", ")))
+		fmt.Fprintf(&sb, "disallowedTools: %s\n", strings.Join(ag.GetDisallowedTools(), ", "))
 	}
+
 	if ag.GetModel() != "" {
-		sb.WriteString(fmt.Sprintf("model: %s\n", ag.GetModel()))
+		fmt.Fprintf(&sb, "model: %s\n", ag.GetModel())
 	}
+
 	if ag.GetPermissionMode() != "" {
-		sb.WriteString(fmt.Sprintf("permissionMode: %s\n", ag.GetPermissionMode()))
+		fmt.Fprintf(&sb, "permissionMode: %s\n", ag.GetPermissionMode())
 	}
+
 	if len(ag.GetSkills()) > 0 {
 		sb.WriteString("skills:\n")
+
 		for _, skill := range ag.GetSkills() {
-			sb.WriteString(fmt.Sprintf("  - %s\n", skill))
+			fmt.Fprintf(&sb, "  - %s\n", skill)
 		}
 	}
+
 	if ag.GetMemory() != "" {
-		sb.WriteString(fmt.Sprintf("memory: %s\n", ag.GetMemory()))
+		fmt.Fprintf(&sb, "memory: %s\n", ag.GetMemory())
 	}
 
 	sb.WriteString("---\n")
@@ -131,16 +143,17 @@ func buildAgentMDContent(ag *v1.AgentDefinition) string {
 // If the value contains newlines, it uses YAML block scalar (|) notation.
 func writeYAMLStringField(sb *strings.Builder, key, value string) {
 	if strings.Contains(value, "\n") {
-		sb.WriteString(fmt.Sprintf("%s: |\n", key))
-		for _, line := range strings.Split(value, "\n") {
+		sb.WriteString(key + ": |\n")
+
+		for line := range strings.SplitSeq(value, "\n") {
 			if line == "" {
 				sb.WriteString("\n")
 			} else {
-				sb.WriteString(fmt.Sprintf("  %s\n", line))
+				fmt.Fprintf(sb, "  %s\n", line)
 			}
 		}
 	} else {
-		sb.WriteString(fmt.Sprintf("%s: %s\n", key, value))
+		fmt.Fprintf(sb, "%s: %s\n", key, value)
 	}
 }
 
@@ -156,9 +169,12 @@ func cleanupStaleAgentFiles(agentsDir string, serverFiles map[string]bool) {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
 			continue
 		}
+
 		if !serverFiles[entry.Name()] {
 			filePath := filepath.Join(agentsDir, entry.Name())
-			if err := os.Remove(filePath); err != nil {
+
+			err := os.Remove(filePath)
+			if err != nil {
 				slog.Error("failed to remove stale agent file", "path", filePath, "error", err)
 			} else {
 				slog.Info("removed stale agent file", "filename", entry.Name())

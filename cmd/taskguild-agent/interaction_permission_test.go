@@ -7,10 +7,11 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/sourcegraph/conc"
+
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/sourcegraph/conc"
 )
 
 // mockAgentManagerClient is a minimal mock for testing handlePermissionRequest.
@@ -29,6 +30,7 @@ type mockAgentManagerClient struct {
 
 func (m *mockAgentManagerClient) CreateInteraction(_ context.Context, req *connect.Request[v1.CreateInteractionRequest]) (*connect.Response[v1.CreateInteractionResponse], error) {
 	m.interactions = append(m.interactions, req.Msg)
+
 	return connect.NewResponse(&v1.CreateInteractionResponse{
 		Interaction: &v1.Interaction{
 			Id: "test-interaction-id",
@@ -38,6 +40,7 @@ func (m *mockAgentManagerClient) CreateInteraction(_ context.Context, req *conne
 
 func (m *mockAgentManagerClient) AddSingleCommandPermission(_ context.Context, req *connect.Request[v1.AddSingleCommandPermissionRequest]) (*connect.Response[v1.AddSingleCommandPermissionResponse], error) {
 	m.addedPermissions = append(m.addedPermissions, req.Msg)
+
 	return connect.NewResponse(&v1.AddSingleCommandPermissionResponse{
 		Permission: &v1.SingleCommandPermission{
 			Id:      "perm-" + req.Msg.GetPattern(),
@@ -127,10 +130,10 @@ func TestHandlePermissionRequest_BashAutoAllow(t *testing.T) {
 		claudeagent.ToolPermissionContext{},
 		nil, scpCache, nil,
 	)
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
 	if _, ok := result.(claudeagent.PermissionResultAllow); !ok {
 		t.Fatalf("expected PermissionResultAllow, got %T", result)
 	}
@@ -148,13 +151,13 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 		{Id: "1", Pattern: "cd *", Type: "command"},
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	waiter := newInteractionWaiter()
 
 	// Run in goroutine since it blocks waiting for response.
 	resultCh := make(chan claudeagent.PermissionResult, 1)
 	errCh := make(chan error, 1)
+
 	var wg conc.WaitGroup
 	wg.Go(func() {
 		result, err := handlePermissionRequest(
@@ -165,6 +168,7 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 			nil, scpCache, nil,
 		)
 		resultCh <- result
+
 		errCh <- err
 	})
 
@@ -177,36 +181,46 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 	inter := mock.interactions[0]
 
 	// Bash tools should have 3 options.
-	if len(inter.Options) != 3 {
-		t.Errorf("expected 3 options, got %d", len(inter.Options))
+	if len(inter.GetOptions()) != 3 {
+		t.Errorf("expected 3 options, got %d", len(inter.GetOptions()))
 	}
-	if inter.Options[0].Value != "allow" {
-		t.Errorf("expected first option 'allow', got %q", inter.Options[0].Value)
+
+	if inter.GetOptions()[0].GetValue() != "allow" {
+		t.Errorf("expected first option 'allow', got %q", inter.GetOptions()[0].GetValue())
 	}
-	if inter.Options[1].Value != "always_allow_command" {
-		t.Errorf("expected second option 'always_allow_command', got %q", inter.Options[1].Value)
+
+	if inter.GetOptions()[1].GetValue() != "always_allow_command" {
+		t.Errorf("expected second option 'always_allow_command', got %q", inter.GetOptions()[1].GetValue())
 	}
-	if inter.Options[2].Value != "deny" {
-		t.Errorf("expected third option 'deny', got %q", inter.Options[2].Value)
+
+	if inter.GetOptions()[2].GetValue() != "deny" {
+		t.Errorf("expected third option 'deny', got %q", inter.GetOptions()[2].GetValue())
 	}
 
 	// Verify metadata contains parsed command info.
-	if inter.Metadata == "" {
+	if inter.GetMetadata() == "" {
 		t.Fatal("expected metadata to be set")
 	}
+
 	var meta bashPermissionMetadata
-	if err := json.Unmarshal([]byte(inter.Metadata), &meta); err != nil {
+
+	err := json.Unmarshal([]byte(inter.GetMetadata()), &meta)
+	if err != nil {
 		t.Fatalf("failed to parse metadata: %v", err)
 	}
+
 	if len(meta.ParsedCommands) != 2 {
 		t.Errorf("expected 2 parsed commands, got %d", len(meta.ParsedCommands))
 	}
+
 	if !meta.ParsedCommands[0].Matched {
 		t.Error("expected first command (cd /home) to be matched")
 	}
+
 	if meta.ParsedCommands[1].Matched {
 		t.Error("expected second command (npm test) to be unmatched")
 	}
+
 	if meta.ParsedCommands[1].SuggestedPattern == "" {
 		t.Error("expected suggested pattern for unmatched command")
 	}
@@ -219,9 +233,11 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 	})
 
 	result := <-resultCh
-	if err := <-errCh; err != nil {
+
+	if err = <-errCh; err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
 	if _, ok := result.(claudeagent.PermissionResultAllow); !ok {
 		t.Fatalf("expected PermissionResultAllow, got %T", result)
 	}
@@ -230,8 +246,7 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 func TestHandlePermissionRequest_NonBashToolOptions(t *testing.T) {
 	mock := &mockAgentManagerClient{}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	waiter := newInteractionWaiter()
 
 	var wg conc.WaitGroup
@@ -254,19 +269,21 @@ func TestHandlePermissionRequest_NonBashToolOptions(t *testing.T) {
 	inter := mock.interactions[0]
 
 	// Non-Bash tools should have 2 options: Allow and Deny.
-	if len(inter.Options) != 2 {
-		t.Errorf("expected 2 options for non-Bash tool, got %d", len(inter.Options))
+	if len(inter.GetOptions()) != 2 {
+		t.Errorf("expected 2 options for non-Bash tool, got %d", len(inter.GetOptions()))
 	}
-	if inter.Options[0].Value != "allow" {
-		t.Errorf("expected first option 'allow', got %q", inter.Options[0].Value)
+
+	if inter.GetOptions()[0].GetValue() != "allow" {
+		t.Errorf("expected first option 'allow', got %q", inter.GetOptions()[0].GetValue())
 	}
-	if inter.Options[1].Value != "deny" {
-		t.Errorf("expected second option 'deny', got %q", inter.Options[1].Value)
+
+	if inter.GetOptions()[1].GetValue() != "deny" {
+		t.Errorf("expected second option 'deny', got %q", inter.GetOptions()[1].GetValue())
 	}
 
 	// Should have no metadata.
-	if inter.Metadata != "" {
-		t.Errorf("expected empty metadata for non-Bash tool, got %q", inter.Metadata)
+	if inter.GetMetadata() != "" {
+		t.Errorf("expected empty metadata for non-Bash tool, got %q", inter.GetMetadata())
 	}
 }
 
@@ -282,6 +299,7 @@ func TestHandlePermissionRequest_AlwaysAllowCommand(t *testing.T) {
 
 	resultCh := make(chan claudeagent.PermissionResult, 1)
 	errCh := make(chan error, 1)
+
 	var wg conc.WaitGroup
 	wg.Go(func() {
 		result, err := handlePermissionRequest(
@@ -292,6 +310,7 @@ func TestHandlePermissionRequest_AlwaysAllowCommand(t *testing.T) {
 			nil, scpCache, nil,
 		)
 		resultCh <- result
+
 		errCh <- err
 	})
 
@@ -318,9 +337,12 @@ func TestHandlePermissionRequest_AlwaysAllowCommand(t *testing.T) {
 	})
 
 	result := <-resultCh
-	if err := <-errCh; err != nil {
+
+	err := <-errCh
+	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
 	if _, ok := result.(claudeagent.PermissionResultAllow); !ok {
 		t.Fatalf("expected PermissionResultAllow, got %T", result)
 	}
@@ -332,15 +354,18 @@ func TestHandlePermissionRequest_AlwaysAllowCommand(t *testing.T) {
 	if len(mock.addedPermissions) != 1 {
 		t.Fatalf("expected 1 added permission, got %d", len(mock.addedPermissions))
 	}
+
 	perm := mock.addedPermissions[0]
-	if perm.Pattern != "npm test" {
-		t.Errorf("expected pattern 'npm test', got %q", perm.Pattern)
+	if perm.GetPattern() != "npm test" {
+		t.Errorf("expected pattern 'npm test', got %q", perm.GetPattern())
 	}
-	if perm.Type != "command" {
-		t.Errorf("expected type 'command', got %q", perm.Type)
+
+	if perm.GetType() != "command" {
+		t.Errorf("expected type 'command', got %q", perm.GetType())
 	}
-	if perm.ProjectName != "test-project" {
-		t.Errorf("expected project 'test-project', got %q", perm.ProjectName)
+
+	if perm.GetProjectName() != "test-project" {
+		t.Errorf("expected project 'test-project', got %q", perm.GetProjectName())
 	}
 }
 
@@ -353,6 +378,7 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_InvalidJSON(t *testing.T) {
 
 	resultCh := make(chan claudeagent.PermissionResult, 1)
 	errCh := make(chan error, 1)
+
 	var wg conc.WaitGroup
 	wg.Go(func() {
 		result, err := handlePermissionRequest(
@@ -363,6 +389,7 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_InvalidJSON(t *testing.T) {
 			nil, scpCache, nil,
 		)
 		resultCh <- result
+
 		errCh <- err
 	})
 
@@ -376,7 +403,9 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_InvalidJSON(t *testing.T) {
 	})
 
 	result := <-resultCh
-	if err := <-errCh; err != nil {
+
+	err := <-errCh
+	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -401,6 +430,7 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_WithRedirects(t *testing.T) 
 
 	resultCh := make(chan claudeagent.PermissionResult, 1)
 	errCh := make(chan error, 1)
+
 	var wg conc.WaitGroup
 	wg.Go(func() {
 		result, err := handlePermissionRequest(
@@ -411,6 +441,7 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_WithRedirects(t *testing.T) 
 			nil, scpCache, nil,
 		)
 		resultCh <- result
+
 		errCh <- err
 	})
 
@@ -422,16 +453,21 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_WithRedirects(t *testing.T) 
 
 	// Verify metadata includes redirect info.
 	inter := mock.interactions[0]
-	if inter.Metadata == "" {
+	if inter.GetMetadata() == "" {
 		t.Fatal("expected metadata to be set")
 	}
+
 	var meta bashPermissionMetadata
-	if err := json.Unmarshal([]byte(inter.Metadata), &meta); err != nil {
+
+	err := json.Unmarshal([]byte(inter.GetMetadata()), &meta)
+	if err != nil {
 		t.Fatalf("failed to parse metadata: %v", err)
 	}
+
 	if len(meta.Redirects) != 1 {
 		t.Errorf("expected 1 redirect, got %d", len(meta.Redirects))
 	}
+
 	if meta.Redirects[0].Path != "/dev/null" {
 		t.Errorf("expected redirect path '/dev/null', got %q", meta.Redirects[0].Path)
 	}
@@ -453,9 +489,11 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_WithRedirects(t *testing.T) 
 	})
 
 	result := <-resultCh
-	if err := <-errCh; err != nil {
+
+	if err = <-errCh; err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
 	if _, ok := result.(claudeagent.PermissionResultAllow); !ok {
 		t.Fatalf("expected PermissionResultAllow, got %T", result)
 	}
@@ -466,11 +504,13 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_WithRedirects(t *testing.T) 
 	if len(mock.addedPermissions) != 2 {
 		t.Fatalf("expected 2 added permissions, got %d", len(mock.addedPermissions))
 	}
-	if mock.addedPermissions[0].Type != "command" {
-		t.Errorf("expected first permission type 'command', got %q", mock.addedPermissions[0].Type)
+
+	if mock.addedPermissions[0].GetType() != "command" {
+		t.Errorf("expected first permission type 'command', got %q", mock.addedPermissions[0].GetType())
 	}
-	if mock.addedPermissions[1].Type != "redirect" {
-		t.Errorf("expected second permission type 'redirect', got %q", mock.addedPermissions[1].Type)
+
+	if mock.addedPermissions[1].GetType() != "redirect" {
+		t.Errorf("expected second permission type 'redirect', got %q", mock.addedPermissions[1].GetType())
 	}
 }
 
@@ -496,6 +536,7 @@ func TestHandlePermissionRequest_SkillToolAutoAllow(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error for %s: %v", skill, err)
 		}
+
 		if _, ok := result.(claudeagent.PermissionResultAllow); !ok {
 			t.Fatalf("expected PermissionResultAllow for %s, got %T", skill, result)
 		}
@@ -508,6 +549,7 @@ func TestHandlePermissionRequest_SkillToolAutoAllow(t *testing.T) {
 	// A skill that is not configured for this status should still go through
 	// the permission flow (blocks waiting for a response).
 	blockedResultCh := make(chan claudeagent.PermissionResult, 1)
+
 	var wg conc.WaitGroup
 	wg.Go(func() {
 		result, _ := handlePermissionRequest(

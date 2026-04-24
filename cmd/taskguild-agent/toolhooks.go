@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
@@ -41,6 +42,7 @@ func buildToolUseHooks(
 						if input.ToolName != "ExitPlanMode" {
 							return claudeagent.HookOutput{}, nil
 						}
+
 						return handleExitPlanModeApproval(hookCtx.Signal, input, client, interClient, taskID, agentManagerID, waiter, planFilePath)
 					},
 				},
@@ -70,10 +72,11 @@ func buildToolUseHooks(
 						// Save plan result when ExitPlanMode is called.
 						if input.ToolName == "ExitPlanMode" && tl != nil {
 							var planContent string
+
 							if input.ToolResponse != nil {
 								if s, ok := input.ToolResponse.(string); ok {
 									// Try to parse as JSON and extract the "plan" field.
-									var obj map[string]interface{}
+									var obj map[string]any
 									if json.Unmarshal([]byte(s), &obj) == nil {
 										if plan, ok := obj["plan"].(string); ok {
 											planContent = plan
@@ -83,18 +86,20 @@ func buildToolUseHooks(
 									} else {
 										planContent = s
 									}
-								} else if m, ok := input.ToolResponse.(map[string]interface{}); ok {
+								} else if m, ok := input.ToolResponse.(map[string]any); ok {
 									if plan, ok := m["plan"].(string); ok {
 										planContent = plan
 									}
 								}
 							}
+
 							if planContent == "" && planFilePath != "" {
 								// Fallback: read from plan file if no tool response.
 								if content, err := os.ReadFile(planFilePath); err == nil {
 									planContent = string(content)
 								}
 							}
+
 							if planContent != "" {
 								savePlanResult(context.Background(), taskID, planContent, tl)
 							}
@@ -116,6 +121,7 @@ func buildToolUseHooks(
 						}
 
 						logToolUse(tl, taskID, input, true)
+
 						return claudeagent.HookOutput{}, nil
 					},
 				},
@@ -147,7 +153,7 @@ func logToolUse(tl *taskLogger, taskID string, input claudeagent.HookInput, isFa
 
 	// Serialize tool output/response.
 	// Note: input.ToolResponse is often already a JSON string (from Claude's raw
-	// tool result). Re-marshalling such a string would double-encode it —
+	// tool result). Re-marshaling such a string would double-encode it —
 	// wrapping the content in quotes and escaping inner characters (e.g. `<`
 	// becomes `\u003c`, newlines become literal `\n`). Detect that case and
 	// store the string as-is; only marshal non-string payloads.
@@ -168,6 +174,7 @@ func logToolUse(tl *taskLogger, taskID string, input claudeagent.HookInput, isFa
 	// Capture error if present.
 	if input.Error != "" {
 		metadata["error"] = input.Error
+
 		if !isFail {
 			level = v1.TaskLogLevel_TASK_LOG_LEVEL_WARN
 		}
@@ -188,15 +195,15 @@ func formatToolSummary(toolName string, toolInput map[string]any) string {
 	switch toolName {
 	case "Read":
 		if fp, ok := toolInput["file_path"].(string); ok {
-			return fmt.Sprintf("Read: %s", fp)
+			return "Read: " + fp
 		}
 	case "Write":
 		if fp, ok := toolInput["file_path"].(string); ok {
-			return fmt.Sprintf("Write: %s", fp)
+			return "Write: " + fp
 		}
 	case "Edit":
 		if fp, ok := toolInput["file_path"].(string); ok {
-			return fmt.Sprintf("Edit: %s", fp)
+			return "Edit: " + fp
 		}
 	case "Bash":
 		if cmd, ok := toolInput["command"].(string); ok {
@@ -204,11 +211,12 @@ func formatToolSummary(toolName string, toolInput map[string]any) string {
 			if len(cmd) > 80 {
 				cmd = cmd[:77] + "..."
 			}
-			return fmt.Sprintf("Bash: %s", cmd)
+
+			return "Bash: " + cmd
 		}
 	case "Glob":
 		if pattern, ok := toolInput["pattern"].(string); ok {
-			return fmt.Sprintf("Glob: %s", pattern)
+			return "Glob: " + pattern
 		}
 	case "Grep":
 		if pattern, ok := toolInput["pattern"].(string); ok {
@@ -216,6 +224,7 @@ func formatToolSummary(toolName string, toolInput map[string]any) string {
 			if p, ok := toolInput["path"].(string); ok {
 				path = " in " + p
 			}
+
 			return fmt.Sprintf("Grep: %q%s", pattern, path)
 		}
 	case "WebSearch":
@@ -224,21 +233,21 @@ func formatToolSummary(toolName string, toolInput map[string]any) string {
 		}
 	case "WebFetch":
 		if url, ok := toolInput["url"].(string); ok {
-			return fmt.Sprintf("WebFetch: %s", url)
+			return "WebFetch: " + url
 		}
 	case "Agent":
 		if desc, ok := toolInput["description"].(string); ok {
-			return fmt.Sprintf("Agent: %s", desc)
+			return "Agent: " + desc
 		}
 	case "TodoWrite":
 		return "TodoWrite"
 	case "NotebookEdit":
 		if nbPath, ok := toolInput["notebook_path"].(string); ok {
-			return fmt.Sprintf("NotebookEdit: %s", nbPath)
+			return "NotebookEdit: " + nbPath
 		}
 	case "Skill":
 		if skill, ok := toolInput["skill"].(string); ok {
-			return fmt.Sprintf("Skill /%s", skill)
+			return "Skill /" + skill
 		}
 	case "AskUserQuestion":
 		return "AskUserQuestion"
@@ -253,16 +262,8 @@ func truncateText(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
 	}
-	return s[:maxLen-3] + "..."
-}
 
-// truncateLines returns the first few lines of a multi-line string.
-func truncateLines(s string, maxLines int) string {
-	lines := strings.SplitN(s, "\n", maxLines+1)
-	if len(lines) <= maxLines {
-		return s
-	}
-	return strings.Join(lines[:maxLines], "\n") + "\n..."
+	return s[:maxLen-3] + "..."
 }
 
 // handleExitPlanModeApproval intercepts ExitPlanMode via a PreToolUse hook.
@@ -317,11 +318,12 @@ func handleExitPlanModeApproval(
 	case <-ctx.Done():
 		return claudeagent.HookOutput{
 			Decision: "block",
-			Reason:   "context cancelled while waiting for plan approval",
+			Reason:   "context canceled while waiting for plan approval",
 		}, nil
 	case inter := <-ch:
 		if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
 			logger.Info("plan approval expired, blocking ExitPlanMode")
+
 			return claudeagent.HookOutput{
 				Decision: "block",
 				Reason:   "Plan approval expired. Please revise the plan and try again.",
@@ -343,12 +345,13 @@ func handleExitPlanModeApproval(
 
 		return claudeagent.HookOutput{
 			Decision: "block",
-			Reason:   fmt.Sprintf("Plan not approved. User feedback: %s", feedback),
+			Reason:   "Plan not approved. User feedback: " + feedback,
 		}, nil
 
 	case msg := <-waiter.UserMessages():
 		// User sent a free-form message — treat as feedback and block.
 		logger.Info("user sent message during plan approval", "message_id", msg.GetId())
+
 		if _, expErr := interClient.ExpireInteraction(ctx, connect.NewRequest(&v1.ExpireInteractionRequest{
 			Id: interactionID,
 		})); expErr != nil {
@@ -357,7 +360,7 @@ func handleExitPlanModeApproval(
 
 		return claudeagent.HookOutput{
 			Decision: "block",
-			Reason:   fmt.Sprintf("Plan not approved. User feedback: %s", msg.GetTitle()),
+			Reason:   "Plan not approved. User feedback: " + msg.GetTitle(),
 		}, nil
 	}
 }

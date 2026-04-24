@@ -33,12 +33,13 @@ func New(eventBus *eventbus.Bus, taskRepo task.Repository, workflowRepo workflow
 }
 
 // Start subscribes to the event bus and processes task lifecycle events.
-// It blocks until ctx is cancelled.
+// It blocks until ctx is canceled.
 func (o *Orchestrator) Start(ctx context.Context) {
 	subID, ch := o.eventBus.Subscribe(256)
 	defer o.eventBus.Unsubscribe(subID)
 
 	slog.Info("orchestrator started")
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -48,7 +49,8 @@ func (o *Orchestrator) Start(ctx context.Context) {
 			if !ok {
 				return
 			}
-			switch event.Type {
+
+			switch event.GetType() {
 			case taskguildv1.EventType_EVENT_TYPE_TASK_CREATED,
 				taskguildv1.EventType_EVENT_TYPE_TASK_STATUS_CHANGED:
 				o.handleTaskEvent(ctx, event)
@@ -60,9 +62,9 @@ func (o *Orchestrator) Start(ctx context.Context) {
 }
 
 func (o *Orchestrator) handleTaskEvent(ctx context.Context, event *taskguildv1.Event) {
-	t, err := o.taskRepo.Get(ctx, event.ResourceId)
+	t, err := o.taskRepo.Get(ctx, event.GetResourceId())
 	if err != nil {
-		slog.Error("orchestrator: failed to get task", "task_id", event.ResourceId, "error", err)
+		slog.Error("orchestrator: failed to get task", "task_id", event.GetResourceId(), "error", err)
 		return
 	}
 
@@ -77,6 +79,7 @@ func (o *Orchestrator) handleTaskEvent(ctx context.Context, event *taskguildv1.E
 	// AgentConfig — resolved via ClaimTask's 3-tier fallback. Only skip if
 	// the status has none of these configured (e.g. Draft / Closed).
 	agentConfigID := wf.FindAgentIDForStatus(t.StatusID)
+
 	skillIDs := wf.FindSkillIDsForStatus(t.StatusID)
 	if agentConfigID == "" && len(skillIDs) == 0 {
 		return // no executor configured for this status (initial/terminal)
@@ -89,15 +92,18 @@ func (o *Orchestrator) handleTaskEvent(ctx context.Context, event *taskguildv1.E
 	if t.AssignmentStatus == task.AssignmentStatusAssigned {
 		slog.Info("orchestrator: task already assigned to agent, skipping",
 			"task_id", t.ID, "agent_id", t.AssignedAgentID)
+
 		return
 	}
 
 	// Set assignment status to PENDING.
 	t.AssignmentStatus = task.AssignmentStatusPending
+
 	t.UpdatedAt = time.Now()
 	if t.Metadata == nil {
 		t.Metadata = make(map[string]string)
 	}
+
 	task.ClearPendingReason(t.Metadata)
 
 	// Resolve project name for filtered broadcast.
@@ -141,15 +147,15 @@ func (o *Orchestrator) handleTaskEvent(ctx context.Context, event *taskguildv1.E
 // manual status change or resume.
 func (o *Orchestrator) handleInteractionCreated(ctx context.Context, event *taskguildv1.Event) {
 	// The event's ResourceId is the interaction ID; task_id is in metadata.
-	taskID := event.Metadata["task_id"]
+	taskID := event.GetMetadata()["task_id"]
 	if taskID == "" {
 		return
 	}
 
 	// Only react to user-sent comments, not agent-created interactions
 	// (permission requests, questions, etc.).
-	interProto := interaction.UnmarshalInteractionPayload(event.Payload)
-	if interProto == nil || interProto.Type != taskguildv1.InteractionType_INTERACTION_TYPE_USER_MESSAGE {
+	interProto := interaction.UnmarshalInteractionPayload(event.GetPayload())
+	if interProto == nil || interProto.GetType() != taskguildv1.InteractionType_INTERACTION_TYPE_USER_MESSAGE {
 		return
 	}
 
@@ -169,6 +175,7 @@ func (o *Orchestrator) handleInteractionCreated(ctx context.Context, event *task
 	if t.Metadata == nil {
 		t.Metadata = make(map[string]string)
 	}
+
 	delete(t.Metadata, "_stopped_by_user")
 	delete(t.Metadata, "_retry_count")
 	delete(t.Metadata, "result_error")
@@ -232,20 +239,23 @@ func (o *Orchestrator) setPendingReason(ctx context.Context, t *task.Task, proje
 		if err != nil {
 			return
 		}
+
 		for _, other := range tasks {
 			if other.ID == t.ID {
 				continue
 			}
+
 			if other.Metadata["worktree"] != worktreeName {
 				continue
 			}
+
 			if other.AssignmentStatus == task.AssignmentStatusAssigned {
 				t.Metadata[task.MetaPendingReason] = task.PendingReasonWorktreeOccupied
 				t.Metadata[task.MetaPendingBlockerTaskID] = other.ID
 				t.Metadata[task.MetaPendingBlockerTaskTitle] = other.Title
+
 				return
 			}
 		}
 	}
 }
-

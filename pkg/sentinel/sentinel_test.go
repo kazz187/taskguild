@@ -14,8 +14,9 @@ func TestHashFile(t *testing.T) {
 	// Create a temp file with known content.
 	dir := t.TempDir()
 	path := filepath.Join(dir, "testfile")
+
 	content := []byte("hello world")
-	if err := os.WriteFile(path, content, 0644); err != nil {
+	if err := os.WriteFile(path, content, 0o644); err != nil {
 		t.Fatalf("failed to write temp file: %v", err)
 	}
 
@@ -35,10 +36,12 @@ func TestHashFileDifferentContent(t *testing.T) {
 
 	path1 := filepath.Join(dir, "file1")
 	path2 := filepath.Join(dir, "file2")
-	if err := os.WriteFile(path1, []byte("content A"), 0644); err != nil {
+
+	if err := os.WriteFile(path1, []byte("content A"), 0o644); err != nil {
 		t.Fatalf("failed to write file1: %v", err)
 	}
-	if err := os.WriteFile(path2, []byte("content B"), 0644); err != nil {
+
+	if err := os.WriteFile(path2, []byte("content B"), 0o644); err != nil {
 		t.Fatalf("failed to write file2: %v", err)
 	}
 
@@ -46,6 +49,7 @@ func TestHashFileDifferentContent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HashFile(file1) failed: %v", err)
 	}
+
 	hash2, err := HashFile(path2)
 	if err != nil {
 		t.Fatalf("HashFile(file2) failed: %v", err)
@@ -68,11 +72,13 @@ func TestHashFileSameContent(t *testing.T) {
 
 	path1 := filepath.Join(dir, "file1")
 	path2 := filepath.Join(dir, "file2")
+
 	content := []byte("identical content")
-	if err := os.WriteFile(path1, content, 0644); err != nil {
+	if err := os.WriteFile(path1, content, 0o644); err != nil {
 		t.Fatalf("failed to write file1: %v", err)
 	}
-	if err := os.WriteFile(path2, content, 0644); err != nil {
+
+	if err := os.WriteFile(path2, content, 0o644); err != nil {
 		t.Fatalf("failed to write file2: %v", err)
 	}
 
@@ -80,6 +86,7 @@ func TestHashFileSameContent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HashFile(file1) failed: %v", err)
 	}
+
 	hash2, err := HashFile(path2)
 	if err != nil {
 		t.Fatalf("HashFile(file2) failed: %v", err)
@@ -114,6 +121,7 @@ func TestBackoffProgression(t *testing.T) {
 
 	for i, want := range expected {
 		s.increaseBackoff()
+
 		if s.backoff != want {
 			t.Errorf("step %d: got %v, want %v", i+1, s.backoff, want)
 		}
@@ -127,12 +135,14 @@ func TestBackoffCap(t *testing.T) {
 	}
 
 	s.increaseBackoff()
+
 	if s.backoff != MaxBackoff {
 		t.Errorf("got %v, want %v (should be capped)", s.backoff, MaxBackoff)
 	}
 
 	// Another increase should stay capped.
 	s.increaseBackoff()
+
 	if s.backoff != MaxBackoff {
 		t.Errorf("got %v, want %v (should stay capped)", s.backoff, MaxBackoff)
 	}
@@ -166,6 +176,7 @@ func TestSleepBackoffInterruptible(t *testing.T) {
 	})
 
 	s.sleepBackoff()
+
 	elapsed := time.Since(start)
 
 	// Should have been interrupted well before the 10s backoff.
@@ -179,18 +190,23 @@ func TestConstants(t *testing.T) {
 	if InitialBackoff != 5*time.Second {
 		t.Errorf("InitialBackoff: got %v, want %v", InitialBackoff, 5*time.Second)
 	}
+
 	if MaxBackoff != 10*time.Minute {
 		t.Errorf("MaxBackoff: got %v, want %v", MaxBackoff, 10*time.Minute)
 	}
+
 	if GracePeriod != 10*time.Second {
 		t.Errorf("GracePeriod: got %v, want %v", GracePeriod, 10*time.Second)
 	}
+
 	if BackoffFactor != 2.0 {
 		t.Errorf("BackoffFactor: got %v, want %v", BackoffFactor, 2.0)
 	}
+
 	if SuccessRunTime != 30*time.Second {
 		t.Errorf("SuccessRunTime: got %v, want %v", SuccessRunTime, 30*time.Second)
 	}
+
 	if ScriptWaitTimeout != 6*time.Minute {
 		t.Errorf("ScriptWaitTimeout: got %v, want %v", ScriptWaitTimeout, 6*time.Minute)
 	}
@@ -209,7 +225,6 @@ func TestMainLoopGracefulRestart_ChildExitsBeforeTimeout(t *testing.T) {
 	// Simulate the updateCh case where child exits before ScriptWaitTimeout.
 	// We verify the flow by checking that the sentinel does NOT call stopChild
 	// (force kill) when the child exits on its own.
-
 	s := &Sentinel{
 		backoff: InitialBackoff,
 		stopCh:  make(chan struct{}),
@@ -221,6 +236,7 @@ func TestMainLoopGracefulRestart_ChildExitsBeforeTimeout(t *testing.T) {
 	var childWg conc.WaitGroup
 	childWg.Go(func() {
 		time.Sleep(50 * time.Millisecond)
+
 		childDone <- nil
 	})
 
@@ -246,6 +262,7 @@ func TestMainLoopGracefulRestart_TimeoutFallback(t *testing.T) {
 	// Do NOT send to childDone — simulates a stuck child.
 
 	timedOut := false
+
 	select {
 	case <-childDone:
 		t.Error("child should not have exited")

@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -14,10 +15,11 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 	"github.com/sourcegraph/conc"
 	"github.com/sourcegraph/conc/pool"
+
+	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
+	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
 
 const (
@@ -44,6 +46,7 @@ func handleStopScript(cmd *v1.StopScriptCommand) {
 	slog.Info("received stop script command", "request_id", requestID)
 
 	runningScripts.mu.Lock()
+
 	cancel, ok := runningScripts.cancels[requestID]
 	if ok {
 		runningScripts.userStopped[requestID] = true
@@ -52,7 +55,7 @@ func handleStopScript(cmd *v1.StopScriptCommand) {
 
 	if ok {
 		cancel()
-		slog.Info("script execution cancelled", "request_id", requestID)
+		slog.Info("script execution canceled", "request_id", requestID)
 	} else {
 		slog.Warn("script execution not found for stop", "request_id", requestID)
 	}
@@ -70,6 +73,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 
 	reportResult := func(success bool, exitCode int32, logEntries []*v1.ScriptLogEntry, errMsg string, stoppedByUser bool) {
 		slog.Info("[STREAM-TRACE] agent: reporting execution result to backend", "request_id", requestID, "success", success, "exit_code", exitCode, "log_entry_count", len(logEntries), "error_message", errMsg)
+
 		_, err := client.ReportScriptExecutionResult(context.Background(), connect.NewRequest(&v1.ReportScriptExecutionResultRequest{
 			RequestId:     requestID,
 			ProjectName:   cfg.ProjectName,
@@ -92,9 +96,12 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 		scriptTracker.mu.Unlock()
 		slog.Warn("script rejected: agent is shutting down for hot reload", "filename", filename, "request_id", requestID)
 		reportResult(false, -1, nil, "script execution rejected: agent is shutting down for hot reload", false)
+
 		return
 	}
+
 	scriptTracker.wg.Add(1)
+
 	scriptTracker.mu.Unlock()
 	defer scriptTracker.wg.Done()
 
@@ -113,6 +120,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 	runningScripts.mu.Lock()
 	runningScripts.cancels[requestID] = cancel
 	runningScripts.mu.Unlock()
+
 	defer func() {
 		runningScripts.mu.Lock()
 		delete(runningScripts.cancels, requestID)
@@ -138,6 +146,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 			// Kill the entire process group (negative PID).
 			return syscall.Kill(-execCmd.Process.Pid, syscall.SIGKILL)
 		}
+
 		return nil
 	}
 
@@ -151,13 +160,16 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 		reportResult(false, -1, nil, fmt.Sprintf("failed to create stdout pipe: %v", err), false)
 		return
 	}
+
 	stderrR, stderrW, err := os.Pipe()
 	if err != nil {
 		stdoutR.Close()
 		stdoutW.Close()
 		reportResult(false, -1, nil, fmt.Sprintf("failed to create stderr pipe: %v", err), false)
+
 		return
 	}
+
 	execCmd.Stdout = stdoutW
 	execCmd.Stderr = stderrW
 
@@ -167,6 +179,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 		stderrR.Close()
 		stderrW.Close()
 		reportResult(false, -1, nil, fmt.Sprintf("failed to start script: %v", err), false)
+
 		return
 	}
 	// Close write ends in the parent so the read ends get EOF when the
@@ -188,6 +201,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 		time.Sleep(500 * time.Millisecond)
 		stdoutR.Close()
 		stderrR.Close()
+
 		return waitErr
 	})
 
@@ -198,6 +212,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 	// Collect the Wait result (available immediately or shortly after
 	// streamOutput returns).
 	waitResults := waitPool.Wait()
+
 	var cmdErr error
 	if len(waitResults) > 0 {
 		cmdErr = waitResults[0]
@@ -215,9 +230,12 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 
 	if cmdErr != nil {
 		exitCode := int32(-1)
-		if exitErr, ok := cmdErr.(*exec.ExitError); ok {
+
+		exitErr := &exec.ExitError{}
+		if errors.As(cmdErr, &exitErr) {
 			exitCode = int32(exitErr.ExitCode())
 		}
+
 		if stoppedByUser {
 			slog.Info("script stopped by user", "filename", filename, "request_id", requestID)
 			reportResult(false, exitCode, logEntries, "Stopped by user", true)
@@ -225,6 +243,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 			slog.Error("script failed", "filename", filename, "exit_code", exitCode, "request_id", requestID)
 			reportResult(false, exitCode, logEntries, "", false)
 		}
+
 		return
 	}
 
@@ -237,24 +256,28 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 // exist, it returns an error instructing the user to run sync first.
 func resolveScriptPath(workDir, filename string) (string, error) {
 	localPath := filepath.Join(workDir, ".taskguild", "scripts", filename)
+
 	info, err := os.Stat(localPath)
 	if err != nil || info.IsDir() {
 		return "", fmt.Errorf("script file not found locally: %s; run sync first", filename)
 	}
 	// Ensure the local file is executable.
-	if info.Mode()&0111 == 0 {
-		if chmodErr := os.Chmod(localPath, 0755); chmodErr != nil {
+	if info.Mode()&0o111 == 0 {
+		chmodErr := os.Chmod(localPath, 0o755)
+		if chmodErr != nil {
 			slog.Warn("failed to set execute permission on script", "path", localPath, "error", chmodErr)
 		}
 	}
+
 	slog.Info("using local script file", "path", localPath)
+
 	return localPath, nil
 }
 
 // logEntryBuffer accumulates log entries in order for the final report.
 type logEntryBuffer struct {
-	mu      sync.Mutex
-	buf     []*v1.ScriptLogEntry
+	mu  sync.Mutex
+	buf []*v1.ScriptLogEntry
 }
 
 func (b *logEntryBuffer) append(stream v1.ScriptLogStream, text string) {
@@ -266,8 +289,10 @@ func (b *logEntryBuffer) append(stream v1.ScriptLogStream, text string) {
 func (b *logEntryBuffer) entries() []*v1.ScriptLogEntry {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+
 	result := make([]*v1.ScriptLogEntry, len(b.buf))
 	copy(result, b.buf)
+
 	return result
 }
 
@@ -288,6 +313,7 @@ func (c *chunkBuffer) drain() []*v1.ScriptLogEntry {
 	entries := c.buf
 	c.buf = nil
 	c.mu.Unlock()
+
 	return entries
 }
 
@@ -310,7 +336,9 @@ func streamOutput(
 	pipeWg.Go(func() {
 		scanner := bufio.NewScanner(stdoutPipe)
 		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+
 		lineCount := 0
+
 		for scanner.Scan() {
 			line := scanner.Text() + "\n"
 			lineCount++
@@ -318,16 +346,21 @@ func streamOutput(
 			chunk.append(v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT, line)
 			fullLog.append(v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT, line)
 		}
-		if err := scanner.Err(); err != nil {
+
+		err := scanner.Err()
+		if err != nil {
 			slog.Warn("[STREAM-TRACE] agent: stdout scanner error", "request_id", requestID, "error", err)
 		}
+
 		slog.Info("[STREAM-TRACE] agent: stdout pipe closed", "request_id", requestID, "total_lines", lineCount)
 	})
 
 	pipeWg.Go(func() {
 		scanner := bufio.NewScanner(stderrPipe)
 		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+
 		lineCount := 0
+
 		for scanner.Scan() {
 			line := scanner.Text() + "\n"
 			lineCount++
@@ -335,18 +368,23 @@ func streamOutput(
 			chunk.append(v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDERR, line)
 			fullLog.append(v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDERR, line)
 		}
-		if err := scanner.Err(); err != nil {
+
+		err := scanner.Err()
+		if err != nil {
 			slog.Warn("[STREAM-TRACE] agent: stderr scanner error", "request_id", requestID, "error", err)
 		}
+
 		slog.Info("[STREAM-TRACE] agent: stderr pipe closed", "request_id", requestID, "total_lines", lineCount)
 	})
 
 	// Periodic flushing in background until pipes close.
 	flushDone := make(chan struct{})
+
 	var flushWg conc.WaitGroup
 	flushWg.Go(func() {
 		ticker := time.NewTicker(outputFlushInterval)
 		defer ticker.Stop()
+
 		for {
 			select {
 			case <-ticker.C:
@@ -368,7 +406,7 @@ func streamOutput(
 	flushLogEntries(ctx, client, cfg, requestID, &chunk)
 
 	if ctx.Err() != nil {
-		slog.Warn("script output streaming cancelled by context", "request_id", requestID, "error", ctx.Err())
+		slog.Warn("script output streaming canceled by context", "request_id", requestID, "error", ctx.Err())
 	} else {
 		slog.Info("script output streaming finished", "request_id", requestID)
 	}

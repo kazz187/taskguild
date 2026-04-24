@@ -49,10 +49,11 @@ func (s *Server) notifyChange(projectID string) {
 
 // GetPermissions returns the permission set for a project.
 func (s *Server) GetPermissions(ctx context.Context, req *connect.Request[taskguildv1.GetPermissionsRequest]) (*connect.Response[taskguildv1.GetPermissionsResponse], error) {
-	ps, err := s.repo.Get(ctx, req.Msg.ProjectId)
+	ps, err := s.repo.Get(ctx, req.Msg.GetProjectId())
 	if err != nil {
 		return nil, err
 	}
+
 	return connect.NewResponse(&taskguildv1.GetPermissionsResponse{
 		Permissions: toProto(ps),
 	}), nil
@@ -61,16 +62,20 @@ func (s *Server) GetPermissions(ctx context.Context, req *connect.Request[taskgu
 // UpdatePermissions replaces the full permission set for a project.
 func (s *Server) UpdatePermissions(ctx context.Context, req *connect.Request[taskguildv1.UpdatePermissionsRequest]) (*connect.Response[taskguildv1.UpdatePermissionsResponse], error) {
 	ps := &PermissionSet{
-		ProjectID: req.Msg.ProjectId,
-		Allow:     dedup(req.Msg.Allow),
-		Ask:       dedup(req.Msg.Ask),
-		Deny:      dedup(req.Msg.Deny),
+		ProjectID: req.Msg.GetProjectId(),
+		Allow:     dedup(req.Msg.GetAllow()),
+		Ask:       dedup(req.Msg.GetAsk()),
+		Deny:      dedup(req.Msg.GetDeny()),
 		UpdatedAt: time.Now(),
 	}
-	if err := s.repo.Upsert(ctx, ps); err != nil {
+
+	err := s.repo.Upsert(ctx, ps)
+	if err != nil {
 		return nil, err
 	}
+
 	s.notifyChange(ps.ProjectID)
+
 	return connect.NewResponse(&taskguildv1.UpdatePermissionsResponse{
 		Permissions: toProto(ps),
 	}), nil
@@ -79,17 +84,20 @@ func (s *Server) UpdatePermissions(ctx context.Context, req *connect.Request[tas
 // SyncPermissionsFromDir reads .claude/settings.json from the given directory
 // and merges its permission rules into the stored set using union strategy.
 func (s *Server) SyncPermissionsFromDir(ctx context.Context, req *connect.Request[taskguildv1.SyncPermissionsFromDirRequest]) (*connect.Response[taskguildv1.SyncPermissionsFromDirResponse], error) {
-	dir := req.Msg.Directory
+	dir := req.Msg.GetDirectory()
 	if (dir == "" || dir == ".") && s.resolver != nil {
-		resolved, err := s.resolver.ResolveWorkDir(req.Msg.ProjectId)
+		resolved, err := s.resolver.ResolveWorkDir(req.Msg.GetProjectId())
 		if err != nil {
 			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("failed to resolve work directory: %w", err))
 		}
+
 		dir = resolved
 	}
+
 	if dir == "" {
 		dir = "."
 	}
+
 	settingsPath := filepath.Join(dir, ".claude", "settings.json")
 
 	localAllow, localAsk, localDeny, err := readSettingsPermissions(settingsPath)
@@ -99,17 +107,18 @@ func (s *Server) SyncPermissionsFromDir(ctx context.Context, req *connect.Reques
 
 	// If no local permissions found, return existing stored permissions as-is.
 	if len(localAllow) == 0 && len(localAsk) == 0 && len(localDeny) == 0 {
-		stored, err := s.repo.Get(ctx, req.Msg.ProjectId)
+		stored, err := s.repo.Get(ctx, req.Msg.GetProjectId())
 		if err != nil {
 			return nil, err
 		}
+
 		return connect.NewResponse(&taskguildv1.SyncPermissionsFromDirResponse{
 			Permissions: toProto(stored),
 		}), nil
 	}
 
 	// Get stored permissions and merge with local.
-	stored, err := s.repo.Get(ctx, req.Msg.ProjectId)
+	stored, err := s.repo.Get(ctx, req.Msg.GetProjectId())
 	if err != nil {
 		return nil, err
 	}
@@ -134,10 +143,11 @@ func readSettingsPermissions(path string) (allow, ask, deny []string, err error)
 		if os.IsNotExist(readErr) {
 			return nil, nil, nil, nil
 		}
+
 		return nil, nil, nil, readErr
 	}
 
-	var raw map[string]interface{}
+	var raw map[string]any
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return nil, nil, nil, fmt.Errorf("invalid JSON in %s: %w", path, err)
 	}
@@ -146,7 +156,8 @@ func readSettingsPermissions(path string) (allow, ask, deny []string, err error)
 	if !ok {
 		return nil, nil, nil, nil
 	}
-	permsMap, ok := permsRaw.(map[string]interface{})
+
+	permsMap, ok := permsRaw.(map[string]any)
 	if !ok {
 		return nil, nil, nil, nil
 	}
@@ -154,24 +165,29 @@ func readSettingsPermissions(path string) (allow, ask, deny []string, err error)
 	allow = toStringSlice(permsMap["allow"])
 	ask = toStringSlice(permsMap["ask"])
 	deny = toStringSlice(permsMap["deny"])
+
 	return allow, ask, deny, nil
 }
 
 // toStringSlice converts an interface{} (expected to be []interface{} of strings) to []string.
-func toStringSlice(v interface{}) []string {
+func toStringSlice(v any) []string {
 	if v == nil {
 		return nil
 	}
-	arr, ok := v.([]interface{})
+
+	arr, ok := v.([]any)
 	if !ok {
 		return nil
 	}
+
 	var result []string
+
 	for _, item := range arr {
 		if s, ok := item.(string); ok {
 			result = append(result, s)
 		}
 	}
+
 	return result
 }
 
@@ -190,32 +206,39 @@ func Merge(stored *PermissionSet, localAllow, localAsk, localDeny []string) *Per
 // unionDedup merges two string slices, removing duplicates while preserving order.
 func unionDedup(a, b []string) []string {
 	seen := make(map[string]bool)
+
 	var result []string
+
 	for _, s := range a {
 		if !seen[s] {
 			seen[s] = true
 			result = append(result, s)
 		}
 	}
+
 	for _, s := range b {
 		if !seen[s] {
 			seen[s] = true
 			result = append(result, s)
 		}
 	}
+
 	return result
 }
 
 // dedup removes duplicate strings while preserving order.
 func dedup(items []string) []string {
 	seen := make(map[string]bool)
+
 	var result []string
+
 	for _, s := range items {
 		if !seen[s] {
 			seen[s] = true
 			result = append(result, s)
 		}
 	}
+
 	return result
 }
 

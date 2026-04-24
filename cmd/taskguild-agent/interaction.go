@@ -3,17 +3,20 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"sync"
 	"time"
 
 	"connectrpc.com/connect"
+
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
-	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 	"github.com/kazz187/taskguild/pkg/clog"
 	"github.com/kazz187/taskguild/pkg/shellparse"
+	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
+	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
 
 // interactionWaiter dispatches streamed interaction responses to waiting goroutines.
@@ -23,7 +26,7 @@ type interactionWaiter struct {
 	mu        sync.Mutex
 	waiters   map[string]chan *v1.Interaction // interaction_id -> ch
 	pending   map[string]*v1.Interaction      // arrived before Register()
-	userMsgCh chan *v1.Interaction             // task-level channel for user-initiated messages
+	userMsgCh chan *v1.Interaction            // task-level channel for user-initiated messages
 }
 
 func newInteractionWaiter() *interactionWaiter {
@@ -57,10 +60,12 @@ func (w *interactionWaiter) Register(id string) <-chan *v1.Interaction {
 	ch := make(chan *v1.Interaction, 1)
 	if inter, ok := w.pending[id]; ok {
 		ch <- inter
+
 		delete(w.pending, id)
 	} else {
 		w.waiters[id] = ch
 	}
+
 	return ch
 }
 
@@ -68,6 +73,7 @@ func (w *interactionWaiter) Register(id string) <-chan *v1.Interaction {
 func (w *interactionWaiter) Unregister(id string) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
 	delete(w.waiters, id)
 	delete(w.pending, id)
 }
@@ -81,6 +87,7 @@ func (w *interactionWaiter) Deliver(inter *v1.Interaction) {
 	id := inter.GetId()
 	if ch, ok := w.waiters[id]; ok {
 		ch <- inter
+
 		delete(w.waiters, id)
 	} else {
 		w.pending[id] = inter
@@ -90,11 +97,12 @@ func (w *interactionWaiter) Deliver(inter *v1.Interaction) {
 // runInteractionListener subscribes to interaction events for a task and delivers
 // responded interactions to the waiter. It automatically reconnects on stream
 // errors with exponential backoff.
-// It returns only when ctx is cancelled (task finished).
+// It returns only when ctx is canceled (task finished).
 func runInteractionListener(ctx context.Context, interClient taskguildv1connect.InteractionServiceClient, taskID string, waiter *interactionWaiter) {
 	logger := clog.LoggerFromContext(ctx)
 
 	backoff := 1 * time.Second
+
 	const maxBackoff = 30 * time.Second
 
 	for {
@@ -106,6 +114,7 @@ func runInteractionListener(ctx context.Context, interClient taskguildv1connect.
 		if ctx.Err() != nil {
 			return
 		}
+
 		if err != nil {
 			logger.Warn("interaction stream error, reconnecting", "error", err, "backoff", backoff)
 		} else {
@@ -127,7 +136,7 @@ func runInteractionListener(ctx context.Context, interClient taskguildv1connect.
 }
 
 // runInteractionStream connects once and processes interaction events until
-// the stream ends or ctx is cancelled. Returns the stream error (if any).
+// the stream ends or ctx is canceled. Returns the stream error (if any).
 func runInteractionStream(ctx context.Context, interClient taskguildv1connect.InteractionServiceClient, taskID string, waiter *interactionWaiter) error {
 	logger := clog.LoggerFromContext(ctx)
 
@@ -148,6 +157,7 @@ func runInteractionStream(ctx context.Context, interClient taskguildv1connect.In
 	if err := stream.Err(); err != nil && ctx.Err() == nil {
 		return fmt.Errorf("stream error: %w", err)
 	}
+
 	return nil
 }
 
@@ -157,6 +167,7 @@ func deliverInteraction(taskID string, inter *v1.Interaction, waiter *interactio
 	if inter == nil {
 		return
 	}
+
 	logger := slog.Default().With("task_id", taskID)
 
 	// User-initiated messages (sent via "Send a message") are routed to
@@ -164,6 +175,7 @@ func deliverInteraction(taskID string, inter *v1.Interaction, waiter *interactio
 	if inter.GetType() == v1.InteractionType_INTERACTION_TYPE_USER_MESSAGE {
 		logger.Debug("user message received", "interaction_id", inter.GetId(), "source", source)
 		waiter.DeliverUserMessage(inter)
+
 		return
 	}
 
@@ -180,7 +192,7 @@ func deliverInteraction(taskID string, inter *v1.Interaction, waiter *interactio
 // errWaitTimeout is returned by waitForUserResponse when the user does not
 // respond within waitForUserResponseTimeout. The caller should retry with a
 // prompt that explicitly asks for NEXT_STATUS.
-var errWaitTimeout = fmt.Errorf("user response timeout")
+var errWaitTimeout = errors.New("user response timeout")
 
 // waitForUserResponse creates a QUESTION interaction and waits for a response via the event stream.
 // If the user does not respond within waitForUserResponseTimeout, the interaction is expired
@@ -224,22 +236,27 @@ func waitForUserResponse(
 		})); expErr != nil {
 			logger.Error("failed to expire interaction", "interaction_id", interactionID, "error", expErr)
 		}
+
 		return "", errWaitTimeout
 	case inter := <-ch:
 		if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
 			return "", errWaitTimeout
 		}
+
 		logger.Info("user responded to interaction", "interaction_id", interactionID)
+
 		return inter.GetResponse(), nil
 	case msg := <-waiter.UserMessages():
 		// User sent a free-form message via "Send a message" — use it as
 		// the response and expire the pending QUESTION interaction.
 		logger.Info("user sent message while waiting for input", "interaction_id", interactionID, "message_id", msg.GetId())
+
 		if _, expErr := interClient.ExpireInteraction(ctx, connect.NewRequest(&v1.ExpireInteractionRequest{
 			Id: interactionID,
 		})); expErr != nil {
 			logger.Error("failed to expire interaction", "interaction_id", interactionID, "error", expErr)
 		}
+
 		return msg.GetTitle(), nil
 	}
 }
@@ -258,50 +275,6 @@ var editTools = map[string]bool{
 	"Edit":         true,
 	"Write":        true,
 	"NotebookEdit": true,
-}
-
-// buildPermissionUpdate constructs permission updates for the "always allow" action.
-// It prefers CLI-provided suggestions when available, falling back to a manually
-// constructed rule from the tool name and input.
-func buildPermissionUpdate(toolName string, input map[string]any, suggestions []*claudeagent.PermissionUpdate) []*claudeagent.PermissionUpdate {
-	// Prefer CLI suggestions: they contain the exact rule format the CLI expects.
-	if len(suggestions) > 0 {
-		var updates []*claudeagent.PermissionUpdate
-		for _, s := range suggestions {
-			if s.Type == claudeagent.PermissionUpdateAddRules &&
-				s.Behavior == claudeagent.PermissionBehaviorAllow {
-				cp := *s // copy
-				cp.Destination = claudeagent.PermissionDestinationLocalSettings
-				updates = append(updates, &cp)
-			}
-		}
-		if len(updates) > 0 {
-			return updates
-		}
-	}
-
-	// Fallback: build rule from tool name and input.
-	rule := &claudeagent.PermissionRuleValue{
-		ToolName: toolName,
-	}
-
-	// For Bash, include the command as ruleContent for a specific match.
-	if toolName == "Bash" {
-		if cmd, ok := input["command"]; ok {
-			if cmdStr, ok := cmd.(string); ok && cmdStr != "" {
-				rule.RuleContent = cmdStr
-			}
-		}
-	}
-
-	return []*claudeagent.PermissionUpdate{
-		{
-			Type:        claudeagent.PermissionUpdateAddRules,
-			Rules:       []*claudeagent.PermissionRuleValue{rule},
-			Behavior:    claudeagent.PermissionBehaviorAllow,
-			Destination: claudeagent.PermissionDestinationLocalSettings,
-		},
-	}
 }
 
 // handleAskUserQuestion processes the AskUserQuestion tool by presenting each question
@@ -340,23 +313,28 @@ func handleAskUserQuestion(
 
 		questionText, _ := qMap["question"].(string)
 		header, _ := qMap["header"].(string)
+
 		if questionText == "" {
 			continue
 		}
 
 		// Build interaction options from the question's options array.
 		var interactionOpts []*v1.InteractionOption
+
 		if optsRaw, ok := qMap["options"].([]any); ok {
 			for _, optRaw := range optsRaw {
 				optMap, ok := optRaw.(map[string]any)
 				if !ok {
 					continue
 				}
+
 				label, _ := optMap["label"].(string)
 				desc, _ := optMap["description"].(string)
+
 				if label == "" {
 					continue
 				}
+
 				interactionOpts = append(interactionOpts, &v1.InteractionOption{
 					Label:       label,
 					Value:       label,
@@ -396,15 +374,18 @@ func handleAskUserQuestion(
 		ch := waiter.Register(interactionID)
 
 		var selectedAnswer string
+
 		select {
 		case <-ctx.Done():
 			waiter.Unregister(interactionID)
-			return claudeagent.PermissionResultDeny{Message: "context cancelled"}, nil
+			return claudeagent.PermissionResultDeny{Message: "context canceled"}, nil
 		case inter := <-ch:
 			waiter.Unregister(interactionID)
+
 			if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
 				return claudeagent.PermissionResultDeny{Message: "question expired"}, nil
 			}
+
 			selectedAnswer = inter.GetResponse()
 		}
 
@@ -429,12 +410,14 @@ func handleAskUserQuestion(
 			select {
 			case <-ctx.Done():
 				waiter.Unregister(followID)
-				return claudeagent.PermissionResultDeny{Message: "context cancelled"}, nil
+				return claudeagent.PermissionResultDeny{Message: "context canceled"}, nil
 			case inter := <-followCh:
 				waiter.Unregister(followID)
+
 				if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
 					return claudeagent.PermissionResultDeny{Message: "question expired"}, nil
 				}
+
 				selectedAnswer = inter.GetResponse()
 			}
 		}
@@ -445,9 +428,7 @@ func handleAskUserQuestion(
 
 	// Inject answers into the input and return as UpdatedInput.
 	updatedInput := make(map[string]any)
-	for k, v := range input {
-		updatedInput[k] = v
-	}
+	maps.Copy(updatedInput, input)
 	updatedInput["answers"] = answers
 
 	return claudeagent.PermissionResultAllow{
@@ -526,15 +507,18 @@ func handlePermissionRequest(
 
 	// Single-command permission check for Bash tool.
 	var bashMeta *bashPermissionMetadata
+
 	if toolName == "Bash" && scpCache != nil {
 		if cmdRaw, ok := input["command"]; ok {
 			if cmdStr, ok := cmdRaw.(string); ok && cmdStr != "" {
 				parsed := shellparse.Parse(cmdStr)
+
 				allMatched, meta := scpCache.CheckAllCommands(parsed)
 				if allMatched {
 					logger.Debug("auto-allowing Bash (all commands matched)", "command", cmdStr)
 					return claudeagent.PermissionResultAllow{}, nil
 				}
+
 				bashMeta = meta
 			}
 		}
@@ -559,6 +543,7 @@ func handlePermissionRequest(
 
 	// Attach parsed command metadata for Bash interactions.
 	var metadataJSON string
+
 	if bashMeta != nil {
 		if data, err := json.Marshal(bashMeta); err == nil {
 			metadataJSON = string(data)
@@ -569,7 +554,7 @@ func handlePermissionRequest(
 		TaskId:      taskID,
 		AgentId:     agentID,
 		Type:        v1.InteractionType_INTERACTION_TYPE_PERMISSION_REQUEST,
-		Title:       fmt.Sprintf("Permission request: %s", toolName),
+		Title:       "Permission request: " + toolName,
 		Description: description,
 		Options:     options,
 		Metadata:    metadataJSON,
@@ -586,7 +571,7 @@ func handlePermissionRequest(
 
 	select {
 	case <-ctx.Done():
-		return claudeagent.PermissionResultDeny{Message: "context cancelled"}, nil
+		return claudeagent.PermissionResultDeny{Message: "context canceled"}, nil
 	case inter := <-ch:
 		if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
 			logger.Info("permission request expired", "tool", toolName)
@@ -635,14 +620,17 @@ func handleAlwaysAllowCommand(
 	logger *slog.Logger,
 ) (claudeagent.PermissionResult, error) {
 	var registered int
+
 	for _, rule := range rules {
 		if rule.Pattern == "" {
 			continue
 		}
+
 		ruleType := rule.Type
 		if ruleType == "" {
 			ruleType = "command"
 		}
+
 		_, err := client.AddSingleCommandPermission(ctx, connect.NewRequest(&v1.AddSingleCommandPermissionRequest{
 			ProjectName: scpCache.projectName,
 			Pattern:     rule.Pattern,
@@ -652,6 +640,7 @@ func handleAlwaysAllowCommand(
 			logger.Error("failed to add single command permission", "pattern", rule.Pattern, "error", err)
 			continue
 		}
+
 		registered++
 	}
 

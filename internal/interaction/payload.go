@@ -16,6 +16,7 @@ func MarshalInteractionPayload(pb *taskguildv1.Interaction) string {
 		slog.Warn("failed to marshal interaction payload", "id", pb.GetId(), "error", err)
 		return ""
 	}
+
 	return string(b)
 }
 
@@ -25,11 +26,15 @@ func UnmarshalInteractionPayload(payload string) *taskguildv1.Interaction {
 	if payload == "" {
 		return nil
 	}
+
 	pb := &taskguildv1.Interaction{}
-	if err := protojson.Unmarshal([]byte(payload), pb); err != nil {
+
+	err := protojson.Unmarshal([]byte(payload), pb)
+	if err != nil {
 		slog.Warn("failed to unmarshal interaction payload", "error", err)
 		return nil
 	}
+
 	return pb
 }
 
@@ -38,29 +43,33 @@ func FromProto(pb *taskguildv1.Interaction) *Interaction {
 	if pb == nil {
 		return nil
 	}
+
 	inter := &Interaction{
-		ID:          pb.Id,
-		TaskID:      pb.TaskId,
-		AgentID:     pb.AgentId,
-		Type:        InteractionType(pb.Type),
-		Status:      InteractionStatus(pb.Status),
-		Title:       pb.Title,
-		Description: pb.Description,
-		Response:    pb.Response,
+		ID:          pb.GetId(),
+		TaskID:      pb.GetTaskId(),
+		AgentID:     pb.GetAgentId(),
+		Type:        InteractionType(pb.GetType()),
+		Status:      InteractionStatus(pb.GetStatus()),
+		Title:       pb.GetTitle(),
+		Description: pb.GetDescription(),
+		Response:    pb.GetResponse(),
 	}
-	if pb.CreatedAt != nil {
-		inter.CreatedAt = pb.CreatedAt.AsTime()
+	if pb.GetCreatedAt() != nil {
+		inter.CreatedAt = pb.GetCreatedAt().AsTime()
 	}
-	if pb.RespondedAt != nil {
-		t := pb.RespondedAt.AsTime()
+
+	if pb.GetRespondedAt() != nil {
+		t := pb.GetRespondedAt().AsTime()
 		inter.RespondedAt = &t
 	}
-	for _, opt := range pb.Options {
+
+	for _, opt := range pb.GetOptions() {
 		inter.Options = append(inter.Options, Option{
-			Label:       opt.Label,
-			Value:       opt.Value,
-			Description: opt.Description,
+			Label:       opt.GetLabel(),
+			Value:       opt.GetValue(),
+			Description: opt.GetDescription(),
 		})
 	}
+
 	return inter
 }

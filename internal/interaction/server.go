@@ -34,18 +34,20 @@ func NewServer(repo Repository, taskRepo task.Repository, eventBus *eventbus.Bus
 
 func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[taskguildv1.ListInteractionsRequest]) (*connect.Response[taskguildv1.ListInteractionsResponse], error) {
 	limit, offset := int32(0), int32(0)
-	if req.Msg.Pagination != nil {
-		limit = req.Msg.Pagination.Limit // 0 means no limit
-		offset = req.Msg.Pagination.Offset
+	if req.Msg.GetPagination() != nil {
+		limit = req.Msg.GetPagination().GetLimit() // 0 means no limit
+		offset = req.Msg.GetPagination().GetOffset()
 	}
 
 	// When project_id is provided, resolve to task IDs for filtering.
 	var taskIDs []string
-	if req.Msg.ProjectId != "" {
-		tasks, _, err := s.taskRepo.List(ctx, req.Msg.ProjectId, "", "", 0, 0)
+
+	if req.Msg.GetProjectId() != "" {
+		tasks, _, err := s.taskRepo.List(ctx, req.Msg.GetProjectId(), "", "", 0, 0)
 		if err != nil {
 			return nil, err
 		}
+
 		taskIDs = make([]string, len(tasks))
 		for i, t := range tasks {
 			taskIDs[i] = t.ID
@@ -53,7 +55,8 @@ func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[task
 	}
 
 	statusFilter := InteractionStatus(req.Msg.GetStatusFilter())
-	interactions, total, err := s.repo.List(ctx, req.Msg.TaskId, taskIDs, statusFilter, int(limit), int(offset))
+
+	interactions, total, err := s.repo.List(ctx, req.Msg.GetTaskId(), taskIDs, statusFilter, int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}
@@ -63,16 +66,19 @@ func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[task
 	for _, inter := range interactions {
 		uniqueTaskIDs[inter.TaskID] = struct{}{}
 	}
+
 	ids := make([]string, 0, len(uniqueTaskIDs))
 	for id := range uniqueTaskIDs {
 		ids = append(ids, id)
 	}
+
 	taskTitles, taskProjectIDs := task.ResolveAll(ctx, s.taskRepo, ids)
 
 	protos := make([]*taskguildv1.Interaction, len(interactions))
 	for i, inter := range interactions {
 		protos[i] = ToProto(inter)
 	}
+
 	return connect.NewResponse(&taskguildv1.ListInteractionsResponse{
 		Interactions: protos,
 		Pagination: &taskguildv1.PaginationResponse{
@@ -86,7 +92,7 @@ func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[task
 }
 
 func (s *Server) RespondToInteraction(ctx context.Context, req *connect.Request[taskguildv1.RespondToInteractionRequest]) (*connect.Response[taskguildv1.RespondToInteractionResponse], error) {
-	inter, err := s.repo.Get(ctx, req.Msg.Id)
+	inter, err := s.repo.Get(ctx, req.Msg.GetId())
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +102,7 @@ func (s *Server) RespondToInteraction(ctx context.Context, req *connect.Request[
 	}
 
 	now := time.Now()
-	inter.Response = req.Msg.Response
+	inter.Response = req.Msg.GetResponse()
 	inter.Status = StatusResponded
 	inter.RespondedAt = &now
 
@@ -118,14 +124,15 @@ func (s *Server) RespondToInteraction(ctx context.Context, req *connect.Request[
 }
 
 func (s *Server) RespondToInteractionByToken(ctx context.Context, req *connect.Request[taskguildv1.RespondToInteractionByTokenRequest]) (*connect.Response[taskguildv1.RespondToInteractionByTokenResponse], error) {
-	if req.Msg.Token == "" {
+	if req.Msg.GetToken() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "token is required", nil).ConnectError()
 	}
-	if req.Msg.Response == "" {
+
+	if req.Msg.GetResponse() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "response is required", nil).ConnectError()
 	}
 
-	inter, err := s.repo.GetByResponseToken(ctx, req.Msg.Token)
+	inter, err := s.repo.GetByResponseToken(ctx, req.Msg.GetToken())
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +142,7 @@ func (s *Server) RespondToInteractionByToken(ctx context.Context, req *connect.R
 	}
 
 	now := time.Now()
-	inter.Response = req.Msg.Response
+	inter.Response = req.Msg.GetResponse()
 	inter.Status = StatusResponded
 	inter.RespondedAt = &now
 	// Invalidate the token after use.
@@ -159,7 +166,7 @@ func (s *Server) RespondToInteractionByToken(ctx context.Context, req *connect.R
 }
 
 func (s *Server) ExpireInteraction(ctx context.Context, req *connect.Request[taskguildv1.ExpireInteractionRequest]) (*connect.Response[taskguildv1.ExpireInteractionResponse], error) {
-	inter, err := s.repo.Get(ctx, req.Msg.Id)
+	inter, err := s.repo.Get(ctx, req.Msg.GetId())
 	if err != nil {
 		return nil, err
 	}
@@ -190,14 +197,15 @@ func (s *Server) ExpireInteraction(ctx context.Context, req *connect.Request[tas
 }
 
 func (s *Server) SendMessage(ctx context.Context, req *connect.Request[taskguildv1.SendMessageRequest]) (*connect.Response[taskguildv1.SendMessageResponse], error) {
-	if req.Msg.TaskId == "" {
+	if req.Msg.GetTaskId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "task_id is required", nil).ConnectError()
 	}
-	if req.Msg.Message == "" {
+
+	if req.Msg.GetMessage() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "message is required", nil).ConnectError()
 	}
 
-	t, err := s.taskRepo.Get(ctx, req.Msg.TaskId)
+	t, err := s.taskRepo.Get(ctx, req.Msg.GetTaskId())
 	if err != nil {
 		return nil, err
 	}
@@ -206,10 +214,10 @@ func (s *Server) SendMessage(ctx context.Context, req *connect.Request[taskguild
 	inter := &Interaction{
 		ID:          ulid.Make().String(),
 		ProjectID:   t.ProjectID,
-		TaskID:      req.Msg.TaskId,
+		TaskID:      req.Msg.GetTaskId(),
 		Type:        TypeUserMessage,
 		Status:      StatusResponded,
-		Title:       req.Msg.Message,
+		Title:       req.Msg.GetMessage(),
 		CreatedAt:   now,
 		RespondedAt: &now,
 	}
@@ -235,7 +243,7 @@ func (s *Server) SubscribeInteractions(ctx context.Context, req *connect.Request
 	subID, ch := s.eventBus.Subscribe(64)
 	defer s.eventBus.Unsubscribe(subID)
 
-	taskID := req.Msg.TaskId
+	taskID := req.Msg.GetTaskId()
 
 	for {
 		select {
@@ -246,30 +254,33 @@ func (s *Server) SubscribeInteractions(ctx context.Context, req *connect.Request
 				return nil
 			}
 			// Filter to interaction events only.
-			if event.Type != taskguildv1.EventType_EVENT_TYPE_INTERACTION_CREATED &&
-				event.Type != taskguildv1.EventType_EVENT_TYPE_INTERACTION_RESPONDED {
+			if event.GetType() != taskguildv1.EventType_EVENT_TYPE_INTERACTION_CREATED &&
+				event.GetType() != taskguildv1.EventType_EVENT_TYPE_INTERACTION_RESPONDED {
 				continue
 			}
 			// Filter by task_id if specified.
 			if taskID != "" {
-				if eventTaskID, ok := event.Metadata["task_id"]; ok && eventTaskID != taskID {
+				if eventTaskID, ok := event.GetMetadata()["task_id"]; ok && eventTaskID != taskID {
 					continue
 				}
 			}
 			// Use interaction data from event payload if available;
 			// fall back to fetching from the repository.
-			interProto := UnmarshalInteractionPayload(event.Payload)
+			interProto := UnmarshalInteractionPayload(event.GetPayload())
 			if interProto == nil {
-				inter, err := s.repo.Get(ctx, event.ResourceId)
+				inter, err := s.repo.Get(ctx, event.GetResourceId())
 				if err != nil {
-					slog.Warn("failed to get interaction for stream", "id", event.ResourceId, "error", err)
+					slog.Warn("failed to get interaction for stream", "id", event.GetResourceId(), "error", err)
 					continue
 				}
+
 				interProto = ToProto(inter)
 			}
-			if err := stream.Send(&taskguildv1.InteractionEvent{
+
+			err := stream.Send(&taskguildv1.InteractionEvent{
 				Interaction: interProto,
-			}); err != nil {
+			})
+			if err != nil {
 				return err
 			}
 		}
@@ -297,8 +308,10 @@ func ToProto(i *Interaction) *taskguildv1.Interaction {
 			Description: opt.Description,
 		})
 	}
+
 	if i.RespondedAt != nil {
 		pb.RespondedAt = timestamppb.New(*i.RespondedAt)
 	}
+
 	return pb
 }

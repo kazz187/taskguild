@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/sourcegraph/conc"
 
+	server "github.com/kazz187/taskguild/internal"
 	"github.com/kazz187/taskguild/internal/agent"
 	agentrepo "github.com/kazz187/taskguild/internal/agent/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/agentmanager"
@@ -27,31 +29,28 @@ import (
 	"github.com/kazz187/taskguild/internal/orchestrator"
 	"github.com/kazz187/taskguild/internal/permission"
 	permissionrepo "github.com/kazz187/taskguild/internal/permission/repositoryimpl"
-	"github.com/kazz187/taskguild/internal/singlecommandpermission"
-	scprepo "github.com/kazz187/taskguild/internal/singlecommandpermission/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/project"
 	projectrepo "github.com/kazz187/taskguild/internal/project/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/pushnotification"
 	pushsubrepo "github.com/kazz187/taskguild/internal/pushsubscription/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/script"
 	scriptrepo "github.com/kazz187/taskguild/internal/script/repositoryimpl"
+	"github.com/kazz187/taskguild/internal/singlecommandpermission"
+	scprepo "github.com/kazz187/taskguild/internal/singlecommandpermission/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/skill"
 	skillrepo "github.com/kazz187/taskguild/internal/skill/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/task"
-	tmpl "github.com/kazz187/taskguild/internal/template"
-	tmplrepo "github.com/kazz187/taskguild/internal/template/repositoryimpl"
 	taskrepo "github.com/kazz187/taskguild/internal/task/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/tasklog"
 	tasklogrepo "github.com/kazz187/taskguild/internal/tasklog/repositoryimpl"
+	tmpl "github.com/kazz187/taskguild/internal/template"
+	tmplrepo "github.com/kazz187/taskguild/internal/template/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/version"
 	"github.com/kazz187/taskguild/internal/workflow"
 	workflowrepo "github.com/kazz187/taskguild/internal/workflow/repositoryimpl"
 	"github.com/kazz187/taskguild/pkg/clog"
 	"github.com/kazz187/taskguild/pkg/storage"
-
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-
-	server "github.com/kazz187/taskguild/internal"
 )
 
 // agentChangeNotifier implements agent.ChangeNotifier by broadcasting
@@ -67,6 +66,7 @@ func (n *agentChangeNotifier) NotifyAgentChange(projectID string, changedAgentNa
 		slog.Error("failed to look up project for agent change notification", "project_id", projectID, "error", err)
 		return
 	}
+
 	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
 		Command: &taskguildv1.AgentCommand_SyncAgents{
 			SyncAgents: &taskguildv1.SyncAgentsCommand{
@@ -89,6 +89,7 @@ func (n *permissionChangeNotifier) NotifyPermissionChange(projectID string) {
 		slog.Error("failed to look up project for permission change notification", "project_id", projectID, "error", err)
 		return
 	}
+
 	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
 		Command: &taskguildv1.AgentCommand_SyncPermissions{
 			SyncPermissions: &taskguildv1.SyncPermissionsCommand{},
@@ -110,6 +111,7 @@ func (n *scpChangeNotifier) NotifySingleCommandPermissionChange(projectID string
 		slog.Error("failed to look up project for single command permission change notification", "project_id", projectID, "error", err)
 		return
 	}
+
 	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
 		Command: &taskguildv1.AgentCommand_SyncPermissions{
 			SyncPermissions: &taskguildv1.SyncPermissionsCommand{},
@@ -137,6 +139,7 @@ func (n *scriptChangeNotifier) NotifyScriptChange(projectID string, changedScrip
 		slog.Error("failed to look up project for script change notification", "project_id", projectID, "error", err)
 		return
 	}
+
 	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
 		Command: &taskguildv1.AgentCommand_SyncScripts{
 			SyncScripts: &taskguildv1.SyncScriptsCommand{
@@ -159,6 +162,7 @@ func (n *claudeSettingsChangeNotifier) NotifyClaudeSettingsChange(projectID stri
 		slog.Error("failed to look up project for claude settings change notification", "project_id", projectID, "error", err)
 		return
 	}
+
 	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
 		Command: &taskguildv1.AgentCommand_SyncClaudeSettings{
 			SyncClaudeSettings: &taskguildv1.SyncClaudeSettingsCommand{},
@@ -172,6 +176,7 @@ func (n *skillChangeNotifier) NotifySkillChange(projectID string, changedSkillID
 		slog.Error("failed to look up project for skill change notification", "project_id", projectID, "error", err)
 		return
 	}
+
 	n.registry.BroadcastCommandToProject(p.Name, &taskguildv1.AgentCommand{
 		Command: &taskguildv1.AgentCommand_SyncSkills{
 			SyncSkills: &taskguildv1.SyncSkillsCommand{
@@ -193,10 +198,12 @@ func (r *workDirResolver) ResolveWorkDir(projectID string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("project not found: %w", err)
 	}
+
 	workDir, ok := r.registry.GetWorkDirForProject(p.Name)
 	if !ok {
 		return "", fmt.Errorf("no connected agent for project %q", p.Name)
 	}
+
 	return workDir, nil
 }
 
@@ -209,33 +216,35 @@ func runServer() {
 
 	// Setup logger
 	level := env.SlogLevel()
+
 	var handler slog.Handler
 	if env.Env == "local" {
 		handler = clog.NewConnectTextHandler(os.Stderr, clog.WithLevel(level))
 	} else {
 		handler = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: level})
 	}
+
 	slog.SetDefault(slog.New(clog.NewAttributesHandler(handler)))
 
 	slog.Info("server starting", "version", version.Short(), "env", env.Env)
 
 	// Setup storage
 	var store storage.Storage
-	switch env.StorageEnv.Type {
+
+	switch env.Type {
 	case "s3":
-		store, err = storage.NewS3Storage(context.Background(), env.StorageEnv.S3Bucket, env.StorageEnv.S3Prefix, env.StorageEnv.S3Region)
+		store, err = storage.NewS3Storage(context.Background(), env.S3Bucket, env.S3Prefix, env.S3Region)
 		if err != nil {
 			slog.Error("failed to create S3 storage", "error", err)
 			os.Exit(1)
 		}
 	default:
-		store, err = storage.NewLocalStorage(env.StorageEnv.BaseDir)
+		store, err = storage.NewLocalStorage(env.BaseDir)
 		if err != nil {
 			slog.Error("failed to create local storage", "error", err)
 			os.Exit(1)
 		}
 	}
-
 
 	// Setup event bus
 	bus := eventbus.New()
@@ -248,7 +257,7 @@ func runServer() {
 	agentRepo := agentrepo.NewYAMLRepository(store)
 	skillRepo := skillrepo.NewYAMLRepository(store)
 	scriptRepo := scriptrepo.NewYAMLRepository(store)
-	taskLogRepo := tasklogrepo.NewJSONLRepository(env.StorageEnv.BaseDir, taskRepo)
+	taskLogRepo := tasklogrepo.NewJSONLRepository(env.BaseDir, taskRepo)
 	pushSubRepo := pushsubrepo.NewYAMLRepository(store)
 	permissionRepo := permissionrepo.NewYAMLRepository(store)
 	scpRepo := scprepo.NewYAMLRepository(store)
@@ -270,6 +279,7 @@ func runServer() {
 	descLogger := tasklog.NewDescriptionLoggerAdapter(taskLogRepo, bus)
 	taskServer := task.NewServer(taskRepo, workflowRepo, bus, agentManagerServer, agentManagerServer, []task.CascadeArchiver{interactionRepo}, descLogger, taskLogRepo, interactionRepo)
 	taskServer.SetImageStore(task.NewImageStore(store))
+
 	interactionServer := interaction.NewServer(interactionRepo, taskRepo, bus)
 	agentChangeNotifier := &agentChangeNotifier{
 		registry:    agentManagerRegistry,
@@ -362,6 +372,7 @@ func runServer() {
 	// for active ones to complete before triggering the normal shutdown flow.
 	usr1Ch := make(chan os.Signal, 1)
 	signal.Notify(usr1Ch, syscall.SIGUSR1)
+
 	var sigWg conc.WaitGroup
 	sigWg.Go(func() {
 		select {
@@ -372,11 +383,14 @@ func runServer() {
 			// so we shut down gracefully instead of being force-killed.
 			drainCtx, drainCancel := context.WithTimeout(context.Background(), 5*time.Minute+30*time.Second)
 			defer drainCancel()
-			if err := scriptBroker.Drain(drainCtx); err != nil {
+
+			err := scriptBroker.Drain(drainCtx)
+			if err != nil {
 				slog.Warn("drain timed out, forcing shutdown", "active_executions", scriptBroker.ActiveCount())
 			} else {
 				slog.Info("all script executions completed, shutting down for hot reload")
 			}
+
 			cancel()
 		case <-ctx.Done():
 		}
@@ -388,7 +402,9 @@ func runServer() {
 		svcWg.Go(func() {
 			pprofAddr := ":6060"
 			slog.Info("starting pprof server", "addr", pprofAddr)
-			if err := http.ListenAndServe(pprofAddr, nil); err != nil {
+
+			err := http.ListenAndServe(pprofAddr, nil)
+			if err != nil {
 				slog.Error("pprof server error", "error", err)
 			}
 		})
@@ -402,6 +418,7 @@ func runServer() {
 	svcWg.Go(func() {
 		ticker := time.NewTicker(6 * time.Hour)
 		defer ticker.Stop()
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -417,7 +434,8 @@ func runServer() {
 	})
 
 	svcWg.Go(func() {
-		if err := srv.ListenAndServe(ctx); err != nil && err != http.ErrServerClosed {
+		err := srv.ListenAndServe(ctx)
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("server error", "error", err)
 			cancel()
 		}
@@ -426,9 +444,10 @@ func runServer() {
 	<-ctx.Done()
 	slog.Info("shutting down server")
 
-	// Give active connections time to finish after stream contexts are cancelled.
+	// Give active connections time to finish after stream contexts are canceled.
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
+
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("shutdown error", "error", err)
 	}

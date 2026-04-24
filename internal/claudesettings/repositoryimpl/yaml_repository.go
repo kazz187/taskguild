@@ -34,19 +34,23 @@ func (r *YAMLRepository) Get(ctx context.Context, projectID string) (*claudesett
 	if err != nil {
 		return nil, cerr.WrapStorageReadError("claude_settings", err)
 	}
+
 	if !exists {
 		return &claudesettings.ClaudeSettings{
 			ProjectID: projectID,
 		}, nil
 	}
+
 	data, err := r.storage.Read(ctx, path(projectID))
 	if err != nil {
 		return nil, cerr.WrapStorageReadError("claude_settings", err)
 	}
+
 	var cs claudesettings.ClaudeSettings
 	if err := yaml.Unmarshal(data, &cs); err != nil {
 		return nil, cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to unmarshal claude_settings: %w", err))
 	}
+
 	return &cs, nil
 }
 
@@ -56,8 +60,10 @@ func (r *YAMLRepository) Upsert(ctx context.Context, cs *claudesettings.ClaudeSe
 	if err != nil {
 		return cerr.NewError(cerr.Internal, "server error", fmt.Errorf("failed to marshal claude_settings: %w", err))
 	}
+
 	if err := r.storage.Write(ctx, path(cs.ProjectID), data); err != nil {
 		return cerr.WrapStorageWriteError("claude_settings", err)
 	}
+
 	return nil
 }

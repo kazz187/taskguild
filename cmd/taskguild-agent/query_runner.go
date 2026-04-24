@@ -37,5 +37,6 @@ func (r subprocessQueryRunner) RunQuerySync(
 	if r.projectDir != "" {
 		logBaseDir = r.projectDir
 	}
+
 	return runQuerySyncWithLog(ctx, prompt, options, logBaseDir, r.projectID, taskID, label)
 }

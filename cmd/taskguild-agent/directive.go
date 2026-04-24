@@ -9,9 +9,10 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+
+	"github.com/kazz187/taskguild/pkg/clog"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/kazz187/taskguild/pkg/clog"
 )
 
 // errInvalidTransition is returned when the agent outputs a NEXT_STATUS
@@ -31,27 +32,33 @@ type createTaskDirective struct {
 // Key-value headers are parsed until the first empty line; everything after is the description.
 func parseCreateTasks(resultText string) []createTaskDirective {
 	var directives []createTaskDirective
+
 	remaining := resultText
 	for {
 		startIdx := strings.Index(remaining, "CREATE_TASK_START")
 		if startIdx == -1 {
 			break
 		}
+
 		afterStart := remaining[startIdx+len("CREATE_TASK_START"):]
-		endIdx := strings.Index(afterStart, "CREATE_TASK_END")
-		if endIdx == -1 {
+
+		before, after, ok := strings.Cut(afterStart, "CREATE_TASK_END")
+		if !ok {
 			break
 		}
-		body := afterStart[:endIdx]
-		remaining = afterStart[endIdx+len("CREATE_TASK_END"):]
+
+		body := before
+		remaining = after
 
 		// Trim leading/trailing newlines from the body.
 		body = strings.TrimLeft(body, "\r\n")
 		body = strings.TrimRight(body, "\r\n \t")
 
 		var d createTaskDirective
+
 		lines := strings.Split(body, "\n")
 		descStart := 0
+
 		for i, line := range lines {
 			trimmed := strings.TrimSpace(line)
 			if trimmed == "" {
@@ -59,9 +66,11 @@ func parseCreateTasks(resultText string) []createTaskDirective {
 				descStart = i + 1
 				break
 			}
+
 			if colonIdx := strings.Index(trimmed, ":"); colonIdx > 0 {
 				key := strings.TrimSpace(trimmed[:colonIdx])
 				value := strings.TrimSpace(trimmed[colonIdx+1:])
+
 				switch strings.ToLower(key) {
 				case "title":
 					d.Title = value
@@ -74,8 +83,10 @@ func parseCreateTasks(resultText string) []createTaskDirective {
 					d.Worktree = value
 				}
 			}
+
 			descStart = i + 1
 		}
+
 		if descStart < len(lines) {
 			d.Description = strings.TrimSpace(strings.Join(lines[descStart:], "\n"))
 		}
@@ -84,6 +95,7 @@ func parseCreateTasks(resultText string) []createTaskDirective {
 			directives = append(directives, d)
 		}
 	}
+
 	return directives
 }
 
@@ -94,6 +106,7 @@ func stripCreateTasks(resultText string) string {
 		if startIdx == -1 {
 			break
 		}
+
 		endIdx := strings.Index(resultText[startIdx:], "CREATE_TASK_END")
 		if endIdx == -1 {
 			break
@@ -103,13 +116,16 @@ func stripCreateTasks(resultText string) string {
 		if lineStart == -1 {
 			lineStart = 0
 		}
+
 		fullEndIdx := startIdx + endIdx + len("CREATE_TASK_END")
 		// Skip trailing newline if present.
 		if fullEndIdx < len(resultText) && resultText[fullEndIdx] == '\n' {
 			fullEndIdx++
 		}
+
 		resultText = resultText[:lineStart] + resultText[fullEndIdx:]
 	}
+
 	return strings.TrimSpace(resultText)
 }
 
@@ -157,6 +173,7 @@ func createTaskFromDirective(
 	if targetStatus == "" {
 		targetStatus = metadata["_current_status_name"]
 	}
+
 	if targetStatus != "" {
 		if parentSessionID := metadata["session_id_"+targetStatus]; parentSessionID != "" {
 			taskMeta["session_id_"+targetStatus] = parentSessionID
@@ -195,11 +212,15 @@ func resolveStatusID(statusIDOrName string, workflowStatusesJSON string) string 
 	if workflowStatusesJSON == "" {
 		return statusIDOrName
 	}
+
 	type statusEntry struct {
 		Name string `json:"name"`
 	}
+
 	var statuses []statusEntry
-	if err := json.Unmarshal([]byte(workflowStatusesJSON), &statuses); err != nil {
+
+	err := json.Unmarshal([]byte(workflowStatusesJSON), &statuses)
+	if err != nil {
 		return statusIDOrName
 	}
 	// Try matching by name (case-insensitive).
@@ -208,6 +229,7 @@ func resolveStatusID(statusIDOrName string, workflowStatusesJSON string) string 
 			return s.Name
 		}
 	}
+
 	return statusIDOrName
 }
 
@@ -217,10 +239,11 @@ func parseNextStatus(resultText string) string {
 	// Scan from the end to find the last NEXT_STATUS directive.
 	for i := len(lines) - 1; i >= 0; i-- {
 		line := strings.TrimSpace(lines[i])
-		if strings.HasPrefix(line, "NEXT_STATUS:") {
-			return strings.TrimSpace(strings.TrimPrefix(line, "NEXT_STATUS:"))
+		if after, ok := strings.CutPrefix(line, "NEXT_STATUS:"); ok {
+			return strings.TrimSpace(after)
 		}
 	}
+
 	return ""
 }
 
@@ -228,13 +251,17 @@ func parseNextStatus(resultText string) string {
 // so that the control directive does not appear in the stored result_summary.
 func stripNextStatus(resultText string) string {
 	lines := strings.Split(resultText, "\n")
+
 	var filtered []string
+
 	for _, line := range lines {
 		if strings.HasPrefix(strings.TrimSpace(line), "NEXT_STATUS:") {
 			continue
 		}
+
 		filtered = append(filtered, line)
 	}
+
 	return strings.TrimSpace(strings.Join(filtered, "\n"))
 }
 
@@ -242,13 +269,16 @@ func stripNextStatus(resultText string) string {
 // The description is enclosed between TASK_DESCRIPTION_START and TASK_DESCRIPTION_END markers.
 // Returns the extracted description (trimmed) or empty string if no markers found.
 func parseTaskDescription(resultText string) string {
-	const startMarker = "TASK_DESCRIPTION_START"
-	const endMarker = "TASK_DESCRIPTION_END"
+	const (
+		startMarker = "TASK_DESCRIPTION_START"
+		endMarker   = "TASK_DESCRIPTION_END"
+	)
 
 	startIdx := strings.Index(resultText, startMarker)
 	if startIdx == -1 {
 		return ""
 	}
+
 	contentStart := startIdx + len(startMarker)
 
 	endIdx := strings.Index(resultText[contentStart:], endMarker)
@@ -262,8 +292,10 @@ func parseTaskDescription(resultText string) string {
 // stripTaskDescription removes the TASK_DESCRIPTION block from the result text
 // so it doesn't clutter the reported summary.
 func stripTaskDescription(resultText string) string {
-	const startMarker = "TASK_DESCRIPTION_START"
-	const endMarker = "TASK_DESCRIPTION_END"
+	const (
+		startMarker = "TASK_DESCRIPTION_START"
+		endMarker   = "TASK_DESCRIPTION_END"
+	)
 
 	startIdx := strings.Index(resultText, startMarker)
 	if startIdx == -1 {
@@ -300,23 +332,29 @@ type transitionEntry struct {
 func parseAvailableTransitions(metadata map[string]string) ([]transitionEntry, error) {
 	transitionsJSON := metadata["_available_transitions"]
 	if transitionsJSON == "" {
-		return nil, fmt.Errorf("no available transitions in metadata")
+		return nil, errors.New("no available transitions in metadata")
 	}
+
 	var raw []transitionEntry
-	if err := json.Unmarshal([]byte(transitionsJSON), &raw); err != nil {
+
+	err := json.Unmarshal([]byte(transitionsJSON), &raw)
+	if err != nil {
 		return nil, fmt.Errorf("failed to parse available transitions: %w", err)
 	}
 	// Filter out self-transitions.
 	currentStatus := metadata["_current_status_name"]
+
 	transitions := make([]transitionEntry, 0, len(raw))
 	for _, t := range raw {
 		if !strings.EqualFold(t.Name, currentStatus) {
 			transitions = append(transitions, t)
 		}
 	}
+
 	if len(transitions) == 0 {
-		return nil, fmt.Errorf("available transitions list is empty (after filtering self-transitions)")
+		return nil, errors.New("available transitions list is empty (after filtering self-transitions)")
 	}
+
 	return transitions, nil
 }
 
@@ -345,6 +383,7 @@ func formatTransitionList(transitions []transitionEntry) string {
 	for i, t := range transitions {
 		parts[i] = t.Name
 	}
+
 	return strings.Join(parts, ", ")
 }
 
@@ -352,19 +391,21 @@ func formatTransitionList(transitions []transitionEntry) string {
 // when it outputs an invalid NEXT_STATUS value.
 func buildTransitionRetryPrompt(failedStatusID string, metadata map[string]string) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("The status transition to %q failed because it is not a valid transition from the current status.\n\n", failedStatusID))
+	fmt.Fprintf(&sb, "The status transition to %q failed because it is not a valid transition from the current status.\n\n", failedStatusID)
 
 	transitions, err := parseAvailableTransitions(metadata)
 	if err == nil && len(transitions) > 0 {
 		sb.WriteString("Valid transitions are:\n")
+
 		for _, t := range transitions {
-			sb.WriteString(fmt.Sprintf("- %s\n", t.Name))
+			fmt.Fprintf(&sb, "- %s\n", t.Name)
 		}
 	}
 
 	sb.WriteString("\nPlease output the correct status on the LAST LINE of your response in the format:\n")
 	sb.WriteString("NEXT_STATUS: <status>\n\n")
 	sb.WriteString("Use ONLY one of the statuses listed above.")
+
 	return sb.String()
 }
 
@@ -394,7 +435,7 @@ func handleStatusTransition(
 			nextStatusID = transitions[0].Name
 			logger.Info("no NEXT_STATUS found, auto-transitioning", "next_status", nextStatusID)
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-				fmt.Sprintf("Auto-transitioning to %s", nextStatusID), nil)
+				"Auto-transitioning to "+nextStatusID, nil)
 		} else {
 			return fmt.Errorf("no NEXT_STATUS found and %d transitions available (%s), cannot auto-transition", len(transitions), formatTransitionList(transitions))
 		}
@@ -404,6 +445,7 @@ func handleStatusTransition(
 		if err != nil {
 			return err
 		}
+
 		nextStatusID = resolvedName
 	}
 
@@ -420,21 +462,25 @@ func handleStatusTransition(
 
 	logger.Info("status transitioned", "next_status", nextStatusID)
 	tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-		fmt.Sprintf("Status transitioned to %s", nextStatusID), nil)
+		"Status transitioned to "+nextStatusID, nil)
+
 	return nil
 }
 
 // saveSessionIDBestEffort is like saveSessionID but falls back to a
-// background context when the original context is already cancelled
+// background context when the original context is already canceled
 // (e.g., user-stopped task). This ensures the session ID is persisted
 // even during shutdown.
 func saveSessionIDBestEffort(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, sessionID string, metadata map[string]string) {
 	if ctx.Err() != nil {
 		bgCtx, bgCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer bgCancel()
+
 		saveSessionID(bgCtx, taskClient, taskID, sessionID, metadata)
+
 		return
 	}
+
 	saveSessionID(ctx, taskClient, taskID, sessionID, metadata)
 }
 
@@ -445,11 +491,14 @@ func saveSessionID(ctx context.Context, taskClient taskguildv1connect.TaskServic
 	if sessionID == "" {
 		return // nothing to save; per-status keys are never cleared
 	}
+
 	statusName := metadata["_current_status_name"]
 	if statusName == "" {
 		return
 	}
+
 	logger := clog.LoggerFromContext(ctx)
+
 	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
 		Id:       taskID,
 		Metadata: map[string]string{"session_id_" + statusName: sessionID},
@@ -461,6 +510,7 @@ func saveSessionID(ctx context.Context, taskClient taskguildv1connect.TaskServic
 
 func saveWorktreeName(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, name string) {
 	logger := clog.LoggerFromContext(ctx)
+
 	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
 		Id:       taskID,
 		Metadata: map[string]string{"worktree": name},
@@ -474,6 +524,7 @@ func saveWorktreeName(ctx context.Context, taskClient taskguildv1connect.TaskSer
 
 func saveClaudeMode(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, mode string) {
 	logger := clog.LoggerFromContext(ctx)
+
 	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
 		Id:       taskID,
 		Metadata: map[string]string{"claude_mode": mode},
@@ -485,6 +536,7 @@ func saveClaudeMode(ctx context.Context, taskClient taskguildv1connect.TaskServi
 
 func saveTaskDescription(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, description string) {
 	logger := clog.LoggerFromContext(ctx)
+
 	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
 		Id:          taskID,
 		Description: description,
@@ -504,6 +556,7 @@ func savePlanResult(ctx context.Context, taskID, content string, tl *taskLogger)
 		if len(preview) > 200 {
 			preview = preview[:200] + "..."
 		}
+
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_RESULT, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 			preview,
 			map[string]string{

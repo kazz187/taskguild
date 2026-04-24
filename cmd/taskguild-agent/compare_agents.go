@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -97,6 +98,7 @@ func readLocalAgents(agentsDir string) map[string]string {
 		if !os.IsNotExist(err) {
 			slog.Error("failed to read agents directory", "error", err)
 		}
+
 		return result
 	}
 
@@ -106,6 +108,7 @@ func readLocalAgents(agentsDir string) map[string]string {
 		}
 
 		filePath := filepath.Join(agentsDir, entry.Name())
+
 		content, err := os.ReadFile(filePath)
 		if err != nil {
 			slog.Error("failed to read local agent file", "path", filePath, "error", err)

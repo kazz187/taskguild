@@ -117,6 +117,7 @@ func TestBuildWorkflowContext(t *testing.T) {
 				if result != "" {
 					t.Errorf("expected empty string, got:\n%s", result)
 				}
+
 				return
 			}
 

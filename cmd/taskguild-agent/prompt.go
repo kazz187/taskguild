@@ -35,6 +35,7 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 		if p := metadata["prompt"]; p != "" {
 			return p
 		}
+
 		return "Please complete the assigned task."
 	}
 
@@ -43,21 +44,24 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 	// Inject skill invocations at the top of the prompt.
 	// /$skill_name triggers Claude CLI to load SKILL.md content and frontmatter.
 	if skillNames := metadata["_skill_names"]; skillNames != "" {
-		for _, name := range strings.Split(skillNames, ",") {
+		for name := range strings.SplitSeq(skillNames, ",") {
 			name = strings.TrimSpace(name)
 			if name != "" {
-				sb.WriteString(fmt.Sprintf("/%s\n", name))
+				fmt.Fprintf(&sb, "/%s\n", name)
 			}
 		}
+
 		sb.WriteString("\n")
 	}
 
-	sb.WriteString(fmt.Sprintf("# Task: %s\n", title))
+	fmt.Fprintf(&sb, "# Task: %s\n", title)
+
 	if currentStatusName := metadata["_current_status_name"]; currentStatusName != "" {
-		sb.WriteString(fmt.Sprintf("Current status: %s\n", currentStatusName))
+		fmt.Fprintf(&sb, "Current status: %s\n", currentStatusName)
 	}
+
 	if description != "" {
-		sb.WriteString(fmt.Sprintf("\n%s\n", description))
+		fmt.Fprintf(&sb, "\n%s\n", description)
 	}
 
 	// Append result history from previous statuses so the agent has full context.
@@ -65,8 +69,9 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 		var history []resultHistoryEntry
 		if json.Unmarshal([]byte(historyJSON), &history) == nil && len(history) > 0 {
 			sb.WriteString("\n## Previous Results\n")
+
 			for _, h := range history {
-				sb.WriteString(fmt.Sprintf("### %s (%s)\n%s\n\n", h.ResultType, h.CreatedAt, h.Text))
+				fmt.Fprintf(&sb, "### %s (%s)\n%s\n\n", h.ResultType, h.CreatedAt, h.Text)
 			}
 		}
 	}
@@ -98,12 +103,13 @@ func buildUserPromptWithImages(ctx context.Context, metadata map[string]string, 
 
 	// Build a map of image ID -> image proto for quick lookup.
 	imageMap := make(map[string]*v1.TaskImage)
-	for _, img := range listResp.Msg.Images {
-		imageMap[img.Id] = img
+	for _, img := range listResp.Msg.GetImages() {
+		imageMap[img.GetId()] = img
 	}
 
 	// Split the text by [Image#N] references and interleave with image blocks.
 	var blocks []map[string]any
+
 	lastEnd := 0
 
 	for _, match := range imageRefPattern.FindAllStringSubmatchIndex(textPrompt, -1) {
@@ -133,8 +139,8 @@ func buildUserPromptWithImages(ctx context.Context, metadata map[string]string, 
 					"type": "image",
 					"source": map[string]any{
 						"type":       "base64",
-						"media_type": imgResp.Msg.Image.MediaType,
-						"data":       base64.StdEncoding.EncodeToString(imgResp.Msg.Data),
+						"media_type": imgResp.Msg.GetImage().GetMediaType(),
+						"data":       base64.StdEncoding.EncodeToString(imgResp.Msg.GetData()),
 					},
 				})
 			} else {
@@ -190,9 +196,9 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 	// In skill-based mode, role definition is loaded via /$skill_name invocations.
 	if metadata["_skill_names"] == "" {
 		if agentName := metadata["_agent_name"]; agentName != "" {
-			sb.WriteString(fmt.Sprintf("\n### Agent Identity\n"))
-			sb.WriteString(fmt.Sprintf("You are executing this task as the **%s** agent.\n", agentName))
-			sb.WriteString(fmt.Sprintf("Your agent definition file (`.claude/agents/%s.md`) has been loaded as your system prompt.\n", agentName))
+			sb.WriteString("\n### Agent Identity\n")
+			fmt.Fprintf(&sb, "You are executing this task as the **%s** agent.\n", agentName)
+			fmt.Fprintf(&sb, "Your agent definition file (`.claude/agents/%s.md`) has been loaded as your system prompt.\n", agentName)
 			sb.WriteString("You MUST follow all instructions, role definitions, and constraints defined in that agent definition.\n")
 		}
 	}
@@ -202,15 +208,20 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 		type statusEntry struct {
 			Name string `json:"name"`
 		}
+
 		var statuses []statusEntry
-		if err := json.Unmarshal([]byte(statusesJSON), &statuses); err == nil && len(statuses) > 0 {
+
+		err := json.Unmarshal([]byte(statusesJSON), &statuses)
+		if err == nil && len(statuses) > 0 {
 			currentName := metadata["_current_status_name"]
+
 			sb.WriteString("\n### Workflow\n")
+
 			for _, s := range statuses {
 				if s.Name == currentName {
-					sb.WriteString(fmt.Sprintf("- **%s** (current)\n", s.Name))
+					fmt.Fprintf(&sb, "- **%s** (current)\n", s.Name)
 				} else {
-					sb.WriteString(fmt.Sprintf("- %s\n", s.Name))
+					fmt.Fprintf(&sb, "- %s\n", s.Name)
 				}
 			}
 		}
@@ -221,22 +232,29 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 		type transitionEntry struct {
 			Name string `json:"name"`
 		}
+
 		var raw []transitionEntry
+
 		currentName := metadata["_current_status_name"]
-		if err := json.Unmarshal([]byte(transitionsJSON), &raw); err == nil {
+
+		err := json.Unmarshal([]byte(transitionsJSON), &raw)
+		if err == nil {
 			var transitions []transitionEntry
+
 			for _, t := range raw {
 				if !strings.EqualFold(t.Name, currentName) {
 					transitions = append(transitions, t)
 				}
 			}
+
 			if len(transitions) > 0 {
 				sb.WriteString("\n### Status Transition\n")
 				sb.WriteString("When your work is complete, output on the last line:\n")
 				sb.WriteString("`NEXT_STATUS: <status>`\n")
 				sb.WriteString("Available next statuses:\n")
+
 				for _, t := range transitions {
-					sb.WriteString(fmt.Sprintf("- %s\n", t.Name))
+					fmt.Fprintf(&sb, "- %s\n", t.Name)
 				}
 			}
 		}
@@ -249,11 +267,15 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 			ActionType string `json:"action_type"`
 			Trigger    string `json:"trigger"`
 		}
+
 		var hooks []hookEntry
-		if err := json.Unmarshal([]byte(hooksJSON), &hooks); err == nil && len(hooks) > 0 {
+
+		err := json.Unmarshal([]byte(hooksJSON), &hooks)
+		if err == nil && len(hooks) > 0 {
 			sb.WriteString("\n### Hooks\n")
+
 			for _, h := range hooks {
-				sb.WriteString(fmt.Sprintf("- %q (%s) — %s\n", h.Name, h.ActionType, h.Trigger))
+				fmt.Fprintf(&sb, "- %q (%s) — %s\n", h.Name, h.ActionType, h.Trigger)
 			}
 		}
 	}
@@ -272,13 +294,17 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 		type statusEntry struct {
 			Name string `json:"name"`
 		}
+
 		var statuses []statusEntry
-		if err := json.Unmarshal([]byte(statusesJSON), &statuses); err == nil && len(statuses) > 0 {
+
+		err := json.Unmarshal([]byte(statusesJSON), &statuses)
+		if err == nil && len(statuses) > 0 {
 			names := make([]string, len(statuses))
 			for i, s := range statuses {
 				names[i] = s.Name
 			}
-			sb.WriteString(fmt.Sprintf("Available statuses: %s\n", strings.Join(names, ", ")))
+
+			fmt.Fprintf(&sb, "Available statuses: %s\n", strings.Join(names, ", "))
 		}
 	}
 
@@ -289,8 +315,9 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 			if workDir != "" {
 				wtDir = filepath.Join(workDir, ".claude", "worktrees", wt) + "/"
 			}
+
 			sb.WriteString("\n### Git Worktree\n")
-			sb.WriteString(fmt.Sprintf("Branch: `worktree-%s` | Dir: `%s`\n", wt, wtDir))
+			fmt.Fprintf(&sb, "Branch: `worktree-%s` | Dir: `%s`\n", wt, wtDir)
 			sb.WriteString("All file modifications and commits must occur within this worktree.\n")
 			sb.WriteString("IMPORTANT: Do NOT use `cd` to navigate outside of this worktree directory.\n")
 			sb.WriteString("Your CWD is already set to the worktree — use relative paths or paths within this directory.\n")
@@ -301,8 +328,9 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 	// Harness knowledge file — accumulated failure patterns from past tasks.
 	if workDir != "" {
 		harnessPath := filepath.Join(workDir, ".taskguild", "HARNESS.md")
+
 		sb.WriteString("\n### Past Failure Patterns\n")
-		sb.WriteString(fmt.Sprintf("Before starting work, consult `%s` (absolute path) for failure patterns recorded by previous tasks. ", harnessPath))
+		fmt.Fprintf(&sb, "Before starting work, consult `%s` (absolute path) for failure patterns recorded by previous tasks. ", harnessPath)
 		sb.WriteString("It lives at the repository root under `.taskguild/`, NOT inside any worktree, so always use the absolute path even when your CWD is a worktree. ")
 		sb.WriteString("The file may not exist yet — that is fine, just skip it.\n")
 	}

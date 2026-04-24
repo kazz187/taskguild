@@ -2,7 +2,6 @@ package chatnotifier
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -34,12 +33,13 @@ func New(eventBus *eventbus.Bus, interactionRepo interaction.Repository, taskRep
 }
 
 // Start subscribes to the event bus and creates notification interactions
-// for task status changes. It blocks until ctx is cancelled.
+// for task status changes. It blocks until ctx is canceled.
 func (n *Notifier) Start(ctx context.Context) {
 	subID, ch := n.eventBus.Subscribe(256)
 	defer n.eventBus.Unsubscribe(subID)
 
 	slog.Info("chat notifier started")
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -49,7 +49,8 @@ func (n *Notifier) Start(ctx context.Context) {
 			if !ok {
 				return
 			}
-			switch event.Type {
+
+			switch event.GetType() {
 			case taskguildv1.EventType_EVENT_TYPE_TASK_STATUS_CHANGED:
 				n.handleTaskStatusChanged(ctx, event)
 			}
@@ -58,8 +59,8 @@ func (n *Notifier) Start(ctx context.Context) {
 }
 
 func (n *Notifier) handleTaskStatusChanged(ctx context.Context, event *taskguildv1.Event) {
-	taskID := event.ResourceId
-	newStatusID := event.Metadata["new_status_id"]
+	taskID := event.GetResourceId()
+	newStatusID := event.GetMetadata()["new_status_id"]
 
 	t, err := n.taskRepo.Get(ctx, taskID)
 	if err != nil {
@@ -69,6 +70,7 @@ func (n *Notifier) handleTaskStatusChanged(ctx context.Context, event *taskguild
 
 	// Resolve the new status name from the workflow.
 	statusName := newStatusID
+
 	wf, err := n.workflowRepo.Get(ctx, t.WorkflowID)
 	if err != nil {
 		slog.Warn("chat notifier: failed to get workflow, using status ID", "workflow_id", t.WorkflowID, "error", err)
@@ -89,7 +91,7 @@ func (n *Notifier) handleTaskStatusChanged(ctx context.Context, event *taskguild
 		TaskID:      taskID,
 		Type:        interaction.TypeNotification,
 		Status:      interaction.StatusResponded,
-		Title:       fmt.Sprintf("Task status changed to %s", statusName),
+		Title:       "Task status changed to " + statusName,
 		CreatedAt:   now,
 		RespondedAt: &now,
 	}

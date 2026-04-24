@@ -6,8 +6,9 @@ import (
 	"sync"
 	"time"
 
-	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/sourcegraph/conc"
+
+	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 )
 
 const (
@@ -50,12 +51,13 @@ func NewScriptExecutionBroker() *ScriptExecutionBroker {
 }
 
 // StartCleanup starts a background goroutine that periodically removes
-// expired completed executions. It stops when the context is cancelled.
+// expired completed executions. It stops when the context is canceled.
 func (b *ScriptExecutionBroker) StartCleanup(ctx context.Context) {
 	var wg conc.WaitGroup
 	wg.Go(func() {
 		ticker := time.NewTicker(cleanupInterval)
 		defer ticker.Stop()
+
 		for {
 			select {
 			case <-ticker.C:
@@ -71,13 +73,16 @@ func (b *ScriptExecutionBroker) StartCleanup(ctx context.Context) {
 func (b *ScriptExecutionBroker) cleanupExpired() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+
 	now := time.Now()
+
 	for id, es := range b.executions {
 		es.mu.Lock()
 		if es.completed && !es.completedAt.IsZero() && now.Sub(es.completedAt) > executionTTL {
 			es.mu.Unlock()
 			delete(b.executions, id)
 			slog.Debug("cleaned up expired script execution", "request_id", id)
+
 			continue
 		}
 		es.mu.Unlock()
@@ -89,6 +94,7 @@ func (b *ScriptExecutionBroker) cleanupExpired() {
 func (b *ScriptExecutionBroker) RegisterExecution(requestID, scriptID, projectID string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+
 	b.executions[requestID] = &executionState{
 		scriptID:  scriptID,
 		projectID: projectID,
@@ -100,6 +106,7 @@ func (b *ScriptExecutionBroker) RegisterExecution(requestID, scriptID, projectID
 func (b *ScriptExecutionBroker) RemoveExecution(requestID string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+
 	delete(b.executions, requestID)
 }
 
@@ -108,6 +115,7 @@ func (b *ScriptExecutionBroker) RemoveExecution(requestID string) {
 func (b *ScriptExecutionBroker) IsDraining() bool {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+
 	return b.draining
 }
 
@@ -116,11 +124,14 @@ func (b *ScriptExecutionBroker) GetProjectID(requestID string) string {
 	b.mu.Lock()
 	es, ok := b.executions[requestID]
 	b.mu.Unlock()
+
 	if !ok {
 		return ""
 	}
+
 	es.mu.Lock()
 	defer es.mu.Unlock()
+
 	return es.projectID
 }
 
@@ -131,9 +142,11 @@ func (b *ScriptExecutionBroker) PushOutput(requestID string, entries []*taskguil
 	b.mu.Lock()
 	es, ok := b.executions[requestID]
 	b.mu.Unlock()
+
 	if !ok {
 		slog.Warn("PushOutput: execution not registered, dropping entries",
 			"request_id", requestID, "entry_count", len(entries))
+
 		return
 	}
 
@@ -147,12 +160,15 @@ func (b *ScriptExecutionBroker) PushOutput(requestID string, entries []*taskguil
 
 	es.mu.Lock()
 	defer es.mu.Unlock()
+
 	if es.completed {
 		slog.Warn("[STREAM-TRACE] broker: PushOutput called on completed execution, ignoring", "request_id", requestID)
 		return
 	}
+
 	es.buffer = append(es.buffer, event)
 	slog.Info("[STREAM-TRACE] broker: PushOutput buffered event", "request_id", requestID, "entry_count", len(entries), "buffer_size", len(es.buffer), "subscriber_count", len(es.subscribers))
+
 	for i, ch := range es.subscribers {
 		select {
 		case ch <- event:
@@ -170,11 +186,14 @@ func (b *ScriptExecutionBroker) CompleteExecution(requestID string, success bool
 	b.mu.Lock()
 	es, ok := b.executions[requestID]
 	b.mu.Unlock()
+
 	if !ok {
 		slog.Warn("CompleteExecution: execution not registered, dropping completion",
 			"request_id", requestID, "log_entry_count", len(logEntries))
+
 		return
 	}
+
 	slog.Info("[STREAM-TRACE] broker: CompleteExecution called",
 		"request_id", requestID, "success", success, "log_entry_count", len(logEntries))
 
@@ -202,6 +221,7 @@ func (b *ScriptExecutionBroker) CompleteExecution(requestID string, success bool
 	es.mu.Unlock()
 
 	slog.Info("[STREAM-TRACE] broker: CompleteExecution sending to subscribers", "request_id", requestID, "subscriber_count", len(subs))
+
 	for i, ch := range subs {
 		select {
 		case ch <- event:
@@ -209,6 +229,7 @@ func (b *ScriptExecutionBroker) CompleteExecution(requestID string, success bool
 		default:
 			slog.Warn("[STREAM-TRACE] broker: CompleteExecution subscriber full, dropping", "request_id", requestID, "subscriber_index", i)
 		}
+
 		close(ch)
 	}
 
@@ -234,6 +255,7 @@ func (b *ScriptExecutionBroker) Subscribe(requestID string) (<-chan *taskguildv1
 	b.mu.Lock()
 	es, ok := b.executions[requestID]
 	b.mu.Unlock()
+
 	if !ok {
 		return nil, func() {}
 	}
@@ -265,6 +287,7 @@ func (b *ScriptExecutionBroker) Subscribe(requestID string) (<-chan *taskguildv1
 	unsubscribe := func() {
 		es.mu.Lock()
 		defer es.mu.Unlock()
+
 		for i, sub := range es.subscribers {
 			if sub == ch {
 				es.subscribers = append(es.subscribers[:i], es.subscribers[i+1:]...)
@@ -283,23 +306,27 @@ func (b *ScriptExecutionBroker) ListExecutions(projectID string) []*taskguildv1.
 	defer b.mu.Unlock()
 
 	var result []*taskguildv1.ScriptExecutionInfo
+
 	for reqID, es := range b.executions {
 		es.mu.Lock()
 		if es.projectID != projectID {
 			es.mu.Unlock()
 			continue
 		}
+
 		info := &taskguildv1.ScriptExecutionInfo{
-			RequestId: reqID,
-			ScriptId:  es.scriptID,
-			Completed: es.completed,
-			Success:   es.success,
-			ExitCode:  es.exitCode,
+			RequestId:    reqID,
+			ScriptId:     es.scriptID,
+			Completed:    es.completed,
+			Success:      es.success,
+			ExitCode:     es.exitCode,
 			ErrorMessage: es.errMessage,
 		}
 		es.mu.Unlock()
+
 		result = append(result, info)
 	}
+
 	return result
 }
 
@@ -307,12 +334,14 @@ func (b *ScriptExecutionBroker) ListExecutions(projectID string) []*taskguildv1.
 func (b *ScriptExecutionBroker) ActiveCount() int {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+
 	return b.activeCountLocked()
 }
 
 // activeCountLocked returns the active count with the lock already held.
 func (b *ScriptExecutionBroker) activeCountLocked() int {
 	count := 0
+
 	for _, es := range b.executions {
 		es.mu.Lock()
 		if !es.completed {
@@ -320,6 +349,7 @@ func (b *ScriptExecutionBroker) activeCountLocked() int {
 		}
 		es.mu.Unlock()
 	}
+
 	return count
 }
 
@@ -328,6 +358,7 @@ func (b *ScriptExecutionBroker) activeCountLocked() int {
 func (b *ScriptExecutionBroker) SetDraining(draining bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+
 	b.draining = draining
 	if draining {
 		b.drainCh = make(chan struct{})
@@ -338,16 +369,18 @@ func (b *ScriptExecutionBroker) SetDraining(draining bool) {
 }
 
 // Drain blocks until all active executions have completed or the context
-// is cancelled (e.g. timeout). Must call SetDraining(true) before calling
-// Drain. Returns the context error if the context was cancelled before all
+// is canceled (e.g. timeout). Must call SetDraining(true) before calling
+// Drain. Returns the context error if the context was canceled before all
 // executions completed, or nil if all executions completed successfully.
 func (b *ScriptExecutionBroker) Drain(ctx context.Context) error {
 	b.mu.Lock()
 	ch := b.drainCh
 	b.mu.Unlock()
+
 	if ch == nil {
 		return nil
 	}
+
 	select {
 	case <-ch:
 		return nil

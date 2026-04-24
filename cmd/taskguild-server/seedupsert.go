@@ -29,15 +29,16 @@ func runSeedUpsert(projectID string) {
 	slog.SetDefault(slog.New(clog.NewAttributesHandler(handler)))
 
 	var store storage.Storage
-	switch env.StorageEnv.Type {
+
+	switch env.Type {
 	case "s3":
-		store, err = storage.NewS3Storage(context.Background(), env.StorageEnv.S3Bucket, env.StorageEnv.S3Prefix, env.StorageEnv.S3Region)
+		store, err = storage.NewS3Storage(context.Background(), env.S3Bucket, env.S3Prefix, env.S3Region)
 		if err != nil {
 			slog.Error("failed to create S3 storage", "error", err)
 			os.Exit(1)
 		}
 	default:
-		store, err = storage.NewLocalStorage(env.StorageEnv.BaseDir)
+		store, err = storage.NewLocalStorage(env.BaseDir)
 		if err != nil {
 			slog.Error("failed to create local storage", "error", err)
 			os.Exit(1)
@@ -53,5 +54,6 @@ func runSeedUpsert(projectID string) {
 		slog.Error("failed to upsert skills", "project_id", projectID, "error", err)
 		os.Exit(1)
 	}
+
 	slog.Info("skills upserted", "project_id", projectID)
 }

@@ -2,6 +2,7 @@ package singlecommandpermission
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -11,21 +12,23 @@ import (
 	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/kazz187/taskguild/pkg/cerr"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/kazz187/taskguild/pkg/cerr"
 )
 
 // validateWildcardPattern checks that a wildcard pattern is valid.
 // It converts the wildcard to a regex and attempts to compile it.
 func validateWildcardPattern(pattern string) error {
 	if pattern == "" {
-		return fmt.Errorf("pattern must not be empty")
+		return errors.New("pattern must not be empty")
 	}
+
 	regex := wildcardToRegex(pattern)
 	if _, err := regexp.Compile(regex); err != nil {
-		return fmt.Errorf("invalid wildcard pattern: %s", err)
+		return fmt.Errorf("invalid wildcard pattern: %w", err)
 	}
+
 	return nil
 }
 
@@ -35,6 +38,7 @@ func wildcardToRegex(pattern string) string {
 	for i, p := range parts {
 		parts[i] = regexp.QuoteMeta(p)
 	}
+
 	return "^" + strings.Join(parts, ".*") + "$"
 }
 
@@ -68,7 +72,7 @@ func (s *Server) ListSingleCommandPermissions(
 	ctx context.Context,
 	req *connect.Request[taskguildv1.ListSingleCommandPermissionsRequest],
 ) (*connect.Response[taskguildv1.ListSingleCommandPermissionsResponse], error) {
-	perms, err := s.repo.List(ctx, req.Msg.ProjectId)
+	perms, err := s.repo.List(ctx, req.Msg.GetProjectId())
 	if err != nil {
 		return nil, err
 	}
@@ -92,17 +96,17 @@ func (s *Server) CreateSingleCommandPermission(
 	req *connect.Request[taskguildv1.CreateSingleCommandPermissionRequest],
 ) (*connect.Response[taskguildv1.CreateSingleCommandPermissionResponse], error) {
 	// Validate the wildcard pattern.
-	if err := validateWildcardPattern(req.Msg.Pattern); err != nil {
+	if err := validateWildcardPattern(req.Msg.GetPattern()); err != nil {
 		return nil, cerr.NewError(cerr.InvalidArgument, err.Error(), err)
 	}
 
 	// Validate type.
-	if req.Msg.Type != TypeCommand && req.Msg.Type != TypeRedirect {
+	if req.Msg.GetType() != TypeCommand && req.Msg.GetType() != TypeRedirect {
 		return nil, cerr.NewError(cerr.InvalidArgument, fmt.Sprintf("type must be %q or %q", TypeCommand, TypeRedirect), nil)
 	}
 
 	// Check for existing duplicates (pattern + type within the same project).
-	existing, err := s.repo.FindByPatternAndType(ctx, req.Msg.ProjectId, req.Msg.Pattern, req.Msg.Type)
+	existing, err := s.repo.FindByPatternAndType(ctx, req.Msg.GetProjectId(), req.Msg.GetPattern(), req.Msg.GetType())
 	if err != nil {
 		return nil, err
 	}
@@ -121,12 +125,14 @@ func (s *Server) CreateSingleCommandPermission(
 		// No duplicate — create a new entry.
 		p = &SingleCommandPermission{
 			ID:        ulid.Make().String(),
-			ProjectID: req.Msg.ProjectId,
-			Pattern:   req.Msg.Pattern,
-			Type:      req.Msg.Type,
+			ProjectID: req.Msg.GetProjectId(),
+			Pattern:   req.Msg.GetPattern(),
+			Type:      req.Msg.GetType(),
 			CreatedAt: time.Now(),
 		}
-		if err := s.repo.Create(ctx, p); err != nil {
+
+		err := s.repo.Create(ctx, p)
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -144,22 +150,22 @@ func (s *Server) UpdateSingleCommandPermission(
 	req *connect.Request[taskguildv1.UpdateSingleCommandPermissionRequest],
 ) (*connect.Response[taskguildv1.UpdateSingleCommandPermissionResponse], error) {
 	// Validate the wildcard pattern.
-	if err := validateWildcardPattern(req.Msg.Pattern); err != nil {
+	if err := validateWildcardPattern(req.Msg.GetPattern()); err != nil {
 		return nil, cerr.NewError(cerr.InvalidArgument, err.Error(), err)
 	}
 
 	// Validate type.
-	if req.Msg.Type != TypeCommand && req.Msg.Type != TypeRedirect {
+	if req.Msg.GetType() != TypeCommand && req.Msg.GetType() != TypeRedirect {
 		return nil, cerr.NewError(cerr.InvalidArgument, fmt.Sprintf("type must be %q or %q", TypeCommand, TypeRedirect), nil)
 	}
 
-	existing, err := s.repo.Get(ctx, req.Msg.Id)
+	existing, err := s.repo.Get(ctx, req.Msg.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	existing.Pattern = req.Msg.Pattern
-	existing.Type = req.Msg.Type
+	existing.Pattern = req.Msg.GetPattern()
+	existing.Type = req.Msg.GetType()
 
 	if err := s.repo.Update(ctx, existing); err != nil {
 		return nil, err
@@ -178,12 +184,12 @@ func (s *Server) DeleteSingleCommandPermission(
 	req *connect.Request[taskguildv1.DeleteSingleCommandPermissionRequest],
 ) (*connect.Response[taskguildv1.DeleteSingleCommandPermissionResponse], error) {
 	// Get the permission first so we know the project ID for notification.
-	existing, err := s.repo.Get(ctx, req.Msg.Id)
+	existing, err := s.repo.Get(ctx, req.Msg.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.repo.Delete(ctx, req.Msg.Id); err != nil {
+	if err := s.repo.Delete(ctx, req.Msg.GetId()); err != nil {
 		return nil, err
 	}
 

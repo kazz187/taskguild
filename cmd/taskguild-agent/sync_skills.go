@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -36,14 +37,16 @@ func syncSkills(ctx context.Context, client taskguildv1connect.AgentManagerServi
 	slog.Info("syncing skills from server", "count", len(skills))
 
 	skillsDir := filepath.Join(cfg.WorkDir, ".claude", "skills")
-	if err := os.MkdirAll(skillsDir, 0755); err != nil {
+	if err := os.MkdirAll(skillsDir, 0o755); err != nil {
 		slog.Error("failed to create skills directory", "error", err)
 		return
 	}
 
 	// serverSkillNames tracks skill directory names known to the server.
 	serverSkillNames := make(map[string]bool)
+
 	var written, skipped int
+
 	for _, sk := range skills {
 		name := sk.GetName()
 		if name == "" {
@@ -68,23 +71,28 @@ func syncSkills(ctx context.Context, client taskguildv1connect.AgentManagerServi
 				slog.Debug("force-overwriting existing skill", "name", name, "skill_id", sk.GetId())
 			} else {
 				slog.Debug("skill file already exists, preserving local version", "name", name)
+
 				skipped++
+
 				continue
 			}
 		}
 
 		// Ensure the skill subdirectory exists.
-		if err := os.MkdirAll(skillDir, 0755); err != nil {
+		err := os.MkdirAll(skillDir, 0o755)
+		if err != nil {
 			slog.Error("failed to create skill directory", "path", skillDir, "error", err)
 			continue
 		}
 
 		content := buildSkillMDContent(sk)
-		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		if err = os.WriteFile(filePath, []byte(content), 0o644); err != nil {
 			slog.Error("failed to write skill file", "path", filePath, "error", err)
 			continue
 		}
+
 		slog.Debug("synced skill", "name", name)
+
 		written++
 	}
 
@@ -100,34 +108,43 @@ func buildSkillMDContent(sk *v1.SkillDefinition) string {
 	sb.WriteString("---\n")
 
 	if sk.GetName() != "" {
-		sb.WriteString(fmt.Sprintf("name: %s\n", sk.GetName()))
+		fmt.Fprintf(&sb, "name: %s\n", sk.GetName())
 	}
+
 	if sk.GetDescription() != "" {
 		writeYAMLStringField(&sb, "description", sk.GetDescription())
 	}
+
 	if sk.GetDisableModelInvocation() {
 		sb.WriteString("disable-model-invocation: true\n")
 	}
+
 	if !sk.GetUserInvocable() {
 		sb.WriteString("user-invocable: false\n")
 	}
+
 	if len(sk.GetAllowedTools()) > 0 {
 		sb.WriteString("allowed-tools:\n")
+
 		for _, tool := range sk.GetAllowedTools() {
-			sb.WriteString(fmt.Sprintf("  - %s\n", tool))
+			fmt.Fprintf(&sb, "  - %s\n", tool)
 		}
 	}
+
 	if sk.GetModel() != "" {
-		sb.WriteString(fmt.Sprintf("model: %s\n", sk.GetModel()))
+		fmt.Fprintf(&sb, "model: %s\n", sk.GetModel())
 	}
+
 	if sk.GetContext() != "" {
-		sb.WriteString(fmt.Sprintf("context: %s\n", sk.GetContext()))
+		fmt.Fprintf(&sb, "context: %s\n", sk.GetContext())
 	}
+
 	if sk.GetAgent() != "" {
-		sb.WriteString(fmt.Sprintf("agent: %s\n", sk.GetAgent()))
+		fmt.Fprintf(&sb, "agent: %s\n", sk.GetAgent())
 	}
+
 	if sk.GetArgumentHint() != "" {
-		sb.WriteString(fmt.Sprintf("argument-hint: %s\n", sk.GetArgumentHint()))
+		fmt.Fprintf(&sb, "argument-hint: %s\n", sk.GetArgumentHint())
 	}
 
 	sb.WriteString("---\n")
@@ -153,9 +170,12 @@ func cleanupStaleSkillDirs(skillsDir string, serverSkillNames map[string]bool) {
 		if !entry.IsDir() {
 			continue
 		}
+
 		if !serverSkillNames[entry.Name()] {
 			dirPath := filepath.Join(skillsDir, entry.Name())
-			if err := os.RemoveAll(dirPath); err != nil {
+
+			err := os.RemoveAll(dirPath)
+			if err != nil {
 				slog.Error("failed to remove stale skill directory", "path", dirPath, "error", err)
 			} else {
 				slog.Info("removed stale skill directory", "name", entry.Name())

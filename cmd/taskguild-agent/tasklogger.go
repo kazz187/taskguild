@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -39,7 +40,9 @@ func newTaskLogger(ctx context.Context, client taskguildv1connect.AgentManagerSe
 		cancel: cancel,
 	}
 	tl.wg.Add(1)
+
 	go tl.stderrFlusher()
+
 	return tl
 }
 
@@ -76,6 +79,7 @@ func (tl *taskLogger) flushStderr() {
 		tl.stderrMu.Unlock()
 		return
 	}
+
 	lines := tl.stderrBuf
 	tl.stderrBuf = nil
 	tl.stderrMu.Unlock()
@@ -87,6 +91,7 @@ func (tl *taskLogger) flushStderr() {
 // stderrFlusher periodically flushes buffered stderr.
 func (tl *taskLogger) stderrFlusher() {
 	defer tl.wg.Done()
+
 	ticker := time.NewTicker(stderrFlushInterval)
 	defer ticker.Stop()
 

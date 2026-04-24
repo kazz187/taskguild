@@ -8,8 +8,8 @@ import "time"
 type SingleCommandPermission struct {
 	ID        string    `yaml:"id"`
 	ProjectID string    `yaml:"project_id"`
-	Pattern   string    `yaml:"pattern"`    // wildcard pattern (e.g. "git status" or "git *")
-	Type      string    `yaml:"type"`       // "command" or "redirect"
+	Pattern   string    `yaml:"pattern"` // wildcard pattern (e.g. "git status" or "git *")
+	Type      string    `yaml:"type"`    // "command" or "redirect"
 	CreatedAt time.Time `yaml:"created_at"`
 }
 

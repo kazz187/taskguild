@@ -9,10 +9,14 @@ import (
 func writeTempAgentMD(t *testing.T, content string) string {
 	t.Helper()
 	dir := t.TempDir()
+
 	fp := filepath.Join(dir, "test-agent.md")
-	if err := os.WriteFile(fp, []byte(content), 0644); err != nil {
+
+	err := os.WriteFile(fp, []byte(content), 0o644)
+	if err != nil {
 		t.Fatal(err)
 	}
+
 	return fp
 }
 
@@ -27,6 +31,7 @@ description: |
 Agent prompt here.
 `
 	fp := writeTempAgentMD(t, content)
+
 	parsed, err := parseAgentMDFile(fp)
 	if err != nil {
 		t.Fatal(err)
@@ -36,9 +41,11 @@ Agent prompt here.
 	if parsed.Description != expected {
 		t.Errorf("description mismatch\ngot:  %q\nwant: %q", parsed.Description, expected)
 	}
+
 	if parsed.Name != "gopls-agent" {
 		t.Errorf("name = %q, want %q", parsed.Name, "gopls-agent")
 	}
+
 	if parsed.Prompt != "Agent prompt here." {
 		t.Errorf("prompt = %q, want %q", parsed.Prompt, "Agent prompt here.")
 	}
@@ -54,6 +61,7 @@ model: sonnet
 ---
 `
 	fp := writeTempAgentMD(t, content)
+
 	parsed, err := parseAgentMDFile(fp)
 	if err != nil {
 		t.Fatal(err)
@@ -63,6 +71,7 @@ model: sonnet
 	if parsed.Description != expected {
 		t.Errorf("description mismatch\ngot:  %q\nwant: %q", parsed.Description, expected)
 	}
+
 	if parsed.Model != "sonnet" {
 		t.Errorf("model = %q, want %q", parsed.Model, "sonnet")
 	}
@@ -77,6 +86,7 @@ description: |
 ---
 `
 	fp := writeTempAgentMD(t, content)
+
 	parsed, err := parseAgentMDFile(fp)
 	if err != nil {
 		t.Fatal(err)
@@ -96,6 +106,7 @@ model: opus
 ---
 `
 	fp := writeTempAgentMD(t, content)
+
 	parsed, err := parseAgentMDFile(fp)
 	if err != nil {
 		t.Fatal(err)
@@ -118,6 +129,7 @@ skills:
 ---
 `
 	fp := writeTempAgentMD(t, content)
+
 	parsed, err := parseAgentMDFile(fp)
 	if err != nil {
 		t.Fatal(err)
@@ -127,6 +139,7 @@ skills:
 	if parsed.Description != expected {
 		t.Errorf("description mismatch\ngot:  %q\nwant: %q", parsed.Description, expected)
 	}
+
 	if len(parsed.Skills) != 2 || parsed.Skills[0] != "skill-a" || parsed.Skills[1] != "skill-b" {
 		t.Errorf("skills = %v, want [skill-a, skill-b]", parsed.Skills)
 	}
@@ -140,6 +153,7 @@ model: sonnet
 ---
 `
 	fp := writeTempAgentMD(t, content)
+
 	parsed, err := parseAgentMDFile(fp)
 	if err != nil {
 		t.Fatal(err)
@@ -148,6 +162,7 @@ model: sonnet
 	if parsed.Description != "" {
 		t.Errorf("description = %q, want empty string", parsed.Description)
 	}
+
 	if parsed.Model != "sonnet" {
 		t.Errorf("model = %q, want %q", parsed.Model, "sonnet")
 	}

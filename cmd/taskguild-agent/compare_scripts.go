@@ -8,9 +8,10 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+
+	"github.com/kazz187/taskguild/internal/script"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/kazz187/taskguild/internal/script"
 )
 
 // handleCompareScripts compares local .taskguild/scripts/* files with server-side
@@ -33,6 +34,7 @@ func handleCompareScripts(ctx context.Context, client taskguildv1connect.AgentMa
 		if filename == "" {
 			filename = sc.GetName() + ".sh"
 		}
+
 		serverByFilename[filename] = sc
 	}
 
@@ -100,6 +102,7 @@ func readLocalScripts(scriptsDir string) map[string]string {
 		if !os.IsNotExist(err) {
 			slog.Error("failed to read scripts directory", "error", err)
 		}
+
 		return result
 	}
 
@@ -115,6 +118,7 @@ func readLocalScripts(scriptsDir string) map[string]string {
 		}
 
 		filePath := filepath.Join(scriptsDir, filename)
+
 		content, err := os.ReadFile(filePath)
 		if err != nil {
 			slog.Error("failed to read local script file", "path", filePath, "error", err)

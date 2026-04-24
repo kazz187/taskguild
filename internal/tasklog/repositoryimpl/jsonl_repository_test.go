@@ -11,9 +11,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/oklog/ulid/v2"
+
 	"github.com/kazz187/taskguild/internal/tasklog"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	"github.com/oklog/ulid/v2"
 )
 
 func createLog(projectID, taskID string, category int32, message string) *tasklog.TaskLog {
@@ -32,8 +33,10 @@ func createLog(projectID, taskID string, category int32, message string) *tasklo
 // returned by List with limit=0 (unlimited).
 func TestMultiTurnCreateAndList(t *testing.T) {
 	dir := t.TempDir()
+
 	repo := NewJSONLRepository(dir, nil)
 	defer repo.Close()
+
 	ctx := context.Background()
 
 	const (
@@ -48,13 +51,16 @@ func TestMultiTurnCreateAndList(t *testing.T) {
 	if err := repo.Create(ctx, log); err != nil {
 		t.Fatalf("create TURN_START 0: %v", err)
 	}
+
 	allIDs = append(allIDs, log.ID)
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		log = createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TOOL_USE), fmt.Sprintf("Turn 0 tool %d", i))
-		if err := repo.Create(ctx, log); err != nil {
+		err := repo.Create(ctx, log)
+		if err != nil {
 			t.Fatalf("create tool_use turn 0: %v", err)
 		}
+
 		allIDs = append(allIDs, log.ID)
 	}
 
@@ -62,6 +68,7 @@ func TestMultiTurnCreateAndList(t *testing.T) {
 	if err := repo.Create(ctx, log); err != nil {
 		t.Fatalf("create TURN_END 0: %v", err)
 	}
+
 	allIDs = append(allIDs, log.ID)
 
 	// Turn 1: TURN_START, 3 entries, TURN_END
@@ -69,13 +76,16 @@ func TestMultiTurnCreateAndList(t *testing.T) {
 	if err := repo.Create(ctx, log); err != nil {
 		t.Fatalf("create TURN_START 1: %v", err)
 	}
+
 	allIDs = append(allIDs, log.ID)
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		log = createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TOOL_USE), fmt.Sprintf("Turn 1 tool %d", i))
-		if err := repo.Create(ctx, log); err != nil {
+		err := repo.Create(ctx, log)
+		if err != nil {
 			t.Fatalf("create tool_use turn 1: %v", err)
 		}
+
 		allIDs = append(allIDs, log.ID)
 	}
 
@@ -83,6 +93,7 @@ func TestMultiTurnCreateAndList(t *testing.T) {
 	if err := repo.Create(ctx, log); err != nil {
 		t.Fatalf("create TURN_END 1: %v", err)
 	}
+
 	allIDs = append(allIDs, log.ID)
 
 	// List with limit=0 (unlimited) — should return ALL entries from both turns.
@@ -94,6 +105,7 @@ func TestMultiTurnCreateAndList(t *testing.T) {
 	if total != len(allIDs) {
 		t.Errorf("total: got %d, want %d", total, len(allIDs))
 	}
+
 	if len(logs) != len(allIDs) {
 		t.Errorf("len(logs): got %d, want %d", len(logs), len(allIDs))
 	}
@@ -103,6 +115,7 @@ func TestMultiTurnCreateAndList(t *testing.T) {
 	for _, l := range logs {
 		gotIDs[l.ID] = true
 	}
+
 	for _, id := range allIDs {
 		if !gotIDs[id] {
 			t.Errorf("missing log ID %s", id)
@@ -121,8 +134,10 @@ func TestMultiTurnCreateAndList(t *testing.T) {
 // while still having access to all entries.
 func TestMultiTurnPagination(t *testing.T) {
 	dir := t.TempDir()
+
 	repo := NewJSONLRepository(dir, nil)
 	defer repo.Close()
+
 	ctx := context.Background()
 
 	const (
@@ -133,25 +148,31 @@ func TestMultiTurnPagination(t *testing.T) {
 	totalEntries := 0
 
 	// Create 2 turns with 5 entries each (including TURN_START/END).
-	for turn := 0; turn < 2; turn++ {
+	for turn := range 2 {
 		log := createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_START), fmt.Sprintf("Turn %d started", turn))
-		if err := repo.Create(ctx, log); err != nil {
+		err := repo.Create(ctx, log)
+		if err != nil {
 			t.Fatal(err)
 		}
+
 		totalEntries++
 
-		for i := 0; i < 3; i++ {
+		for i := range 3 {
 			log = createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TOOL_USE), fmt.Sprintf("Turn %d tool %d", turn, i))
-			if err := repo.Create(ctx, log); err != nil {
+			err := repo.Create(ctx, log)
+			if err != nil {
 				t.Fatal(err)
 			}
+
 			totalEntries++
 		}
 
 		log = createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_END), fmt.Sprintf("Turn %d ended", turn))
-		if err := repo.Create(ctx, log); err != nil {
+		err = repo.Create(ctx, log)
+		if err != nil {
 			t.Fatal(err)
 		}
+
 		totalEntries++
 	}
 
@@ -160,9 +181,11 @@ func TestMultiTurnPagination(t *testing.T) {
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
+
 	if total != totalEntries {
 		t.Errorf("total: got %d, want %d", total, totalEntries)
 	}
+
 	if len(logs) != 3 {
 		t.Errorf("len(logs): got %d, want 3", len(logs))
 	}
@@ -172,9 +195,11 @@ func TestMultiTurnPagination(t *testing.T) {
 	if err != nil {
 		t.Fatalf("List page 2: %v", err)
 	}
+
 	if total2 != totalEntries {
 		t.Errorf("total page 2: got %d, want %d", total2, totalEntries)
 	}
+
 	if len(logs2) != 3 {
 		t.Errorf("len(logs2): got %d, want 3", len(logs2))
 	}
@@ -205,25 +230,33 @@ func TestMultiTurnServerRestart(t *testing.T) {
 	// Phase 1: Create logs with first repo instance.
 	{
 		repo := NewJSONLRepository(dir, nil)
-		for turn := 0; turn < 2; turn++ {
+
+		for turn := range 2 {
 			log := createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_START), fmt.Sprintf("Turn %d started", turn))
-			if err := repo.Create(ctx, log); err != nil {
+			err := repo.Create(ctx, log)
+			if err != nil {
 				t.Fatal(err)
 			}
+
 			allIDs = append(allIDs, log.ID)
 
 			log = createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_AGENT_OUTPUT), fmt.Sprintf("Turn %d output", turn))
-			if err := repo.Create(ctx, log); err != nil {
+			err = repo.Create(ctx, log)
+			if err != nil {
 				t.Fatal(err)
 			}
+
 			allIDs = append(allIDs, log.ID)
 
 			log = createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_END), fmt.Sprintf("Turn %d ended", turn))
-			if err := repo.Create(ctx, log); err != nil {
+			err = repo.Create(ctx, log)
+			if err != nil {
 				t.Fatal(err)
 			}
+
 			allIDs = append(allIDs, log.ID)
 		}
+
 		repo.Close()
 	}
 
@@ -236,9 +269,11 @@ func TestMultiTurnServerRestart(t *testing.T) {
 		if err != nil {
 			t.Fatalf("List after restart: %v", err)
 		}
+
 		if total != len(allIDs) {
 			t.Errorf("total after restart: got %d, want %d", total, len(allIDs))
 		}
+
 		if len(logs) != len(allIDs) {
 			t.Errorf("len(logs) after restart: got %d, want %d", len(logs), len(allIDs))
 		}
@@ -247,6 +282,7 @@ func TestMultiTurnServerRestart(t *testing.T) {
 		for _, l := range logs {
 			gotIDs[l.ID] = true
 		}
+
 		for _, id := range allIDs {
 			if !gotIDs[id] {
 				t.Errorf("missing log ID after restart: %s", id)
@@ -269,19 +305,27 @@ func TestMissingJSONLEvictedFromIndex(t *testing.T) {
 
 	// Seed the repo and capture the absolute path of the turn 0 file.
 	repo := NewJSONLRepository(dir, nil)
+
 	log := createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_START), "Turn 0 started")
-	if err := repo.Create(ctx, log); err != nil {
+	err := repo.Create(ctx, log)
+	if err != nil {
 		t.Fatalf("create TURN_START: %v", err)
 	}
+
 	var turnFilePath string
+
 	repo.indexMu.RLock()
+
 	if loc, ok := repo.locationIndex[log.ID]; ok {
 		turnFilePath = filepath.Join(repo.baseDir, loc.filePath)
 	}
+
 	repo.indexMu.RUnlock()
+
 	if turnFilePath == "" {
 		t.Fatalf("turn file path not found in index")
 	}
+
 	repo.Close()
 
 	// Re-open. Warm the index first so it references the real file, then
@@ -292,7 +336,9 @@ func TestMissingJSONLEvictedFromIndex(t *testing.T) {
 	if _, _, err := repo.List(ctx, taskID, nil, 0, 0); err != nil {
 		t.Fatalf("warm-up List: %v", err)
 	}
-	if err := os.Remove(turnFilePath); err != nil {
+
+	err = os.Remove(turnFilePath)
+	if err != nil {
 		t.Fatalf("remove jsonl: %v", err)
 	}
 
@@ -300,18 +346,22 @@ func TestMissingJSONLEvictedFromIndex(t *testing.T) {
 	// to be noisy during the eviction; the second must be silent about the
 	// missing file because the stale index entry is gone.
 	var buf bytes.Buffer
+
 	origHandler := slog.Default().Handler()
+
 	t.Cleanup(func() { slog.SetDefault(slog.New(origHandler)) })
 	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn})))
 
 	if _, _, err := repo.List(ctx, taskID, nil, 0, 0); err != nil {
 		t.Fatalf("first List after delete: %v", err)
 	}
+
 	buf.Reset()
 
 	if _, _, err := repo.List(ctx, taskID, nil, 0, 0); err != nil {
 		t.Fatalf("second List: %v", err)
 	}
+
 	if strings.Contains(buf.String(), "failed to read JSONL file during List, skipping") {
 		t.Fatalf("stale index still producing WARN: %q", buf.String())
 	}
@@ -320,6 +370,7 @@ func TestMissingJSONLEvictedFromIndex(t *testing.T) {
 	repo.indexMu.RLock()
 	_, indexed := repo.locationIndex[log.ID]
 	repo.indexMu.RUnlock()
+
 	if indexed {
 		t.Fatalf("id %s still present in locationIndex after eviction", log.ID)
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,11 +21,11 @@ import (
 // RequestSkillComparison sends a CompareSkillsCommand to connected agent-managers
 // so they compare local skills with server versions.
 func (s *Server) RequestSkillComparison(ctx context.Context, req *connect.Request[taskguildv1.RequestSkillComparisonRequest]) (*connect.Response[taskguildv1.RequestSkillComparisonResponse], error) {
-	if req.Msg.ProjectId == "" {
+	if req.Msg.GetProjectId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
 	}
 
-	proj, err := s.projectRepo.Get(ctx, req.Msg.ProjectId)
+	proj, err := s.projectRepo.Get(ctx, req.Msg.GetProjectId())
 	if err != nil {
 		return nil, cerr.ExtractConnectError(ctx, err)
 	}
@@ -52,7 +53,7 @@ func (s *Server) RequestSkillComparison(ctx context.Context, req *connect.Reques
 	})
 
 	slog.Info("skill comparison requested",
-		"project_id", req.Msg.ProjectId,
+		"project_id", req.Msg.GetProjectId(),
 		"project_name", proj.Name,
 		"request_id", requestID,
 		"skill_count", len(skills),
@@ -65,7 +66,7 @@ func (s *Server) RequestSkillComparison(ctx context.Context, req *connect.Reques
 
 // ReportSkillComparison receives comparison results from the agent and caches them.
 func (s *Server) ReportSkillComparison(ctx context.Context, req *connect.Request[taskguildv1.ReportSkillComparisonRequest]) (*connect.Response[taskguildv1.ReportSkillComparisonResponse], error) {
-	projectName := req.Msg.ProjectName
+	projectName := req.Msg.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -77,26 +78,26 @@ func (s *Server) ReportSkillComparison(ctx context.Context, req *connect.Request
 
 	// Cache the diffs for this project.
 	s.skillDiffMu.Lock()
-	s.skillDiffCache[proj.ID] = req.Msg.Diffs
+	s.skillDiffCache[proj.ID] = req.Msg.GetDiffs()
 	s.skillDiffMu.Unlock()
 
 	// Publish event so frontend can pick up the comparison results.
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_SKILL_COMPARISON,
-		req.Msg.RequestId,
+		req.Msg.GetRequestId(),
 		"",
 		map[string]string{
 			"project_id": proj.ID,
-			"request_id": req.Msg.RequestId,
-			"diff_count": fmt.Sprintf("%d", len(req.Msg.Diffs)),
+			"request_id": req.Msg.GetRequestId(),
+			"diff_count": strconv.Itoa(len(req.Msg.GetDiffs())),
 		},
 	)
 
 	slog.Info("skill comparison reported",
 		"project_id", proj.ID,
 		"project_name", projectName,
-		"request_id", req.Msg.RequestId,
-		"diff_count", len(req.Msg.Diffs),
+		"request_id", req.Msg.GetRequestId(),
+		"diff_count", len(req.Msg.GetDiffs()),
 	)
 
 	return connect.NewResponse(&taskguildv1.ReportSkillComparisonResponse{}), nil
@@ -104,12 +105,12 @@ func (s *Server) ReportSkillComparison(ctx context.Context, req *connect.Request
 
 // GetSkillComparison returns the cached skill diffs for a project.
 func (s *Server) GetSkillComparison(ctx context.Context, req *connect.Request[taskguildv1.GetSkillComparisonRequest]) (*connect.Response[taskguildv1.GetSkillComparisonResponse], error) {
-	if req.Msg.ProjectId == "" {
+	if req.Msg.GetProjectId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
 	}
 
 	s.skillDiffMu.RLock()
-	diffs := s.skillDiffCache[req.Msg.ProjectId]
+	diffs := s.skillDiffCache[req.Msg.GetProjectId()]
 	s.skillDiffMu.RUnlock()
 
 	return connect.NewResponse(&taskguildv1.GetSkillComparisonResponse{
@@ -119,23 +120,23 @@ func (s *Server) GetSkillComparison(ctx context.Context, req *connect.Request[ta
 
 // ResolveSkillConflict resolves a single skill conflict between server and agent versions.
 func (s *Server) ResolveSkillConflict(ctx context.Context, req *connect.Request[taskguildv1.ResolveSkillConflictRequest]) (*connect.Response[taskguildv1.ResolveSkillConflictResponse], error) {
-	if req.Msg.ProjectId == "" {
+	if req.Msg.GetProjectId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
 	}
 
-	proj, err := s.projectRepo.Get(ctx, req.Msg.ProjectId)
+	proj, err := s.projectRepo.Get(ctx, req.Msg.GetProjectId())
 	if err != nil {
 		return nil, cerr.ExtractConnectError(ctx, err)
 	}
 
 	var resultSkill *skill.Skill
 
-	switch req.Msg.Choice {
+	switch req.Msg.GetChoice() {
 	case taskguildv1.SkillResolutionChoice_SKILL_RESOLUTION_CHOICE_SERVER:
 		// Server version wins. DB is already correct.
 		// Force-overwrite the agent's local file by sending SyncSkillsCommand.
-		if req.Msg.SkillId != "" {
-			resultSkill, err = s.skillRepo.Get(ctx, req.Msg.SkillId)
+		if req.Msg.GetSkillId() != "" {
+			resultSkill, err = s.skillRepo.Get(ctx, req.Msg.GetSkillId())
 			if err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)
 			}
@@ -143,7 +144,7 @@ func (s *Server) ResolveSkillConflict(ctx context.Context, req *connect.Request[
 			s.registry.BroadcastCommandToProject(proj.Name, &taskguildv1.AgentCommand{
 				Command: &taskguildv1.AgentCommand_SyncSkills{
 					SyncSkills: &taskguildv1.SyncSkillsCommand{
-						ForceOverwriteSkillIds: []string{req.Msg.SkillId},
+						ForceOverwriteSkillIds: []string{req.Msg.GetSkillId()},
 					},
 				},
 			})
@@ -151,17 +152,18 @@ func (s *Server) ResolveSkillConflict(ctx context.Context, req *connect.Request[
 
 	case taskguildv1.SkillResolutionChoice_SKILL_RESOLUTION_CHOICE_AGENT:
 		// Agent version wins. Update the DB with agent's content.
-		parsed, parseErr := parseSkillMDContent(req.Msg.AgentContent)
+		parsed, parseErr := parseSkillMDContent(req.Msg.GetAgentContent())
 		if parseErr != nil {
 			return nil, cerr.NewError(cerr.InvalidArgument, fmt.Sprintf("failed to parse skill content: %v", parseErr), nil).ConnectError()
 		}
 
-		if req.Msg.SkillId != "" {
+		if req.Msg.GetSkillId() != "" {
 			// Update existing skill.
-			resultSkill, err = s.skillRepo.Get(ctx, req.Msg.SkillId)
+			resultSkill, err = s.skillRepo.Get(ctx, req.Msg.GetSkillId())
 			if err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)
 			}
+
 			resultSkill.Description = parsed.Description
 			resultSkill.Content = parsed.Content
 			resultSkill.DisableModelInvocation = parsed.DisableModelInvocation
@@ -172,17 +174,21 @@ func (s *Server) ResolveSkillConflict(ctx context.Context, req *connect.Request[
 			resultSkill.Agent = parsed.Agent
 			resultSkill.ArgumentHint = parsed.ArgumentHint
 			resultSkill.IsSynced = true
+
 			resultSkill.UpdatedAt = time.Now()
-			if err := s.skillRepo.Update(ctx, resultSkill); err != nil {
+
+			err := s.skillRepo.Update(ctx, resultSkill)
+			if err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)
 			}
 		} else {
 			// Agent-only skill — create new in DB.
 			now := time.Now()
+
 			resultSkill = &skill.Skill{
 				ID:                     ulid.Make().String(),
-				ProjectID:              req.Msg.ProjectId,
-				Name:                   req.Msg.SkillName,
+				ProjectID:              req.Msg.GetProjectId(),
+				Name:                   req.Msg.GetSkillName(),
 				Description:            parsed.Description,
 				Content:                parsed.Content,
 				DisableModelInvocation: parsed.DisableModelInvocation,
@@ -196,7 +202,9 @@ func (s *Server) ResolveSkillConflict(ctx context.Context, req *connect.Request[
 				CreatedAt:              now,
 				UpdatedAt:              now,
 			}
-			if err := s.skillRepo.Create(ctx, resultSkill); err != nil {
+
+			err := s.skillRepo.Create(ctx, resultSkill)
+			if err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)
 			}
 		}
@@ -206,7 +214,7 @@ func (s *Server) ResolveSkillConflict(ctx context.Context, req *connect.Request[
 	}
 
 	// Remove the resolved diff from cache.
-	s.removeSkillDiff(req.Msg.ProjectId, req.Msg.SkillId, req.Msg.Filename)
+	s.removeSkillDiff(req.Msg.GetProjectId(), req.Msg.GetSkillId(), req.Msg.GetFilename())
 
 	var proto *taskguildv1.SkillDefinition
 	if resultSkill != nil {
@@ -214,10 +222,10 @@ func (s *Server) ResolveSkillConflict(ctx context.Context, req *connect.Request[
 	}
 
 	slog.Info("skill conflict resolved",
-		"project_id", req.Msg.ProjectId,
-		"skill_id", req.Msg.SkillId,
-		"skill_name", req.Msg.SkillName,
-		"choice", req.Msg.Choice.String(),
+		"project_id", req.Msg.GetProjectId(),
+		"skill_id", req.Msg.GetSkillId(),
+		"skill_name", req.Msg.GetSkillName(),
+		"choice", req.Msg.GetChoice().String(),
 	)
 
 	return connect.NewResponse(&taskguildv1.ResolveSkillConflictResponse{
@@ -238,14 +246,17 @@ func (s *Server) removeSkillDiff(projectID, skillID, filename string) {
 
 	filtered := make([]*taskguildv1.SkillDiff, 0, len(diffs))
 	for _, d := range diffs {
-		if skillID != "" && d.SkillId == skillID {
+		if skillID != "" && d.GetSkillId() == skillID {
 			continue // remove this diff
 		}
-		if skillID == "" && filename != "" && d.Filename == filename {
+
+		if skillID == "" && filename != "" && d.GetFilename() == filename {
 			continue // remove agent-only diff by filename
 		}
+
 		filtered = append(filtered, d)
 	}
+
 	s.skillDiffCache[projectID] = filtered
 }
 
@@ -265,12 +276,14 @@ func parseSkillMDContent(content string) (*parsedSkillMD, error) {
 
 	// Find closing ---.
 	closingIdx := -1
+
 	for i := 1; i < len(lines); i++ {
 		if strings.TrimSpace(lines[i]) == "---" {
 			closingIdx = i
 			break
 		}
 	}
+
 	if closingIdx == -1 {
 		result.Content = content
 		return result, nil
@@ -278,6 +291,7 @@ func parseSkillMDContent(content string) (*parsedSkillMD, error) {
 
 	// Parse YAML frontmatter.
 	var currentListKey string
+
 	for i := 1; i < closingIdx; i++ {
 		line := lines[i]
 		trimmed := strings.TrimSpace(line)
@@ -291,6 +305,7 @@ func parseSkillMDContent(content string) (*parsedSkillMD, error) {
 					result.AllowedTools = append(result.AllowedTools, item)
 				}
 			}
+
 			continue
 		}
 
@@ -312,7 +327,7 @@ func parseSkillMDContent(content string) (*parsedSkillMD, error) {
 				if value == "" {
 					currentListKey = "allowed-tools"
 				} else {
-					for _, p := range strings.Split(value, ",") {
+					for p := range strings.SplitSeq(value, ",") {
 						p = strings.TrimSpace(p)
 						if p != "" {
 							result.AllowedTools = append(result.AllowedTools, p)

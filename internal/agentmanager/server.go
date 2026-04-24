@@ -22,15 +22,15 @@ import (
 var _ taskguildv1connect.AgentManagerServiceHandler = (*Server)(nil)
 
 type Server struct {
-	registry        *Registry
-	taskRepo        task.Repository
-	workflowRepo    workflow.Repository
-	agentRepo       agent.Repository
-	interactionRepo interaction.Repository
-	projectRepo     project.Repository
-	skillRepo       skill.Repository
-	scriptRepo      script.Repository
-	taskLogRepo     tasklog.Repository
+	registry           *Registry
+	taskRepo           task.Repository
+	workflowRepo       workflow.Repository
+	agentRepo          agent.Repository
+	interactionRepo    interaction.Repository
+	projectRepo        project.Repository
+	skillRepo          skill.Repository
+	scriptRepo         script.Repository
+	taskLogRepo        tasklog.Repository
 	permissionRepo     permission.Repository
 	scpRepo            scp.Repository
 	claudeSettingsRepo claudesettings.Repository
@@ -39,7 +39,7 @@ type Server struct {
 	// scriptBroker manages streaming script execution output.
 	scriptBroker *script.ScriptExecutionBroker
 
-	// worktreeClaimMu serialises ClaimTask calls per project+worktree pair,
+	// worktreeClaimMu serializes ClaimTask calls per project+worktree pair,
 	// ensuring only one task per worktree can be ASSIGNED at a time.
 	// Key: "projectID\x00worktreeName" → value: *sync.Mutex
 	worktreeClaimMu sync.Map
@@ -80,10 +80,10 @@ func NewServer(registry *Registry, taskRepo task.Repository, workflowRepo workfl
 		scpRepo:            scpRepo,
 		claudeSettingsRepo: claudeSettingsRepo,
 		eventBus:           eventBus,
-		scriptBroker:    scriptBroker,
-		worktreeCache:   make(map[string][]*taskguildv1.WorktreeInfo),
-		scriptDiffCache: make(map[string][]*taskguildv1.ScriptDiff),
-		agentDiffCache:  make(map[string][]*taskguildv1.AgentDiff),
-		skillDiffCache:  make(map[string][]*taskguildv1.SkillDiff),
+		scriptBroker:       scriptBroker,
+		worktreeCache:      make(map[string][]*taskguildv1.WorktreeInfo),
+		scriptDiffCache:    make(map[string][]*taskguildv1.ScriptDiff),
+		agentDiffCache:     make(map[string][]*taskguildv1.AgentDiff),
+		skillDiffCache:     make(map[string][]*taskguildv1.SkillDiff),
 	}
 }

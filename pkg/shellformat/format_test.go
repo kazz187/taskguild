@@ -262,6 +262,7 @@ fi`,
 			if err != nil {
 				t.Fatalf("Format() returned error: %v", err)
 			}
+
 			if got != tt.expected {
 				t.Errorf("Format(%q)\n  got:\n%s\n\n  expected:\n%s", tt.input, got, tt.expected)
 			}

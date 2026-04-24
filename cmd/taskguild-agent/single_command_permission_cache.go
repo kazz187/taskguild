@@ -2,16 +2,17 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log/slog"
 	"regexp"
 	"strings"
 	"sync"
 
 	"connectrpc.com/connect"
+
+	"github.com/kazz187/taskguild/pkg/shellparse"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
-	"github.com/kazz187/taskguild/pkg/shellparse"
 )
 
 // wildcardToRegex converts a wildcard (glob-like) pattern to a Go regular expression.
@@ -22,6 +23,7 @@ func wildcardToRegex(pattern string) string {
 	for i, p := range parts {
 		parts[i] = regexp.QuoteMeta(p)
 	}
+
 	return "(?s)^" + strings.Join(parts, ".*") + "$"
 }
 
@@ -29,8 +31,9 @@ func wildcardToRegex(pattern string) string {
 // Returns an error if the pattern is empty or the resulting regex is invalid.
 func compileWildcard(pattern string) (*regexp.Regexp, error) {
 	if pattern == "" {
-		return nil, fmt.Errorf("empty pattern")
+		return nil, errors.New("empty pattern")
 	}
+
 	return regexp.Compile(wildcardToRegex(pattern))
 }
 
@@ -67,18 +70,20 @@ func (c *singleCommandPermissionCache) Update(perms []*v1.SingleCommandPermissio
 
 	compiled := make([]compiledPattern, 0, len(perms))
 	for _, p := range perms {
-		re, err := compileWildcard(p.Pattern)
+		re, err := compileWildcard(p.GetPattern())
 		if err != nil {
-			slog.Warn("skipping invalid wildcard pattern", "pattern", p.Pattern, "error", err)
+			slog.Warn("skipping invalid wildcard pattern", "pattern", p.GetPattern(), "error", err)
 			continue
 		}
+
 		compiled = append(compiled, compiledPattern{
-			id:    p.Id,
-			raw:   p.Pattern,
+			id:    p.GetId(),
+			raw:   p.GetPattern(),
 			regex: re,
-			ptype: p.Type,
+			ptype: p.GetType(),
 		})
 	}
+
 	c.patterns = compiled
 	slog.Info("single command permission cache updated", "patterns", len(compiled))
 }
@@ -93,6 +98,7 @@ func (c *singleCommandPermissionCache) Sync(ctx context.Context) {
 		slog.Error("failed to sync single command permissions", "error", err)
 		return
 	}
+
 	c.Update(resp.Msg.GetPermissions())
 }
 
@@ -130,10 +136,12 @@ func (c *singleCommandPermissionCache) CheckCommand(command string) (matched boo
 		if p.ptype != "command" {
 			continue
 		}
+
 		if p.regex.MatchString(command) {
 			return true, p.raw
 		}
 	}
+
 	return false, ""
 }
 
@@ -146,10 +154,12 @@ func (c *singleCommandPermissionCache) CheckRedirect(path string) (matched bool,
 		if p.ptype != "redirect" {
 			continue
 		}
+
 		if p.regex.MatchString(path) {
 			return true, p.raw
 		}
 	}
+
 	return false, ""
 }
 
@@ -162,6 +172,7 @@ func (c *singleCommandPermissionCache) CheckAllCommands(parsed *shellparse.Parse
 
 	for _, cmd := range parsed.Commands {
 		matched, pattern := c.CheckCommand(cmd.Raw)
+
 		result := commandCheckResult{
 			Command: cmd.Raw,
 			Matched: matched,
@@ -172,6 +183,7 @@ func (c *singleCommandPermissionCache) CheckAllCommands(parsed *shellparse.Parse
 			allMatched = false
 			result.SuggestedPattern = SuggestCommandPattern(cmd)
 		}
+
 		meta.ParsedCommands = append(meta.ParsedCommands, result)
 
 		// Check each redirect.
@@ -179,7 +191,9 @@ func (c *singleCommandPermissionCache) CheckAllCommands(parsed *shellparse.Parse
 			if redir.Path == "" {
 				continue
 			}
+
 			rMatched, rPattern := c.CheckRedirect(redir.Path)
+
 			rResult := redirectCheckResult{
 				Operator: redir.Op,
 				Path:     redir.Path,
@@ -191,6 +205,7 @@ func (c *singleCommandPermissionCache) CheckAllCommands(parsed *shellparse.Parse
 				allMatched = false
 				rResult.SuggestedPattern = SuggestRedirectPattern(redir.Path)
 			}
+
 			meta.Redirects = append(meta.Redirects, rResult)
 		}
 	}
