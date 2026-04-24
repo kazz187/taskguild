@@ -153,7 +153,7 @@ func TestExecuteScript_Success(t *testing.T) {
 		t.Fatalf("ExecuteScript failed: %v", err)
 	}
 
-	requestID := resp.Msg.RequestId
+	requestID := resp.Msg.GetRequestId()
 	if requestID == "" {
 		t.Fatal("expected non-empty requestID")
 	}
@@ -286,8 +286,8 @@ func TestListActiveExecutions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListActiveExecutions failed: %v", err)
 	}
-	if len(resp.Msg.Executions) != 2 {
-		t.Fatalf("expected 2 executions for proj-1, got %d", len(resp.Msg.Executions))
+	if len(resp.Msg.GetExecutions()) != 2 {
+		t.Fatalf("expected 2 executions for proj-1, got %d", len(resp.Msg.GetExecutions()))
 	}
 }
 
@@ -304,7 +304,7 @@ func TestEndToEnd_ExecuteAndReceiveViaSubscriber(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ExecuteScript failed: %v", err)
 	}
-	requestID := execResp.Msg.RequestId
+	requestID := execResp.Msg.GetRequestId()
 
 	// 2. Frontend subscribes to the stream (via broker directly, since
 	//    connect.ServerStream requires HTTP infrastructure to construct)
@@ -362,34 +362,34 @@ done:
 		taskguildv1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT,
 	}
 	for i := range 3 {
-		out, ok := events[i].Event.(*taskguildv1.ScriptExecutionEvent_Output)
+		out, ok := events[i].GetEvent().(*taskguildv1.ScriptExecutionEvent_Output)
 		if !ok {
 			t.Fatalf("event %d: expected output event", i)
 		}
-		if len(out.Output.Entries) != 1 {
-			t.Fatalf("event %d: expected 1 entry, got %d", i, len(out.Output.Entries))
+		if len(out.Output.GetEntries()) != 1 {
+			t.Fatalf("event %d: expected 1 entry, got %d", i, len(out.Output.GetEntries()))
 		}
-		if out.Output.Entries[0].Text != expectedTexts[i] {
-			t.Errorf("event %d: expected text %q, got %q", i, expectedTexts[i], out.Output.Entries[0].Text)
+		if out.Output.GetEntries()[0].GetText() != expectedTexts[i] {
+			t.Errorf("event %d: expected text %q, got %q", i, expectedTexts[i], out.Output.GetEntries()[0].GetText())
 		}
-		if out.Output.Entries[0].Stream != expectedStreams[i] {
-			t.Errorf("event %d: expected stream %v, got %v", i, expectedStreams[i], out.Output.Entries[0].Stream)
+		if out.Output.GetEntries()[0].GetStream() != expectedStreams[i] {
+			t.Errorf("event %d: expected stream %v, got %v", i, expectedStreams[i], out.Output.GetEntries()[0].GetStream())
 		}
 	}
 
 	// Verify completion event
-	comp, ok := events[3].Event.(*taskguildv1.ScriptExecutionEvent_Complete)
+	comp, ok := events[3].GetEvent().(*taskguildv1.ScriptExecutionEvent_Complete)
 	if !ok {
 		t.Fatal("event 3: expected complete event")
 	}
-	if !comp.Complete.Success {
+	if !comp.Complete.GetSuccess() {
 		t.Error("expected success=true")
 	}
-	if comp.Complete.ExitCode != 0 {
-		t.Errorf("expected exitCode=0, got %d", comp.Complete.ExitCode)
+	if comp.Complete.GetExitCode() != 0 {
+		t.Errorf("expected exitCode=0, got %d", comp.Complete.GetExitCode())
 	}
-	if len(comp.Complete.LogEntries) != 3 {
-		t.Errorf("expected 3 log entries in completion, got %d", len(comp.Complete.LogEntries))
+	if len(comp.Complete.GetLogEntries()) != 3 {
+		t.Errorf("expected 3 log entries in completion, got %d", len(comp.Complete.GetLogEntries()))
 	}
 
 	// 7. Verify execution shows as completed in list
@@ -399,10 +399,10 @@ done:
 	if err != nil {
 		t.Fatalf("ListActiveExecutions failed: %v", err)
 	}
-	if len(listResp.Msg.Executions) != 1 {
-		t.Fatalf("expected 1 execution in list, got %d", len(listResp.Msg.Executions))
+	if len(listResp.Msg.GetExecutions()) != 1 {
+		t.Fatalf("expected 1 execution in list, got %d", len(listResp.Msg.GetExecutions()))
 	}
-	if !listResp.Msg.Executions[0].Completed {
+	if !listResp.Msg.GetExecutions()[0].GetCompleted() {
 		t.Error("expected execution to be marked completed")
 	}
 }
@@ -418,7 +418,7 @@ func TestEndToEnd_ExecuteFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ExecuteScript failed: %v", err)
 	}
-	requestID := execResp.Msg.RequestId
+	requestID := execResp.Msg.GetRequestId()
 
 	// Subscribe
 	ch, unsub := broker.Subscribe(requestID)
@@ -450,18 +450,18 @@ done:
 		t.Fatalf("expected 2 events, got %d", len(events))
 	}
 
-	comp, ok := events[1].Event.(*taskguildv1.ScriptExecutionEvent_Complete)
+	comp, ok := events[1].GetEvent().(*taskguildv1.ScriptExecutionEvent_Complete)
 	if !ok {
 		t.Fatal("event 1: expected complete event")
 	}
-	if comp.Complete.Success {
+	if comp.Complete.GetSuccess() {
 		t.Error("expected success=false")
 	}
-	if comp.Complete.ExitCode != 126 {
-		t.Errorf("expected exitCode=126, got %d", comp.Complete.ExitCode)
+	if comp.Complete.GetExitCode() != 126 {
+		t.Errorf("expected exitCode=126, got %d", comp.Complete.GetExitCode())
 	}
-	if comp.Complete.ErrorMessage != "permission denied" {
-		t.Errorf("expected errorMessage=%q, got %q", "permission denied", comp.Complete.ErrorMessage)
+	if comp.Complete.GetErrorMessage() != "permission denied" {
+		t.Errorf("expected errorMessage=%q, got %q", "permission denied", comp.Complete.GetErrorMessage())
 	}
 }
 
@@ -476,7 +476,7 @@ func TestEndToEnd_StoppedByUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ExecuteScript failed: %v", err)
 	}
-	requestID := execResp.Msg.RequestId
+	requestID := execResp.Msg.GetRequestId()
 
 	// Subscribe
 	ch, unsub := broker.Subscribe(requestID)
@@ -505,14 +505,14 @@ done:
 		t.Fatalf("expected 1 event, got %d", len(events))
 	}
 
-	comp, ok := events[0].Event.(*taskguildv1.ScriptExecutionEvent_Complete)
+	comp, ok := events[0].GetEvent().(*taskguildv1.ScriptExecutionEvent_Complete)
 	if !ok {
 		t.Fatal("event 0: expected complete event")
 	}
-	if comp.Complete.Success {
+	if comp.Complete.GetSuccess() {
 		t.Error("expected success=false")
 	}
-	if !comp.Complete.StoppedByUser {
+	if !comp.Complete.GetStoppedByUser() {
 		t.Error("expected stoppedByUser=true")
 	}
 }
@@ -528,7 +528,7 @@ func TestEndToEnd_LateJoinerGetsFullReplay(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ExecuteScript failed: %v", err)
 	}
-	requestID := execResp.Msg.RequestId
+	requestID := execResp.Msg.GetRequestId()
 
 	// Agent sends output and completes BEFORE anyone subscribes
 	broker.PushOutput(requestID, []*taskguildv1.ScriptLogEntry{
@@ -565,13 +565,13 @@ done:
 		t.Fatalf("expected 3 events for late joiner, got %d", len(events))
 	}
 
-	if _, ok := events[0].Event.(*taskguildv1.ScriptExecutionEvent_Output); !ok {
+	if _, ok := events[0].GetEvent().(*taskguildv1.ScriptExecutionEvent_Output); !ok {
 		t.Error("event 0: expected output")
 	}
-	if _, ok := events[1].Event.(*taskguildv1.ScriptExecutionEvent_Output); !ok {
+	if _, ok := events[1].GetEvent().(*taskguildv1.ScriptExecutionEvent_Output); !ok {
 		t.Error("event 1: expected output")
 	}
-	if _, ok := events[2].Event.(*taskguildv1.ScriptExecutionEvent_Complete); !ok {
+	if _, ok := events[2].GetEvent().(*taskguildv1.ScriptExecutionEvent_Complete); !ok {
 		t.Error("event 2: expected complete")
 	}
 }

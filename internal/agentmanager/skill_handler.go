@@ -15,7 +15,7 @@ import (
 // --- Skill sync RPCs ---
 
 func (s *Server) SyncSkills(ctx context.Context, req *connect.Request[taskguildv1.SyncSkillsRequest]) (*connect.Response[taskguildv1.SyncSkillsResponse], error) {
-	projectName := req.Msg.ProjectName
+	projectName := req.Msg.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}

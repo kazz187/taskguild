@@ -45,7 +45,7 @@ func TestLogToolUse_StringToolResponseNotDoubleEncoded(t *testing.T) {
 	tc.agentHandler.mu.Lock()
 	defer tc.agentHandler.mu.Unlock()
 	req := tc.agentHandler.reportTaskLogReqs[0]
-	out, ok := req.Metadata["tool_output"]
+	out, ok := req.GetMetadata()["tool_output"]
 	require.True(t, ok, "tool_output should be present")
 
 	assert.Equal(t, raw, out, "tool_output must be stored verbatim (no double encoding)")
@@ -87,7 +87,7 @@ func TestLogToolUse_NonStringToolResponseMarshaled(t *testing.T) {
 	tc.agentHandler.mu.Lock()
 	defer tc.agentHandler.mu.Unlock()
 	req := tc.agentHandler.reportTaskLogReqs[0]
-	out, ok := req.Metadata["tool_output"]
+	out, ok := req.GetMetadata()["tool_output"]
 	require.True(t, ok, "tool_output should be present")
 
 	// Should be valid JSON containing the map fields.

@@ -15,7 +15,7 @@ import (
 )
 
 func (s *Server) SyncAgents(ctx context.Context, req *connect.Request[taskguildv1.SyncAgentsRequest]) (*connect.Response[taskguildv1.SyncAgentsResponse], error) {
-	projectName := req.Msg.ProjectName
+	projectName := req.Msg.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -41,7 +41,7 @@ func (s *Server) SyncAgents(ctx context.Context, req *connect.Request[taskguildv
 }
 
 func (s *Server) SyncPermissions(ctx context.Context, req *connect.Request[taskguildv1.SyncPermissionsRequest]) (*connect.Response[taskguildv1.SyncPermissionsResponse], error) {
-	projectName := req.Msg.ProjectName
+	projectName := req.Msg.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -58,7 +58,7 @@ func (s *Server) SyncPermissions(ctx context.Context, req *connect.Request[taskg
 	}
 
 	// Merge local permissions with stored (union strategy).
-	merged := permission.Merge(stored, req.Msg.LocalAllow, req.Msg.LocalAsk, req.Msg.LocalDeny)
+	merged := permission.Merge(stored, req.Msg.GetLocalAllow(), req.Msg.GetLocalAsk(), req.Msg.GetLocalDeny())
 
 	// Save merged result.
 	if err := s.permissionRepo.Upsert(ctx, merged); err != nil {
@@ -98,19 +98,19 @@ func agentToProto(a *agent.Agent) *taskguildv1.AgentDefinition {
 func (s *Server) ReportAgentStatus(ctx context.Context, req *connect.Request[taskguildv1.ReportAgentStatusRequest]) (*connect.Response[taskguildv1.ReportAgentStatusResponse], error) {
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_AGENT_STATUS_CHANGED,
-		req.Msg.TaskId,
+		req.Msg.GetTaskId(),
 		"",
 		map[string]string{
-			"agent_manager_id": req.Msg.AgentManagerId,
-			"agent_status":     req.Msg.Status.String(),
-			"message":          req.Msg.Message,
+			"agent_manager_id": req.Msg.GetAgentManagerId(),
+			"agent_status":     req.Msg.GetStatus().String(),
+			"message":          req.Msg.GetMessage(),
 		},
 	)
 	return connect.NewResponse(&taskguildv1.ReportAgentStatusResponse{}), nil
 }
 
 func (s *Server) SyncClaudeSettings(ctx context.Context, req *connect.Request[taskguildv1.SyncClaudeSettingsAgentRequest]) (*connect.Response[taskguildv1.SyncClaudeSettingsAgentResponse], error) {
-	projectName := req.Msg.ProjectName
+	projectName := req.Msg.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -126,7 +126,7 @@ func (s *Server) SyncClaudeSettings(ctx context.Context, req *connect.Request[ta
 	}
 
 	// Merge: local value fills in nil fields.
-	merged := mergeClaudeSettings(stored, req.Msg.LocalLanguage, attributionFromProto(req.Msg.LocalAttribution))
+	merged := mergeClaudeSettings(stored, req.Msg.LocalLanguage, attributionFromProto(req.Msg.GetLocalAttribution()))
 
 	if err := s.claudeSettingsRepo.Upsert(ctx, merged); err != nil {
 		return nil, cerr.ExtractConnectError(ctx, err)

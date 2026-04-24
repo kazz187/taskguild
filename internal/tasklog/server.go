@@ -24,15 +24,15 @@ func NewServer(repo Repository, taskRepo task.Repository) *Server {
 
 func (s *Server) ListTaskLogs(ctx context.Context, req *connect.Request[taskguildv1.ListTaskLogsRequest]) (*connect.Response[taskguildv1.ListTaskLogsResponse], error) {
 	limit, offset := int32(0), int32(0)
-	if req.Msg.Pagination != nil {
-		limit = req.Msg.Pagination.Limit
-		offset = req.Msg.Pagination.Offset
+	if req.Msg.GetPagination() != nil {
+		limit = req.Msg.GetPagination().GetLimit()
+		offset = req.Msg.GetPagination().GetOffset()
 	}
 
 	// When project_id is provided (and task_id is not), resolve to task IDs for filtering.
 	var taskIDs []string
-	if req.Msg.ProjectId != "" && req.Msg.TaskId == "" {
-		tasks, _, err := s.taskRepo.List(ctx, req.Msg.ProjectId, "", "", 0, 0)
+	if req.Msg.GetProjectId() != "" && req.Msg.GetTaskId() == "" {
+		tasks, _, err := s.taskRepo.List(ctx, req.Msg.GetProjectId(), "", "", 0, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -42,7 +42,7 @@ func (s *Server) ListTaskLogs(ctx context.Context, req *connect.Request[taskguil
 		}
 	}
 
-	logs, total, err := s.repo.List(ctx, req.Msg.TaskId, taskIDs, int(limit), int(offset))
+	logs, total, err := s.repo.List(ctx, req.Msg.GetTaskId(), taskIDs, int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}

@@ -48,7 +48,7 @@ func (n *Notifier) Start(ctx context.Context) {
 			if !ok {
 				return
 			}
-			switch event.Type {
+			switch event.GetType() {
 			case taskguildv1.EventType_EVENT_TYPE_TASK_STATUS_CHANGED:
 				n.handleTaskStatusChanged(ctx, event)
 			}
@@ -57,8 +57,8 @@ func (n *Notifier) Start(ctx context.Context) {
 }
 
 func (n *Notifier) handleTaskStatusChanged(ctx context.Context, event *taskguildv1.Event) {
-	taskID := event.ResourceId
-	newStatusID := event.Metadata["new_status_id"]
+	taskID := event.GetResourceId()
+	newStatusID := event.GetMetadata()["new_status_id"]
 
 	t, err := n.taskRepo.Get(ctx, taskID)
 	if err != nil {

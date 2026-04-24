@@ -64,7 +64,7 @@ func (m *scriptMockClient) allChunkEntries() []*v1.ScriptLogEntry {
 	defer m.mu.Unlock()
 	var entries []*v1.ScriptLogEntry
 	for _, c := range m.chunks {
-		entries = append(entries, c.Entries...)
+		entries = append(entries, c.GetEntries()...)
 	}
 	return entries
 }
@@ -80,10 +80,10 @@ func TestChunkBuffer_AppendAndDrain(t *testing.T) {
 	if len(entries) != 2 {
 		t.Fatalf("expected 2 entries, got %d", len(entries))
 	}
-	if entries[0].Text != "line1\n" || entries[0].Stream != v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT {
+	if entries[0].GetText() != "line1\n" || entries[0].GetStream() != v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT {
 		t.Errorf("entry 0: unexpected %v", entries[0])
 	}
-	if entries[1].Text != "err1\n" || entries[1].Stream != v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDERR {
+	if entries[1].GetText() != "err1\n" || entries[1].GetStream() != v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDERR {
 		t.Errorf("entry 1: unexpected %v", entries[1])
 	}
 
@@ -134,14 +134,14 @@ func TestFlushLogEntries_SendsChunk(t *testing.T) {
 	if len(chunks) != 1 {
 		t.Fatalf("expected 1 chunk, got %d", len(chunks))
 	}
-	if chunks[0].RequestId != "req-1" {
-		t.Errorf("expected requestID %q, got %q", "req-1", chunks[0].RequestId)
+	if chunks[0].GetRequestId() != "req-1" {
+		t.Errorf("expected requestID %q, got %q", "req-1", chunks[0].GetRequestId())
 	}
-	if chunks[0].ProjectName != "test-proj" {
-		t.Errorf("expected projectName %q, got %q", "test-proj", chunks[0].ProjectName)
+	if chunks[0].GetProjectName() != "test-proj" {
+		t.Errorf("expected projectName %q, got %q", "test-proj", chunks[0].GetProjectName())
 	}
-	if len(chunks[0].Entries) != 1 || chunks[0].Entries[0].Text != "hello\n" {
-		t.Errorf("unexpected entries: %v", chunks[0].Entries)
+	if len(chunks[0].GetEntries()) != 1 || chunks[0].GetEntries()[0].GetText() != "hello\n" {
+		t.Errorf("unexpected entries: %v", chunks[0].GetEntries())
 	}
 }
 
@@ -185,10 +185,10 @@ func TestStreamOutput_StdoutAndStderr(t *testing.T) {
 	// Collect all text
 	var stdoutTexts, stderrTexts []string
 	for _, e := range entries {
-		if e.Stream == v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT {
-			stdoutTexts = append(stdoutTexts, e.Text)
+		if e.GetStream() == v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT {
+			stdoutTexts = append(stdoutTexts, e.GetText())
 		} else {
-			stderrTexts = append(stderrTexts, e.Text)
+			stderrTexts = append(stderrTexts, e.GetText())
 		}
 	}
 	if len(stdoutTexts) != 2 {
@@ -377,20 +377,20 @@ func TestHandleExecuteScript_Success(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected result to be reported")
 	}
-	if result.RequestId != "req-test-1" {
-		t.Errorf("expected requestID %q, got %q", "req-test-1", result.RequestId)
+	if result.GetRequestId() != "req-test-1" {
+		t.Errorf("expected requestID %q, got %q", "req-test-1", result.GetRequestId())
 	}
-	if result.ProjectName != "test-proj" {
-		t.Errorf("expected projectName %q, got %q", "test-proj", result.ProjectName)
+	if result.GetProjectName() != "test-proj" {
+		t.Errorf("expected projectName %q, got %q", "test-proj", result.GetProjectName())
 	}
-	if result.ScriptId != "sc-1" {
-		t.Errorf("expected scriptID %q, got %q", "sc-1", result.ScriptId)
+	if result.GetScriptId() != "sc-1" {
+		t.Errorf("expected scriptID %q, got %q", "sc-1", result.GetScriptId())
 	}
-	if !result.Success {
-		t.Errorf("expected success=true, got false. error: %s", result.ErrorMessage)
+	if !result.GetSuccess() {
+		t.Errorf("expected success=true, got false. error: %s", result.GetErrorMessage())
 	}
-	if result.ExitCode != 0 {
-		t.Errorf("expected exitCode=0, got %d", result.ExitCode)
+	if result.GetExitCode() != 0 {
+		t.Errorf("expected exitCode=0, got %d", result.GetExitCode())
 	}
 
 	// Verify output was streamed
@@ -398,7 +398,7 @@ func TestHandleExecuteScript_Success(t *testing.T) {
 	var allText string
 	var allTextSb399 strings.Builder
 	for _, e := range chunkEntries {
-		allTextSb399.WriteString(e.Text)
+		allTextSb399.WriteString(e.GetText())
 	}
 	allText += allTextSb399.String()
 	if !strings.Contains(allText, "hello") || !strings.Contains(allText, "world") {
@@ -408,8 +408,8 @@ func TestHandleExecuteScript_Success(t *testing.T) {
 	// Verify full log in result
 	var resultText string
 	var resultTextSb408 strings.Builder
-	for _, e := range result.LogEntries {
-		resultTextSb408.WriteString(e.Text)
+	for _, e := range result.GetLogEntries() {
+		resultTextSb408.WriteString(e.GetText())
 	}
 	resultText += resultTextSb408.String()
 	if !strings.Contains(resultText, "hello") || !strings.Contains(resultText, "world") {
@@ -445,13 +445,13 @@ func TestHandleExecuteScript_ScriptFails(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected result to be reported")
 	}
-	if result.Success {
+	if result.GetSuccess() {
 		t.Error("expected success=false")
 	}
-	if result.ExitCode != 42 {
-		t.Errorf("expected exitCode=42, got %d", result.ExitCode)
+	if result.GetExitCode() != 42 {
+		t.Errorf("expected exitCode=42, got %d", result.GetExitCode())
 	}
-	if result.StoppedByUser {
+	if result.GetStoppedByUser() {
 		t.Error("expected stoppedByUser=false")
 	}
 
@@ -459,8 +459,8 @@ func TestHandleExecuteScript_ScriptFails(t *testing.T) {
 	var stderrText string
 	var stderrTextSb456 strings.Builder
 	for _, e := range mock.allChunkEntries() {
-		if e.Stream == v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDERR {
-			stderrTextSb456.WriteString(e.Text)
+		if e.GetStream() == v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDERR {
+			stderrTextSb456.WriteString(e.GetText())
 		}
 	}
 	stderrText += stderrTextSb456.String()
@@ -491,14 +491,14 @@ func TestHandleExecuteScript_StdoutAndStderrInterleaved(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected result to be reported")
 	}
-	if !result.Success {
-		t.Errorf("expected success=true, error: %s", result.ErrorMessage)
+	if !result.GetSuccess() {
+		t.Errorf("expected success=true, error: %s", result.GetErrorMessage())
 	}
 
 	// Verify both streams captured
 	var stdoutCount, stderrCount int
-	for _, e := range result.LogEntries {
-		switch e.Stream {
+	for _, e := range result.GetLogEntries() {
+		switch e.GetStream() {
 		case v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT:
 			stdoutCount++
 		case v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDERR:
@@ -554,10 +554,10 @@ func TestHandleExecuteScript_ParentContextCancelled(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected result to be reported")
 	}
-	if result.Success {
+	if result.GetSuccess() {
 		t.Error("expected success=false for canceled script")
 	}
-	if result.StoppedByUser {
+	if result.GetStoppedByUser() {
 		t.Error("expected stoppedByUser=false for parent context cancellation (not user-initiated)")
 	}
 }
@@ -602,10 +602,10 @@ func TestHandleExecuteScript_StoppedByUser(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected result to be reported")
 	}
-	if result.Success {
+	if result.GetSuccess() {
 		t.Error("expected success=false for stopped script")
 	}
-	if !result.StoppedByUser {
+	if !result.GetStoppedByUser() {
 		t.Error("expected stoppedByUser=true for user-initiated stop")
 	}
 }
@@ -657,10 +657,10 @@ func TestHandleExecuteScript_HotReloadDoesNotSetStoppedByUser(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected result to be reported")
 	}
-	if result.Success {
+	if result.GetSuccess() {
 		t.Error("expected success=false for canceled script")
 	}
-	if result.StoppedByUser {
+	if result.GetStoppedByUser() {
 		t.Error("expected stoppedByUser=false for hot-reload cancellation")
 	}
 }
@@ -755,11 +755,11 @@ func TestHandleExecuteScript_RejectDuringHotReload(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected result to be reported")
 	}
-	if result.Success {
+	if result.GetSuccess() {
 		t.Error("expected success=false for rejected script")
 	}
-	if !strings.Contains(result.ErrorMessage, "hot reload") {
-		t.Errorf("expected error about hot reload, got: %q", result.ErrorMessage)
+	if !strings.Contains(result.GetErrorMessage(), "hot reload") {
+		t.Errorf("expected error about hot reload, got: %q", result.GetErrorMessage())
 	}
 
 	// No chunks should have been sent (script never ran)
@@ -788,11 +788,11 @@ func TestHandleExecuteScript_LocalFileNotFound(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected result to be reported")
 	}
-	if result.Success {
+	if result.GetSuccess() {
 		t.Error("expected success=false for missing script")
 	}
-	if !strings.Contains(result.ErrorMessage, "not found locally") {
-		t.Errorf("expected error about script not found, got: %q", result.ErrorMessage)
+	if !strings.Contains(result.GetErrorMessage(), "not found locally") {
+		t.Errorf("expected error about script not found, got: %q", result.GetErrorMessage())
 	}
 }
 

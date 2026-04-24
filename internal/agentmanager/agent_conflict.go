@@ -21,11 +21,11 @@ import (
 // RequestAgentComparison sends a CompareAgentsCommand to connected agent-managers
 // so they compare local agents with server versions.
 func (s *Server) RequestAgentComparison(ctx context.Context, req *connect.Request[taskguildv1.RequestAgentComparisonRequest]) (*connect.Response[taskguildv1.RequestAgentComparisonResponse], error) {
-	if req.Msg.ProjectId == "" {
+	if req.Msg.GetProjectId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
 	}
 
-	proj, err := s.projectRepo.Get(ctx, req.Msg.ProjectId)
+	proj, err := s.projectRepo.Get(ctx, req.Msg.GetProjectId())
 	if err != nil {
 		return nil, cerr.ExtractConnectError(ctx, err)
 	}
@@ -53,7 +53,7 @@ func (s *Server) RequestAgentComparison(ctx context.Context, req *connect.Reques
 	})
 
 	slog.Info("agent comparison requested",
-		"project_id", req.Msg.ProjectId,
+		"project_id", req.Msg.GetProjectId(),
 		"project_name", proj.Name,
 		"request_id", requestID,
 		"agent_count", len(agents),
@@ -66,7 +66,7 @@ func (s *Server) RequestAgentComparison(ctx context.Context, req *connect.Reques
 
 // ReportAgentComparison receives comparison results from the agent and caches them.
 func (s *Server) ReportAgentComparison(ctx context.Context, req *connect.Request[taskguildv1.ReportAgentComparisonRequest]) (*connect.Response[taskguildv1.ReportAgentComparisonResponse], error) {
-	projectName := req.Msg.ProjectName
+	projectName := req.Msg.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -78,26 +78,26 @@ func (s *Server) ReportAgentComparison(ctx context.Context, req *connect.Request
 
 	// Cache the diffs for this project.
 	s.agentDiffMu.Lock()
-	s.agentDiffCache[proj.ID] = req.Msg.Diffs
+	s.agentDiffCache[proj.ID] = req.Msg.GetDiffs()
 	s.agentDiffMu.Unlock()
 
 	// Publish event so frontend can pick up the comparison results.
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_AGENT_COMPARISON,
-		req.Msg.RequestId,
+		req.Msg.GetRequestId(),
 		"",
 		map[string]string{
 			"project_id": proj.ID,
-			"request_id": req.Msg.RequestId,
-			"diff_count": strconv.Itoa(len(req.Msg.Diffs)),
+			"request_id": req.Msg.GetRequestId(),
+			"diff_count": strconv.Itoa(len(req.Msg.GetDiffs())),
 		},
 	)
 
 	slog.Info("agent comparison reported",
 		"project_id", proj.ID,
 		"project_name", projectName,
-		"request_id", req.Msg.RequestId,
-		"diff_count", len(req.Msg.Diffs),
+		"request_id", req.Msg.GetRequestId(),
+		"diff_count", len(req.Msg.GetDiffs()),
 	)
 
 	return connect.NewResponse(&taskguildv1.ReportAgentComparisonResponse{}), nil
@@ -105,12 +105,12 @@ func (s *Server) ReportAgentComparison(ctx context.Context, req *connect.Request
 
 // GetAgentComparison returns the cached agent diffs for a project.
 func (s *Server) GetAgentComparison(ctx context.Context, req *connect.Request[taskguildv1.GetAgentComparisonRequest]) (*connect.Response[taskguildv1.GetAgentComparisonResponse], error) {
-	if req.Msg.ProjectId == "" {
+	if req.Msg.GetProjectId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
 	}
 
 	s.agentDiffMu.RLock()
-	diffs := s.agentDiffCache[req.Msg.ProjectId]
+	diffs := s.agentDiffCache[req.Msg.GetProjectId()]
 	s.agentDiffMu.RUnlock()
 
 	return connect.NewResponse(&taskguildv1.GetAgentComparisonResponse{
@@ -120,24 +120,24 @@ func (s *Server) GetAgentComparison(ctx context.Context, req *connect.Request[ta
 
 // ResolveAgentConflict resolves a single agent conflict between server and agent versions.
 func (s *Server) ResolveAgentConflict(ctx context.Context, req *connect.Request[taskguildv1.ResolveAgentConflictRequest]) (*connect.Response[taskguildv1.ResolveAgentConflictResponse], error) {
-	if req.Msg.ProjectId == "" {
+	if req.Msg.GetProjectId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
 	}
 
-	proj, err := s.projectRepo.Get(ctx, req.Msg.ProjectId)
+	proj, err := s.projectRepo.Get(ctx, req.Msg.GetProjectId())
 	if err != nil {
 		return nil, cerr.ExtractConnectError(ctx, err)
 	}
 
 	var resultAgent *agent.Agent
 
-	switch req.Msg.Choice {
+	switch req.Msg.GetChoice() {
 	case taskguildv1.AgentResolutionChoice_AGENT_RESOLUTION_CHOICE_SERVER:
 		// Server version wins. DB is already correct.
 		// Force-overwrite the agent's local file by sending SyncAgentsCommand.
-		if req.Msg.AgentName != "" {
-			if req.Msg.AgentId != "" {
-				resultAgent, err = s.agentRepo.Get(ctx, req.Msg.AgentId)
+		if req.Msg.GetAgentName() != "" {
+			if req.Msg.GetAgentId() != "" {
+				resultAgent, err = s.agentRepo.Get(ctx, req.Msg.GetAgentId())
 				if err != nil {
 					return nil, cerr.ExtractConnectError(ctx, err)
 				}
@@ -146,7 +146,7 @@ func (s *Server) ResolveAgentConflict(ctx context.Context, req *connect.Request[
 			s.registry.BroadcastCommandToProject(proj.Name, &taskguildv1.AgentCommand{
 				Command: &taskguildv1.AgentCommand_SyncAgents{
 					SyncAgents: &taskguildv1.SyncAgentsCommand{
-						ForceOverwriteAgentNames: []string{req.Msg.AgentName},
+						ForceOverwriteAgentNames: []string{req.Msg.GetAgentName()},
 					},
 				},
 			})
@@ -155,14 +155,14 @@ func (s *Server) ResolveAgentConflict(ctx context.Context, req *connect.Request[
 	case taskguildv1.AgentResolutionChoice_AGENT_RESOLUTION_CHOICE_AGENT:
 		// Agent version wins. Update the DB with agent's content.
 		// Parse the agent MD content from the agent side.
-		if req.Msg.AgentId != "" {
+		if req.Msg.GetAgentId() != "" {
 			// Update existing agent.
-			resultAgent, err = s.agentRepo.Get(ctx, req.Msg.AgentId)
+			resultAgent, err = s.agentRepo.Get(ctx, req.Msg.GetAgentId())
 			if err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)
 			}
 			// Parse the agent content to extract fields.
-			parsed, parseErr := parseAgentMDContent(req.Msg.AgentContent)
+			parsed, parseErr := parseAgentMDContent(req.Msg.GetAgentContent())
 			if parseErr != nil {
 				return nil, cerr.NewError(cerr.InvalidArgument, fmt.Sprintf("failed to parse agent content: %v", parseErr), nil).ConnectError()
 			}
@@ -181,15 +181,15 @@ func (s *Server) ResolveAgentConflict(ctx context.Context, req *connect.Request[
 			}
 		} else {
 			// Agent-only agent — create new in DB.
-			parsed, parseErr := parseAgentMDContent(req.Msg.AgentContent)
+			parsed, parseErr := parseAgentMDContent(req.Msg.GetAgentContent())
 			if parseErr != nil {
 				return nil, cerr.NewError(cerr.InvalidArgument, fmt.Sprintf("failed to parse agent content: %v", parseErr), nil).ConnectError()
 			}
 			now := time.Now()
 			resultAgent = &agent.Agent{
 				ID:              ulid.Make().String(),
-				ProjectID:       req.Msg.ProjectId,
-				Name:            req.Msg.AgentName,
+				ProjectID:       req.Msg.GetProjectId(),
+				Name:            req.Msg.GetAgentName(),
 				Description:     parsed.Description,
 				Prompt:          parsed.Prompt,
 				Tools:           parsed.Tools,
@@ -212,7 +212,7 @@ func (s *Server) ResolveAgentConflict(ctx context.Context, req *connect.Request[
 	}
 
 	// Remove the resolved diff from cache.
-	s.removeAgentDiff(req.Msg.ProjectId, req.Msg.AgentId, req.Msg.Filename)
+	s.removeAgentDiff(req.Msg.GetProjectId(), req.Msg.GetAgentId(), req.Msg.GetFilename())
 
 	var proto *taskguildv1.AgentDefinition
 	if resultAgent != nil {
@@ -220,10 +220,10 @@ func (s *Server) ResolveAgentConflict(ctx context.Context, req *connect.Request[
 	}
 
 	slog.Info("agent conflict resolved",
-		"project_id", req.Msg.ProjectId,
-		"agent_id", req.Msg.AgentId,
-		"agent_name", req.Msg.AgentName,
-		"choice", req.Msg.Choice.String(),
+		"project_id", req.Msg.GetProjectId(),
+		"agent_id", req.Msg.GetAgentId(),
+		"agent_name", req.Msg.GetAgentName(),
+		"choice", req.Msg.GetChoice().String(),
 	)
 
 	return connect.NewResponse(&taskguildv1.ResolveAgentConflictResponse{
@@ -244,10 +244,10 @@ func (s *Server) removeAgentDiff(projectID, agentID, filename string) {
 
 	filtered := make([]*taskguildv1.AgentDiff, 0, len(diffs))
 	for _, d := range diffs {
-		if agentID != "" && d.AgentId == agentID {
+		if agentID != "" && d.GetAgentId() == agentID {
 			continue // remove this diff
 		}
-		if agentID == "" && filename != "" && d.Filename == filename {
+		if agentID == "" && filename != "" && d.GetFilename() == filename {
 			continue // remove agent-only diff by filename
 		}
 		filtered = append(filtered, d)

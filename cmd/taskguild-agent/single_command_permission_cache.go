@@ -68,16 +68,16 @@ func (c *singleCommandPermissionCache) Update(perms []*v1.SingleCommandPermissio
 
 	compiled := make([]compiledPattern, 0, len(perms))
 	for _, p := range perms {
-		re, err := compileWildcard(p.Pattern)
+		re, err := compileWildcard(p.GetPattern())
 		if err != nil {
-			slog.Warn("skipping invalid wildcard pattern", "pattern", p.Pattern, "error", err)
+			slog.Warn("skipping invalid wildcard pattern", "pattern", p.GetPattern(), "error", err)
 			continue
 		}
 		compiled = append(compiled, compiledPattern{
-			id:    p.Id,
-			raw:   p.Pattern,
+			id:    p.GetId(),
+			raw:   p.GetPattern(),
 			regex: re,
-			ptype: p.Type,
+			ptype: p.GetType(),
 		})
 	}
 	c.patterns = compiled

@@ -53,17 +53,17 @@ func (s *Server) CreateSkill(ctx context.Context, req *connect.Request[taskguild
 	now := time.Now()
 	sk := &Skill{
 		ID:                     ulid.Make().String(),
-		ProjectID:              req.Msg.ProjectId,
-		Name:                   req.Msg.Name,
-		Description:            req.Msg.Description,
-		Content:                req.Msg.Content,
-		DisableModelInvocation: req.Msg.DisableModelInvocation,
-		UserInvocable:          req.Msg.UserInvocable,
-		AllowedTools:           req.Msg.AllowedTools,
-		Model:                  req.Msg.Model,
-		Context:                req.Msg.Context,
-		Agent:                  req.Msg.Agent,
-		ArgumentHint:           req.Msg.ArgumentHint,
+		ProjectID:              req.Msg.GetProjectId(),
+		Name:                   req.Msg.GetName(),
+		Description:            req.Msg.GetDescription(),
+		Content:                req.Msg.GetContent(),
+		DisableModelInvocation: req.Msg.GetDisableModelInvocation(),
+		UserInvocable:          req.Msg.GetUserInvocable(),
+		AllowedTools:           req.Msg.GetAllowedTools(),
+		Model:                  req.Msg.GetModel(),
+		Context:                req.Msg.GetContext(),
+		Agent:                  req.Msg.GetAgent(),
+		ArgumentHint:           req.Msg.GetArgumentHint(),
 		IsSynced:               false,
 		CreatedAt:              now,
 		UpdatedAt:              now,
@@ -78,7 +78,7 @@ func (s *Server) CreateSkill(ctx context.Context, req *connect.Request[taskguild
 }
 
 func (s *Server) GetSkill(ctx context.Context, req *connect.Request[taskguildv1.GetSkillRequest]) (*connect.Response[taskguildv1.GetSkillResponse], error) {
-	sk, err := s.repo.Get(ctx, req.Msg.Id)
+	sk, err := s.repo.Get(ctx, req.Msg.GetId())
 	if err != nil {
 		return nil, err
 	}
@@ -89,13 +89,13 @@ func (s *Server) GetSkill(ctx context.Context, req *connect.Request[taskguildv1.
 
 func (s *Server) ListSkills(ctx context.Context, req *connect.Request[taskguildv1.ListSkillsRequest]) (*connect.Response[taskguildv1.ListSkillsResponse], error) {
 	limit, offset := int32(50), int32(0)
-	if req.Msg.Pagination != nil {
-		if req.Msg.Pagination.Limit > 0 {
-			limit = req.Msg.Pagination.Limit
+	if req.Msg.GetPagination() != nil {
+		if req.Msg.GetPagination().GetLimit() > 0 {
+			limit = req.Msg.GetPagination().GetLimit()
 		}
-		offset = req.Msg.Pagination.Offset
+		offset = req.Msg.GetPagination().GetOffset()
 	}
-	skills, total, err := s.repo.List(ctx, req.Msg.ProjectId, int(limit), int(offset))
+	skills, total, err := s.repo.List(ctx, req.Msg.GetProjectId(), int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}
@@ -114,36 +114,36 @@ func (s *Server) ListSkills(ctx context.Context, req *connect.Request[taskguildv
 }
 
 func (s *Server) UpdateSkill(ctx context.Context, req *connect.Request[taskguildv1.UpdateSkillRequest]) (*connect.Response[taskguildv1.UpdateSkillResponse], error) {
-	sk, err := s.repo.Get(ctx, req.Msg.Id)
+	sk, err := s.repo.Get(ctx, req.Msg.GetId())
 	if err != nil {
 		return nil, err
 	}
-	if req.Msg.Name != "" {
-		sk.Name = req.Msg.Name
+	if req.Msg.GetName() != "" {
+		sk.Name = req.Msg.GetName()
 	}
-	if req.Msg.Description != "" {
-		sk.Description = req.Msg.Description
+	if req.Msg.GetDescription() != "" {
+		sk.Description = req.Msg.GetDescription()
 	}
-	if req.Msg.Content != "" {
-		sk.Content = req.Msg.Content
+	if req.Msg.GetContent() != "" {
+		sk.Content = req.Msg.GetContent()
 	}
 	// Boolean fields are always applied (proto3 default is false).
-	sk.DisableModelInvocation = req.Msg.DisableModelInvocation
-	sk.UserInvocable = req.Msg.UserInvocable
+	sk.DisableModelInvocation = req.Msg.GetDisableModelInvocation()
+	sk.UserInvocable = req.Msg.GetUserInvocable()
 	if req.Msg.AllowedTools != nil {
-		sk.AllowedTools = req.Msg.AllowedTools
+		sk.AllowedTools = req.Msg.GetAllowedTools()
 	}
-	if req.Msg.Model != "" {
-		sk.Model = req.Msg.Model
+	if req.Msg.GetModel() != "" {
+		sk.Model = req.Msg.GetModel()
 	}
-	if req.Msg.Context != "" {
-		sk.Context = req.Msg.Context
+	if req.Msg.GetContext() != "" {
+		sk.Context = req.Msg.GetContext()
 	}
-	if req.Msg.Agent != "" {
-		sk.Agent = req.Msg.Agent
+	if req.Msg.GetAgent() != "" {
+		sk.Agent = req.Msg.GetAgent()
 	}
-	if req.Msg.ArgumentHint != "" {
-		sk.ArgumentHint = req.Msg.ArgumentHint
+	if req.Msg.GetArgumentHint() != "" {
+		sk.ArgumentHint = req.Msg.GetArgumentHint()
 	}
 	sk.UpdatedAt = time.Now()
 	if err := s.repo.Update(ctx, sk); err != nil {
@@ -156,11 +156,11 @@ func (s *Server) UpdateSkill(ctx context.Context, req *connect.Request[taskguild
 }
 
 func (s *Server) DeleteSkill(ctx context.Context, req *connect.Request[taskguildv1.DeleteSkillRequest]) (*connect.Response[taskguildv1.DeleteSkillResponse], error) {
-	sk, err := s.repo.Get(ctx, req.Msg.Id)
+	sk, err := s.repo.Get(ctx, req.Msg.GetId())
 	if err != nil {
 		return nil, err
 	}
-	if err := s.repo.Delete(ctx, req.Msg.Id); err != nil {
+	if err := s.repo.Delete(ctx, req.Msg.GetId()); err != nil {
 		return nil, err
 	}
 	s.notifyChange(sk.ProjectID, nil)
@@ -169,9 +169,9 @@ func (s *Server) DeleteSkill(ctx context.Context, req *connect.Request[taskguild
 
 // SyncSkillsFromDir scans a directory for .claude/skills/*/SKILL.md files and syncs them.
 func (s *Server) SyncSkillsFromDir(ctx context.Context, req *connect.Request[taskguildv1.SyncSkillsFromDirRequest]) (*connect.Response[taskguildv1.SyncSkillsFromDirResponse], error) {
-	dir := req.Msg.Directory
+	dir := req.Msg.GetDirectory()
 	if (dir == "" || dir == ".") && s.resolver != nil {
-		resolved, err := s.resolver.ResolveWorkDir(req.Msg.ProjectId)
+		resolved, err := s.resolver.ResolveWorkDir(req.Msg.GetProjectId())
 		if err != nil {
 			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("failed to resolve work directory: %w", err))
 		}
@@ -208,7 +208,7 @@ func (s *Server) SyncSkillsFromDir(ctx context.Context, req *connect.Request[tas
 		}
 
 		// Try to find existing skill with same name in this project.
-		existing, err := s.repo.FindByName(ctx, req.Msg.ProjectId, parsed.Name)
+		existing, err := s.repo.FindByName(ctx, req.Msg.GetProjectId(), parsed.Name)
 		if err == nil && existing != nil {
 			// Update existing skill.
 			existing.Description = parsed.Description
@@ -232,7 +232,7 @@ func (s *Server) SyncSkillsFromDir(ctx context.Context, req *connect.Request[tas
 			now := time.Now()
 			sk := &Skill{
 				ID:                     ulid.Make().String(),
-				ProjectID:              req.Msg.ProjectId,
+				ProjectID:              req.Msg.GetProjectId(),
 				Name:                   parsed.Name,
 				Description:            parsed.Description,
 				Content:                parsed.Content,

@@ -48,7 +48,7 @@ func (o *Orchestrator) Start(ctx context.Context) {
 			if !ok {
 				return
 			}
-			switch event.Type {
+			switch event.GetType() {
 			case taskguildv1.EventType_EVENT_TYPE_TASK_CREATED,
 				taskguildv1.EventType_EVENT_TYPE_TASK_STATUS_CHANGED:
 				o.handleTaskEvent(ctx, event)
@@ -60,9 +60,9 @@ func (o *Orchestrator) Start(ctx context.Context) {
 }
 
 func (o *Orchestrator) handleTaskEvent(ctx context.Context, event *taskguildv1.Event) {
-	t, err := o.taskRepo.Get(ctx, event.ResourceId)
+	t, err := o.taskRepo.Get(ctx, event.GetResourceId())
 	if err != nil {
-		slog.Error("orchestrator: failed to get task", "task_id", event.ResourceId, "error", err)
+		slog.Error("orchestrator: failed to get task", "task_id", event.GetResourceId(), "error", err)
 		return
 	}
 
@@ -141,15 +141,15 @@ func (o *Orchestrator) handleTaskEvent(ctx context.Context, event *taskguildv1.E
 // manual status change or resume.
 func (o *Orchestrator) handleInteractionCreated(ctx context.Context, event *taskguildv1.Event) {
 	// The event's ResourceId is the interaction ID; task_id is in metadata.
-	taskID := event.Metadata["task_id"]
+	taskID := event.GetMetadata()["task_id"]
 	if taskID == "" {
 		return
 	}
 
 	// Only react to user-sent comments, not agent-created interactions
 	// (permission requests, questions, etc.).
-	interProto := interaction.UnmarshalInteractionPayload(event.Payload)
-	if interProto == nil || interProto.Type != taskguildv1.InteractionType_INTERACTION_TYPE_USER_MESSAGE {
+	interProto := interaction.UnmarshalInteractionPayload(event.GetPayload())
+	if interProto == nil || interProto.GetType() != taskguildv1.InteractionType_INTERACTION_TYPE_USER_MESSAGE {
 		return
 	}
 

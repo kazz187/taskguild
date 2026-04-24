@@ -96,12 +96,12 @@ func TestPushOutput_DeliveredToSubscriber(t *testing.T) {
 	b.PushOutput("req-1", makeEntries("line1"))
 
 	evt := receiveWithTimeout(t, ch, time.Second)
-	out, ok := evt.Event.(*taskguildv1.ScriptExecutionEvent_Output)
+	out, ok := evt.GetEvent().(*taskguildv1.ScriptExecutionEvent_Output)
 	if !ok {
 		t.Fatal("expected output event")
 	}
-	if len(out.Output.Entries) != 1 || out.Output.Entries[0].Text != "line1" {
-		t.Fatalf("unexpected entry: %v", out.Output.Entries)
+	if len(out.Output.GetEntries()) != 1 || out.Output.GetEntries()[0].GetText() != "line1" {
+		t.Fatalf("unexpected entry: %v", out.Output.GetEntries())
 	}
 }
 
@@ -118,12 +118,12 @@ func TestPushOutput_DeliveredToMultipleSubscribers(t *testing.T) {
 
 	for i, ch := range []<-chan *taskguildv1.ScriptExecutionEvent{ch1, ch2} {
 		evt := receiveWithTimeout(t, ch, time.Second)
-		out, ok := evt.Event.(*taskguildv1.ScriptExecutionEvent_Output)
+		out, ok := evt.GetEvent().(*taskguildv1.ScriptExecutionEvent_Output)
 		if !ok {
 			t.Fatalf("subscriber %d: expected output event", i)
 		}
-		if out.Output.Entries[0].Text != "hello" {
-			t.Fatalf("subscriber %d: unexpected text %q", i, out.Output.Entries[0].Text)
+		if out.Output.GetEntries()[0].GetText() != "hello" {
+			t.Fatalf("subscriber %d: unexpected text %q", i, out.Output.GetEntries()[0].GetText())
 		}
 	}
 }
@@ -144,7 +144,7 @@ func TestPushOutput_IgnoredAfterComplete(t *testing.T) {
 	// Subscribe again - should only see the completion event, not "late"
 	ch2, _ := b.Subscribe("req-1")
 	evt := receiveWithTimeout(t, ch2, time.Second)
-	if _, ok := evt.Event.(*taskguildv1.ScriptExecutionEvent_Complete); !ok {
+	if _, ok := evt.GetEvent().(*taskguildv1.ScriptExecutionEvent_Complete); !ok {
 		t.Fatal("expected only completion event, got something else")
 	}
 	expectClosed(t, ch2, time.Second)
@@ -162,11 +162,11 @@ func TestCompleteExecution_DeliveredAndChannelClosed(t *testing.T) {
 	b.CompleteExecution("req-1", true, 0, nil, "", false)
 
 	evt := receiveWithTimeout(t, ch, time.Second)
-	comp, ok := evt.Event.(*taskguildv1.ScriptExecutionEvent_Complete)
+	comp, ok := evt.GetEvent().(*taskguildv1.ScriptExecutionEvent_Complete)
 	if !ok {
 		t.Fatal("expected complete event")
 	}
-	if !comp.Complete.Success {
+	if !comp.Complete.GetSuccess() {
 		t.Fatal("expected success=true")
 	}
 
@@ -183,14 +183,14 @@ func TestCompleteExecution_FieldsStoredCorrectly(t *testing.T) {
 		t.Fatalf("expected 1 execution, got %d", len(execs))
 	}
 	e := execs[0]
-	if e.Success {
+	if e.GetSuccess() {
 		t.Error("expected success=false")
 	}
-	if e.ExitCode != 42 {
-		t.Errorf("expected exitCode=42, got %d", e.ExitCode)
+	if e.GetExitCode() != 42 {
+		t.Errorf("expected exitCode=42, got %d", e.GetExitCode())
 	}
-	if e.ErrorMessage != "something failed" {
-		t.Errorf("expected errorMessage=%q, got %q", "something failed", e.ErrorMessage)
+	if e.GetErrorMessage() != "something failed" {
+		t.Errorf("expected errorMessage=%q, got %q", "something failed", e.GetErrorMessage())
 	}
 }
 
@@ -210,12 +210,12 @@ func TestSubscribe_LateJoinerReceivesBufferedEvents(t *testing.T) {
 
 	for _, expected := range []string{"line1", "line2", "line3"} {
 		evt := receiveWithTimeout(t, ch, time.Second)
-		out, ok := evt.Event.(*taskguildv1.ScriptExecutionEvent_Output)
+		out, ok := evt.GetEvent().(*taskguildv1.ScriptExecutionEvent_Output)
 		if !ok {
 			t.Fatalf("expected output event for %q", expected)
 		}
-		if out.Output.Entries[0].Text != expected {
-			t.Errorf("expected %q, got %q", expected, out.Output.Entries[0].Text)
+		if out.Output.GetEntries()[0].GetText() != expected {
+			t.Errorf("expected %q, got %q", expected, out.Output.GetEntries()[0].GetText())
 		}
 	}
 }
@@ -231,13 +231,13 @@ func TestSubscribe_CompletedExecution(t *testing.T) {
 
 	// Should receive output event
 	evt1 := receiveWithTimeout(t, ch, time.Second)
-	if _, ok := evt1.Event.(*taskguildv1.ScriptExecutionEvent_Output); !ok {
+	if _, ok := evt1.GetEvent().(*taskguildv1.ScriptExecutionEvent_Output); !ok {
 		t.Fatal("expected output event")
 	}
 
 	// Should receive complete event
 	evt2 := receiveWithTimeout(t, ch, time.Second)
-	if _, ok := evt2.Event.(*taskguildv1.ScriptExecutionEvent_Complete); !ok {
+	if _, ok := evt2.GetEvent().(*taskguildv1.ScriptExecutionEvent_Complete); !ok {
 		t.Fatal("expected complete event")
 	}
 
@@ -300,7 +300,7 @@ func TestListExecutions_ActiveAndCompleted(t *testing.T) {
 
 	var active, completed int
 	for _, e := range execs {
-		if e.Completed {
+		if e.GetCompleted() {
 			completed++
 		} else {
 			active++

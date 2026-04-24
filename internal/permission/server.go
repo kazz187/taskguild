@@ -49,7 +49,7 @@ func (s *Server) notifyChange(projectID string) {
 
 // GetPermissions returns the permission set for a project.
 func (s *Server) GetPermissions(ctx context.Context, req *connect.Request[taskguildv1.GetPermissionsRequest]) (*connect.Response[taskguildv1.GetPermissionsResponse], error) {
-	ps, err := s.repo.Get(ctx, req.Msg.ProjectId)
+	ps, err := s.repo.Get(ctx, req.Msg.GetProjectId())
 	if err != nil {
 		return nil, err
 	}
@@ -61,10 +61,10 @@ func (s *Server) GetPermissions(ctx context.Context, req *connect.Request[taskgu
 // UpdatePermissions replaces the full permission set for a project.
 func (s *Server) UpdatePermissions(ctx context.Context, req *connect.Request[taskguildv1.UpdatePermissionsRequest]) (*connect.Response[taskguildv1.UpdatePermissionsResponse], error) {
 	ps := &PermissionSet{
-		ProjectID: req.Msg.ProjectId,
-		Allow:     dedup(req.Msg.Allow),
-		Ask:       dedup(req.Msg.Ask),
-		Deny:      dedup(req.Msg.Deny),
+		ProjectID: req.Msg.GetProjectId(),
+		Allow:     dedup(req.Msg.GetAllow()),
+		Ask:       dedup(req.Msg.GetAsk()),
+		Deny:      dedup(req.Msg.GetDeny()),
 		UpdatedAt: time.Now(),
 	}
 	if err := s.repo.Upsert(ctx, ps); err != nil {
@@ -79,9 +79,9 @@ func (s *Server) UpdatePermissions(ctx context.Context, req *connect.Request[tas
 // SyncPermissionsFromDir reads .claude/settings.json from the given directory
 // and merges its permission rules into the stored set using union strategy.
 func (s *Server) SyncPermissionsFromDir(ctx context.Context, req *connect.Request[taskguildv1.SyncPermissionsFromDirRequest]) (*connect.Response[taskguildv1.SyncPermissionsFromDirResponse], error) {
-	dir := req.Msg.Directory
+	dir := req.Msg.GetDirectory()
 	if (dir == "" || dir == ".") && s.resolver != nil {
-		resolved, err := s.resolver.ResolveWorkDir(req.Msg.ProjectId)
+		resolved, err := s.resolver.ResolveWorkDir(req.Msg.GetProjectId())
 		if err != nil {
 			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("failed to resolve work directory: %w", err))
 		}
@@ -99,7 +99,7 @@ func (s *Server) SyncPermissionsFromDir(ctx context.Context, req *connect.Reques
 
 	// If no local permissions found, return existing stored permissions as-is.
 	if len(localAllow) == 0 && len(localAsk) == 0 && len(localDeny) == 0 {
-		stored, err := s.repo.Get(ctx, req.Msg.ProjectId)
+		stored, err := s.repo.Get(ctx, req.Msg.GetProjectId())
 		if err != nil {
 			return nil, err
 		}
@@ -109,7 +109,7 @@ func (s *Server) SyncPermissionsFromDir(ctx context.Context, req *connect.Reques
 	}
 
 	// Get stored permissions and merge with local.
-	stored, err := s.repo.Get(ctx, req.Msg.ProjectId)
+	stored, err := s.repo.Get(ctx, req.Msg.GetProjectId())
 	if err != nil {
 		return nil, err
 	}

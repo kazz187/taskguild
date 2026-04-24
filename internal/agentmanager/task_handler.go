@@ -23,21 +23,21 @@ import (
 )
 
 func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1.AgentManagerSubscribeRequest], stream *connect.ServerStream[taskguildv1.AgentCommand]) error {
-	agentManagerID := req.Msg.AgentManagerId
+	agentManagerID := req.Msg.GetAgentManagerId()
 	if agentManagerID == "" {
 		return cerr.NewError(cerr.InvalidArgument, "agent_manager_id is required", nil).ConnectError()
 	}
 
-	projectName := req.Msg.ProjectName
-	activeTaskIDs := req.Msg.ActiveTaskIds
-	agentVersion := req.Msg.AgentVersion
+	projectName := req.Msg.GetProjectName()
+	activeTaskIDs := req.Msg.GetActiveTaskIds()
+	agentVersion := req.Msg.GetAgentVersion()
 	serverVersion := version.Short()
 
 	slog.Info("agent-manager connected",
 		"agent_manager_id", agentManagerID,
 		"agent_version", agentVersion,
 		"server_version", serverVersion,
-		"max_concurrent_tasks", req.Msg.MaxConcurrentTasks,
+		"max_concurrent_tasks", req.Msg.GetMaxConcurrentTasks(),
 		"project_name", projectName,
 		"active_tasks", len(activeTaskIDs),
 	)
@@ -56,7 +56,7 @@ func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1
 	// transient stream disconnection.
 	s.releaseAgentTasksExcept(ctx, agentManagerID, activeTaskIDs)
 
-	commandCh := s.registry.Register(agentManagerID, req.Msg.MaxConcurrentTasks, projectName, req.Msg.WorkDir)
+	commandCh := s.registry.Register(agentManagerID, req.Msg.GetMaxConcurrentTasks(), projectName, req.Msg.GetWorkDir())
 	defer func() {
 		wasActive := s.registry.UnregisterIfMatch(agentManagerID, commandCh)
 		if wasActive {
@@ -293,10 +293,10 @@ func (s *Server) sendPendingTasksToStream(ctx context.Context, projectName strin
 }
 
 func (s *Server) Heartbeat(ctx context.Context, req *connect.Request[taskguildv1.HeartbeatRequest]) (*connect.Response[taskguildv1.HeartbeatResponse], error) {
-	if req.Msg.AgentManagerId == "" {
+	if req.Msg.GetAgentManagerId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "agent_manager_id is required", nil).ConnectError()
 	}
-	if !s.registry.UpdateHeartbeat(req.Msg.AgentManagerId, req.Msg.ActiveTasks) {
+	if !s.registry.UpdateHeartbeat(req.Msg.GetAgentManagerId(), req.Msg.GetActiveTasks()) {
 		return nil, cerr.NewError(cerr.NotFound, "agent-manager not connected", nil).ConnectError()
 	}
 	return connect.NewResponse(&taskguildv1.HeartbeatResponse{}), nil
@@ -310,7 +310,7 @@ const (
 )
 
 func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[taskguildv1.ReportTaskResultRequest]) (*connect.Response[taskguildv1.ReportTaskResultResponse], error) {
-	t, err := s.taskRepo.Get(ctx, req.Msg.TaskId)
+	t, err := s.taskRepo.Get(ctx, req.Msg.GetTaskId())
 	if err != nil {
 		return nil, err
 	}
@@ -327,7 +327,7 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 			return nil, err
 		}
 		slog.Info("task already unassigned, updated metadata only", "task_id", t.ID)
-		s.emitResultLog(ctx, t, req.Msg.Summary, req.Msg.ErrorMessage)
+		s.emitResultLog(ctx, t, req.Msg.GetSummary(), req.Msg.GetErrorMessage())
 		return connect.NewResponse(&taskguildv1.ReportTaskResultResponse{}), nil
 	}
 
@@ -341,14 +341,14 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 
 	// Emit a chronological RESULT log entry (append-only).
 	// Result data is no longer stored in metadata to avoid overwrites.
-	s.emitResultLog(ctx, t, req.Msg.Summary, req.Msg.ErrorMessage)
+	s.emitResultLog(ctx, t, req.Msg.GetSummary(), req.Msg.GetErrorMessage())
 
 	eventMeta := map[string]string{
 		"project_id":  t.ProjectID,
 		"workflow_id": t.WorkflowID,
 	}
 
-	if req.Msg.ErrorMessage != "" {
+	if req.Msg.GetErrorMessage() != "" {
 		// If stopped by user, skip retry and go straight to UNASSIGNED.
 		if t.Metadata["_stopped_by_user"] == "true" {
 			slog.Info("task stopped by user, skipping retry",
@@ -568,12 +568,12 @@ func (s *Server) emitResultLog(ctx context.Context, t *task.Task, summary, errMs
 }
 
 func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1.ClaimTaskRequest]) (*connect.Response[taskguildv1.ClaimTaskResponse], error) {
-	if req.Msg.TaskId == "" || req.Msg.AgentManagerId == "" {
+	if req.Msg.GetTaskId() == "" || req.Msg.GetAgentManagerId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "task_id and agent_manager_id are required", nil).ConnectError()
 	}
 
 	// Pre-read the task to check worktree occupancy before claiming.
-	taskForCheck, err := s.taskRepo.Get(ctx, req.Msg.TaskId)
+	taskForCheck, err := s.taskRepo.Get(ctx, req.Msg.GetTaskId())
 	if err != nil {
 		return nil, cerr.ExtractConnectError(ctx, err)
 	}
@@ -608,10 +608,10 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 				Success: false,
 			}), nil
 		}
-		t, err = s.taskRepo.Claim(ctx, req.Msg.TaskId, req.Msg.AgentManagerId)
+		t, err = s.taskRepo.Claim(ctx, req.Msg.GetTaskId(), req.Msg.GetAgentManagerId())
 		mu.Unlock()
 	} else {
-		t, err = s.taskRepo.Claim(ctx, req.Msg.TaskId, req.Msg.AgentManagerId)
+		t, err = s.taskRepo.Claim(ctx, req.Msg.GetTaskId(), req.Msg.GetAgentManagerId())
 	}
 
 	if err != nil {
@@ -624,7 +624,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 	}
 
 	// Validate project name: if the agent declared a project, verify it matches.
-	if agentProject, ok := s.registry.GetProjectName(req.Msg.AgentManagerId); ok && agentProject != "" {
+	if agentProject, ok := s.registry.GetProjectName(req.Msg.GetAgentManagerId()); ok && agentProject != "" {
 		var taskProjectName string
 		if p, pErr := s.projectRepo.Get(ctx, t.ProjectID); pErr == nil {
 			taskProjectName = p.Name
@@ -921,7 +921,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		t.ID,
 		"",
 		map[string]string{
-			"agent_manager_id": req.Msg.AgentManagerId,
+			"agent_manager_id": req.Msg.GetAgentManagerId(),
 			"agent_config_id":  agentConfigID,
 			"project_id":       t.ProjectID,
 			"workflow_id":      t.WorkflowID,
@@ -930,7 +930,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 
 	slog.Info("agent claimed task",
 		"task_id", t.ID,
-		"agent_manager_id", req.Msg.AgentManagerId,
+		"agent_manager_id", req.Msg.GetAgentManagerId(),
 		"agent_config_id", agentConfigID,
 	)
 

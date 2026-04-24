@@ -101,7 +101,7 @@ func writeLocalClaudeSettings(path string, raw map[string]any, merged *v1.Claude
 
 	// Update only the settings fields (language, attribution).
 	if merged.Language != nil {
-		raw["language"] = *merged.Language
+		raw["language"] = merged.GetLanguage()
 	} else {
 		raw["language"] = nil
 	}
@@ -109,12 +109,12 @@ func writeLocalClaudeSettings(path string, raw map[string]any, merged *v1.Claude
 	if attr := merged.GetAttribution(); attr != nil {
 		attrMap := make(map[string]any)
 		if attr.Commit != nil {
-			attrMap["commit"] = *attr.Commit
+			attrMap["commit"] = attr.GetCommit()
 		} else {
 			attrMap["commit"] = nil
 		}
 		if attr.Pr != nil {
-			attrMap["pr"] = *attr.Pr
+			attrMap["pr"] = attr.GetPr()
 		} else {
 			attrMap["pr"] = nil
 		}

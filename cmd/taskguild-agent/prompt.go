@@ -98,8 +98,8 @@ func buildUserPromptWithImages(ctx context.Context, metadata map[string]string, 
 
 	// Build a map of image ID -> image proto for quick lookup.
 	imageMap := make(map[string]*v1.TaskImage)
-	for _, img := range listResp.Msg.Images {
-		imageMap[img.Id] = img
+	for _, img := range listResp.Msg.GetImages() {
+		imageMap[img.GetId()] = img
 	}
 
 	// Split the text by [Image#N] references and interleave with image blocks.
@@ -133,8 +133,8 @@ func buildUserPromptWithImages(ctx context.Context, metadata map[string]string, 
 					"type": "image",
 					"source": map[string]any{
 						"type":       "base64",
-						"media_type": imgResp.Msg.Image.MediaType,
-						"data":       base64.StdEncoding.EncodeToString(imgResp.Msg.Data),
+						"media_type": imgResp.Msg.GetImage().GetMediaType(),
+						"data":       base64.StdEncoding.EncodeToString(imgResp.Msg.GetData()),
 					},
 				})
 			} else {

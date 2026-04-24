@@ -176,25 +176,25 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 	inter := mock.interactions[0]
 
 	// Bash tools should have 3 options.
-	if len(inter.Options) != 3 {
-		t.Errorf("expected 3 options, got %d", len(inter.Options))
+	if len(inter.GetOptions()) != 3 {
+		t.Errorf("expected 3 options, got %d", len(inter.GetOptions()))
 	}
-	if inter.Options[0].Value != "allow" {
-		t.Errorf("expected first option 'allow', got %q", inter.Options[0].Value)
+	if inter.GetOptions()[0].GetValue() != "allow" {
+		t.Errorf("expected first option 'allow', got %q", inter.GetOptions()[0].GetValue())
 	}
-	if inter.Options[1].Value != "always_allow_command" {
-		t.Errorf("expected second option 'always_allow_command', got %q", inter.Options[1].Value)
+	if inter.GetOptions()[1].GetValue() != "always_allow_command" {
+		t.Errorf("expected second option 'always_allow_command', got %q", inter.GetOptions()[1].GetValue())
 	}
-	if inter.Options[2].Value != "deny" {
-		t.Errorf("expected third option 'deny', got %q", inter.Options[2].Value)
+	if inter.GetOptions()[2].GetValue() != "deny" {
+		t.Errorf("expected third option 'deny', got %q", inter.GetOptions()[2].GetValue())
 	}
 
 	// Verify metadata contains parsed command info.
-	if inter.Metadata == "" {
+	if inter.GetMetadata() == "" {
 		t.Fatal("expected metadata to be set")
 	}
 	var meta bashPermissionMetadata
-	if err := json.Unmarshal([]byte(inter.Metadata), &meta); err != nil {
+	if err := json.Unmarshal([]byte(inter.GetMetadata()), &meta); err != nil {
 		t.Fatalf("failed to parse metadata: %v", err)
 	}
 	if len(meta.ParsedCommands) != 2 {
@@ -252,19 +252,19 @@ func TestHandlePermissionRequest_NonBashToolOptions(t *testing.T) {
 	inter := mock.interactions[0]
 
 	// Non-Bash tools should have 2 options: Allow and Deny.
-	if len(inter.Options) != 2 {
-		t.Errorf("expected 2 options for non-Bash tool, got %d", len(inter.Options))
+	if len(inter.GetOptions()) != 2 {
+		t.Errorf("expected 2 options for non-Bash tool, got %d", len(inter.GetOptions()))
 	}
-	if inter.Options[0].Value != "allow" {
-		t.Errorf("expected first option 'allow', got %q", inter.Options[0].Value)
+	if inter.GetOptions()[0].GetValue() != "allow" {
+		t.Errorf("expected first option 'allow', got %q", inter.GetOptions()[0].GetValue())
 	}
-	if inter.Options[1].Value != "deny" {
-		t.Errorf("expected second option 'deny', got %q", inter.Options[1].Value)
+	if inter.GetOptions()[1].GetValue() != "deny" {
+		t.Errorf("expected second option 'deny', got %q", inter.GetOptions()[1].GetValue())
 	}
 
 	// Should have no metadata.
-	if inter.Metadata != "" {
-		t.Errorf("expected empty metadata for non-Bash tool, got %q", inter.Metadata)
+	if inter.GetMetadata() != "" {
+		t.Errorf("expected empty metadata for non-Bash tool, got %q", inter.GetMetadata())
 	}
 }
 
@@ -331,14 +331,14 @@ func TestHandlePermissionRequest_AlwaysAllowCommand(t *testing.T) {
 		t.Fatalf("expected 1 added permission, got %d", len(mock.addedPermissions))
 	}
 	perm := mock.addedPermissions[0]
-	if perm.Pattern != "npm test" {
-		t.Errorf("expected pattern 'npm test', got %q", perm.Pattern)
+	if perm.GetPattern() != "npm test" {
+		t.Errorf("expected pattern 'npm test', got %q", perm.GetPattern())
 	}
-	if perm.Type != "command" {
-		t.Errorf("expected type 'command', got %q", perm.Type)
+	if perm.GetType() != "command" {
+		t.Errorf("expected type 'command', got %q", perm.GetType())
 	}
-	if perm.ProjectName != "test-project" {
-		t.Errorf("expected project 'test-project', got %q", perm.ProjectName)
+	if perm.GetProjectName() != "test-project" {
+		t.Errorf("expected project 'test-project', got %q", perm.GetProjectName())
 	}
 }
 
@@ -420,11 +420,11 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_WithRedirects(t *testing.T) 
 
 	// Verify metadata includes redirect info.
 	inter := mock.interactions[0]
-	if inter.Metadata == "" {
+	if inter.GetMetadata() == "" {
 		t.Fatal("expected metadata to be set")
 	}
 	var meta bashPermissionMetadata
-	if err := json.Unmarshal([]byte(inter.Metadata), &meta); err != nil {
+	if err := json.Unmarshal([]byte(inter.GetMetadata()), &meta); err != nil {
 		t.Fatalf("failed to parse metadata: %v", err)
 	}
 	if len(meta.Redirects) != 1 {
@@ -464,11 +464,11 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_WithRedirects(t *testing.T) 
 	if len(mock.addedPermissions) != 2 {
 		t.Fatalf("expected 2 added permissions, got %d", len(mock.addedPermissions))
 	}
-	if mock.addedPermissions[0].Type != "command" {
-		t.Errorf("expected first permission type 'command', got %q", mock.addedPermissions[0].Type)
+	if mock.addedPermissions[0].GetType() != "command" {
+		t.Errorf("expected first permission type 'command', got %q", mock.addedPermissions[0].GetType())
 	}
-	if mock.addedPermissions[1].Type != "redirect" {
-		t.Errorf("expected second permission type 'redirect', got %q", mock.addedPermissions[1].Type)
+	if mock.addedPermissions[1].GetType() != "redirect" {
+		t.Errorf("expected second permission type 'redirect', got %q", mock.addedPermissions[1].GetType())
 	}
 }
 

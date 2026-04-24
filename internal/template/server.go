@@ -40,31 +40,31 @@ func (s *Server) CreateTemplate(ctx context.Context, req *connect.Request[taskgu
 	now := time.Now()
 	t := &Template{
 		ID:          ulid.Make().String(),
-		Name:        req.Msg.Name,
-		Description: req.Msg.Description,
-		EntityType:  req.Msg.EntityType,
+		Name:        req.Msg.GetName(),
+		Description: req.Msg.GetDescription(),
+		EntityType:  req.Msg.GetEntityType(),
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
 
-	switch req.Msg.EntityType {
+	switch req.Msg.GetEntityType() {
 	case "agent":
-		if req.Msg.AgentConfig == nil {
+		if req.Msg.GetAgentConfig() == nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("agent_config is required for entity_type=agent"))
 		}
-		t.AgentConfig = agentConfigFromProto(req.Msg.AgentConfig)
+		t.AgentConfig = agentConfigFromProto(req.Msg.GetAgentConfig())
 	case "skill":
-		if req.Msg.SkillConfig == nil {
+		if req.Msg.GetSkillConfig() == nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("skill_config is required for entity_type=skill"))
 		}
-		t.SkillConfig = skillConfigFromProto(req.Msg.SkillConfig)
+		t.SkillConfig = skillConfigFromProto(req.Msg.GetSkillConfig())
 	case "script":
-		if req.Msg.ScriptConfig == nil {
+		if req.Msg.GetScriptConfig() == nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("script_config is required for entity_type=script"))
 		}
-		t.ScriptConfig = scriptConfigFromProto(req.Msg.ScriptConfig)
+		t.ScriptConfig = scriptConfigFromProto(req.Msg.GetScriptConfig())
 	default:
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid entity_type: %s", req.Msg.EntityType))
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid entity_type: %s", req.Msg.GetEntityType()))
 	}
 
 	if err := s.repo.Create(ctx, t); err != nil {
@@ -77,7 +77,7 @@ func (s *Server) CreateTemplate(ctx context.Context, req *connect.Request[taskgu
 
 // GetTemplate retrieves a single template by ID.
 func (s *Server) GetTemplate(ctx context.Context, req *connect.Request[taskguildv1.GetTemplateRequest]) (*connect.Response[taskguildv1.GetTemplateResponse], error) {
-	t, err := s.repo.Get(ctx, req.Msg.Id)
+	t, err := s.repo.Get(ctx, req.Msg.GetId())
 	if err != nil {
 		return nil, err
 	}
@@ -89,13 +89,13 @@ func (s *Server) GetTemplate(ctx context.Context, req *connect.Request[taskguild
 // ListTemplates lists templates, optionally filtered by entity type.
 func (s *Server) ListTemplates(ctx context.Context, req *connect.Request[taskguildv1.ListTemplatesRequest]) (*connect.Response[taskguildv1.ListTemplatesResponse], error) {
 	limit, offset := int32(50), int32(0)
-	if req.Msg.Pagination != nil {
-		if req.Msg.Pagination.Limit > 0 {
-			limit = req.Msg.Pagination.Limit
+	if req.Msg.GetPagination() != nil {
+		if req.Msg.GetPagination().GetLimit() > 0 {
+			limit = req.Msg.GetPagination().GetLimit()
 		}
-		offset = req.Msg.Pagination.Offset
+		offset = req.Msg.GetPagination().GetOffset()
 	}
-	templates, total, err := s.repo.List(ctx, req.Msg.EntityType, int(limit), int(offset))
+	templates, total, err := s.repo.List(ctx, req.Msg.GetEntityType(), int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}
@@ -115,30 +115,30 @@ func (s *Server) ListTemplates(ctx context.Context, req *connect.Request[taskgui
 
 // UpdateTemplate updates an existing template.
 func (s *Server) UpdateTemplate(ctx context.Context, req *connect.Request[taskguildv1.UpdateTemplateRequest]) (*connect.Response[taskguildv1.UpdateTemplateResponse], error) {
-	t, err := s.repo.Get(ctx, req.Msg.Id)
+	t, err := s.repo.Get(ctx, req.Msg.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	if req.Msg.Name != "" {
-		t.Name = req.Msg.Name
+	if req.Msg.GetName() != "" {
+		t.Name = req.Msg.GetName()
 	}
-	if req.Msg.Description != "" {
-		t.Description = req.Msg.Description
+	if req.Msg.GetDescription() != "" {
+		t.Description = req.Msg.GetDescription()
 	}
 
 	switch t.EntityType {
 	case "agent":
-		if req.Msg.AgentConfig != nil {
-			t.AgentConfig = agentConfigFromProto(req.Msg.AgentConfig)
+		if req.Msg.GetAgentConfig() != nil {
+			t.AgentConfig = agentConfigFromProto(req.Msg.GetAgentConfig())
 		}
 	case "skill":
-		if req.Msg.SkillConfig != nil {
-			t.SkillConfig = skillConfigFromProto(req.Msg.SkillConfig)
+		if req.Msg.GetSkillConfig() != nil {
+			t.SkillConfig = skillConfigFromProto(req.Msg.GetSkillConfig())
 		}
 	case "script":
-		if req.Msg.ScriptConfig != nil {
-			t.ScriptConfig = scriptConfigFromProto(req.Msg.ScriptConfig)
+		if req.Msg.GetScriptConfig() != nil {
+			t.ScriptConfig = scriptConfigFromProto(req.Msg.GetScriptConfig())
 		}
 	}
 
@@ -153,7 +153,7 @@ func (s *Server) UpdateTemplate(ctx context.Context, req *connect.Request[taskgu
 
 // DeleteTemplate deletes a template by ID.
 func (s *Server) DeleteTemplate(ctx context.Context, req *connect.Request[taskguildv1.DeleteTemplateRequest]) (*connect.Response[taskguildv1.DeleteTemplateResponse], error) {
-	if err := s.repo.Delete(ctx, req.Msg.Id); err != nil {
+	if err := s.repo.Delete(ctx, req.Msg.GetId()); err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&taskguildv1.DeleteTemplateResponse{}), nil
@@ -166,18 +166,18 @@ func (s *Server) SaveAsTemplate(ctx context.Context, req *connect.Request[taskgu
 	var mainTemplate *Template
 	var dependentTemplates []*Template
 
-	switch req.Msg.EntityType {
+	switch req.Msg.GetEntityType() {
 	case "agent":
-		a, err := s.agentRepo.Get(ctx, req.Msg.EntityId)
+		a, err := s.agentRepo.Get(ctx, req.Msg.GetEntityId())
 		if err != nil {
 			return nil, err
 		}
 
-		templateName := req.Msg.TemplateName
+		templateName := req.Msg.GetTemplateName()
 		if templateName == "" {
 			templateName = a.Name
 		}
-		templateDesc := req.Msg.TemplateDescription
+		templateDesc := req.Msg.GetTemplateDescription()
 		if templateDesc == "" {
 			templateDesc = a.Description
 		}
@@ -203,7 +203,7 @@ func (s *Server) SaveAsTemplate(ctx context.Context, req *connect.Request[taskgu
 		}
 
 		// Save dependent skills as templates if requested.
-		if req.Msg.IncludeDependentSkills && len(a.Skills) > 0 {
+		if req.Msg.GetIncludeDependentSkills() && len(a.Skills) > 0 {
 			for _, skillName := range a.Skills {
 				sk, err := s.skillRepo.FindByName(ctx, a.ProjectID, skillName)
 				if err != nil {
@@ -237,16 +237,16 @@ func (s *Server) SaveAsTemplate(ctx context.Context, req *connect.Request[taskgu
 		}
 
 	case "skill":
-		sk, err := s.skillRepo.Get(ctx, req.Msg.EntityId)
+		sk, err := s.skillRepo.Get(ctx, req.Msg.GetEntityId())
 		if err != nil {
 			return nil, err
 		}
 
-		templateName := req.Msg.TemplateName
+		templateName := req.Msg.GetTemplateName()
 		if templateName == "" {
 			templateName = sk.Name
 		}
-		templateDesc := req.Msg.TemplateDescription
+		templateDesc := req.Msg.GetTemplateDescription()
 		if templateDesc == "" {
 			templateDesc = sk.Description
 		}
@@ -273,16 +273,16 @@ func (s *Server) SaveAsTemplate(ctx context.Context, req *connect.Request[taskgu
 		}
 
 	case "script":
-		sc, err := s.scriptRepo.Get(ctx, req.Msg.EntityId)
+		sc, err := s.scriptRepo.Get(ctx, req.Msg.GetEntityId())
 		if err != nil {
 			return nil, err
 		}
 
-		templateName := req.Msg.TemplateName
+		templateName := req.Msg.GetTemplateName()
 		if templateName == "" {
 			templateName = sc.Name
 		}
-		templateDesc := req.Msg.TemplateDescription
+		templateDesc := req.Msg.GetTemplateDescription()
 		if templateDesc == "" {
 			templateDesc = sc.Description
 		}
@@ -303,7 +303,7 @@ func (s *Server) SaveAsTemplate(ctx context.Context, req *connect.Request[taskgu
 		}
 
 	default:
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid entity_type: %s", req.Msg.EntityType))
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid entity_type: %s", req.Msg.GetEntityType()))
 	}
 
 	if err := s.repo.Create(ctx, mainTemplate); err != nil {
@@ -325,7 +325,7 @@ func (s *Server) SaveAsTemplate(ctx context.Context, req *connect.Request[taskgu
 // CreateFromTemplate instantiates a new entity in a project from a template.
 // For agent templates, optionally creates dependent skills from their templates.
 func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[taskguildv1.CreateFromTemplateRequest]) (*connect.Response[taskguildv1.CreateFromTemplateResponse], error) {
-	tmpl, err := s.repo.Get(ctx, req.Msg.TemplateId)
+	tmpl, err := s.repo.Get(ctx, req.Msg.GetTemplateId())
 	if err != nil {
 		return nil, err
 	}
@@ -338,8 +338,8 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 	switch tmpl.EntityType {
 	case "agent":
 		cfg := tmpl.AgentConfig
-		if req.Msg.AgentConfig != nil {
-			cfg = agentConfigFromProto(req.Msg.AgentConfig)
+		if req.Msg.GetAgentConfig() != nil {
+			cfg = agentConfigFromProto(req.Msg.GetAgentConfig())
 		}
 		if cfg == nil {
 			return nil, connect.NewError(connect.CodeInternal, errors.New("agent template has no config"))
@@ -347,7 +347,7 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 
 		a := &agent.Agent{
 			ID:              ulid.Make().String(),
-			ProjectID:       req.Msg.ProjectId,
+			ProjectID:       req.Msg.GetProjectId(),
 			Name:            cfg.Name,
 			Description:     cfg.Description,
 			Prompt:          cfg.Prompt,
@@ -367,10 +367,10 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 		createdEntityID = a.ID
 
 		// Create dependent skills from templates.
-		if req.Msg.CreateDependentSkills && len(cfg.Skills) > 0 {
+		if req.Msg.GetCreateDependentSkills() && len(cfg.Skills) > 0 {
 			for _, skillName := range cfg.Skills {
 				// Check if the skill already exists in the target project.
-				_, err := s.skillRepo.FindByName(ctx, req.Msg.ProjectId, skillName)
+				_, err := s.skillRepo.FindByName(ctx, req.Msg.GetProjectId(), skillName)
 				if err == nil {
 					// Skill already exists; skip.
 					continue
@@ -391,7 +391,7 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 				sc := skillTmpl.SkillConfig
 				sk := &skill.Skill{
 					ID:                     ulid.Make().String(),
-					ProjectID:              req.Msg.ProjectId,
+					ProjectID:              req.Msg.GetProjectId(),
 					Name:                   sc.Name,
 					Description:            sc.Description,
 					Content:                sc.Content,
@@ -416,8 +416,8 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 
 	case "skill":
 		cfg := tmpl.SkillConfig
-		if req.Msg.SkillConfig != nil {
-			cfg = skillConfigFromProto(req.Msg.SkillConfig)
+		if req.Msg.GetSkillConfig() != nil {
+			cfg = skillConfigFromProto(req.Msg.GetSkillConfig())
 		}
 		if cfg == nil {
 			return nil, connect.NewError(connect.CodeInternal, errors.New("skill template has no config"))
@@ -425,7 +425,7 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 
 		sk := &skill.Skill{
 			ID:                     ulid.Make().String(),
-			ProjectID:              req.Msg.ProjectId,
+			ProjectID:              req.Msg.GetProjectId(),
 			Name:                   cfg.Name,
 			Description:            cfg.Description,
 			Content:                cfg.Content,
@@ -447,8 +447,8 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 
 	case "script":
 		cfg := tmpl.ScriptConfig
-		if req.Msg.ScriptConfig != nil {
-			cfg = scriptConfigFromProto(req.Msg.ScriptConfig)
+		if req.Msg.GetScriptConfig() != nil {
+			cfg = scriptConfigFromProto(req.Msg.GetScriptConfig())
 		}
 		if cfg == nil {
 			return nil, connect.NewError(connect.CodeInternal, errors.New("script template has no config"))
@@ -456,7 +456,7 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 
 		sc := &script.Script{
 			ID:          ulid.Make().String(),
-			ProjectID:   req.Msg.ProjectId,
+			ProjectID:   req.Msg.GetProjectId(),
 			Name:        cfg.Name,
 			Description: cfg.Description,
 			Filename:    cfg.Filename,
@@ -510,15 +510,15 @@ func agentConfigFromProto(p *taskguildv1.AgentTemplateConfig) *AgentConfig {
 		return nil
 	}
 	return &AgentConfig{
-		Name:            p.Name,
-		Description:     p.Description,
-		Prompt:          p.Prompt,
-		Tools:           p.Tools,
-		DisallowedTools: p.DisallowedTools,
-		Model:           p.Model,
-		PermissionMode:  p.PermissionMode,
-		Skills:          p.Skills,
-		Memory:          p.Memory,
+		Name:            p.GetName(),
+		Description:     p.GetDescription(),
+		Prompt:          p.GetPrompt(),
+		Tools:           p.GetTools(),
+		DisallowedTools: p.GetDisallowedTools(),
+		Model:           p.GetModel(),
+		PermissionMode:  p.GetPermissionMode(),
+		Skills:          p.GetSkills(),
+		Memory:          p.GetMemory(),
 	}
 }
 
@@ -544,16 +544,16 @@ func skillConfigFromProto(p *taskguildv1.SkillTemplateConfig) *SkillConfig {
 		return nil
 	}
 	return &SkillConfig{
-		Name:                   p.Name,
-		Description:            p.Description,
-		Content:                p.Content,
-		DisableModelInvocation: p.DisableModelInvocation,
-		UserInvocable:          p.UserInvocable,
-		AllowedTools:           p.AllowedTools,
-		Model:                  p.Model,
-		Context:                p.Context,
-		Agent:                  p.Agent,
-		ArgumentHint:           p.ArgumentHint,
+		Name:                   p.GetName(),
+		Description:            p.GetDescription(),
+		Content:                p.GetContent(),
+		DisableModelInvocation: p.GetDisableModelInvocation(),
+		UserInvocable:          p.GetUserInvocable(),
+		AllowedTools:           p.GetAllowedTools(),
+		Model:                  p.GetModel(),
+		Context:                p.GetContext(),
+		Agent:                  p.GetAgent(),
+		ArgumentHint:           p.GetArgumentHint(),
 	}
 }
 
@@ -580,10 +580,10 @@ func scriptConfigFromProto(p *taskguildv1.ScriptTemplateConfig) *ScriptConfig {
 		return nil
 	}
 	return &ScriptConfig{
-		Name:        p.Name,
-		Description: p.Description,
-		Filename:    p.Filename,
-		Content:     p.Content,
+		Name:        p.GetName(),
+		Description: p.GetDescription(),
+		Filename:    p.GetFilename(),
+		Content:     p.GetContent(),
 	}
 }
 

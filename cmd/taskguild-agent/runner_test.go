@@ -39,7 +39,7 @@ func TestRunTask_PlanToDevelop(t *testing.T) {
 	tc.taskHandler.mu.Lock()
 	defer tc.taskHandler.mu.Unlock()
 	require.Len(t, tc.taskHandler.updateTaskStatusReqs, 1, "expected exactly one status transition")
-	assert.Equal(t, "Develop", tc.taskHandler.updateTaskStatusReqs[0].StatusId)
+	assert.Equal(t, "Develop", tc.taskHandler.updateTaskStatusReqs[0].GetStatusId())
 }
 
 // TestRunTask_DevelopToReview verifies transition from Develop to Review.
@@ -68,7 +68,7 @@ func TestRunTask_DevelopToReview(t *testing.T) {
 	tc.taskHandler.mu.Lock()
 	defer tc.taskHandler.mu.Unlock()
 	require.Len(t, tc.taskHandler.updateTaskStatusReqs, 1)
-	assert.Equal(t, "Review", tc.taskHandler.updateTaskStatusReqs[0].StatusId)
+	assert.Equal(t, "Review", tc.taskHandler.updateTaskStatusReqs[0].GetStatusId())
 }
 
 // TestRunTask_FullWorkflow_PlanDevelopReview verifies the complete 3-step
@@ -127,8 +127,8 @@ func TestRunTask_FullWorkflow_PlanDevelopReview(t *testing.T) {
 	tc.taskHandler.mu.Lock()
 	defer tc.taskHandler.mu.Unlock()
 	require.Len(t, tc.taskHandler.updateTaskStatusReqs, 2, "expected 2 status transitions")
-	assert.Equal(t, "Develop", tc.taskHandler.updateTaskStatusReqs[0].StatusId)
-	assert.Equal(t, "Review", tc.taskHandler.updateTaskStatusReqs[1].StatusId)
+	assert.Equal(t, "Develop", tc.taskHandler.updateTaskStatusReqs[0].GetStatusId())
+	assert.Equal(t, "Review", tc.taskHandler.updateTaskStatusReqs[1].GetStatusId())
 }
 
 // TestRunTask_InvalidTransitionRetry verifies that when the agent outputs an
@@ -166,7 +166,7 @@ func TestRunTask_InvalidTransitionRetry(t *testing.T) {
 	tc.taskHandler.mu.Lock()
 	defer tc.taskHandler.mu.Unlock()
 	require.Len(t, tc.taskHandler.updateTaskStatusReqs, 1)
-	assert.Equal(t, "Develop", tc.taskHandler.updateTaskStatusReqs[0].StatusId)
+	assert.Equal(t, "Develop", tc.taskHandler.updateTaskStatusReqs[0].GetStatusId())
 }
 
 // TestRunTask_AutoTransition_SingleTarget verifies that when the agent does
@@ -198,7 +198,7 @@ func TestRunTask_AutoTransition_SingleTarget(t *testing.T) {
 	tc.taskHandler.mu.Lock()
 	defer tc.taskHandler.mu.Unlock()
 	require.Len(t, tc.taskHandler.updateTaskStatusReqs, 1)
-	assert.Equal(t, "Develop", tc.taskHandler.updateTaskStatusReqs[0].StatusId)
+	assert.Equal(t, "Develop", tc.taskHandler.updateTaskStatusReqs[0].GetStatusId())
 }
 
 // TestRunTask_TerminalStatus verifies that when the task is at a terminal
@@ -288,11 +288,11 @@ NEXT_STATUS: Develop`
 	tc.taskHandler.mu.Lock()
 	defer tc.taskHandler.mu.Unlock()
 	require.Len(t, tc.taskHandler.createTaskReqs, 1, "expected one CreateTask call")
-	assert.Equal(t, "Implement authentication", tc.taskHandler.createTaskReqs[0].Title)
+	assert.Equal(t, "Implement authentication", tc.taskHandler.createTaskReqs[0].GetTitle())
 
 	// Verify status still transitioned
 	require.Len(t, tc.taskHandler.updateTaskStatusReqs, 1)
-	assert.Equal(t, "Develop", tc.taskHandler.updateTaskStatusReqs[0].StatusId)
+	assert.Equal(t, "Develop", tc.taskHandler.updateTaskStatusReqs[0].GetStatusId())
 }
 
 // TestRunTask_TaskDescriptionUpdate verifies that TASK_DESCRIPTION directives
@@ -334,8 +334,8 @@ NEXT_STATUS: Develop`
 	// Find the description update among all UpdateTask calls
 	var foundDesc bool
 	for _, req := range tc.taskHandler.updateTaskReqs {
-		if req.Description != "" {
-			assert.Equal(t, "This is the updated description with more details.", req.Description)
+		if req.GetDescription() != "" {
+			assert.Equal(t, "This is the updated description with more details.", req.GetDescription())
 			foundDesc = true
 			break
 		}
@@ -374,13 +374,13 @@ func TestRunTask_SessionPerStatusOnTransition(t *testing.T) {
 
 	// Verify global session_id is NOT written (only per-status keys).
 	for _, req := range tc.taskHandler.updateTaskReqs {
-		_, hasGlobal := req.Metadata["session_id"]
+		_, hasGlobal := req.GetMetadata()["session_id"]
 		assert.False(t, hasGlobal, "global session_id should not be written")
 	}
 
 	// Verify status transition still happened.
 	require.Len(t, tc.taskHandler.updateTaskStatusReqs, 1)
-	assert.Equal(t, "Review", tc.taskHandler.updateTaskStatusReqs[0].StatusId)
+	assert.Equal(t, "Review", tc.taskHandler.updateTaskStatusReqs[0].GetStatusId())
 }
 
 func TestResolveSession(t *testing.T) {
@@ -560,7 +560,7 @@ func TestRunTask_SessionSavedOnCancel(t *testing.T) {
 	// intermediate messages.
 	var savedSessionID bool
 	for _, req := range tc.taskHandler.updateTaskReqs {
-		if sid, ok := req.Metadata["session_id_Plan"]; ok && sid == "interrupted-session-id" {
+		if sid, ok := req.GetMetadata()["session_id_Plan"]; ok && sid == "interrupted-session-id" {
 			savedSessionID = true
 			break
 		}

@@ -62,7 +62,7 @@ func TestExecuteHooks_CreatePR(t *testing.T) {
 	var foundMetadata bool
 	for _, req := range tc.taskHandler.updateTaskReqs {
 		if req.Metadata != nil {
-			if url, ok := req.Metadata["pr_url"]; ok {
+			if url, ok := req.GetMetadata()["pr_url"]; ok {
 				assert.Equal(t, "https://github.com/test/repo/pull/42", url)
 				foundMetadata = true
 				break
@@ -316,5 +316,5 @@ func TestRunTask_WithAfterHooks(t *testing.T) {
 	tc.taskHandler.mu.Lock()
 	defer tc.taskHandler.mu.Unlock()
 	require.Len(t, tc.taskHandler.updateTaskStatusReqs, 1)
-	assert.Equal(t, "Review", tc.taskHandler.updateTaskStatusReqs[0].StatusId)
+	assert.Equal(t, "Review", tc.taskHandler.updateTaskStatusReqs[0].GetStatusId())
 }
