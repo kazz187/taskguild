@@ -277,51 +277,6 @@ var editTools = map[string]bool{
 	"NotebookEdit": true,
 }
 
-// buildPermissionUpdate constructs permission updates for the "always allow" action.
-// It prefers CLI-provided suggestions when available, falling back to a manually
-// constructed rule from the tool name and input.
-func buildPermissionUpdate(toolName string, input map[string]any, suggestions []*claudeagent.PermissionUpdate) []*claudeagent.PermissionUpdate {
-	// Prefer CLI suggestions: they contain the exact rule format the CLI expects.
-	if len(suggestions) > 0 {
-		var updates []*claudeagent.PermissionUpdate
-
-		for _, s := range suggestions {
-			if s.Type == claudeagent.PermissionUpdateAddRules &&
-				s.Behavior == claudeagent.PermissionBehaviorAllow {
-				cp := *s // copy
-				cp.Destination = claudeagent.PermissionDestinationLocalSettings
-				updates = append(updates, &cp)
-			}
-		}
-
-		if len(updates) > 0 {
-			return updates
-		}
-	}
-
-	// Fallback: build rule from tool name and input.
-	rule := &claudeagent.PermissionRuleValue{
-		ToolName: toolName,
-	}
-
-	// For Bash, include the command as ruleContent for a specific match.
-	if toolName == "Bash" {
-		if cmd, ok := input["command"]; ok {
-			if cmdStr, ok := cmd.(string); ok && cmdStr != "" {
-				rule.RuleContent = cmdStr
-			}
-		}
-	}
-
-	return []*claudeagent.PermissionUpdate{
-		{
-			Type:        claudeagent.PermissionUpdateAddRules,
-			Rules:       []*claudeagent.PermissionRuleValue{rule},
-			Behavior:    claudeagent.PermissionBehaviorAllow,
-			Destination: claudeagent.PermissionDestinationLocalSettings,
-		},
-	}
-}
 
 // handleAskUserQuestion processes the AskUserQuestion tool by presenting each question
 // as an INTERACTION_TYPE_QUESTION with selectable options. Returns PermissionResultAllow

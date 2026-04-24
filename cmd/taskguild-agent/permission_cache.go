@@ -2,14 +2,12 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
 
 	"connectrpc.com/connect"
 
-	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -91,34 +89,6 @@ func (c *permissionCache) AddAndSync(ctx context.Context, newRules []string) {
 	c.mu.Unlock()
 
 	slog.Info("permission cache: backend sync complete", "allow", len(merged.GetAllow()))
-}
-
-// extractRuleStrings converts PermissionUpdate objects into human-readable
-// rule strings matching the Claude Code settings format.
-//
-// Examples:
-//   - PermissionRuleValue{ToolName: "Read"}             → "Read"
-//   - PermissionRuleValue{ToolName: "Bash", RuleContent: "git *"} → "Bash(git *)"
-func extractRuleStrings(updates []*claudeagent.PermissionUpdate) []string {
-	var rules []string
-
-	for _, u := range updates {
-		for _, rule := range u.Rules {
-			rules = append(rules, ruleValueToString(rule))
-		}
-	}
-
-	return rules
-}
-
-// ruleValueToString converts a single PermissionRuleValue to the string format
-// used in .claude/settings.json: "ToolName" or "ToolName(ruleContent)".
-func ruleValueToString(rule *claudeagent.PermissionRuleValue) string {
-	if rule.RuleContent == "" {
-		return rule.ToolName
-	}
-
-	return fmt.Sprintf("%s(%s)", rule.ToolName, rule.RuleContent)
 }
 
 // unionDedupRules merges two string slices, removing duplicates while preserving order.

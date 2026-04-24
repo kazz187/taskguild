@@ -194,26 +194,6 @@ func applyHookMetadata(ctx context.Context, taskID string, output string, taskCl
 	}
 }
 
-// listLocalWorktrees returns directory names under {workDir}/.claude/worktrees/.
-func listLocalWorktrees(workDir string) []string {
-	dir := filepath.Join(workDir, ".claude", "worktrees")
-
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil
-	}
-
-	var names []string
-
-	for _, e := range entries {
-		if e.IsDir() {
-			names = append(names, e.Name())
-		}
-	}
-
-	return names
-}
-
 var slugMultiHyphen = regexp.MustCompile(`-{2,}`)
 
 // slugifyASCII extracts ASCII alphanumeric characters from a string, lowercased,

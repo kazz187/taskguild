@@ -266,16 +266,6 @@ func truncateText(s string, maxLen int) string {
 	return s[:maxLen-3] + "..."
 }
 
-// truncateLines returns the first few lines of a multi-line string.
-func truncateLines(s string, maxLines int) string {
-	lines := strings.SplitN(s, "\n", maxLines+1)
-	if len(lines) <= maxLines {
-		return s
-	}
-
-	return strings.Join(lines[:maxLines], "\n") + "\n..."
-}
-
 // handleExitPlanModeApproval intercepts ExitPlanMode via a PreToolUse hook.
 // It reads the plan content from the tool input or the plan file, creates an
 // interaction asking the user to approve or provide feedback, and blocks the
