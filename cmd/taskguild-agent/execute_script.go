@@ -53,7 +53,7 @@ func handleStopScript(cmd *v1.StopScriptCommand) {
 
 	if ok {
 		cancel()
-		slog.Info("script execution cancelled", "request_id", requestID)
+		slog.Info("script execution canceled", "request_id", requestID)
 	} else {
 		slog.Warn("script execution not found for stop", "request_id", requestID)
 	}
@@ -369,7 +369,7 @@ func streamOutput(
 	flushLogEntries(ctx, client, cfg, requestID, &chunk)
 
 	if ctx.Err() != nil {
-		slog.Warn("script output streaming cancelled by context", "request_id", requestID, "error", ctx.Err())
+		slog.Warn("script output streaming canceled by context", "request_id", requestID, "error", ctx.Err())
 	} else {
 		slog.Info("script output streaming finished", "request_id", requestID)
 	}

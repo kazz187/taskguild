@@ -2,8 +2,8 @@ package agentmanager
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
+	"strconv"
 
 	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
@@ -171,7 +171,7 @@ func (s *Server) ReportWorktreeDeleteResult(ctx context.Context, req *connect.Re
 			"project_id":    proj.ID,
 			"request_id":    req.Msg.RequestId,
 			"worktree_name": req.Msg.WorktreeName,
-			"success":       fmt.Sprintf("%v", req.Msg.Success),
+			"success":       strconv.FormatBool(req.Msg.Success),
 			"error_message": req.Msg.ErrorMessage,
 		},
 	)

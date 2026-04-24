@@ -148,8 +148,7 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 		{Id: "1", Pattern: "cd *", Type: "command"},
 	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	waiter := newInteractionWaiter()
 
 	// Run in goroutine since it blocks waiting for response.
@@ -230,8 +229,7 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 func TestHandlePermissionRequest_NonBashToolOptions(t *testing.T) {
 	mock := &mockAgentManagerClient{}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	waiter := newInteractionWaiter()
 
 	var wg conc.WaitGroup

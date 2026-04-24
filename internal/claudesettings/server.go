@@ -144,7 +144,7 @@ func readSettingsFromFile(path string) (*string, *Attribution, error) {
 		return nil, nil, readErr
 	}
 
-	var raw map[string]interface{}
+	var raw map[string]any
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return nil, nil, fmt.Errorf("invalid JSON in %s: %w", path, err)
 	}
@@ -157,7 +157,7 @@ func readSettingsFromFile(path string) (*string, *Attribution, error) {
 	}
 
 	var attr *Attribution
-	if attrRaw, ok := raw["attribution"].(map[string]interface{}); ok {
+	if attrRaw, ok := raw["attribution"].(map[string]any); ok {
 		attr = &Attribution{}
 		if v, exists := attrRaw["commit"]; exists {
 			if s, ok := v.(string); ok {

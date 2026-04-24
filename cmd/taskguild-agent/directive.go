@@ -39,12 +39,12 @@ func parseCreateTasks(resultText string) []createTaskDirective {
 			break
 		}
 		afterStart := remaining[startIdx+len("CREATE_TASK_START"):]
-		endIdx := strings.Index(afterStart, "CREATE_TASK_END")
-		if endIdx == -1 {
+		before, after, ok := strings.Cut(afterStart, "CREATE_TASK_END")
+		if !ok {
 			break
 		}
-		body := afterStart[:endIdx]
-		remaining = afterStart[endIdx+len("CREATE_TASK_END"):]
+		body := before
+		remaining = after
 
 		// Trim leading/trailing newlines from the body.
 		body = strings.TrimLeft(body, "\r\n")
@@ -218,8 +218,8 @@ func parseNextStatus(resultText string) string {
 	// Scan from the end to find the last NEXT_STATUS directive.
 	for i := len(lines) - 1; i >= 0; i-- {
 		line := strings.TrimSpace(lines[i])
-		if strings.HasPrefix(line, "NEXT_STATUS:") {
-			return strings.TrimSpace(strings.TrimPrefix(line, "NEXT_STATUS:"))
+		if after, ok := strings.CutPrefix(line, "NEXT_STATUS:"); ok {
+			return strings.TrimSpace(after)
 		}
 	}
 	return ""
@@ -301,7 +301,7 @@ type transitionEntry struct {
 func parseAvailableTransitions(metadata map[string]string) ([]transitionEntry, error) {
 	transitionsJSON := metadata["_available_transitions"]
 	if transitionsJSON == "" {
-		return nil, fmt.Errorf("no available transitions in metadata")
+		return nil, errors.New("no available transitions in metadata")
 	}
 	var raw []transitionEntry
 	if err := json.Unmarshal([]byte(transitionsJSON), &raw); err != nil {
@@ -316,7 +316,7 @@ func parseAvailableTransitions(metadata map[string]string) ([]transitionEntry, e
 		}
 	}
 	if len(transitions) == 0 {
-		return nil, fmt.Errorf("available transitions list is empty (after filtering self-transitions)")
+		return nil, errors.New("available transitions list is empty (after filtering self-transitions)")
 	}
 	return transitions, nil
 }
@@ -395,7 +395,7 @@ func handleStatusTransition(
 			nextStatusID = transitions[0].Name
 			logger.Info("no NEXT_STATUS found, auto-transitioning", "next_status", nextStatusID)
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-				fmt.Sprintf("Auto-transitioning to %s", nextStatusID), nil)
+				"Auto-transitioning to "+nextStatusID, nil)
 		} else {
 			return fmt.Errorf("no NEXT_STATUS found and %d transitions available (%s), cannot auto-transition", len(transitions), formatTransitionList(transitions))
 		}
@@ -421,12 +421,12 @@ func handleStatusTransition(
 
 	logger.Info("status transitioned", "next_status", nextStatusID)
 	tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-		fmt.Sprintf("Status transitioned to %s", nextStatusID), nil)
+		"Status transitioned to "+nextStatusID, nil)
 	return nil
 }
 
 // saveSessionIDBestEffort is like saveSessionID but falls back to a
-// background context when the original context is already cancelled
+// background context when the original context is already canceled
 // (e.g., user-stopped task). This ensures the session ID is persisted
 // even during shutdown.
 func saveSessionIDBestEffort(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, sessionID string, metadata map[string]string) {

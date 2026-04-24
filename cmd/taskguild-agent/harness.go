@@ -255,7 +255,7 @@ func runSkillHarness(
 	if result.Result != nil && result.Result.IsError {
 		logger.Error("skill harness returned error", "task_id", taskID, "result", result.Result.Result)
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_WARN,
-			fmt.Sprintf("Skill harness error: %s", result.Result.Result), nil)
+			"Skill harness error: "+result.Result.Result, nil)
 		return
 	}
 
@@ -269,7 +269,7 @@ func runSkillHarness(
 	} else {
 		logger.Info("skill harness completed with changes", "task_id", taskID)
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-			fmt.Sprintf("Skill harness completed\n\n%s", diff), nil)
+			"Skill harness completed\n\n"+diff, nil)
 	}
 }
 

@@ -2,6 +2,7 @@ package template
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -49,17 +50,17 @@ func (s *Server) CreateTemplate(ctx context.Context, req *connect.Request[taskgu
 	switch req.Msg.EntityType {
 	case "agent":
 		if req.Msg.AgentConfig == nil {
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("agent_config is required for entity_type=agent"))
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("agent_config is required for entity_type=agent"))
 		}
 		t.AgentConfig = agentConfigFromProto(req.Msg.AgentConfig)
 	case "skill":
 		if req.Msg.SkillConfig == nil {
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("skill_config is required for entity_type=skill"))
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("skill_config is required for entity_type=skill"))
 		}
 		t.SkillConfig = skillConfigFromProto(req.Msg.SkillConfig)
 	case "script":
 		if req.Msg.ScriptConfig == nil {
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("script_config is required for entity_type=script"))
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("script_config is required for entity_type=script"))
 		}
 		t.ScriptConfig = scriptConfigFromProto(req.Msg.ScriptConfig)
 	default:
@@ -341,7 +342,7 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 			cfg = agentConfigFromProto(req.Msg.AgentConfig)
 		}
 		if cfg == nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("agent template has no config"))
+			return nil, connect.NewError(connect.CodeInternal, errors.New("agent template has no config"))
 		}
 
 		a := &agent.Agent{
@@ -419,7 +420,7 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 			cfg = skillConfigFromProto(req.Msg.SkillConfig)
 		}
 		if cfg == nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("skill template has no config"))
+			return nil, connect.NewError(connect.CodeInternal, errors.New("skill template has no config"))
 		}
 
 		sk := &skill.Skill{
@@ -450,7 +451,7 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 			cfg = scriptConfigFromProto(req.Msg.ScriptConfig)
 		}
 		if cfg == nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("script template has no config"))
+			return nil, connect.NewError(connect.CodeInternal, errors.New("script template has no config"))
 		}
 
 		sc := &script.Script{

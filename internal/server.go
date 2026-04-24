@@ -95,8 +95,8 @@ func NewServer(
 
 // ListenAndServe starts the HTTP server. The provided context is used as the
 // base context for all incoming requests via http.Server.BaseContext. When ctx
-// is cancelled (e.g. on shutdown signal), all streaming RPC contexts are also
-// cancelled, allowing the server to shut down without waiting for streams.
+// is canceled (e.g. on shutdown signal), all streaming RPC contexts are also
+// canceled, allowing the server to shut down without waiting for streams.
 func (s *Server) ListenAndServe(ctx context.Context) error {
 	r := chi.NewRouter()
 	r.Route("/api", func(r chi.Router) {

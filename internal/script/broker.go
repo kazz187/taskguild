@@ -51,7 +51,7 @@ func NewScriptExecutionBroker() *ScriptExecutionBroker {
 }
 
 // StartCleanup starts a background goroutine that periodically removes
-// expired completed executions. It stops when the context is cancelled.
+// expired completed executions. It stops when the context is canceled.
 func (b *ScriptExecutionBroker) StartCleanup(ctx context.Context) {
 	var wg conc.WaitGroup
 	wg.Go(func() {
@@ -339,8 +339,8 @@ func (b *ScriptExecutionBroker) SetDraining(draining bool) {
 }
 
 // Drain blocks until all active executions have completed or the context
-// is cancelled (e.g. timeout). Must call SetDraining(true) before calling
-// Drain. Returns the context error if the context was cancelled before all
+// is canceled (e.g. timeout). Must call SetDraining(true) before calling
+// Drain. Returns the context error if the context was canceled before all
 // executions completed, or nil if all executions completed successfully.
 func (b *ScriptExecutionBroker) Drain(ctx context.Context) error {
 	b.mu.Lock()

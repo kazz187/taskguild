@@ -49,8 +49,8 @@ func syncClaudeSettings(ctx context.Context, client taskguildv1connect.AgentMana
 
 // readLocalClaudeSettings reads the settings fields from a .claude/settings.json file.
 // Returns nil values and an empty map if the file doesn't exist or has no settings.
-func readLocalClaudeSettings(path string) (language *string, attribution *v1.Attribution, raw map[string]interface{}) {
-	raw = make(map[string]interface{})
+func readLocalClaudeSettings(path string) (language *string, attribution *v1.Attribution, raw map[string]any) {
+	raw = make(map[string]any)
 
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -68,7 +68,7 @@ func readLocalClaudeSettings(path string) (language *string, attribution *v1.Att
 		}
 	}
 
-	if attrRaw, ok := raw["attribution"].(map[string]interface{}); ok {
+	if attrRaw, ok := raw["attribution"].(map[string]any); ok {
 		attribution = &v1.Attribution{}
 		if val, exists := attrRaw["commit"]; exists {
 			if s, ok := val.(string); ok {
@@ -87,9 +87,9 @@ func readLocalClaudeSettings(path string) (language *string, attribution *v1.Att
 
 // writeLocalClaudeSettings writes the merged settings back to settings.json,
 // preserving all other sections (permissions, env, hooks, etc.).
-func writeLocalClaudeSettings(path string, raw map[string]interface{}, merged *v1.ClaudeSettings) {
+func writeLocalClaudeSettings(path string, raw map[string]any, merged *v1.ClaudeSettings) {
 	if raw == nil {
-		raw = make(map[string]interface{})
+		raw = make(map[string]any)
 	}
 
 	// Ensure .claude directory exists.
@@ -107,7 +107,7 @@ func writeLocalClaudeSettings(path string, raw map[string]interface{}, merged *v
 	}
 
 	if attr := merged.GetAttribution(); attr != nil {
-		attrMap := make(map[string]interface{})
+		attrMap := make(map[string]any)
 		if attr.Commit != nil {
 			attrMap["commit"] = *attr.Commit
 		} else {

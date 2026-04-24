@@ -2,8 +2,8 @@ package agentmanager
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
+	"strconv"
 
 	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
@@ -65,7 +65,7 @@ func (s *Server) ReportGitPullMainResult(ctx context.Context, req *connect.Reque
 		map[string]string{
 			"project_id":    proj.ID,
 			"request_id":    req.Msg.RequestId,
-			"success":       fmt.Sprintf("%v", req.Msg.Success),
+			"success":       strconv.FormatBool(req.Msg.Success),
 			"output":        req.Msg.Output,
 			"error_message": req.Msg.ErrorMessage,
 		},

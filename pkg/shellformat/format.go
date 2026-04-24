@@ -137,10 +137,7 @@ func (f *formatter) writeIndent() {
 
 // availWidth returns the available width at the current indentation.
 func (f *formatter) availWidth() int {
-	w := f.maxW - f.indent*f.width
-	if w < 20 {
-		w = 20
-	}
+	w := max(f.maxW-f.indent*f.width, 20)
 	return w
 }
 

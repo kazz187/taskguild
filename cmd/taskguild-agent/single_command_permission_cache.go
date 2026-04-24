@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log/slog"
 	"regexp"
 	"strings"
@@ -30,7 +30,7 @@ func wildcardToRegex(pattern string) string {
 // Returns an error if the pattern is empty or the resulting regex is invalid.
 func compileWildcard(pattern string) (*regexp.Regexp, error) {
 	if pattern == "" {
-		return nil, fmt.Errorf("empty pattern")
+		return nil, errors.New("empty pattern")
 	}
 	return regexp.Compile(wildcardToRegex(pattern))
 }

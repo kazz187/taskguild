@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
+	"slices"
 	"time"
 
 	"connectrpc.com/connect"
@@ -199,9 +201,7 @@ func (s *Server) UpdateTask(ctx context.Context, req *connect.Request[taskguildv
 		if t.Metadata == nil {
 			t.Metadata = make(map[string]string)
 		}
-		for k, v := range req.Msg.Metadata {
-			t.Metadata[k] = v
-		}
+		maps.Copy(t.Metadata, req.Msg.Metadata)
 	}
 	if req.Msg.UseWorktree != nil {
 		t.UseWorktree = *req.Msg.UseWorktree
@@ -320,13 +320,7 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *connect.Request[task
 
 	// When force is false, enforce workflow transition rules.
 	if !req.Msg.Force {
-		allowed := false
-		for _, to := range currentStatus.TransitionsTo {
-			if to == req.Msg.StatusId {
-				allowed = true
-				break
-			}
-		}
+		allowed := slices.Contains(currentStatus.TransitionsTo, req.Msg.StatusId)
 		if !allowed {
 			return nil, cerr.NewError(
 				cerr.FailedPrecondition,

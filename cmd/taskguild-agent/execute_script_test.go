@@ -234,7 +234,7 @@ func TestStreamOutput_LargeOutput(t *testing.T) {
 	// Write many lines
 	var writerWg conc.WaitGroup
 	writerWg.Go(func() {
-		for i := 0; i < 100; i++ {
+		for range 100 {
 			stdoutW.WriteString("line of output\n")
 		}
 		stdoutW.Close()
@@ -396,18 +396,22 @@ func TestHandleExecuteScript_Success(t *testing.T) {
 	// Verify output was streamed
 	chunkEntries := mock.allChunkEntries()
 	var allText string
+	var allTextSb399 strings.Builder
 	for _, e := range chunkEntries {
-		allText += e.Text
+		allTextSb399.WriteString(e.Text)
 	}
+	allText += allTextSb399.String()
 	if !strings.Contains(allText, "hello") || !strings.Contains(allText, "world") {
 		t.Errorf("expected stdout to contain 'hello' and 'world', got: %q", allText)
 	}
 
 	// Verify full log in result
 	var resultText string
+	var resultTextSb408 strings.Builder
 	for _, e := range result.LogEntries {
-		resultText += e.Text
+		resultTextSb408.WriteString(e.Text)
 	}
+	resultText += resultTextSb408.String()
 	if !strings.Contains(resultText, "hello") || !strings.Contains(resultText, "world") {
 		t.Errorf("expected result log to contain 'hello' and 'world', got: %q", resultText)
 	}
@@ -453,11 +457,13 @@ func TestHandleExecuteScript_ScriptFails(t *testing.T) {
 
 	// Verify stderr was captured
 	var stderrText string
+	var stderrTextSb456 strings.Builder
 	for _, e := range mock.allChunkEntries() {
 		if e.Stream == v1.ScriptLogStream_SCRIPT_LOG_STREAM_STDERR {
-			stderrText += e.Text
+			stderrTextSb456.WriteString(e.Text)
 		}
 	}
+	stderrText += stderrTextSb456.String()
 	if !strings.Contains(stderrText, "failing") {
 		t.Errorf("expected stderr to contain 'failing', got: %q", stderrText)
 	}
@@ -549,7 +555,7 @@ func TestHandleExecuteScript_ParentContextCancelled(t *testing.T) {
 		t.Fatal("expected result to be reported")
 	}
 	if result.Success {
-		t.Error("expected success=false for cancelled script")
+		t.Error("expected success=false for canceled script")
 	}
 	if result.StoppedByUser {
 		t.Error("expected stoppedByUser=false for parent context cancellation (not user-initiated)")
@@ -652,7 +658,7 @@ func TestHandleExecuteScript_HotReloadDoesNotSetStoppedByUser(t *testing.T) {
 		t.Fatal("expected result to be reported")
 	}
 	if result.Success {
-		t.Error("expected success=false for cancelled script")
+		t.Error("expected success=false for canceled script")
 	}
 	if result.StoppedByUser {
 		t.Error("expected stoppedByUser=false for hot-reload cancellation")
@@ -675,8 +681,7 @@ func TestHandleExecuteScript_RunningScriptsTracked(t *testing.T) {
 		Filename:  "slow.sh",
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	started := make(chan struct{})
 	done := make(chan struct{})

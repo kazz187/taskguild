@@ -416,8 +416,8 @@ func parseSkillMDFile(filePath string, dirName string) (*parsedSkill, error) {
 				if value == "" {
 					currentListKey = "allowed-tools"
 				} else {
-					parts := strings.Split(value, ",")
-					for _, p := range parts {
+					parts := strings.SplitSeq(value, ",")
+					for p := range parts {
 						p = strings.TrimSpace(p)
 						if p != "" {
 							result.AllowedTools = append(result.AllowedTools, p)

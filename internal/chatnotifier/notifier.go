@@ -2,7 +2,6 @@ package chatnotifier
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -34,7 +33,7 @@ func New(eventBus *eventbus.Bus, interactionRepo interaction.Repository, taskRep
 }
 
 // Start subscribes to the event bus and creates notification interactions
-// for task status changes. It blocks until ctx is cancelled.
+// for task status changes. It blocks until ctx is canceled.
 func (n *Notifier) Start(ctx context.Context) {
 	subID, ch := n.eventBus.Subscribe(256)
 	defer n.eventBus.Unsubscribe(subID)
@@ -89,7 +88,7 @@ func (n *Notifier) handleTaskStatusChanged(ctx context.Context, event *taskguild
 		TaskID:      taskID,
 		Type:        interaction.TypeNotification,
 		Status:      interaction.StatusResponded,
-		Title:       fmt.Sprintf("Task status changed to %s", statusName),
+		Title:       "Task status changed to " + statusName,
 		CreatedAt:   now,
 		RespondedAt: &now,
 	}

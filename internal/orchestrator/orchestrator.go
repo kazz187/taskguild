@@ -33,7 +33,7 @@ func New(eventBus *eventbus.Bus, taskRepo task.Repository, workflowRepo workflow
 }
 
 // Start subscribes to the event bus and processes task lifecycle events.
-// It blocks until ctx is cancelled.
+// It blocks until ctx is canceled.
 func (o *Orchestrator) Start(ctx context.Context) {
 	subID, ch := o.eventBus.Subscribe(256)
 	defer o.eventBus.Unsubscribe(subID)

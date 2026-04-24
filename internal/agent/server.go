@@ -418,8 +418,8 @@ func parseAgentMDFile(filePath string) (*parsedAgent, error) {
 				if value == "" {
 					currentListKey = "tools"
 				} else {
-					parts := strings.Split(value, ",")
-					for _, p := range parts {
+					parts := strings.SplitSeq(value, ",")
+					for p := range parts {
 						p = strings.TrimSpace(p)
 						if p != "" {
 							result.Tools = append(result.Tools, p)
@@ -430,8 +430,8 @@ func parseAgentMDFile(filePath string) (*parsedAgent, error) {
 				if value == "" {
 					currentListKey = "disallowedTools"
 				} else {
-					parts := strings.Split(value, ",")
-					for _, p := range parts {
+					parts := strings.SplitSeq(value, ",")
+					for p := range parts {
 						p = strings.TrimSpace(p)
 						if p != "" {
 							result.DisallowedTools = append(result.DisallowedTools, p)
@@ -446,8 +446,8 @@ func parseAgentMDFile(filePath string) (*parsedAgent, error) {
 				if value == "" {
 					currentListKey = "skills"
 				} else {
-					parts := strings.Split(value, ",")
-					for _, p := range parts {
+					parts := strings.SplitSeq(value, ",")
+					for p := range parts {
 						p = strings.TrimSpace(p)
 						if p != "" {
 							result.Skills = append(result.Skills, p)

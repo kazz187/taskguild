@@ -90,7 +90,7 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 			opts.ForkSession = true
 		}
 
-		result, err := qr.RunQuerySync(hookCtx, h.Content, opts, workDir, taskID, fmt.Sprintf("hook_%s", h.Name))
+		result, err := qr.RunQuerySync(hookCtx, h.Content, opts, workDir, taskID, "hook_"+h.Name)
 		cancel()
 
 		if err != nil {
@@ -114,7 +114,7 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 		logger.Info("hook completed successfully", "name", h.Name)
 		if tl != nil {
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_HOOK, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-				fmt.Sprintf("Hook completed: %s", h.Name), nil)
+				"Hook completed: "+h.Name, nil)
 		}
 
 		// Parse TASK_METADATA directives from hook output and update the task.

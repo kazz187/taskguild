@@ -132,8 +132,8 @@ func buildAgentMDContent(ag *v1.AgentDefinition) string {
 // If the value contains newlines, it uses YAML block scalar (|) notation.
 func writeYAMLStringField(sb *strings.Builder, key, value string) {
 	if strings.Contains(value, "\n") {
-		sb.WriteString(fmt.Sprintf("%s: |\n", key))
-		for _, line := range strings.Split(value, "\n") {
+		sb.WriteString(key + ": |\n")
+		for line := range strings.SplitSeq(value, "\n") {
 			if line == "" {
 				sb.WriteString("\n")
 			} else {

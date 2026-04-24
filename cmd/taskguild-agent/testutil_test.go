@@ -182,7 +182,7 @@ type testInteractionHandler struct {
 	taskguildv1connect.UnimplementedInteractionServiceHandler
 }
 
-// SubscribeInteractions blocks until the context is cancelled (simulating an
+// SubscribeInteractions blocks until the context is canceled (simulating an
 // idle stream with no events).
 func (h *testInteractionHandler) SubscribeInteractions(ctx context.Context, req *connect.Request[v1.SubscribeInteractionsRequest], stream *connect.ServerStream[v1.InteractionEvent]) error {
 	<-ctx.Done()

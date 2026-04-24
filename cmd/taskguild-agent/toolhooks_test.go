@@ -49,14 +49,14 @@ func TestLogToolUse_StringToolResponseNotDoubleEncoded(t *testing.T) {
 	require.True(t, ok, "tool_output should be present")
 
 	assert.Equal(t, raw, out, "tool_output must be stored verbatim (no double encoding)")
-	assert.False(t, strings.Contains(out, `\u003c`), "tool_output must not unicode-escape `<`")
+	assert.NotContains(t, out, `\u003c`, "tool_output must not unicode-escape `<`")
 	// It must also not be wrapped in an extra pair of JSON quotes.
 	assert.False(t, strings.HasPrefix(out, `"`) && strings.HasSuffix(out, `"`),
 		"tool_output must not be wrapped in extra JSON quotes")
 }
 
 // TestLogToolUse_NonStringToolResponseMarshaled verifies that non-string
-// ToolResponse values are still json.Marshaled (the existing behaviour).
+// ToolResponse values are still json.Marshaled (the existing behavior).
 func TestLogToolUse_NonStringToolResponseMarshaled(t *testing.T) {
 	tc := newTestClients()
 	defer tc.Close()

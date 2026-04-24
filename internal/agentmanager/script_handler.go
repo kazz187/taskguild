@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -75,8 +76,8 @@ func (s *Server) ReportScriptExecutionResult(ctx context.Context, req *connect.R
 			"project_id":    proj.ID,
 			"request_id":    req.Msg.RequestId,
 			"script_id":     req.Msg.ScriptId,
-			"success":       fmt.Sprintf("%v", req.Msg.Success),
-			"exit_code":     fmt.Sprintf("%d", req.Msg.ExitCode),
+			"success":       strconv.FormatBool(req.Msg.Success),
+			"exit_code":     strconv.Itoa(int(req.Msg.ExitCode)),
 			"error_message": req.Msg.ErrorMessage,
 		},
 	)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -38,7 +39,7 @@ var scriptTracker struct {
 // userStoppedTasks tracks which tasks were explicitly stopped by the user
 // (via CancelTaskCommand) as opposed to system-initiated cancellations
 // (SIGINT/SIGTERM, task re-assignment). This prevents false "stopped by user"
-// reports when context is cancelled for non-user reasons.
+// reports when context is canceled for non-user reasons.
 var userStoppedTasks struct {
 	mu      sync.Mutex
 	stopped map[string]bool
@@ -86,7 +87,7 @@ func loadConfig() (*config, error) {
 	}
 	cfg.APIKey = os.Getenv("TASKGUILD_API_KEY")
 	if cfg.APIKey == "" {
-		return nil, fmt.Errorf("TASKGUILD_API_KEY is required")
+		return nil, errors.New("TASKGUILD_API_KEY is required")
 	}
 	if v := os.Getenv("TASKGUILD_AGENT_MANAGER_ID"); v != "" {
 		cfg.AgentManagerID = v
@@ -162,7 +163,7 @@ func runAgent() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// taskRootCtx is a separate context tree for tasks. Cancelling ctx
+	// taskRootCtx is a separate context tree for tasks. Canceling ctx
 	// (for subscribe loop teardown) does NOT cascade to running tasks,
 	// allowing them to finish during graceful hot-reload.
 	taskRootCtx, taskRootCancel := context.WithCancel(context.Background())
@@ -277,7 +278,7 @@ func runAgent() {
 	)
 	subscribeBackoff := subscribeInitialBackoff
 
-	// On the very first sync, honour the --override-agent-md flag.
+	// On the very first sync, honor the --override-agent-md flag.
 	firstSync := true
 
 	for {
@@ -329,7 +330,7 @@ func runAgent() {
 	if !rejectTasks.Load() {
 		mu.Lock()
 		for taskID, cancelFn := range activeTasks {
-			slog.Info("cancelling task", "task_id", taskID)
+			slog.Info("canceling task", "task_id", taskID)
 			cancelFn()
 		}
 		mu.Unlock()
@@ -446,7 +447,7 @@ func runSubscribeLoop(
 			mu.Lock()
 			if prevCancel, ok := activeTasks[taskID]; ok {
 				mu.Unlock()
-				slog.Info("task already active, cancelling previous run and re-claiming", "task_id", taskID)
+				slog.Info("task already active, canceling previous run and re-claiming", "task_id", taskID)
 				prevCancel()
 			} else {
 				mu.Unlock()
@@ -627,7 +628,7 @@ func runSubscribeLoop(
 			mu.Lock()
 			if prevCancel, ok := activeTasks[taskID]; ok {
 				mu.Unlock()
-				slog.Info("task already active, cancelling previous run for re-assignment", "task_id", taskID)
+				slog.Info("task already active, canceling previous run for re-assignment", "task_id", taskID)
 				prevCancel()
 			} else {
 				mu.Unlock()
@@ -690,7 +691,7 @@ func runSubscribeLoop(
 
 		default:
 			// Nil should be caught by the guard above; if it still reaches
-			// here, silently skip to avoid noisy logs from proxy artefacts.
+			// here, silently skip to avoid noisy logs from proxy artifacts.
 			if cmd.GetCommand() == nil {
 				continue
 			}
@@ -829,8 +830,8 @@ func handleListWorktrees(ctx context.Context, client taskguildv1connect.AgentMan
 		statusCmd := exec.CommandContext(ctx, "git", "status", "--porcelain")
 		statusCmd.Dir = wtDir
 		if out, err := statusCmd.Output(); err == nil {
-			lines := strings.Split(strings.TrimRight(string(out), "\n"), "\n")
-			for _, line := range lines {
+			lines := strings.SplitSeq(strings.TrimRight(string(out), "\n"), "\n")
+			for line := range lines {
 				// git status --porcelain format: "XY filename" (filename starts at position 3)
 				// Do not TrimSpace: the leading space is part of the status code format
 				// and trimming shifts the offset, corrupting the filename (e.g. ".claude/" → "claude/").
@@ -903,7 +904,7 @@ func handleDeleteWorktree(ctx context.Context, client taskguildv1connect.AgentMa
 			raw := strings.TrimRight(string(out), "\n")
 			if raw != "" {
 				hasNonClaudeChanges := false
-				for _, line := range strings.Split(raw, "\n") {
+				for line := range strings.SplitSeq(raw, "\n") {
 					// Do not TrimSpace: the leading space is part of the porcelain status code format
 					// and trimming shifts the offset, corrupting the filename (e.g. ".claude/" → "claude/").
 					if len(line) < 4 {

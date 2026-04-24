@@ -2,6 +2,7 @@ package clog
 
 import (
 	"context"
+	"maps"
 	"sync"
 )
 
@@ -96,9 +97,7 @@ func (c *ctxSlog) getAttributes() map[string]any {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	copied := make(map[string]any, len(c.attributes))
-	for k, v := range c.attributes {
-		copied[k] = v
-	}
+	maps.Copy(copied, c.attributes)
 	return copied
 }
 

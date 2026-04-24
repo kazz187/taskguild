@@ -58,8 +58,8 @@ func syncPermissions(ctx context.Context, client taskguildv1connect.AgentManager
 
 // readLocalPermissions reads the permissions section from a .claude/settings.json file.
 // Returns empty slices and an empty map if the file doesn't exist or has no permissions.
-func readLocalPermissions(path string) (allow, ask, deny []string, raw map[string]interface{}) {
-	raw = make(map[string]interface{})
+func readLocalPermissions(path string) (allow, ask, deny []string, raw map[string]any) {
+	raw = make(map[string]any)
 
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -76,7 +76,7 @@ func readLocalPermissions(path string) (allow, ask, deny []string, raw map[strin
 	if !ok {
 		return nil, nil, nil, raw
 	}
-	permsMap, ok := permsRaw.(map[string]interface{})
+	permsMap, ok := permsRaw.(map[string]any)
 	if !ok {
 		return nil, nil, nil, raw
 	}
@@ -89,9 +89,9 @@ func readLocalPermissions(path string) (allow, ask, deny []string, raw map[strin
 
 // writeLocalPermissions writes the merged permissions back to settings.json,
 // preserving all other sections (env, hooks, etc.).
-func writeLocalPermissions(path string, raw map[string]interface{}, merged *v1.PermissionSet) {
+func writeLocalPermissions(path string, raw map[string]any, merged *v1.PermissionSet) {
 	if raw == nil {
-		raw = make(map[string]interface{})
+		raw = make(map[string]any)
 	}
 
 	// Ensure .claude directory exists.
@@ -117,7 +117,7 @@ func writeLocalPermissions(path string, raw map[string]interface{}, merged *v1.P
 	}
 
 	// Update only the permissions section.
-	raw["permissions"] = map[string]interface{}{
+	raw["permissions"] = map[string]any{
 		"allow": allowList,
 		"ask":   askList,
 		"deny":  denyList,
@@ -137,11 +137,11 @@ func writeLocalPermissions(path string, raw map[string]interface{}, merged *v1.P
 }
 
 // toStringSlice converts an interface{} (expected to be []interface{}) to []string.
-func toStringSlice(v interface{}) []string {
+func toStringSlice(v any) []string {
 	if v == nil {
 		return nil
 	}
-	arr, ok := v.([]interface{})
+	arr, ok := v.([]any)
 	if !ok {
 		return nil
 	}

@@ -423,7 +423,7 @@ func runServer() {
 	<-ctx.Done()
 	slog.Info("shutting down server")
 
-	// Give active connections time to finish after stream contexts are cancelled.
+	// Give active connections time to finish after stream contexts are canceled.
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {

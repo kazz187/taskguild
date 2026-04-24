@@ -56,7 +56,7 @@ func (c *permissionCache) Check(toolName string, input map[string]any) bool {
 	return false
 }
 
-// AddAndSync adds new permission rules to the cache and synchronises them
+// AddAndSync adds new permission rules to the cache and synchronizes them
 // with the backend via the SyncPermissions RPC (union merge). The resulting
 // merged allow list from the backend replaces the local cache.
 func (c *permissionCache) AddAndSync(ctx context.Context, newRules []string) {

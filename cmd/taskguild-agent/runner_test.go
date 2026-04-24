@@ -514,7 +514,7 @@ func TestExtractSessionIDFromMessages(t *testing.T) {
 }
 
 // TestRunTask_SessionSavedOnCancel verifies that when a task is stopped
-// mid-turn (context cancelled before ResultMessage), the session ID is
+// mid-turn (context canceled before ResultMessage), the session ID is
 // still extracted from intermediate messages and saved to metadata.
 func TestRunTask_SessionSavedOnCancel(t *testing.T) {
 	tc := newTestClients()
@@ -525,7 +525,7 @@ func TestRunTask_SessionSavedOnCancel(t *testing.T) {
 
 	metadata := baseMetadata("Plan", `[{"name":"Develop"}]`)
 
-	// Simulate a cancelled turn: RunQuerySync returns with ctx.Canceled error
+	// Simulate a canceled turn: RunQuerySync returns with ctx.Canceled error
 	// but the QueryResult contains StreamEvent messages with session_id.
 	cancelledResult := &claudeagent.QueryResult{
 		Messages: []claudeagent.Message{

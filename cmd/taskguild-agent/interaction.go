@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"sync"
 	"time"
 
@@ -91,7 +93,7 @@ func (w *interactionWaiter) Deliver(inter *v1.Interaction) {
 // runInteractionListener subscribes to interaction events for a task and delivers
 // responded interactions to the waiter. It automatically reconnects on stream
 // errors with exponential backoff.
-// It returns only when ctx is cancelled (task finished).
+// It returns only when ctx is canceled (task finished).
 func runInteractionListener(ctx context.Context, interClient taskguildv1connect.InteractionServiceClient, taskID string, waiter *interactionWaiter) {
 	logger := clog.LoggerFromContext(ctx)
 
@@ -128,7 +130,7 @@ func runInteractionListener(ctx context.Context, interClient taskguildv1connect.
 }
 
 // runInteractionStream connects once and processes interaction events until
-// the stream ends or ctx is cancelled. Returns the stream error (if any).
+// the stream ends or ctx is canceled. Returns the stream error (if any).
 func runInteractionStream(ctx context.Context, interClient taskguildv1connect.InteractionServiceClient, taskID string, waiter *interactionWaiter) error {
 	logger := clog.LoggerFromContext(ctx)
 
@@ -181,7 +183,7 @@ func deliverInteraction(taskID string, inter *v1.Interaction, waiter *interactio
 // errWaitTimeout is returned by waitForUserResponse when the user does not
 // respond within waitForUserResponseTimeout. The caller should retry with a
 // prompt that explicitly asks for NEXT_STATUS.
-var errWaitTimeout = fmt.Errorf("user response timeout")
+var errWaitTimeout = errors.New("user response timeout")
 
 // waitForUserResponse creates a QUESTION interaction and waits for a response via the event stream.
 // If the user does not respond within waitForUserResponseTimeout, the interaction is expired
@@ -400,7 +402,7 @@ func handleAskUserQuestion(
 		select {
 		case <-ctx.Done():
 			waiter.Unregister(interactionID)
-			return claudeagent.PermissionResultDeny{Message: "context cancelled"}, nil
+			return claudeagent.PermissionResultDeny{Message: "context canceled"}, nil
 		case inter := <-ch:
 			waiter.Unregister(interactionID)
 			if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
@@ -430,7 +432,7 @@ func handleAskUserQuestion(
 			select {
 			case <-ctx.Done():
 				waiter.Unregister(followID)
-				return claudeagent.PermissionResultDeny{Message: "context cancelled"}, nil
+				return claudeagent.PermissionResultDeny{Message: "context canceled"}, nil
 			case inter := <-followCh:
 				waiter.Unregister(followID)
 				if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
@@ -446,9 +448,7 @@ func handleAskUserQuestion(
 
 	// Inject answers into the input and return as UpdatedInput.
 	updatedInput := make(map[string]any)
-	for k, v := range input {
-		updatedInput[k] = v
-	}
+	maps.Copy(updatedInput, input)
 	updatedInput["answers"] = answers
 
 	return claudeagent.PermissionResultAllow{
@@ -570,7 +570,7 @@ func handlePermissionRequest(
 		TaskId:      taskID,
 		AgentId:     agentID,
 		Type:        v1.InteractionType_INTERACTION_TYPE_PERMISSION_REQUEST,
-		Title:       fmt.Sprintf("Permission request: %s", toolName),
+		Title:       "Permission request: " + toolName,
 		Description: description,
 		Options:     options,
 		Metadata:    metadataJSON,
@@ -587,7 +587,7 @@ func handlePermissionRequest(
 
 	select {
 	case <-ctx.Done():
-		return claudeagent.PermissionResultDeny{Message: "context cancelled"}, nil
+		return claudeagent.PermissionResultDeny{Message: "context canceled"}, nil
 	case inter := <-ch:
 		if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
 			logger.Info("permission request expired", "tool", toolName)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"path/filepath"
 	"sort"
 	"sync"
@@ -103,9 +104,7 @@ func copyTask(t *task.Task) *task.Task {
 	cp := *t
 	if t.Metadata != nil {
 		cp.Metadata = make(map[string]string, len(t.Metadata))
-		for k, v := range t.Metadata {
-			cp.Metadata[k] = v
-		}
+		maps.Copy(cp.Metadata, t.Metadata)
 	}
 	return &cp
 }

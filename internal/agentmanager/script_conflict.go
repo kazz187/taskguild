@@ -2,8 +2,8 @@ package agentmanager
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
+	"strconv"
 	"time"
 
 	"connectrpc.com/connect"
@@ -87,7 +87,7 @@ func (s *Server) ReportScriptComparison(ctx context.Context, req *connect.Reques
 		map[string]string{
 			"project_id": proj.ID,
 			"request_id": req.Msg.RequestId,
-			"diff_count": fmt.Sprintf("%d", len(req.Msg.Diffs)),
+			"diff_count": strconv.Itoa(len(req.Msg.Diffs)),
 		},
 	)
 

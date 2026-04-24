@@ -2,6 +2,7 @@ package script
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -260,7 +261,7 @@ func (s *Server) SyncScriptsFromDir(ctx context.Context, req *connect.Request[ta
 // ExecuteScript triggers execution of a script on a connected agent-manager.
 func (s *Server) ExecuteScript(ctx context.Context, req *connect.Request[taskguildv1.ExecuteScriptRequest]) (*connect.Response[taskguildv1.ExecuteScriptResponse], error) {
 	if s.broker.IsDraining() {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("server is shutting down; cannot accept new script executions"))
+		return nil, connect.NewError(connect.CodeUnavailable, errors.New("server is shutting down; cannot accept new script executions"))
 	}
 
 	sc, err := s.repo.Get(ctx, req.Msg.ScriptId)
@@ -290,7 +291,7 @@ func (s *Server) ExecuteScript(ctx context.Context, req *connect.Request[taskgui
 func (s *Server) StopScriptExecution(ctx context.Context, req *connect.Request[taskguildv1.StopScriptExecutionRequest]) (*connect.Response[taskguildv1.StopScriptExecutionResponse], error) {
 	requestID := req.Msg.RequestId
 	if requestID == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("request_id is required"))
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("request_id is required"))
 	}
 
 	projectID := s.broker.GetProjectID(requestID)

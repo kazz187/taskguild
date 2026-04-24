@@ -61,7 +61,7 @@ func (r *fakeRepository) FindByName(_ context.Context, projectID, name string) (
 			return s, nil
 		}
 	}
-	return nil, fmt.Errorf("script not found")
+	return nil, errors.New("script not found")
 }
 
 func (r *fakeRepository) Update(_ context.Context, s *Script) error {
@@ -361,7 +361,7 @@ done:
 		taskguildv1.ScriptLogStream_SCRIPT_LOG_STREAM_STDERR,
 		taskguildv1.ScriptLogStream_SCRIPT_LOG_STREAM_STDOUT,
 	}
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		out, ok := events[i].Event.(*taskguildv1.ScriptExecutionEvent_Output)
 		if !ok {
 			t.Fatalf("event %d: expected output event", i)

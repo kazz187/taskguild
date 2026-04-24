@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -88,7 +89,7 @@ func (s *Server) ReportSkillComparison(ctx context.Context, req *connect.Request
 		map[string]string{
 			"project_id": proj.ID,
 			"request_id": req.Msg.RequestId,
-			"diff_count": fmt.Sprintf("%d", len(req.Msg.Diffs)),
+			"diff_count": strconv.Itoa(len(req.Msg.Diffs)),
 		},
 	)
 
@@ -312,7 +313,7 @@ func parseSkillMDContent(content string) (*parsedSkillMD, error) {
 				if value == "" {
 					currentListKey = "allowed-tools"
 				} else {
-					for _, p := range strings.Split(value, ",") {
+					for p := range strings.SplitSeq(value, ",") {
 						p = strings.TrimSpace(p)
 						if p != "" {
 							result.AllowedTools = append(result.AllowedTools, p)

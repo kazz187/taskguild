@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -143,7 +144,7 @@ func runTask(
 	}
 	defer afterHooks()
 
-	// Defense-in-depth: if context is cancelled by user stop, report
+	// Defense-in-depth: if context is canceled by user stop, report
 	// the cancellation with a fresh context so the RPC can still succeed.
 	// Only report "stopped by user" when the user explicitly stopped the task;
 	// system-initiated cancellations (e.g. task re-assignment after status
@@ -212,7 +213,7 @@ func runTask(
 
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_START, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 			fmt.Sprintf("Turn %d started", turn),
-			map[string]string{"turn": fmt.Sprintf("%d", turn), "claude_mode": turnMode})
+			map[string]string{"turn": strconv.Itoa(turn), "claude_mode": turnMode})
 		logger.Info("starting Claude CLI", "turn", turn, "session_id", sessionID, "claude_mode", turnMode)
 		logger.Debug("Claude SDK input", "turn", turn)
 		if turn == 0 {
@@ -259,11 +260,11 @@ func runTask(
 		if err != nil {
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_END, v1.TaskLogLevel_TASK_LOG_LEVEL_ERROR,
 				fmt.Sprintf("Turn %d error: %v", turn, err),
-				map[string]string{"turn": fmt.Sprintf("%d", turn), "claude_mode": endMode})
+				map[string]string{"turn": strconv.Itoa(turn), "claude_mode": endMode})
 		} else {
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_END, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Turn %d completed", turn),
-				map[string]string{"turn": fmt.Sprintf("%d", turn), "claude_mode": endMode})
+				map[string]string{"turn": strconv.Itoa(turn), "claude_mode": endMode})
 		}
 
 		// Save session ID for resume.
@@ -333,7 +334,7 @@ func runTask(
 			if consecutiveErrors >= maxConsecutiveErrors {
 				logger.Error("max consecutive errors reached, giving up")
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_ERROR, v1.TaskLogLevel_TASK_LOG_LEVEL_ERROR,
-					fmt.Sprintf("Max consecutive errors reached, giving up: %s", errMsg), nil)
+					"Max consecutive errors reached, giving up: "+errMsg, nil)
 				reportTaskResult(ctx, client, taskID, "", errMsg)
 				reportAgentStatus(ctx, client, agentManagerID, taskID, v1.AgentStatus_AGENT_STATUS_ERROR, errMsg)
 				return
@@ -373,7 +374,7 @@ func runTask(
 					"Task description updated",
 					map[string]string{
 						"directive_type": "TASK_DESCRIPTION",
-						"turn":           fmt.Sprintf("%d", turn),
+						"turn":           strconv.Itoa(turn),
 					})
 				// Emit a RESULT log so description updates appear in the chronological results timeline.
 				descPreview := newDesc
@@ -397,11 +398,11 @@ func runTask(
 				createTaskFromDirective(ctx, taskClient, taskID, metadata, d)
 				// Log the directive execution to timeline.
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_DIRECTIVE, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-					fmt.Sprintf("Task created: %s", d.Title),
+					"Task created: "+d.Title,
 					map[string]string{
 						"directive_type": "CREATE_TASK",
 						"task_title":     d.Title,
-						"turn":           fmt.Sprintf("%d", turn),
+						"turn":           strconv.Itoa(turn),
 					})
 			}
 		}
@@ -436,7 +437,7 @@ func runTask(
 					preview,
 					map[string]string{
 						"full_text": fullText,
-						"turn":      fmt.Sprintf("%d", turn),
+						"turn":      strconv.Itoa(turn),
 					})
 			}
 		}
@@ -447,11 +448,11 @@ func runTask(
 		if nextStatusID != "" {
 			// Log the NEXT_STATUS directive to timeline.
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_DIRECTIVE, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-				fmt.Sprintf("Status transition: %s", nextStatusID),
+				"Status transition: "+nextStatusID,
 				map[string]string{
 					"directive_type": "NEXT_STATUS",
 					"next_status":    nextStatusID,
-					"turn":           fmt.Sprintf("%d", turn),
+					"turn":           strconv.Itoa(turn),
 				})
 
 			// Validate the transition before reporting completion.
@@ -545,7 +546,7 @@ func runTask(
 			logger.Info("no NEXT_STATUS output, auto-transitioning (single transition available)",
 				"next_status_name", autoName, "turn", turn)
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_SYSTEM, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
-				fmt.Sprintf("No NEXT_STATUS output; auto-transitioning to %s", autoName), nil)
+				"No NEXT_STATUS output; auto-transitioning to "+autoName, nil)
 			if strings.EqualFold(autoName, metadata["_current_status_name"]) {
 				afterHooksExecuted = true
 			} else {
@@ -628,7 +629,7 @@ func runTask(
 func collectStatusSkills(metadata map[string]string) map[string]bool {
 	out := map[string]bool{}
 	if names := metadata["_skill_names"]; names != "" {
-		for _, n := range strings.Split(names, ",") {
+		for n := range strings.SplitSeq(names, ",") {
 			if n = strings.TrimSpace(n); n != "" {
 				out[n] = true
 			}

@@ -2,6 +2,7 @@ package singlecommandpermission
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -20,7 +21,7 @@ import (
 // It converts the wildcard to a regex and attempts to compile it.
 func validateWildcardPattern(pattern string) error {
 	if pattern == "" {
-		return fmt.Errorf("pattern must not be empty")
+		return errors.New("pattern must not be empty")
 	}
 	regex := wildcardToRegex(pattern)
 	if _, err := regexp.Compile(regex); err != nil {

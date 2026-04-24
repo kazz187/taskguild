@@ -2,6 +2,7 @@ package sentinel
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log/slog"
@@ -125,7 +126,7 @@ func Run(extraArgs ...string) {
 		os.Exit(1)
 	}
 	s.lastHash = initialHash
-	slog.Info("initial binary hash computed", "hash", fmt.Sprintf("%x", initialHash[:8]))
+	slog.Info("initial binary hash computed", "hash", hex.EncodeToString(initialHash[:8]))
 
 	// Set up OS signal handler.
 	sigCh := make(chan os.Signal, 1)
@@ -195,7 +196,7 @@ func (s *Sentinel) mainLoop(sigCh <-chan os.Signal, updateCh <-chan struct{}) {
 			// restart so the child can finish running scripts before exiting.
 			// If the child does not handle SIGUSR1 (e.g. old binary or
 			// taskguild-server), the default OS action terminates the process
-			// immediately — same as the previous SIGTERM behaviour.
+			// immediately — same as the previous SIGTERM behavior.
 			slog.Info("binary update detected, requesting graceful restart")
 			s.requestGracefulRestart(child)
 			select {
@@ -218,7 +219,7 @@ func (s *Sentinel) mainLoop(sigCh <-chan os.Signal, updateCh <-chan struct{}) {
 				s.hashMu.Lock()
 				s.lastHash = h
 				s.hashMu.Unlock()
-				slog.Info("new binary hash", "hash", fmt.Sprintf("%x", h[:8]))
+				slog.Info("new binary hash", "hash", hex.EncodeToString(h[:8]))
 			}
 			s.backoff = InitialBackoff
 
@@ -288,7 +289,7 @@ func (s *Sentinel) stopChild(cmd *exec.Cmd) {
 //
 // If the child does not handle SIGUSR1 (e.g. old binary or taskguild-server),
 // the default OS action is to terminate the process — which is equivalent to
-// the previous immediate-SIGTERM behaviour.
+// the previous immediate-SIGTERM behavior.
 func (s *Sentinel) requestGracefulRestart(cmd *exec.Cmd) {
 	if cmd == nil || cmd.Process == nil {
 		return
@@ -360,8 +361,8 @@ func (s *Sentinel) watchBinary(updateCh chan<- struct{}) {
 				s.hashMu.RUnlock()
 				if newHash != currentHash {
 					slog.Info("binary checksum changed",
-						"old_hash", fmt.Sprintf("%x", currentHash[:8]),
-						"new_hash", fmt.Sprintf("%x", newHash[:8]))
+						"old_hash", hex.EncodeToString(currentHash[:8]),
+						"new_hash", hex.EncodeToString(newHash[:8]))
 					// Non-blocking send.
 					select {
 					case updateCh <- struct{}{}:
@@ -414,8 +415,5 @@ func (s *Sentinel) sleepBackoff() {
 
 // increaseBackoff multiplies the backoff by the factor, capping at the maximum.
 func (s *Sentinel) increaseBackoff() {
-	s.backoff = time.Duration(float64(s.backoff) * BackoffFactor)
-	if s.backoff > MaxBackoff {
-		s.backoff = MaxBackoff
-	}
+	s.backoff = min(time.Duration(float64(s.backoff)*BackoffFactor), MaxBackoff)
 }

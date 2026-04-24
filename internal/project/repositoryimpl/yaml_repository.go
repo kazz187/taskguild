@@ -77,7 +77,7 @@ func (r *YAMLRepository) readAll(ctx context.Context) ([]*project.Project, error
 	}
 	projects := make([]*project.Project, 0, len(dirs))
 	for _, d := range dirs {
-		projectPath := fmt.Sprintf("%s/project.yaml", d)
+		projectPath := d + "/project.yaml"
 		data, err := r.storage.Read(ctx, projectPath)
 		if err != nil {
 			continue

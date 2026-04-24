@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -88,7 +89,7 @@ func (s *Server) ReportAgentComparison(ctx context.Context, req *connect.Request
 		map[string]string{
 			"project_id": proj.ID,
 			"request_id": req.Msg.RequestId,
-			"diff_count": fmt.Sprintf("%d", len(req.Msg.Diffs)),
+			"diff_count": strconv.Itoa(len(req.Msg.Diffs)),
 		},
 	)
 
@@ -282,38 +283,38 @@ func parseAgentMDContent(content string) (*parsedAgentMD, error) {
 	// Parse YAML frontmatter.
 	for i := 1; i < closingIdx; i++ {
 		line := lines[i]
-		if strings.HasPrefix(line, "name:") {
-			result.Name = strings.TrimSpace(strings.TrimPrefix(line, "name:"))
-		} else if strings.HasPrefix(line, "description:") {
-			result.Description = strings.TrimSpace(strings.TrimPrefix(line, "description:"))
-		} else if strings.HasPrefix(line, "tools:") {
-			toolsStr := strings.TrimSpace(strings.TrimPrefix(line, "tools:"))
-			for _, t := range strings.Split(toolsStr, ",") {
+		if after, ok := strings.CutPrefix(line, "name:"); ok {
+			result.Name = strings.TrimSpace(after)
+		} else if after, ok := strings.CutPrefix(line, "description:"); ok {
+			result.Description = strings.TrimSpace(after)
+		} else if after, ok := strings.CutPrefix(line, "tools:"); ok {
+			toolsStr := strings.TrimSpace(after)
+			for t := range strings.SplitSeq(toolsStr, ",") {
 				t = strings.TrimSpace(t)
 				if t != "" {
 					result.Tools = append(result.Tools, t)
 				}
 			}
-		} else if strings.HasPrefix(line, "disallowedTools:") {
-			toolsStr := strings.TrimSpace(strings.TrimPrefix(line, "disallowedTools:"))
-			for _, t := range strings.Split(toolsStr, ",") {
+		} else if after, ok := strings.CutPrefix(line, "disallowedTools:"); ok {
+			toolsStr := strings.TrimSpace(after)
+			for t := range strings.SplitSeq(toolsStr, ",") {
 				t = strings.TrimSpace(t)
 				if t != "" {
 					result.DisallowedTools = append(result.DisallowedTools, t)
 				}
 			}
-		} else if strings.HasPrefix(line, "model:") {
-			result.Model = strings.TrimSpace(strings.TrimPrefix(line, "model:"))
-		} else if strings.HasPrefix(line, "permissionMode:") {
-			result.PermissionMode = strings.TrimSpace(strings.TrimPrefix(line, "permissionMode:"))
-		} else if strings.HasPrefix(line, "memory:") {
-			result.Memory = strings.TrimSpace(strings.TrimPrefix(line, "memory:"))
+		} else if after, ok := strings.CutPrefix(line, "model:"); ok {
+			result.Model = strings.TrimSpace(after)
+		} else if after, ok := strings.CutPrefix(line, "permissionMode:"); ok {
+			result.PermissionMode = strings.TrimSpace(after)
+		} else if after, ok := strings.CutPrefix(line, "memory:"); ok {
+			result.Memory = strings.TrimSpace(after)
 		} else if strings.HasPrefix(line, "skills:") {
 			// YAML list follows on subsequent lines with "  - " prefix.
 			for j := i + 1; j < closingIdx; j++ {
 				skillLine := strings.TrimSpace(lines[j])
-				if strings.HasPrefix(skillLine, "- ") {
-					result.Skills = append(result.Skills, strings.TrimPrefix(skillLine, "- "))
+				if after, ok := strings.CutPrefix(skillLine, "- "); ok {
+					result.Skills = append(result.Skills, after)
 					i = j // skip parsed lines
 				} else {
 					break

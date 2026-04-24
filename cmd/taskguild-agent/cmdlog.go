@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -65,7 +66,7 @@ func newTurnLog(workDir, projectID, taskID, label string) *turnLog {
 	if entries, err := os.ReadDir(logDir); err == nil && len(entries) > maxLogFiles {
 		// Entries are sorted by name (timestamp-prefixed), so oldest are first.
 		toDelete := len(entries) - maxLogFiles
-		for i := 0; i < toDelete; i++ {
+		for i := range toDelete {
 			if entries[i].IsDir() {
 				continue
 			}
@@ -237,7 +238,7 @@ func runQuerySyncWithLog(
 	// Configure permission prompt tool name (matching RunQuery behavior).
 	if opts.CanUseTool != nil {
 		if opts.PermissionPromptToolName != "" {
-			return nil, fmt.Errorf("CanUseTool callback cannot be used with PermissionPromptToolName")
+			return nil, errors.New("CanUseTool callback cannot be used with PermissionPromptToolName")
 		}
 		opts.PermissionPromptToolName = "stdio"
 	}

@@ -137,7 +137,7 @@ func readSettingsPermissions(path string) (allow, ask, deny []string, err error)
 		return nil, nil, nil, readErr
 	}
 
-	var raw map[string]interface{}
+	var raw map[string]any
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return nil, nil, nil, fmt.Errorf("invalid JSON in %s: %w", path, err)
 	}
@@ -146,7 +146,7 @@ func readSettingsPermissions(path string) (allow, ask, deny []string, err error)
 	if !ok {
 		return nil, nil, nil, nil
 	}
-	permsMap, ok := permsRaw.(map[string]interface{})
+	permsMap, ok := permsRaw.(map[string]any)
 	if !ok {
 		return nil, nil, nil, nil
 	}
@@ -158,11 +158,11 @@ func readSettingsPermissions(path string) (allow, ask, deny []string, err error)
 }
 
 // toStringSlice converts an interface{} (expected to be []interface{} of strings) to []string.
-func toStringSlice(v interface{}) []string {
+func toStringSlice(v any) []string {
 	if v == nil {
 		return nil
 	}
-	arr, ok := v.([]interface{})
+	arr, ok := v.([]any)
 	if !ok {
 		return nil
 	}

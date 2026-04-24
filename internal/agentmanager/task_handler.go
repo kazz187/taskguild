@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"maps"
 	"strconv"
 	"strings"
 	"sync"
@@ -720,9 +721,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 
 	// Build enriched metadata with task info and available transitions.
 	enrichedMetadata := make(map[string]string)
-	for k, v := range t.Metadata {
-		enrichedMetadata[k] = v
-	}
+	maps.Copy(enrichedMetadata, t.Metadata)
 	enrichedMetadata["_task_title"] = t.Title
 	enrichedMetadata["_task_description"] = t.Description
 	enrichedMetadata["_project_id"] = t.ProjectID

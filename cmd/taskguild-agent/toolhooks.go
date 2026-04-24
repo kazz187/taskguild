@@ -74,7 +74,7 @@ func buildToolUseHooks(
 							if input.ToolResponse != nil {
 								if s, ok := input.ToolResponse.(string); ok {
 									// Try to parse as JSON and extract the "plan" field.
-									var obj map[string]interface{}
+									var obj map[string]any
 									if json.Unmarshal([]byte(s), &obj) == nil {
 										if plan, ok := obj["plan"].(string); ok {
 											planContent = plan
@@ -84,7 +84,7 @@ func buildToolUseHooks(
 									} else {
 										planContent = s
 									}
-								} else if m, ok := input.ToolResponse.(map[string]interface{}); ok {
+								} else if m, ok := input.ToolResponse.(map[string]any); ok {
 									if plan, ok := m["plan"].(string); ok {
 										planContent = plan
 									}
@@ -148,7 +148,7 @@ func logToolUse(tl *taskLogger, taskID string, input claudeagent.HookInput, isFa
 
 	// Serialize tool output/response.
 	// Note: input.ToolResponse is often already a JSON string (from Claude's raw
-	// tool result). Re-marshalling such a string would double-encode it —
+	// tool result). Re-marshaling such a string would double-encode it —
 	// wrapping the content in quotes and escaping inner characters (e.g. `<`
 	// becomes `\u003c`, newlines become literal `\n`). Detect that case and
 	// store the string as-is; only marshal non-string payloads.
@@ -189,15 +189,15 @@ func formatToolSummary(toolName string, toolInput map[string]any) string {
 	switch toolName {
 	case "Read":
 		if fp, ok := toolInput["file_path"].(string); ok {
-			return fmt.Sprintf("Read: %s", fp)
+			return "Read: " + fp
 		}
 	case "Write":
 		if fp, ok := toolInput["file_path"].(string); ok {
-			return fmt.Sprintf("Write: %s", fp)
+			return "Write: " + fp
 		}
 	case "Edit":
 		if fp, ok := toolInput["file_path"].(string); ok {
-			return fmt.Sprintf("Edit: %s", fp)
+			return "Edit: " + fp
 		}
 	case "Bash":
 		if cmd, ok := toolInput["command"].(string); ok {
@@ -205,11 +205,11 @@ func formatToolSummary(toolName string, toolInput map[string]any) string {
 			if len(cmd) > 80 {
 				cmd = cmd[:77] + "..."
 			}
-			return fmt.Sprintf("Bash: %s", cmd)
+			return "Bash: " + cmd
 		}
 	case "Glob":
 		if pattern, ok := toolInput["pattern"].(string); ok {
-			return fmt.Sprintf("Glob: %s", pattern)
+			return "Glob: " + pattern
 		}
 	case "Grep":
 		if pattern, ok := toolInput["pattern"].(string); ok {
@@ -225,21 +225,21 @@ func formatToolSummary(toolName string, toolInput map[string]any) string {
 		}
 	case "WebFetch":
 		if url, ok := toolInput["url"].(string); ok {
-			return fmt.Sprintf("WebFetch: %s", url)
+			return "WebFetch: " + url
 		}
 	case "Agent":
 		if desc, ok := toolInput["description"].(string); ok {
-			return fmt.Sprintf("Agent: %s", desc)
+			return "Agent: " + desc
 		}
 	case "TodoWrite":
 		return "TodoWrite"
 	case "NotebookEdit":
 		if nbPath, ok := toolInput["notebook_path"].(string); ok {
-			return fmt.Sprintf("NotebookEdit: %s", nbPath)
+			return "NotebookEdit: " + nbPath
 		}
 	case "Skill":
 		if skill, ok := toolInput["skill"].(string); ok {
-			return fmt.Sprintf("Skill /%s", skill)
+			return "Skill /" + skill
 		}
 	case "AskUserQuestion":
 		return "AskUserQuestion"
@@ -318,7 +318,7 @@ func handleExitPlanModeApproval(
 	case <-ctx.Done():
 		return claudeagent.HookOutput{
 			Decision: "block",
-			Reason:   "context cancelled while waiting for plan approval",
+			Reason:   "context canceled while waiting for plan approval",
 		}, nil
 	case inter := <-ch:
 		if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
@@ -344,7 +344,7 @@ func handleExitPlanModeApproval(
 
 		return claudeagent.HookOutput{
 			Decision: "block",
-			Reason:   fmt.Sprintf("Plan not approved. User feedback: %s", feedback),
+			Reason:   "Plan not approved. User feedback: " + feedback,
 		}, nil
 
 	case msg := <-waiter.UserMessages():
@@ -358,7 +358,7 @@ func handleExitPlanModeApproval(
 
 		return claudeagent.HookOutput{
 			Decision: "block",
-			Reason:   fmt.Sprintf("Plan not approved. User feedback: %s", msg.GetTitle()),
+			Reason:   "Plan not approved. User feedback: " + msg.GetTitle(),
 		}, nil
 	}
 }

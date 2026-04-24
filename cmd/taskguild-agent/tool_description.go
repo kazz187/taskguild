@@ -73,10 +73,7 @@ func codeBlockFence(content string) string {
 			cur = 0
 		}
 	}
-	n := maxRun + 1
-	if n < 3 {
-		n = 3
-	}
+	n := max(maxRun+1, 3)
 	return strings.Repeat("`", n)
 }
 
@@ -125,17 +122,17 @@ func formatToolDescription(toolName string, input map[string]any) string {
 			combined := oldStr + newStr
 			fence := codeBlockFence(combined)
 			sb.WriteString(fmt.Sprintf("\n%sdiff\n", fence))
-			for _, line := range strings.Split(oldStr, "\n") {
+			for line := range strings.SplitSeq(oldStr, "\n") {
 				sb.WriteString("- ")
 				sb.WriteString(line)
 				sb.WriteString("\n")
 			}
-			for _, line := range strings.Split(newStr, "\n") {
+			for line := range strings.SplitSeq(newStr, "\n") {
 				sb.WriteString("+ ")
 				sb.WriteString(line)
 				sb.WriteString("\n")
 			}
-			sb.WriteString(fmt.Sprintf("%s\n", fence))
+			sb.WriteString(fence + "\n")
 		}
 
 	case "Write":
