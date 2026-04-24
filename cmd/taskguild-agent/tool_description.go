@@ -100,7 +100,7 @@ func formatToolDescription(toolName string, input map[string]any) string {
 		sb.WriteString("**Tool:** `Bash`\n")
 
 		if desc := str("description"); desc != "" {
-			sb.WriteString(fmt.Sprintf("**Description:** %s\n", desc))
+			fmt.Fprintf(&sb, "**Description:** %s\n", desc)
 		}
 
 		if cmd := str("command"); cmd != "" {
@@ -113,9 +113,9 @@ func formatToolDescription(toolName string, input map[string]any) string {
 			}
 
 			fence := codeBlockFence(formatted)
-			sb.WriteString(fmt.Sprintf("\n%sbash\n", fence))
+			fmt.Fprintf(&sb, "\n%sbash\n", fence)
 			sb.WriteString(formatted)
-			sb.WriteString(fmt.Sprintf("\n%s\n", fence))
+			fmt.Fprintf(&sb, "\n%s\n", fence)
 		}
 
 	case "Edit":
@@ -123,7 +123,7 @@ func formatToolDescription(toolName string, input map[string]any) string {
 
 		filePath := str("file_path")
 		if filePath != "" {
-			sb.WriteString(fmt.Sprintf("**File:** `%s`\n", filePath))
+			fmt.Fprintf(&sb, "**File:** `%s`\n", filePath)
 		}
 
 		oldStr := str("old_string")
@@ -132,7 +132,7 @@ func formatToolDescription(toolName string, input map[string]any) string {
 		if oldStr != "" || newStr != "" {
 			combined := oldStr + newStr
 			fence := codeBlockFence(combined)
-			sb.WriteString(fmt.Sprintf("\n%sdiff\n", fence))
+			fmt.Fprintf(&sb, "\n%sdiff\n", fence)
 
 			for line := range strings.SplitSeq(oldStr, "\n") {
 				sb.WriteString("- ")
@@ -154,48 +154,48 @@ func formatToolDescription(toolName string, input map[string]any) string {
 
 		filePath := str("file_path")
 		if filePath != "" {
-			sb.WriteString(fmt.Sprintf("**File:** `%s`\n", filePath))
+			fmt.Fprintf(&sb, "**File:** `%s`\n", filePath)
 		}
 
 		if content := str("content"); content != "" {
 			lang := inferLanguageFromPath(filePath)
 			fence := codeBlockFence(content)
-			sb.WriteString(fmt.Sprintf("\n%s%s\n", fence, lang))
+			fmt.Fprintf(&sb, "\n%s%s\n", fence, lang)
 			sb.WriteString(content)
-			sb.WriteString(fmt.Sprintf("\n%s\n", fence))
+			fmt.Fprintf(&sb, "\n%s\n", fence)
 		}
 
 	case "Read":
 		sb.WriteString("**Tool:** `Read`\n")
 
 		if filePath := str("file_path"); filePath != "" {
-			sb.WriteString(fmt.Sprintf("**File:** `%s`\n", filePath))
+			fmt.Fprintf(&sb, "**File:** `%s`\n", filePath)
 		}
 
 	case "Glob":
 		sb.WriteString("**Tool:** `Glob`\n")
 
 		if pattern := str("pattern"); pattern != "" {
-			sb.WriteString(fmt.Sprintf("**Pattern:** `%s`\n", pattern))
+			fmt.Fprintf(&sb, "**Pattern:** `%s`\n", pattern)
 		}
 
 		if path := str("path"); path != "" {
-			sb.WriteString(fmt.Sprintf("**Path:** `%s`\n", path))
+			fmt.Fprintf(&sb, "**Path:** `%s`\n", path)
 		}
 
 	case "Grep":
 		sb.WriteString("**Tool:** `Grep`\n")
 
 		if pattern := str("pattern"); pattern != "" {
-			sb.WriteString(fmt.Sprintf("**Pattern:** `%s`\n", pattern))
+			fmt.Fprintf(&sb, "**Pattern:** `%s`\n", pattern)
 		}
 
 		if path := str("path"); path != "" {
-			sb.WriteString(fmt.Sprintf("**Path:** `%s`\n", path))
+			fmt.Fprintf(&sb, "**Path:** `%s`\n", path)
 		}
 
 	default:
-		sb.WriteString(fmt.Sprintf("**Tool:** `%s`\n", toolName))
+		fmt.Fprintf(&sb, "**Tool:** `%s`\n", toolName)
 		// Render remaining keys sorted, with multiline values in code blocks.
 		keys := make([]string, 0, len(input))
 		for k := range input {
@@ -210,9 +210,9 @@ func formatToolDescription(toolName string, input map[string]any) string {
 			s := fmt.Sprintf("%v", v)
 			if strings.Contains(s, "\n") {
 				fence := codeBlockFence(s)
-				sb.WriteString(fmt.Sprintf("**%s:**\n\n%s\n%s\n%s\n", k, fence, s, fence))
+				fmt.Fprintf(&sb, "**%s:**\n\n%s\n%s\n%s\n", k, fence, s, fence)
 			} else {
-				sb.WriteString(fmt.Sprintf("**%s:** `%s`\n", k, s))
+				fmt.Fprintf(&sb, "**%s:** `%s`\n", k, s)
 			}
 		}
 	}

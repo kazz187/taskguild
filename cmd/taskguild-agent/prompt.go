@@ -47,21 +47,21 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 		for name := range strings.SplitSeq(skillNames, ",") {
 			name = strings.TrimSpace(name)
 			if name != "" {
-				sb.WriteString(fmt.Sprintf("/%s\n", name))
+				fmt.Fprintf(&sb, "/%s\n", name)
 			}
 		}
 
 		sb.WriteString("\n")
 	}
 
-	sb.WriteString(fmt.Sprintf("# Task: %s\n", title))
+	fmt.Fprintf(&sb, "# Task: %s\n", title)
 
 	if currentStatusName := metadata["_current_status_name"]; currentStatusName != "" {
-		sb.WriteString(fmt.Sprintf("Current status: %s\n", currentStatusName))
+		fmt.Fprintf(&sb, "Current status: %s\n", currentStatusName)
 	}
 
 	if description != "" {
-		sb.WriteString(fmt.Sprintf("\n%s\n", description))
+		fmt.Fprintf(&sb, "\n%s\n", description)
 	}
 
 	// Append result history from previous statuses so the agent has full context.
@@ -71,7 +71,7 @@ func buildUserPrompt(metadata map[string]string, workDir string) string {
 			sb.WriteString("\n## Previous Results\n")
 
 			for _, h := range history {
-				sb.WriteString(fmt.Sprintf("### %s (%s)\n%s\n\n", h.ResultType, h.CreatedAt, h.Text))
+				fmt.Fprintf(&sb, "### %s (%s)\n%s\n\n", h.ResultType, h.CreatedAt, h.Text)
 			}
 		}
 	}
@@ -197,8 +197,8 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 	if metadata["_skill_names"] == "" {
 		if agentName := metadata["_agent_name"]; agentName != "" {
 			sb.WriteString("\n### Agent Identity\n")
-			sb.WriteString(fmt.Sprintf("You are executing this task as the **%s** agent.\n", agentName))
-			sb.WriteString(fmt.Sprintf("Your agent definition file (`.claude/agents/%s.md`) has been loaded as your system prompt.\n", agentName))
+			fmt.Fprintf(&sb, "You are executing this task as the **%s** agent.\n", agentName)
+			fmt.Fprintf(&sb, "Your agent definition file (`.claude/agents/%s.md`) has been loaded as your system prompt.\n", agentName)
 			sb.WriteString("You MUST follow all instructions, role definitions, and constraints defined in that agent definition.\n")
 		}
 	}
@@ -218,9 +218,9 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 
 			for _, s := range statuses {
 				if s.Name == currentName {
-					sb.WriteString(fmt.Sprintf("- **%s** (current)\n", s.Name))
+					fmt.Fprintf(&sb, "- **%s** (current)\n", s.Name)
 				} else {
-					sb.WriteString(fmt.Sprintf("- %s\n", s.Name))
+					fmt.Fprintf(&sb, "- %s\n", s.Name)
 				}
 			}
 		}
@@ -253,7 +253,7 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 				sb.WriteString("Available next statuses:\n")
 
 				for _, t := range transitions {
-					sb.WriteString(fmt.Sprintf("- %s\n", t.Name))
+					fmt.Fprintf(&sb, "- %s\n", t.Name)
 				}
 			}
 		}
@@ -273,7 +273,7 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 			sb.WriteString("\n### Hooks\n")
 
 			for _, h := range hooks {
-				sb.WriteString(fmt.Sprintf("- %q (%s) — %s\n", h.Name, h.ActionType, h.Trigger))
+				fmt.Fprintf(&sb, "- %q (%s) — %s\n", h.Name, h.ActionType, h.Trigger)
 			}
 		}
 	}
@@ -301,7 +301,7 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 				names[i] = s.Name
 			}
 
-			sb.WriteString(fmt.Sprintf("Available statuses: %s\n", strings.Join(names, ", ")))
+			fmt.Fprintf(&sb, "Available statuses: %s\n", strings.Join(names, ", "))
 		}
 	}
 
@@ -314,7 +314,7 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 			}
 
 			sb.WriteString("\n### Git Worktree\n")
-			sb.WriteString(fmt.Sprintf("Branch: `worktree-%s` | Dir: `%s`\n", wt, wtDir))
+			fmt.Fprintf(&sb, "Branch: `worktree-%s` | Dir: `%s`\n", wt, wtDir)
 			sb.WriteString("All file modifications and commits must occur within this worktree.\n")
 			sb.WriteString("IMPORTANT: Do NOT use `cd` to navigate outside of this worktree directory.\n")
 			sb.WriteString("Your CWD is already set to the worktree — use relative paths or paths within this directory.\n")
@@ -327,7 +327,7 @@ func buildWorkflowContext(metadata map[string]string, workDir string) string {
 		harnessPath := filepath.Join(workDir, ".taskguild", "HARNESS.md")
 
 		sb.WriteString("\n### Past Failure Patterns\n")
-		sb.WriteString(fmt.Sprintf("Before starting work, consult `%s` (absolute path) for failure patterns recorded by previous tasks. ", harnessPath))
+		fmt.Fprintf(&sb, "Before starting work, consult `%s` (absolute path) for failure patterns recorded by previous tasks. ", harnessPath)
 		sb.WriteString("It lives at the repository root under `.taskguild/`, NOT inside any worktree, so always use the absolute path even when your CWD is a worktree. ")
 		sb.WriteString("The file may not exist yet — that is fine, just skip it.\n")
 	}

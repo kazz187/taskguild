@@ -389,14 +389,14 @@ func formatTransitionList(transitions []transitionEntry) string {
 // when it outputs an invalid NEXT_STATUS value.
 func buildTransitionRetryPrompt(failedStatusID string, metadata map[string]string) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("The status transition to %q failed because it is not a valid transition from the current status.\n\n", failedStatusID))
+	fmt.Fprintf(&sb, "The status transition to %q failed because it is not a valid transition from the current status.\n\n", failedStatusID)
 
 	transitions, err := parseAvailableTransitions(metadata)
 	if err == nil && len(transitions) > 0 {
 		sb.WriteString("Valid transitions are:\n")
 
 		for _, t := range transitions {
-			sb.WriteString(fmt.Sprintf("- %s\n", t.Name))
+			fmt.Fprintf(&sb, "- %s\n", t.Name)
 		}
 	}
 

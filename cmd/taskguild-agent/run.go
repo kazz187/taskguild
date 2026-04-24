@@ -292,10 +292,7 @@ func runAgent() {
 	// On the very first sync, honor the --override-agent-md flag.
 	firstSync := true
 
-	for {
-		if ctx.Err() != nil {
-			break
-		}
+	for ctx.Err() == nil {
 
 		// Re-sync agents, permissions, and scripts on each reconnection so local files stay up-to-date.
 		forceAll := firstSync && overrideAgentMDFlag != nil && *overrideAgentMDFlag

@@ -108,7 +108,7 @@ func buildSkillMDContent(sk *v1.SkillDefinition) string {
 	sb.WriteString("---\n")
 
 	if sk.GetName() != "" {
-		sb.WriteString(fmt.Sprintf("name: %s\n", sk.GetName()))
+		fmt.Fprintf(&sb, "name: %s\n", sk.GetName())
 	}
 
 	if sk.GetDescription() != "" {
@@ -127,24 +127,24 @@ func buildSkillMDContent(sk *v1.SkillDefinition) string {
 		sb.WriteString("allowed-tools:\n")
 
 		for _, tool := range sk.GetAllowedTools() {
-			sb.WriteString(fmt.Sprintf("  - %s\n", tool))
+			fmt.Fprintf(&sb, "  - %s\n", tool)
 		}
 	}
 
 	if sk.GetModel() != "" {
-		sb.WriteString(fmt.Sprintf("model: %s\n", sk.GetModel()))
+		fmt.Fprintf(&sb, "model: %s\n", sk.GetModel())
 	}
 
 	if sk.GetContext() != "" {
-		sb.WriteString(fmt.Sprintf("context: %s\n", sk.GetContext()))
+		fmt.Fprintf(&sb, "context: %s\n", sk.GetContext())
 	}
 
 	if sk.GetAgent() != "" {
-		sb.WriteString(fmt.Sprintf("agent: %s\n", sk.GetAgent()))
+		fmt.Fprintf(&sb, "agent: %s\n", sk.GetAgent())
 	}
 
 	if sk.GetArgumentHint() != "" {
-		sb.WriteString(fmt.Sprintf("argument-hint: %s\n", sk.GetArgumentHint()))
+		fmt.Fprintf(&sb, "argument-hint: %s\n", sk.GetArgumentHint())
 	}
 
 	sb.WriteString("---\n")

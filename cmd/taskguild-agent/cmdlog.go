@@ -138,14 +138,14 @@ func (tl *turnLog) LogCommandArgs(args []string) {
 
 	var sb strings.Builder
 	sb.WriteString(separator())
-	sb.WriteString(fmt.Sprintf("[%s] ## Command Args\n\n", ts()))
+	fmt.Fprintf(&sb, "[%s] ## Command Args\n\n", ts())
 
 	for _, arg := range args {
 		sb.WriteString(arg)
 		sb.WriteString("\n")
 	}
 
-	sb.WriteString(fmt.Sprintf("\n# Full command:\n%s\n", strings.Join(args, " ")))
+	fmt.Fprintf(&sb, "\n# Full command:\n%s\n", strings.Join(args, " "))
 	tl.writeLocked(sb.String())
 }
 
@@ -157,7 +157,7 @@ func (tl *turnLog) LogStdinMessage(jsonData []byte) {
 
 	var sb strings.Builder
 	sb.WriteString(separator())
-	sb.WriteString(fmt.Sprintf("[%s] ## Stdin Message\n\n", ts()))
+	fmt.Fprintf(&sb, "[%s] ## Stdin Message\n\n", ts())
 
 	var prettyJSON bytes.Buffer
 	err := json.Indent(&prettyJSON, jsonData, "", "  ")
@@ -189,7 +189,7 @@ func (tl *turnLog) LogMessage(msg claudeagent.Message) {
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("\n[%s] ## Message[%d]\n", ts(), idx))
+	fmt.Fprintf(&sb, "\n[%s] ## Message[%d]\n", ts(), idx)
 
 	var prettyJSON bytes.Buffer
 	if err := json.Indent(&prettyJSON, data, "", "  "); err == nil {
@@ -210,27 +210,27 @@ func (tl *turnLog) LogResult(result *claudeagent.ResultMessage, queryErr error) 
 
 	var sb strings.Builder
 	sb.WriteString(separator())
-	sb.WriteString(fmt.Sprintf("[%s] ## Final Result\n\n", ts()))
+	fmt.Fprintf(&sb, "[%s] ## Final Result\n\n", ts())
 
 	if queryErr != nil {
-		sb.WriteString(fmt.Sprintf("### Error\n%v\n\n", queryErr))
+		fmt.Fprintf(&sb, "### Error\n%v\n\n", queryErr)
 	}
 
 	if result == nil {
 		sb.WriteString("Result: nil\n")
 	} else {
-		sb.WriteString(fmt.Sprintf("Session ID: %s\n", result.SessionID))
-		sb.WriteString(fmt.Sprintf("Is Error: %v\n", result.IsError))
+		fmt.Fprintf(&sb, "Session ID: %s\n", result.SessionID)
+		fmt.Fprintf(&sb, "Is Error: %v\n", result.IsError)
 
 		if result.StopReason != "" {
-			sb.WriteString(fmt.Sprintf("Stop Reason: %s\n", result.StopReason))
+			fmt.Fprintf(&sb, "Stop Reason: %s\n", result.StopReason)
 		}
 
 		if len(result.Errors) > 0 {
-			sb.WriteString(fmt.Sprintf("Errors: %v\n", result.Errors))
+			fmt.Fprintf(&sb, "Errors: %v\n", result.Errors)
 		}
 
-		sb.WriteString(fmt.Sprintf("Result Text (%d chars):\n", len(result.Result)))
+		fmt.Fprintf(&sb, "Result Text (%d chars):\n", len(result.Result))
 		sb.WriteString(result.Result)
 		sb.WriteString("\n")
 	}

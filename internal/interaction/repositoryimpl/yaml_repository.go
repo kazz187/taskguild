@@ -169,7 +169,7 @@ func (r *YAMLRepository) ensureIndex(ctx context.Context) {
 
 			taskDirs := r.scanTaskDirs(ctx, pid)
 			for _, td := range taskDirs {
-				loc := entityLocation{projectID: td.projectID, taskID: td.taskID, archived: td.archived}
+				loc := entityLocation(td)
 				prefix := loc.interactionPrefix()
 
 				files, err := r.storage.List(ctx, prefix)
