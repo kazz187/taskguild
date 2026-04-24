@@ -64,10 +64,10 @@ type YAMLRepository struct {
 	taskRepo task.Repository
 
 	mu            sync.RWMutex
-	taskIndex     map[string][]string                   // taskID -> sorted []interactionID
-	locationIndex map[string]entityLocation             // interactionID -> location
-	tokenIndex    map[string]string                     // responseToken -> interactionID (pending only)
-	dataCache     map[string]*interaction.Interaction   // interactionID -> decoded interaction
+	taskIndex     map[string][]string                 // taskID -> sorted []interactionID
+	locationIndex map[string]entityLocation           // interactionID -> location
+	tokenIndex    map[string]string                   // responseToken -> interactionID (pending only)
+	dataCache     map[string]*interaction.Interaction // interactionID -> decoded interaction
 
 	loadStates sync.Map // taskID -> *loadState (lazy per-task load)
 

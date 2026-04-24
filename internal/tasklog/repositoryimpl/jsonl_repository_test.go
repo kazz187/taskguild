@@ -11,9 +11,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/oklog/ulid/v2"
+
 	"github.com/kazz187/taskguild/internal/tasklog"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	"github.com/oklog/ulid/v2"
 )
 
 func createLog(projectID, taskID string, category int32, message string) *tasklog.TaskLog {

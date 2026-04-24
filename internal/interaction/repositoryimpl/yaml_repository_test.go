@@ -61,17 +61,19 @@ func (f *fakeTaskRepo) ListArchived(_ context.Context, projectID, _ string, _, _
 	return out, len(out), nil
 }
 
-func (f *fakeTaskRepo) Create(context.Context, *task.Task) error            { panic("unused") }
-func (f *fakeTaskRepo) Update(context.Context, *task.Task) error            { panic("unused") }
-func (f *fakeTaskRepo) Delete(context.Context, string) error                { panic("unused") }
-func (f *fakeTaskRepo) Archive(context.Context, string) error               { panic("unused") }
-func (f *fakeTaskRepo) Unarchive(context.Context, string) error             { panic("unused") }
+func (f *fakeTaskRepo) Create(context.Context, *task.Task) error { panic("unused") }
+func (f *fakeTaskRepo) Update(context.Context, *task.Task) error { panic("unused") }
+func (f *fakeTaskRepo) Delete(context.Context, string) error     { panic("unused") }
+func (f *fakeTaskRepo) Archive(context.Context, string) error    { panic("unused") }
+func (f *fakeTaskRepo) Unarchive(context.Context, string) error  { panic("unused") }
 func (f *fakeTaskRepo) Claim(context.Context, string, string) (*task.Task, error) {
 	panic("unused")
 }
+
 func (f *fakeTaskRepo) ReleaseByAgent(context.Context, string) ([]*task.Task, error) {
 	panic("unused")
 }
+
 func (f *fakeTaskRepo) ReleaseByAgentExcept(context.Context, string, map[string]struct{}) ([]*task.Task, error) {
 	panic("unused")
 }
