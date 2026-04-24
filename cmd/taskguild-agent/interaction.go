@@ -277,7 +277,6 @@ var editTools = map[string]bool{
 	"NotebookEdit": true,
 }
 
-
 // handleAskUserQuestion processes the AskUserQuestion tool by presenting each question
 // as an INTERACTION_TYPE_QUESTION with selectable options. Returns PermissionResultAllow
 // with the user's answers injected into UpdatedInput.
