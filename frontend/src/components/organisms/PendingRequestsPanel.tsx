@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { RequestItem } from './RequestItem.tsx'
 import { useRequestKeyboard } from '@/hooks/useRequestKeyboard'
@@ -14,7 +14,7 @@ interface TaskGroup {
   interactions: Interaction[]
 }
 
-export function PendingRequestsPanel({
+function PendingRequestsPanelImpl({
   pendingRequests,
   onRespond,
   isRespondPending,
@@ -140,3 +140,7 @@ export function PendingRequestsPanel({
     </div>
   )
 }
+
+// Memoized so unrelated timeline refetches don't re-render the heavy
+// request list while a BashPatternEditor input has focus.
+export const PendingRequestsPanel = memo(PendingRequestsPanelImpl)

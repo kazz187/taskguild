@@ -1,8 +1,13 @@
 package repositoryimpl
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -27,7 +32,7 @@ func createLog(projectID, taskID string, category int32, message string) *tasklo
 // returned by List with limit=0 (unlimited).
 func TestMultiTurnCreateAndList(t *testing.T) {
 	dir := t.TempDir()
-	repo := NewJSONLRepository(dir)
+	repo := NewJSONLRepository(dir, nil)
 	defer repo.Close()
 	ctx := context.Background()
 
@@ -116,7 +121,7 @@ func TestMultiTurnCreateAndList(t *testing.T) {
 // while still having access to all entries.
 func TestMultiTurnPagination(t *testing.T) {
 	dir := t.TempDir()
-	repo := NewJSONLRepository(dir)
+	repo := NewJSONLRepository(dir, nil)
 	defer repo.Close()
 	ctx := context.Background()
 
@@ -199,7 +204,7 @@ func TestMultiTurnServerRestart(t *testing.T) {
 
 	// Phase 1: Create logs with first repo instance.
 	{
-		repo := NewJSONLRepository(dir)
+		repo := NewJSONLRepository(dir, nil)
 		for turn := 0; turn < 2; turn++ {
 			log := createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_START), fmt.Sprintf("Turn %d started", turn))
 			if err := repo.Create(ctx, log); err != nil {
@@ -224,7 +229,7 @@ func TestMultiTurnServerRestart(t *testing.T) {
 
 	// Phase 2: Create a NEW repo instance (simulating server restart).
 	{
-		repo := NewJSONLRepository(dir)
+		repo := NewJSONLRepository(dir, nil)
 		defer repo.Close()
 
 		logs, total, err := repo.List(ctx, taskID, nil, 0, 0)
@@ -247,5 +252,75 @@ func TestMultiTurnServerRestart(t *testing.T) {
 				t.Errorf("missing log ID after restart: %s", id)
 			}
 		}
+	}
+}
+
+// TestMissingJSONLEvictedFromIndex verifies that when a JSONL file referenced
+// by the index no longer exists on disk, List silently evicts the stale
+// entries instead of spamming WARN logs every call.
+func TestMissingJSONLEvictedFromIndex(t *testing.T) {
+	dir := t.TempDir()
+	ctx := context.Background()
+
+	const (
+		projectID = "proj1"
+		taskID    = "task1"
+	)
+
+	// Seed the repo and capture the absolute path of the turn 0 file.
+	repo := NewJSONLRepository(dir, nil)
+	log := createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_START), "Turn 0 started")
+	if err := repo.Create(ctx, log); err != nil {
+		t.Fatalf("create TURN_START: %v", err)
+	}
+	var turnFilePath string
+	repo.indexMu.RLock()
+	if loc, ok := repo.locationIndex[log.ID]; ok {
+		turnFilePath = filepath.Join(repo.baseDir, loc.filePath)
+	}
+	repo.indexMu.RUnlock()
+	if turnFilePath == "" {
+		t.Fatalf("turn file path not found in index")
+	}
+	repo.Close()
+
+	// Re-open. Warm the index first so it references the real file, then
+	// delete the file out from under it.
+	repo = NewJSONLRepository(dir, nil)
+	defer repo.Close()
+
+	if _, _, err := repo.List(ctx, taskID, nil, 0, 0); err != nil {
+		t.Fatalf("warm-up List: %v", err)
+	}
+	if err := os.Remove(turnFilePath); err != nil {
+		t.Fatalf("remove jsonl: %v", err)
+	}
+
+	// Capture slog WARN output. The first List after deletion is allowed
+	// to be noisy during the eviction; the second must be silent about the
+	// missing file because the stale index entry is gone.
+	var buf bytes.Buffer
+	origHandler := slog.Default().Handler()
+	t.Cleanup(func() { slog.SetDefault(slog.New(origHandler)) })
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn})))
+
+	if _, _, err := repo.List(ctx, taskID, nil, 0, 0); err != nil {
+		t.Fatalf("first List after delete: %v", err)
+	}
+	buf.Reset()
+
+	if _, _, err := repo.List(ctx, taskID, nil, 0, 0); err != nil {
+		t.Fatalf("second List: %v", err)
+	}
+	if strings.Contains(buf.String(), "failed to read JSONL file during List, skipping") {
+		t.Fatalf("stale index still producing WARN: %q", buf.String())
+	}
+
+	// Index should no longer reference the evicted ID.
+	repo.indexMu.RLock()
+	_, indexed := repo.locationIndex[log.ID]
+	repo.indexMu.RUnlock()
+	if indexed {
+		t.Fatalf("id %s still present in locationIndex after eviction", log.ID)
 	}
 }

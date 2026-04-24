@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -13,10 +14,18 @@ import (
 	"sync"
 	"time"
 
+	"github.com/oklog/ulid/v2"
+	"github.com/sourcegraph/conc/pool"
+
+	"github.com/kazz187/taskguild/internal/task"
 	"github.com/kazz187/taskguild/internal/tasklog"
 	"github.com/kazz187/taskguild/pkg/cerr"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	"github.com/oklog/ulid/v2"
+)
+
+const (
+	projectsPrefix      = "projects"
+	listLoadConcurrency = 8
 )
 
 // knownSubdirs contains directory names under a project that are NOT task directories.
@@ -77,28 +86,53 @@ type logLocation struct {
 	filePath  string // relative path to the .jsonl file within baseDir
 }
 
+// loadState guards per-task lazy index population. Once Done, it is never
+// re-run so the first observation of a task is the authoritative one for the
+// lifetime of the repository. Create() maintains the index incrementally from
+// that point onwards.
+type loadState struct {
+	once sync.Once
+}
+
 // JSONLRepository implements tasklog.Repository using JSONL files on the local filesystem.
+//
+// The in-memory index is built lazily on a per-task basis: the first time a
+// task's logs are requested, its directory is scanned and the IDs are cached.
+// Subsequent reads serve from the index without another directory walk. A
+// task.Repository is used to enumerate active tasks when a global List is
+// issued; archived tasks are not scanned by default. The task.Repository is
+// optional — tests and edge cases (orphaned log directories) fall back to a
+// filesystem search.
 type JSONLRepository struct {
-	baseDir string
+	baseDir  string
+	taskRepo task.Repository
 
 	mu        sync.Mutex
 	turnFiles map[string]*turnFileState // taskID -> current turn file
 
-	indexOnce     sync.Once
 	indexMu       sync.RWMutex
 	taskIndex     map[string][]string    // taskID -> sorted []logID
 	locationIndex map[string]logLocation // logID -> location info
 	allIDs        []string               // all log IDs in sorted order
+
+	loadStates sync.Map // taskID -> *loadState
 }
 
-func NewJSONLRepository(baseDir string) *JSONLRepository {
+// NewJSONLRepository constructs a JSONLRepository rooted at baseDir. The
+// taskRepo is used to enumerate active tasks and resolve taskID → projectID;
+// nil is accepted for tests and orphan-log scenarios (in which case the repo
+// falls back to directory scanning).
+func NewJSONLRepository(baseDir string, taskRepo task.Repository) *JSONLRepository {
 	abs, err := filepath.Abs(baseDir)
 	if err != nil {
 		abs = baseDir
 	}
 	return &JSONLRepository{
-		baseDir:   abs,
-		turnFiles: make(map[string]*turnFileState),
+		baseDir:       abs,
+		taskRepo:      taskRepo,
+		turnFiles:     make(map[string]*turnFileState),
+		taskIndex:     make(map[string][]string),
+		locationIndex: make(map[string]logLocation),
 	}
 }
 
@@ -114,6 +148,10 @@ func (r *JSONLRepository) Close() {
 
 func (r *JSONLRepository) logsDir(projectID, taskID string) string {
 	return filepath.Join(r.baseDir, "projects", projectID, taskID, "logs")
+}
+
+func (r *JSONLRepository) archivedLogsDir(projectID, taskID string) string {
+	return filepath.Join(r.baseDir, "projects", projectID, "archived", taskID, "logs")
 }
 
 // openTurnFile creates a new JSONL file for a turn and registers it. Caller must hold r.mu.
@@ -175,8 +213,127 @@ func fromJSONLEntry(e *jsonlEntry, projectID, taskID string) *tasklog.TaskLog {
 	}
 }
 
+// locateTaskDir resolves taskID → logs directory path. It consults the task
+// repository first (cache-friendly), then falls back to scanning the base
+// projects directory. Returns ("", false) if the task's log directory cannot
+// be found.
+func (r *JSONLRepository) locateTaskDir(ctx context.Context, taskID string) (logsDir string, ok bool) {
+	// Prefer the task repository if available: cheap and authoritative.
+	if r.taskRepo != nil {
+		if t, err := r.taskRepo.Get(ctx, taskID); err == nil && t != nil {
+			return r.logsDir(t.ProjectID, taskID), true
+		}
+		if t, err := r.taskRepo.GetArchived(ctx, taskID); err == nil && t != nil {
+			return r.archivedLogsDir(t.ProjectID, taskID), true
+		}
+	}
+
+	// Fallback: scan projects on disk. Used for orphan log directories and
+	// tests that don't wire up a taskRepo.
+	projectsDir := filepath.Join(r.baseDir, projectsPrefix)
+	entries, err := os.ReadDir(projectsDir)
+	if err != nil {
+		return "", false
+	}
+	for _, pd := range entries {
+		if !pd.IsDir() {
+			continue
+		}
+		pid := pd.Name()
+		if info, err := os.Stat(filepath.Join(projectsDir, pid, taskID)); err == nil && info.IsDir() {
+			return r.logsDir(pid, taskID), true
+		}
+		if info, err := os.Stat(filepath.Join(projectsDir, pid, "archived", taskID)); err == nil && info.IsDir() {
+			return r.archivedLogsDir(pid, taskID), true
+		}
+	}
+	return "", false
+}
+
+// loadTaskLogs scans a single task's logs directory and populates indexes.
+// The work is gated by sync.Once so the directory is read at most once per
+// task per repository lifetime.
+func (r *JSONLRepository) loadTaskLogs(ctx context.Context, taskID string) {
+	if taskID == "" {
+		return
+	}
+	v, _ := r.loadStates.LoadOrStore(taskID, &loadState{})
+	state := v.(*loadState)
+	state.once.Do(func() {
+		logsPath, ok := r.locateTaskDir(ctx, taskID)
+		if !ok {
+			return
+		}
+		entries, err := os.ReadDir(logsPath)
+		if err != nil {
+			return
+		}
+
+		type fileIDs struct {
+			relPath string
+			ids     []string
+		}
+		var files []fileIDs
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".jsonl") {
+				continue
+			}
+			absPath := filepath.Join(logsPath, entry.Name())
+			rel, err := filepath.Rel(r.baseDir, absPath)
+			if err != nil {
+				continue
+			}
+			files = append(files, fileIDs{relPath: rel, ids: r.scanJSONLIDs(absPath)})
+		}
+
+		// Determine projectID for index entries — from the first file's path.
+		// logsPath is under baseDir/projects/<pid>/[archived/]<taskID>/logs.
+		var projectID string
+		rel, err := filepath.Rel(filepath.Join(r.baseDir, projectsPrefix), logsPath)
+		if err == nil {
+			parts := strings.Split(filepath.ToSlash(rel), "/")
+			if len(parts) > 0 {
+				projectID = parts[0]
+			}
+		}
+
+		r.indexMu.Lock()
+		defer r.indexMu.Unlock()
+		var taskIDs []string
+		for _, fi := range files {
+			for _, id := range fi.ids {
+				r.locationIndex[id] = logLocation{
+					projectID: projectID,
+					taskID:    taskID,
+					filePath:  fi.relPath,
+				}
+				taskIDs = append(taskIDs, id)
+				r.allIDs = append(r.allIDs, id)
+			}
+		}
+		sort.Strings(taskIDs)
+		r.taskIndex[taskID] = taskIDs
+		sort.Strings(r.allIDs)
+	})
+}
+
+// loadManyTaskLogs loads logs for many tasks in parallel with bounded concurrency.
+func (r *JSONLRepository) loadManyTaskLogs(ctx context.Context, taskIDs []string) {
+	if len(taskIDs) == 0 {
+		return
+	}
+	p := pool.New().WithContext(ctx).WithMaxGoroutines(listLoadConcurrency)
+	for _, tid := range taskIDs {
+		p.Go(func(ctx context.Context) error {
+			r.loadTaskLogs(ctx, tid)
+			return nil
+		})
+	}
+	_ = p.Wait()
+}
+
 func (r *JSONLRepository) Create(ctx context.Context, l *tasklog.TaskLog) error {
-	r.ensureIndex(ctx)
+	r.loadTaskLogs(ctx, l.TaskID)
 
 	r.indexMu.RLock()
 	_, exists := r.locationIndex[l.ID]
@@ -227,27 +384,49 @@ func (r *JSONLRepository) Create(ctx context.Context, l *tasklog.TaskLog) error 
 }
 
 func (r *JSONLRepository) List(ctx context.Context, taskID string, taskIDs []string, limit, offset int) ([]*tasklog.TaskLog, int, error) {
-	r.ensureIndex(ctx)
-
-	r.indexMu.RLock()
-	var matchIDs []string
+	// Resolve the set of tasks to query.
+	var targetTaskIDs []string
 	switch {
 	case taskID != "":
-		matchIDs = make([]string, len(r.taskIndex[taskID]))
-		copy(matchIDs, r.taskIndex[taskID])
+		targetTaskIDs = []string{taskID}
 	case len(taskIDs) > 0:
-		for _, tid := range taskIDs {
+		targetTaskIDs = taskIDs
+	default:
+		// Global list: active tasks only. Archived tasks are excluded to
+		// keep this call bounded even with large histories on disk.
+		if r.taskRepo != nil {
+			tasks, _, err := r.taskRepo.List(ctx, "", "", "", 0, 0)
+			if err != nil {
+				return nil, 0, err
+			}
+			targetTaskIDs = make([]string, 0, len(tasks))
+			for _, t := range tasks {
+				targetTaskIDs = append(targetTaskIDs, t.ID)
+			}
+		} else {
+			// No task repo wired: fall back to a filesystem scan of project
+			// directories for their active task subdirectories.
+			targetTaskIDs = r.discoverActiveTaskIDs()
+		}
+	}
+
+	r.loadManyTaskLogs(ctx, targetTaskIDs)
+
+	// Gather matching IDs from the index.
+	r.indexMu.RLock()
+	var matchIDs []string
+	if taskID != "" {
+		matchIDs = append([]string(nil), r.taskIndex[taskID]...)
+	} else {
+		for _, tid := range targetTaskIDs {
 			matchIDs = append(matchIDs, r.taskIndex[tid]...)
 		}
-		sort.Strings(matchIDs)
-	default:
-		matchIDs = make([]string, len(r.allIDs))
-		copy(matchIDs, r.allIDs)
 	}
-	r.indexMu.RUnlock()
+	sort.Strings(matchIDs)
 
 	total := len(matchIDs)
 	if offset >= total {
+		r.indexMu.RUnlock()
 		return nil, total, nil
 	}
 	paginated := matchIDs[offset:]
@@ -259,8 +438,7 @@ func (r *JSONLRepository) List(ctx context.Context, taskID string, taskIDs []str
 		id  string
 		loc logLocation
 	}
-	var needed []idAndLoc
-	r.indexMu.RLock()
+	needed := make([]idAndLoc, 0, len(paginated))
 	for _, id := range paginated {
 		if loc, ok := r.locationIndex[id]; ok {
 			needed = append(needed, idAndLoc{id, loc})
@@ -277,10 +455,18 @@ func (r *JSONLRepository) List(ctx context.Context, taskID string, taskIDs []str
 		fileGroups[n.loc.filePath] = n.loc
 	}
 
+	var missingPaths []string
 	for fp, loc := range fileGroups {
 		absPath := filepath.Join(r.baseDir, fp)
 		entries, err := r.readJSONLFile(absPath, loc.projectID, loc.taskID)
 		if err != nil {
+			// Missing files are treated as a stale index and silently
+			// evicted. Other I/O errors (permission denied etc.) are still
+			// logged so operators notice them.
+			if errors.Is(err, os.ErrNotExist) {
+				missingPaths = append(missingPaths, fp)
+				continue
+			}
 			slog.Warn("failed to read JSONL file during List, skipping", "path", absPath, "error", err)
 			continue
 		}
@@ -291,6 +477,12 @@ func (r *JSONLRepository) List(ctx context.Context, taskID string, taskIDs []str
 			}
 		}
 		fileEntries[fp] = m
+	}
+
+	// Evict stale index entries pointing at missing files so the next List
+	// does not retry them.
+	if len(missingPaths) > 0 {
+		r.evictMissingPaths(missingPaths)
 	}
 
 	result := make([]*tasklog.TaskLog, 0, len(paginated))
@@ -305,8 +497,71 @@ func (r *JSONLRepository) List(ctx context.Context, taskID string, taskIDs []str
 	return result, total, nil
 }
 
+// evictMissingPaths removes all index entries for the given stale relative
+// file paths so that subsequent List calls no longer surface the ENOENT
+// error for the same files.
+func (r *JSONLRepository) evictMissingPaths(paths []string) {
+	if len(paths) == 0 {
+		return
+	}
+	stale := make(map[string]bool, len(paths))
+	for _, p := range paths {
+		stale[p] = true
+	}
+
+	r.indexMu.Lock()
+	defer r.indexMu.Unlock()
+
+	// Collect ids to remove.
+	var removeIDs []string
+	byTask := make(map[string][]string)
+	for id, loc := range r.locationIndex {
+		if stale[loc.filePath] {
+			removeIDs = append(removeIDs, id)
+			byTask[loc.taskID] = append(byTask[loc.taskID], id)
+		}
+	}
+	if len(removeIDs) == 0 {
+		return
+	}
+	removeSet := make(map[string]bool, len(removeIDs))
+	for _, id := range removeIDs {
+		delete(r.locationIndex, id)
+		removeSet[id] = true
+	}
+
+	// Prune taskIndex per-task.
+	for tid, ids := range byTask {
+		cur := r.taskIndex[tid]
+		filtered := cur[:0]
+		rm := make(map[string]bool, len(ids))
+		for _, id := range ids {
+			rm[id] = true
+		}
+		for _, id := range cur {
+			if !rm[id] {
+				filtered = append(filtered, id)
+			}
+		}
+		if len(filtered) == 0 {
+			delete(r.taskIndex, tid)
+		} else {
+			r.taskIndex[tid] = filtered
+		}
+	}
+
+	// Prune allIDs in-place (preserving order).
+	filteredAll := r.allIDs[:0]
+	for _, id := range r.allIDs {
+		if !removeSet[id] {
+			filteredAll = append(filteredAll, id)
+		}
+	}
+	r.allIDs = filteredAll
+}
+
 func (r *JSONLRepository) DeleteByTaskID(ctx context.Context, taskID string) (int, error) {
-	r.ensureIndex(ctx)
+	r.loadTaskLogs(ctx, taskID)
 
 	r.mu.Lock()
 	r.closeTurnFile(taskID)
@@ -354,8 +609,6 @@ func (r *JSONLRepository) DeleteByTaskID(ctx context.Context, taskID string) (in
 }
 
 func (r *JSONLRepository) CleanupOlderThan(ctx context.Context, maxAge time.Duration) (int, error) {
-	r.ensureIndex(ctx)
-
 	cutoff := time.Now().Add(-maxAge)
 	deleted := 0
 
@@ -374,6 +627,10 @@ func (r *JSONLRepository) CleanupOlderThan(ctx context.Context, maxAge time.Dura
 		}
 		projectID := pd.Name()
 		for _, td := range r.listTaskDirs(filepath.Join(projectsDir, projectID)) {
+			// Ensure the task's logs are indexed before we touch files under
+			// its logs directory, so the index stays in sync with deletions.
+			r.loadTaskLogs(ctx, td.taskID)
+
 			logsPath := filepath.Join(projectsDir, projectID, td.dir, "logs")
 			logFiles, err := os.ReadDir(logsPath)
 			if err != nil {
@@ -466,35 +723,36 @@ func (r *JSONLRepository) scanJSONLIDs(absPath string) []string {
 	return ids
 }
 
-// ensureIndex lazily builds the in-memory index on first access.
-func (r *JSONLRepository) ensureIndex(ctx context.Context) {
-	r.indexOnce.Do(func() {
-		r.indexMu.Lock()
-		defer r.indexMu.Unlock()
-		r.taskIndex = make(map[string][]string)
-		r.locationIndex = make(map[string]logLocation)
-
-		projectsDir := filepath.Join(r.baseDir, "projects")
-		projectDirs, err := os.ReadDir(projectsDir)
-		if err != nil {
-			return
+// discoverActiveTaskIDs enumerates active task directories on disk. Used as a
+// fallback when no taskRepo is wired (primarily in tests).
+func (r *JSONLRepository) discoverActiveTaskIDs() []string {
+	projectsDir := filepath.Join(r.baseDir, projectsPrefix)
+	projectDirs, err := os.ReadDir(projectsDir)
+	if err != nil {
+		return nil
+	}
+	var result []string
+	for _, pd := range projectDirs {
+		if !pd.IsDir() {
+			continue
 		}
-
-		for _, pd := range projectDirs {
-			if !pd.IsDir() {
+		projectPath := filepath.Join(projectsDir, pd.Name())
+		subdirs, err := os.ReadDir(projectPath)
+		if err != nil {
+			continue
+		}
+		for _, sd := range subdirs {
+			if !sd.IsDir() {
 				continue
 			}
-			projectID := pd.Name()
-			for _, td := range r.listTaskDirs(filepath.Join(projectsDir, projectID)) {
-				r.scanTaskLogs(projectID, td.taskID, td.dir)
+			name := sd.Name()
+			if knownSubdirs[name] {
+				continue
 			}
+			result = append(result, name)
 		}
-
-		sort.Strings(r.allIDs)
-		for tid := range r.taskIndex {
-			sort.Strings(r.taskIndex[tid])
-		}
-	})
+	}
+	return result
 }
 
 type taskDirEntry struct {
@@ -530,32 +788,6 @@ func (r *JSONLRepository) listTaskDirs(projectPath string) []taskDirEntry {
 		}
 	}
 	return result
-}
-
-// scanTaskLogs reads all .jsonl files under a task's logs directory and indexes their entries.
-func (r *JSONLRepository) scanTaskLogs(projectID, taskID, dir string) {
-	logsPath := filepath.Join(r.baseDir, "projects", projectID, dir, "logs")
-	entries, err := os.ReadDir(logsPath)
-	if err != nil {
-		return
-	}
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".jsonl") {
-			continue
-		}
-		absPath := filepath.Join(logsPath, entry.Name())
-		relPath := filepath.Join("projects", projectID, dir, "logs", entry.Name())
-		ids := r.scanJSONLIDs(absPath)
-		for _, id := range ids {
-			r.locationIndex[id] = logLocation{
-				projectID: projectID,
-				taskID:    taskID,
-				filePath:  relPath,
-			}
-			r.taskIndex[taskID] = append(r.taskIndex[taskID], id)
-			r.allIDs = append(r.allIDs, id)
-		}
-	}
 }
 
 func (r *JSONLRepository) addToIndex(id, projectID, taskID, relPath string) {
