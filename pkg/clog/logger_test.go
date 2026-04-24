@@ -2,13 +2,12 @@ package clog
 
 import (
 	"context"
-	"io"
 	"log/slog"
 	"testing"
 )
 
 func TestContextWithLogger(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil)).With("test_key", "test_value")
+	logger := slog.New(slog.DiscardHandler).With("test_key", "test_value")
 	ctx := ContextWithLogger(context.Background(), logger)
 
 	got := LoggerFromContext(ctx)
