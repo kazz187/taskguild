@@ -11,6 +11,7 @@ func writeTempAgentMD(t *testing.T, content string) string {
 	dir := t.TempDir()
 
 	fp := filepath.Join(dir, "test-agent.md")
+
 	err := os.WriteFile(fp, []byte(content), 0o644)
 	if err != nil {
 		t.Fatal(err)

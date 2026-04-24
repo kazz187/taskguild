@@ -130,6 +130,7 @@ func (s *Server) CreateSingleCommandPermission(
 			Type:      req.Msg.GetType(),
 			CreatedAt: time.Now(),
 		}
+
 		err := s.repo.Create(ctx, p)
 		if err != nil {
 			return nil, err

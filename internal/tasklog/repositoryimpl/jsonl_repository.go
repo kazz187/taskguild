@@ -434,6 +434,7 @@ func (r *JSONLRepository) CleanupOlderThan(ctx context.Context, maxAge time.Dura
 					absPath := filepath.Join(logsPath, lf.Name())
 
 					ids := r.scanJSONLIDs(absPath)
+
 					err := os.Remove(absPath)
 					if err != nil {
 						continue
@@ -477,6 +478,7 @@ func (r *JSONLRepository) readJSONLFile(absPath, projectID, taskID string) ([]*t
 		}
 
 		var e jsonlEntry
+
 		err := json.Unmarshal(line, &e)
 		if err != nil {
 			continue
@@ -514,6 +516,7 @@ func (r *JSONLRepository) scanJSONLIDs(absPath string) []string {
 		var partial struct {
 			ID string `json:"id"`
 		}
+
 		err := json.Unmarshal(line, &partial)
 		if err != nil {
 			continue

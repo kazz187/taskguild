@@ -230,6 +230,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 
 	if cmdErr != nil {
 		exitCode := int32(-1)
+
 		exitErr := &exec.ExitError{}
 		if errors.As(cmdErr, &exitErr) {
 			exitCode = int32(exitErr.ExitCode())

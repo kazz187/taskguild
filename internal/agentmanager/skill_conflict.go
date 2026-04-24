@@ -176,6 +176,7 @@ func (s *Server) ResolveSkillConflict(ctx context.Context, req *connect.Request[
 			resultSkill.IsSynced = true
 
 			resultSkill.UpdatedAt = time.Now()
+
 			err := s.skillRepo.Update(ctx, resultSkill)
 			if err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)
@@ -201,6 +202,7 @@ func (s *Server) ResolveSkillConflict(ctx context.Context, req *connect.Request[
 				CreatedAt:              now,
 				UpdatedAt:              now,
 			}
+
 			err := s.skillRepo.Create(ctx, resultSkill)
 			if err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)

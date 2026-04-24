@@ -218,6 +218,7 @@ func resolveStatusID(statusIDOrName string, workflowStatusesJSON string) string 
 	}
 
 	var statuses []statusEntry
+
 	err := json.Unmarshal([]byte(workflowStatusesJSON), &statuses)
 	if err != nil {
 		return statusIDOrName
@@ -335,6 +336,7 @@ func parseAvailableTransitions(metadata map[string]string) ([]transitionEntry, e
 	}
 
 	var raw []transitionEntry
+
 	err := json.Unmarshal([]byte(transitionsJSON), &raw)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse available transitions: %w", err)

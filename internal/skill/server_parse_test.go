@@ -11,6 +11,7 @@ func writeTempSkillMD(t *testing.T, content string) (filePath string, dirName st
 	dir := t.TempDir()
 
 	skillDir := filepath.Join(dir, "test-skill")
+
 	err := os.MkdirAll(skillDir, 0o755)
 	if err != nil {
 		t.Fatal(err)

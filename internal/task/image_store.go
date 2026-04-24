@@ -161,6 +161,7 @@ func (s *storageImageStore) List(ctx context.Context, projectID, taskID string) 
 
 func (s *storageImageStore) Delete(ctx context.Context, projectID, taskID, imageID string) error {
 	var firstErr error
+
 	err := s.store.Delete(ctx, imageDataPath(projectID, taskID, imageID))
 	if err != nil {
 		firstErr = fmt.Errorf("delete image data: %w", err)

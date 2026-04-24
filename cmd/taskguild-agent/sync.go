@@ -172,6 +172,7 @@ func cleanupStaleAgentFiles(agentsDir string, serverFiles map[string]bool) {
 
 		if !serverFiles[entry.Name()] {
 			filePath := filepath.Join(agentsDir, entry.Name())
+
 			err := os.Remove(filePath)
 			if err != nil {
 				slog.Error("failed to remove stale agent file", "path", filePath, "error", err)

@@ -40,6 +40,7 @@ func (s *Server) CreateWorkflow(ctx context.Context, req *connect.Request[taskgu
 		CreatedAt:             now,
 		UpdatedAt:             now,
 	}
+
 	err := validateStatuses(req.Msg.GetStatuses())
 	if err != nil {
 		return nil, err

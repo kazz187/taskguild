@@ -288,6 +288,7 @@ func (s *Server) sendPendingTasksToStream(ctx context.Context, projectName strin
 				},
 			},
 		}
+
 		err := stream.Send(cmd)
 		if err != nil {
 			slog.Error("sendPendingTasks: failed to send command",
@@ -340,6 +341,7 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 		delete(t.Metadata, "_stopped_by_user")
 
 		t.UpdatedAt = time.Now()
+
 		err := s.taskRepo.Update(ctx, t)
 		if err != nil {
 			return nil, err

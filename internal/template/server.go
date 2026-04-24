@@ -389,6 +389,7 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 			CreatedAt:       now,
 			UpdatedAt:       now,
 		}
+
 		err := s.agentRepo.Create(ctx, a)
 		if err != nil {
 			return nil, err
@@ -473,6 +474,7 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 			CreatedAt:              now,
 			UpdatedAt:              now,
 		}
+
 		err := s.skillRepo.Create(ctx, sk)
 		if err != nil {
 			return nil, err
@@ -501,6 +503,7 @@ func (s *Server) CreateFromTemplate(ctx context.Context, req *connect.Request[ta
 			CreatedAt:   now,
 			UpdatedAt:   now,
 		}
+
 		err := s.scriptRepo.Create(ctx, sc)
 		if err != nil {
 			return nil, err

@@ -81,6 +81,7 @@ func (s *Server) CreateScript(ctx context.Context, req *connect.Request[taskguil
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
+
 	err := s.repo.Create(ctx, sc)
 	if err != nil {
 		return nil, err
@@ -251,6 +252,7 @@ func (s *Server) SyncScriptsFromDir(ctx context.Context, req *connect.Request[ta
 			existing.IsSynced = true
 
 			existing.UpdatedAt = time.Now()
+
 			err := s.repo.Update(ctx, existing)
 			if err != nil {
 				continue
@@ -272,6 +274,7 @@ func (s *Server) SyncScriptsFromDir(ctx context.Context, req *connect.Request[ta
 				CreatedAt: now,
 				UpdatedAt: now,
 			}
+
 			err := s.repo.Create(ctx, sc)
 			if err != nil {
 				continue

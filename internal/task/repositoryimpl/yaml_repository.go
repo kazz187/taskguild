@@ -277,6 +277,7 @@ func (r *YAMLRepository) ReleaseByAgent(ctx context.Context, agentID string) ([]
 		t.AssignmentStatus = task.AssignmentStatusPending
 
 		t.UpdatedAt = now
+
 		err := r.Update(ctx, t)
 		if err != nil {
 			continue
@@ -320,6 +321,7 @@ func (r *YAMLRepository) ReleaseByAgentExcept(ctx context.Context, agentID strin
 		t.AssignmentStatus = task.AssignmentStatusPending
 
 		t.UpdatedAt = now
+
 		err := r.Update(ctx, t)
 		if err != nil {
 			continue
@@ -429,6 +431,7 @@ func (r *YAMLRepository) Unarchive(ctx context.Context, id string) error {
 	data, err := r.storage.Read(ctx, taskPath(foundPID, id))
 	if err == nil {
 		var t task.Task
+
 		err := yaml.Unmarshal(data, &t)
 		if err == nil {
 			r.cacheMu.Lock()

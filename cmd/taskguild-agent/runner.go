@@ -158,7 +158,7 @@ func runTask(
 	// transition) should not produce this error.
 	// This defer runs after afterHooks (LIFO) but before tl.Close.
 	defer func() {
-		if ctx.Err() == context.Canceled && isUserStopped() {
+		if errors.Is(ctx.Err(), context.Canceled) && isUserStopped() {
 			bgCtx, bgCancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer bgCancel()
 
@@ -704,6 +704,7 @@ func collectStatusSkills(metadata map[string]string) map[string]bool {
 			Name       string `json:"name"`
 			ActionType string `json:"action_type"`
 		}
+
 		err := json.Unmarshal([]byte(hooksJSON), &hooks)
 		if err == nil {
 			for _, h := range hooks {

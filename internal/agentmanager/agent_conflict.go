@@ -178,6 +178,7 @@ func (s *Server) ResolveAgentConflict(ctx context.Context, req *connect.Request[
 			resultAgent.IsSynced = true
 
 			resultAgent.UpdatedAt = time.Now()
+
 			err := s.agentRepo.Update(ctx, resultAgent)
 			if err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)
@@ -207,6 +208,7 @@ func (s *Server) ResolveAgentConflict(ctx context.Context, req *connect.Request[
 				CreatedAt:       now,
 				UpdatedAt:       now,
 			}
+
 			err := s.agentRepo.Create(ctx, resultAgent)
 			if err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)

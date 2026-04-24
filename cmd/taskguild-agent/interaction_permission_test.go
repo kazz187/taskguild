@@ -203,6 +203,7 @@ func TestHandlePermissionRequest_BashPartialMatch_CreatesInteraction(t *testing.
 	}
 
 	var meta bashPermissionMetadata
+
 	err := json.Unmarshal([]byte(inter.GetMetadata()), &meta)
 	if err != nil {
 		t.Fatalf("failed to parse metadata: %v", err)
@@ -457,6 +458,7 @@ func TestHandlePermissionRequest_AlwaysAllowCommand_WithRedirects(t *testing.T) 
 	}
 
 	var meta bashPermissionMetadata
+
 	err := json.Unmarshal([]byte(inter.GetMetadata()), &meta)
 	if err != nil {
 		t.Fatalf("failed to parse metadata: %v", err)

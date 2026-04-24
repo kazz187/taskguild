@@ -480,6 +480,7 @@ func (r *YAMLRepository) ExpirePendingByTask(ctx context.Context, taskID string)
 		i.Status = interaction.StatusExpired
 
 		i.RespondedAt = &now
+
 		err := r.Update(ctx, i)
 		if err != nil {
 			return count, fmt.Errorf("failed to expire interaction %s: %w", i.ID, err)

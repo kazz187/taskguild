@@ -57,6 +57,7 @@ const namespace = "TASKGUILD"
 
 func LoadEnv() (*Env, error) {
 	var env Env
+
 	err := envconfig.Process(namespace, &env)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load env: %w", err)
@@ -71,6 +72,7 @@ func (e *BaseEnv) SlogLevel() slog.Level {
 	}
 
 	var level slog.Level
+
 	err := level.UnmarshalText([]byte(e.LogLevel))
 	if err != nil {
 		return slog.LevelDebug

@@ -57,6 +57,7 @@ func (s *LocalStorage) Write(_ context.Context, path string, data []byte) error 
 	full := s.resolve(path)
 
 	dir := filepath.Dir(full)
+
 	err := os.MkdirAll(dir, 0o755)
 	if err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", dir, err)
@@ -78,6 +79,7 @@ func (s *LocalStorage) Write(_ context.Context, path string, data []byte) error 
 
 func (s *LocalStorage) Delete(_ context.Context, path string) error {
 	full := s.resolve(path)
+
 	err := os.Remove(full)
 	if err != nil {
 		if os.IsNotExist(err) {

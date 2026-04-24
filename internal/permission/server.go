@@ -68,6 +68,7 @@ func (s *Server) UpdatePermissions(ctx context.Context, req *connect.Request[tas
 		Deny:      dedup(req.Msg.GetDeny()),
 		UpdatedAt: time.Now(),
 	}
+
 	err := s.repo.Upsert(ctx, ps)
 	if err != nil {
 		return nil, err

@@ -68,6 +68,7 @@ func (s *Server) CreateAgent(ctx context.Context, req *connect.Request[taskguild
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
+
 	err := s.repo.Create(ctx, a)
 	if err != nil {
 		return nil, err
@@ -252,6 +253,7 @@ func (s *Server) SyncAgentsFromDir(ctx context.Context, req *connect.Request[tas
 			existing.IsSynced = true
 
 			existing.UpdatedAt = time.Now()
+
 			err := s.repo.Update(ctx, existing)
 			if err != nil {
 				continue
@@ -279,6 +281,7 @@ func (s *Server) SyncAgentsFromDir(ctx context.Context, req *connect.Request[tas
 				CreatedAt:       now,
 				UpdatedAt:       now,
 			}
+
 			err := s.repo.Create(ctx, a)
 			if err != nil {
 				continue

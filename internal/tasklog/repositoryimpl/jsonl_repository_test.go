@@ -51,6 +51,7 @@ func TestMultiTurnCreateAndList(t *testing.T) {
 
 	for i := range 3 {
 		log = createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TOOL_USE), fmt.Sprintf("Turn 0 tool %d", i))
+
 		err := repo.Create(ctx, log)
 		if err != nil {
 			t.Fatalf("create tool_use turn 0: %v", err)
@@ -76,6 +77,7 @@ func TestMultiTurnCreateAndList(t *testing.T) {
 
 	for i := range 3 {
 		log = createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TOOL_USE), fmt.Sprintf("Turn 1 tool %d", i))
+
 		err := repo.Create(ctx, log)
 		if err != nil {
 			t.Fatalf("create tool_use turn 1: %v", err)
@@ -145,6 +147,7 @@ func TestMultiTurnPagination(t *testing.T) {
 	// Create 2 turns with 5 entries each (including TURN_START/END).
 	for turn := range 2 {
 		log := createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_START), fmt.Sprintf("Turn %d started", turn))
+
 		err := repo.Create(ctx, log)
 		if err != nil {
 			t.Fatal(err)
@@ -154,6 +157,7 @@ func TestMultiTurnPagination(t *testing.T) {
 
 		for i := range 3 {
 			log = createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TOOL_USE), fmt.Sprintf("Turn %d tool %d", turn, i))
+
 			err := repo.Create(ctx, log)
 			if err != nil {
 				t.Fatal(err)
@@ -163,6 +167,7 @@ func TestMultiTurnPagination(t *testing.T) {
 		}
 
 		log = createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_END), fmt.Sprintf("Turn %d ended", turn))
+
 		err = repo.Create(ctx, log)
 		if err != nil {
 			t.Fatal(err)
@@ -228,6 +233,7 @@ func TestMultiTurnServerRestart(t *testing.T) {
 
 		for turn := range 2 {
 			log := createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_START), fmt.Sprintf("Turn %d started", turn))
+
 			err := repo.Create(ctx, log)
 			if err != nil {
 				t.Fatal(err)
@@ -236,6 +242,7 @@ func TestMultiTurnServerRestart(t *testing.T) {
 			allIDs = append(allIDs, log.ID)
 
 			log = createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_AGENT_OUTPUT), fmt.Sprintf("Turn %d output", turn))
+
 			err = repo.Create(ctx, log)
 			if err != nil {
 				t.Fatal(err)
@@ -244,6 +251,7 @@ func TestMultiTurnServerRestart(t *testing.T) {
 			allIDs = append(allIDs, log.ID)
 
 			log = createLog(projectID, taskID, int32(taskguildv1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_END), fmt.Sprintf("Turn %d ended", turn))
+
 			err = repo.Create(ctx, log)
 			if err != nil {
 				t.Fatal(err)

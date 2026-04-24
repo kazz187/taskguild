@@ -293,7 +293,6 @@ func runAgent() {
 	firstSync := true
 
 	for ctx.Err() == nil {
-
 		// Re-sync agents, permissions, and scripts on each reconnection so local files stay up-to-date.
 		forceAll := firstSync && overrideAgentMDFlag != nil && *overrideAgentMDFlag
 		syncAgents(ctx, client, cfg, nil, forceAll)

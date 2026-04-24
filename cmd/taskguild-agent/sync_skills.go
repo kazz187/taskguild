@@ -173,6 +173,7 @@ func cleanupStaleSkillDirs(skillsDir string, serverSkillNames map[string]bool) {
 
 		if !serverSkillNames[entry.Name()] {
 			dirPath := filepath.Join(skillsDir, entry.Name())
+
 			err := os.RemoveAll(dirPath)
 			if err != nil {
 				slog.Error("failed to remove stale skill directory", "path", dirPath, "error", err)

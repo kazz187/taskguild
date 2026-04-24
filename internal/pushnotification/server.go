@@ -59,6 +59,7 @@ func (s *Server) RegisterPushSubscription(ctx context.Context, req *connect.Requ
 		existing.P256dhKey = req.Msg.GetP256DhKey()
 
 		existing.AuthKey = req.Msg.GetAuthKey()
+
 		delErr := s.repo.Delete(ctx, existing.ID)
 		if delErr != nil {
 			return nil, delErr
