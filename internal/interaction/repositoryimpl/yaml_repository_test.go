@@ -126,7 +126,8 @@ func TestListStatusFilter(t *testing.T) {
 	mustCreate := func(i *interaction.Interaction) {
 		t.Helper()
 
-		if err := repo.Create(ctx, i); err != nil {
+		err := repo.Create(ctx, i)
+		if err != nil {
 			t.Fatalf("Create: %v", err)
 		}
 	}
@@ -167,7 +168,8 @@ func TestLazyLoadNoDoubleLoad(t *testing.T) {
 	repo, tr := newTestRepo(t)
 	tr.active["task1"] = &task.Task{ID: "task1", ProjectID: "proj1"}
 
-	if err := repo.Create(ctx, sampleInteraction("i-1", "proj1", "task1", interaction.StatusPending)); err != nil {
+	err := repo.Create(ctx, sampleInteraction("i-1", "proj1", "task1", interaction.StatusPending))
+	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
