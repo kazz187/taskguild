@@ -215,7 +215,7 @@ export type WorkflowStatus = Message<"taskguild.v1.WorkflowStatus"> & {
 
   /**
    * permission mode for agents executing tasks in this status
-   * (default, acceptEdits, dontAsk, bypassPermissions, plan)
+   * (default, acceptEdits, dontAsk, bypassPermissions, plan, auto)
    *
    * @generated from field: string permission_mode = 11;
    */

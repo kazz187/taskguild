@@ -365,7 +365,7 @@ type WorkflowStatus struct {
 	// hooks
 	Hooks []*StatusHook `protobuf:"bytes,8,rep,name=hooks,proto3" json:"hooks,omitempty"`
 	// permission mode for agents executing tasks in this status
-	// (default, acceptEdits, dontAsk, bypassPermissions, plan)
+	// (default, acceptEdits, dontAsk, bypassPermissions, plan, auto)
 	PermissionMode string `protobuf:"bytes,11,opt,name=permission_mode,json=permissionMode,proto3" json:"permission_mode,omitempty"`
 	// Name of the status whose session to inherit (fork) when entering this status.
 	// Empty means start a fresh session.

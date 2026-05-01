@@ -38,7 +38,7 @@ type AgentDefinition struct {
 	DisallowedTools []string `protobuf:"bytes,7,rep,name=disallowed_tools,json=disallowedTools,proto3" json:"disallowed_tools,omitempty"` // tools to deny from inherited list
 	// model & permissions
 	Model          string `protobuf:"bytes,8,opt,name=model,proto3" json:"model,omitempty"`                                         // sonnet, opus, haiku, inherit
-	PermissionMode string `protobuf:"bytes,9,opt,name=permission_mode,json=permissionMode,proto3" json:"permission_mode,omitempty"` // default, acceptEdits, dontAsk, bypassPermissions, plan
+	PermissionMode string `protobuf:"bytes,9,opt,name=permission_mode,json=permissionMode,proto3" json:"permission_mode,omitempty"` // default, acceptEdits, dontAsk, bypassPermissions, plan, auto
 	// extensions
 	Skills []string `protobuf:"bytes,10,rep,name=skills,proto3" json:"skills,omitempty"` // skills to preload into agent context
 	Memory string   `protobuf:"bytes,11,opt,name=memory,proto3" json:"memory,omitempty"` // persistent memory scope: user, project, local

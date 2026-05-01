@@ -192,6 +192,7 @@ export function StatusCard({ status: s, index, statuses, skills, scripts, onMove
               <option value="acceptEdits">Accept Edits (auto-approve file changes)</option>
               <option value="plan">Plan (no tool execution, plan only)</option>
               <option value="bypassPermissions">Bypass Permissions (auto-approve all)</option>
+              <option value="auto">Auto (model-classified)</option>
             </Select>
           </FormField>
         </div>
