@@ -37,6 +37,7 @@ export const PERMISSION_MODE_OPTIONS = [
   { value: 'dontAsk', label: "Don't Ask (auto-deny unpermitted)" },
   { value: 'bypassPermissions', label: 'Bypass Permissions' },
   { value: 'plan', label: 'Plan (read-only exploration)' },
+  { value: 'auto', label: 'Auto (model-classified)' },
 ]
 
 export const MEMORY_OPTIONS = [

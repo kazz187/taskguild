@@ -34,7 +34,7 @@ message AgentDefinition {
 
   // model & permissions
   string model = 8;                      // sonnet, opus, haiku, inherit
-  string permission_mode = 9;            // default, acceptEdits, dontAsk, bypassPermissions, plan
+  string permission_mode = 9;            // default, acceptEdits, dontAsk, bypassPermissions, plan, auto
 
   // extensions
   repeated string skills = 10;           // skills to preload into agent context

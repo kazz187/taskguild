@@ -82,7 +82,7 @@ export type AgentDefinition = Message<"taskguild.v1.AgentDefinition"> & {
   model: string;
 
   /**
-   * default, acceptEdits, dontAsk, bypassPermissions, plan
+   * default, acceptEdits, dontAsk, bypassPermissions, plan, auto
    *
    * @generated from field: string permission_mode = 9;
    */

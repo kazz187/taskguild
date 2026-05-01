@@ -223,7 +223,7 @@ memory: project
 | `tools` | string / list | 使用可能なツール（カンマ区切り or YAML リスト） |
 | `disallowedTools` | string / list | 使用禁止のツール |
 | `model` | string | 使用モデル: `sonnet` / `opus` / `haiku` / `inherit` |
-| `permissionMode` | string | 権限モード: `default` / `acceptEdits` / `dontAsk` / `bypassPermissions` / `plan` |
+| `permissionMode` | string | 権限モード: `default` / `acceptEdits` / `dontAsk` / `bypassPermissions` / `plan` / `auto` |
 | `skills` | list | プリロードするスキル |
 | `memory` | string | メモリスコープ: `user` / `project` / `local` |
 

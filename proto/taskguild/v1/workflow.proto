@@ -84,7 +84,7 @@ message WorkflowStatus {
   reserved "enable_agent_md_harness", "agent_md_harness_explicitly_disabled";
 
   // permission mode for agents executing tasks in this status
-  // (default, acceptEdits, dontAsk, bypassPermissions, plan)
+  // (default, acceptEdits, dontAsk, bypassPermissions, plan, auto)
   string permission_mode = 11;
 
   // Name of the status whose session to inherit (fork) when entering this status.
