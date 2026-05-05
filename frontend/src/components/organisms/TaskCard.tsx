@@ -3,7 +3,7 @@ import { useDraggable } from '@dnd-kit/core'
 import { useNavigate } from '@tanstack/react-router'
 import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { TaskAssignmentStatus } from '@taskguild/proto/taskguild/v1/task_pb.ts'
-import { Bot, Clock, GitBranch, Loader, Pencil, ArrowRight, AlertTriangle, CopyPlus, ArrowUpRight, Layers, Square, Play } from 'lucide-react'
+import { Bot, Clock, GitBranch, Loader, Pencil, ArrowRight, AlertTriangle, CopyPlus, ArrowUpRight, Layers, MessageSquare, Square, Play } from 'lucide-react'
 import { shortId } from '@/lib/id'
 import { Badge, Tooltip } from '../atoms/index.ts'
 import { DropdownMenu } from '../molecules/index.ts'
@@ -28,6 +28,8 @@ interface TaskCardProps {
   childCount?: number
   /** Parent task title (when this task is a child) */
   parentTaskTitle?: string
+  /** Number of PENDING interactions awaiting user response */
+  pendingInteractionCount?: number
   /** Callback to stop a running task */
   onStop?: (taskId: string) => void
   /** Callback to resume a stopped task */
@@ -36,7 +38,7 @@ interface TaskCardProps {
   statusHasAgent?: boolean
 }
 
-export function TaskCard({ task, onEdit, onCreateChild, isDragOverlay, transitionTargets, onTransition, childCount, parentTaskTitle, onStop, onResume, statusHasAgent }: TaskCardProps) {
+export function TaskCard({ task, onEdit, onCreateChild, isDragOverlay, transitionTargets, onTransition, childCount, parentTaskTitle, pendingInteractionCount, onStop, onResume, statusHasAgent }: TaskCardProps) {
   const navigate = useNavigate()
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: task.id,
@@ -232,6 +234,12 @@ export function TaskCard({ task, onEdit, onCreateChild, isDragOverlay, transitio
           {childCount != null && childCount > 0 && (
             <Badge color="purple" size="xs" variant="outline" pill icon={<Layers className="w-2.5 h-2.5" />}>
               {childCount}
+            </Badge>
+          )}
+          {/* PENDING Interaction count badge (awaiting user response) */}
+          {pendingInteractionCount != null && pendingInteractionCount > 0 && (
+            <Badge color="amber" size="xs" variant="outline" pill icon={<MessageSquare className="w-2.5 h-2.5" />}>
+              {pendingInteractionCount}
             </Badge>
           )}
         </div>
