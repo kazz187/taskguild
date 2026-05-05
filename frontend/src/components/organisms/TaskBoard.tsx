@@ -3,10 +3,12 @@ import { createPortal } from 'react-dom'
 import { useQuery, useMutation } from '@connectrpc/connect-query'
 import { listTasks, updateTaskStatus, stopTask, resumeTask } from '@taskguild/proto/taskguild/v1/task-TaskService_connectquery.ts'
 import { listAgents } from '@taskguild/proto/taskguild/v1/agent-AgentService_connectquery.ts'
+import { listInteractions } from '@taskguild/proto/taskguild/v1/interaction-InteractionService_connectquery.ts'
+import { InteractionStatus } from '@taskguild/proto/taskguild/v1/interaction_pb.ts'
 import type { Workflow, WorkflowStatus } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import type { Task } from '@taskguild/proto/taskguild/v1/task_pb.ts'
 import { TaskAssignmentStatus } from '@taskguild/proto/taskguild/v1/task_pb.ts'
-import { EventType } from '@taskguild/proto/taskguild/v1/event_pb.ts'
+import { EventType, type Event } from '@taskguild/proto/taskguild/v1/event_pb.ts'
 import {
   DndContext,
   DragOverlay,
@@ -18,6 +20,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core'
 import { useEventSubscription } from '@/hooks/useEventSubscription'
+import { useNotificationSound } from '@/hooks/useNotificationSound'
 import { TaskCard } from './TaskCard.tsx'
 import { TaskDetailModal } from './TaskDetailModal.tsx'
 import { TaskCreateModal } from './TaskCreateModal.tsx'
@@ -35,7 +38,7 @@ interface TaskBoardProps {
   headerActionsRef?: RefObject<HTMLDivElement | null>
 }
 
-const TASK_EVENT_TYPES = [
+const KANBAN_EVENT_TYPES = [
   EventType.TASK_CREATED,
   EventType.TASK_UPDATED,
   EventType.TASK_STATUS_CHANGED,
@@ -44,6 +47,8 @@ const TASK_EVENT_TYPES = [
   EventType.AGENT_STATUS_CHANGED,
   EventType.TASK_ARCHIVED,
   EventType.TASK_UNARCHIVED,
+  EventType.INTERACTION_CREATED,
+  EventType.INTERACTION_RESPONDED,
 ]
 
 /** Pending force-move confirmation state */
@@ -59,6 +64,18 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
     projectId,
     workflowId: workflow.id,
   })
+  // Project-scoped PENDING interactions. The proto has no `workflow_id` filter,
+  // so we fetch project-wide and filter to the current workflow's task IDs in
+  // memory. PENDING-only keeps the result small (responded items drop out).
+  const { data: pendingInteractionsData, refetch: refetchInteractions } = useQuery(
+    listInteractions,
+    {
+      projectId,
+      taskId: '',
+      statusFilter: InteractionStatus.PENDING,
+      pagination: { limit: 0 },
+    },
+  )
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [creatingChildForTask, setCreatingChildForTask] = useState<Task | null>(null)
@@ -82,11 +99,26 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   )
 
-  const onEvent = useCallback(() => {
-    refetch()
-  }, [refetch])
+  const onEvent = useCallback(
+    (event: Event) => {
+      switch (event.type) {
+        case EventType.INTERACTION_CREATED:
+        case EventType.INTERACTION_RESPONDED:
+          void refetchInteractions()
+          return
+        default:
+          // Task lifecycle events: refresh the task list. Task creates/updates
+          // also affect interaction visibility (e.g., a deleted task's
+          // interactions vanish), so refetch interactions too.
+          void refetch()
+          void refetchInteractions()
+          return
+      }
+    },
+    [refetch, refetchInteractions],
+  )
 
-  useEventSubscription(TASK_EVENT_TYPES, projectId, onEvent)
+  useEventSubscription(KANBAN_EVENT_TYPES, projectId, onEvent)
 
   const tasks = data?.tasks ?? []
   const sortedStatuses = useMemo(
@@ -129,6 +161,32 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
     }
     return map
   }, [tasks])
+
+  // taskId -> count of PENDING interactions awaiting user response.
+  // The query is project-scoped (no workflow filter in proto), so the map may
+  // include task IDs from other workflows. TaskCard lookup by ID handles that
+  // gracefully (other-workflow tasks aren't rendered here).
+  const pendingInteractionCounts = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const i of pendingInteractionsData?.interactions ?? []) {
+      map.set(i.taskId, (map.get(i.taskId) ?? 0) + 1)
+    }
+    return map
+  }, [pendingInteractionsData])
+
+  // Total PENDING interactions for tasks shown in THIS workflow (for sound).
+  // Restricting to the current workflow avoids ringing the bell when an
+  // unrelated workflow in the same project gets a new interaction — the
+  // Project Chat / Global Chat pages already cover the broader scope.
+  const workflowTaskIds = useMemo(() => new Set(tasks.map((t) => t.id)), [tasks])
+  const totalPendingForWorkflow = useMemo(() => {
+    let count = 0
+    for (const i of pendingInteractionsData?.interactions ?? []) {
+      if (workflowTaskIds.has(i.taskId)) count++
+    }
+    return count
+  }, [pendingInteractionsData, workflowTaskIds])
+  useNotificationSound(totalPendingForWorkflow)
 
   // Fetch project agents to resolve agent names from status agent_id.
   const { data: agentsData } = useQuery(listAgents, { projectId })
@@ -441,6 +499,7 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
                 defaultUseWorktree={workflow.defaultUseWorktree}
                 childTasksByParentId={childTasksByParentId}
                 parentTaskById={parentTaskById}
+                pendingInteractionCounts={pendingInteractionCounts}
                 onStop={handleStopTask}
                 onResume={handleResumeTask}
               />
@@ -452,7 +511,11 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
           >
             {activeTask ? (
               <div className="w-72">
-                <TaskCard task={activeTask} isDragOverlay />
+                <TaskCard
+                  task={activeTask}
+                  isDragOverlay
+                  pendingInteractionCount={pendingInteractionCounts.get(activeTask.id) ?? 0}
+                />
               </div>
             ) : null}
           </DragOverlay>
@@ -534,6 +597,7 @@ function StatusColumn({
   defaultUseWorktree,
   childTasksByParentId,
   parentTaskById,
+  pendingInteractionCounts,
   onStop,
   onResume,
 }: {
@@ -553,6 +617,7 @@ function StatusColumn({
   defaultUseWorktree?: boolean
   childTasksByParentId: Map<string, { id: string; title: string; statusId: string }[]>
   parentTaskById: Map<string, { id: string; title: string }>
+  pendingInteractionCounts: Map<string, number>
   onStop: (taskId: string) => void
   onResume: (taskId: string) => void
 }) {
@@ -626,6 +691,7 @@ function StatusColumn({
               onTransition={onTransition}
               childCount={childTasksByParentId.get(task.id)?.length}
               parentTaskTitle={parentTaskById.get(task.id)?.title}
+              pendingInteractionCount={pendingInteractionCounts.get(task.id) ?? 0}
               onStop={onStop}
               onResume={onResume}
               statusHasAgent={!!status.agentId}
