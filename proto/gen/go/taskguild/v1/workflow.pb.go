@@ -378,7 +378,7 @@ type WorkflowStatus struct {
 	// Skill-based harness: appends failure patterns to Skill files
 	EnableSkillHarness             bool `protobuf:"varint,17,opt,name=enable_skill_harness,json=enableSkillHarness,proto3" json:"enable_skill_harness,omitempty"`
 	SkillHarnessExplicitlyDisabled bool `protobuf:"varint,18,opt,name=skill_harness_explicitly_disabled,json=skillHarnessExplicitlyDisabled,proto3" json:"skill_harness_explicitly_disabled,omitempty"`
-	// Effort controls thinking depth. Valid values: "low", "medium", "high", "max".
+	// Effort controls thinking depth. Valid values: "low", "medium", "high", "xhigh", "max".
 	Effort        string `protobuf:"bytes,19,opt,name=effort,proto3" json:"effort,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

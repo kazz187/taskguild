@@ -42,7 +42,7 @@ type Task struct {
 	Metadata         map[string]string `yaml:"metadata"`
 	UseWorktree      bool              `yaml:"use_worktree"`
 	// Effort overrides WorkflowStatus.effort when non-empty.
-	// Valid values: "low", "medium", "high", "max". Empty = inherit from WorkflowStatus.
+	// Valid values: "low", "medium", "high", "xhigh", "max". Empty = inherit from WorkflowStatus.
 	Effort    string    `yaml:"effort,omitempty"`
 	CreatedAt time.Time `yaml:"created_at"`
 	UpdatedAt time.Time `yaml:"updated_at"`
