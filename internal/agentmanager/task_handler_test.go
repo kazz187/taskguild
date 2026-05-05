@@ -51,6 +51,18 @@ func TestResolveEffort(t *testing.T) {
 			statusEffort: "",
 			expected:     "medium",
 		},
+		{
+			name:         "task xhigh effort overrides status max effort",
+			taskEffort:   "xhigh",
+			statusEffort: "max",
+			expected:     "xhigh",
+		},
+		{
+			name:         "status xhigh propagates when task effort empty",
+			taskEffort:   "",
+			statusEffort: "xhigh",
+			expected:     "xhigh",
+		},
 	}
 
 	for _, tc := range tests {

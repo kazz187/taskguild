@@ -96,7 +96,7 @@ export type Task = Message<"taskguild.v1.Task"> & {
 
   /**
    * overrides WorkflowStatus.effort when non-empty.
-   * Valid values: "low", "medium", "high", "max".
+   * Valid values: "low", "medium", "high", "xhigh", "max".
    *
    * @generated from field: string effort = 14;
    */
@@ -161,7 +161,7 @@ export type CreateTaskRequest = Message<"taskguild.v1.CreateTaskRequest"> & {
 
   /**
    * overrides WorkflowStatus.effort when non-empty.
-   * Valid values: "low", "medium", "high", "max".
+   * Valid values: "low", "medium", "high", "xhigh", "max".
    *
    * @generated from field: string effort = 9;
    */
@@ -320,7 +320,7 @@ export type UpdateTaskRequest = Message<"taskguild.v1.UpdateTaskRequest"> & {
   /**
    * optional override of WorkflowStatus.effort.
    * Empty string explicitly clears the override (falls back to WorkflowStatus).
-   * Valid non-empty values: "low", "medium", "high", "max".
+   * Valid non-empty values: "low", "medium", "high", "xhigh", "max".
    *
    * @generated from field: optional string effort = 7;
    */

@@ -63,7 +63,7 @@ message Task {
   google.protobuf.Timestamp updated_at = 13;
 
   // overrides WorkflowStatus.effort when non-empty.
-  // Valid values: "low", "medium", "high", "max".
+  // Valid values: "low", "medium", "high", "xhigh", "max".
   string effort = 14;
 }
 
@@ -88,7 +88,7 @@ message CreateTaskRequest {
   optional string status_id = 8;
 
   // overrides WorkflowStatus.effort when non-empty.
-  // Valid values: "low", "medium", "high", "max".
+  // Valid values: "low", "medium", "high", "xhigh", "max".
   string effort = 9;
 }
 message CreateTaskResponse {
@@ -132,7 +132,7 @@ message UpdateTaskRequest {
 
   // optional override of WorkflowStatus.effort.
   // Empty string explicitly clears the override (falls back to WorkflowStatus).
-  // Valid non-empty values: "low", "medium", "high", "max".
+  // Valid non-empty values: "low", "medium", "high", "xhigh", "max".
   optional string effort = 7;
 }
 message UpdateTaskResponse {

@@ -101,7 +101,7 @@ message WorkflowStatus {
   bool enable_skill_harness = 17;
   bool skill_harness_explicitly_disabled = 18;
 
-  // Effort controls thinking depth. Valid values: "low", "medium", "high", "max".
+  // Effort controls thinking depth. Valid values: "low", "medium", "high", "xhigh", "max".
   string effort = 19;
 }
 

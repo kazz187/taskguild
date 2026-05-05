@@ -69,7 +69,7 @@ type Status struct {
 	Tools           []string `yaml:"tools,omitempty"`
 	DisallowedTools []string `yaml:"disallowed_tools,omitempty"`
 	SkillIDs        []string `yaml:"skill_ids,omitempty"`
-	Effort          string   `yaml:"effort,omitempty"` // "low" / "medium" / "high" / "max"
+	Effort          string   `yaml:"effort,omitempty"` // "low" / "medium" / "high" / "xhigh" / "max"
 
 	// Skill-based harness: appends failure patterns to Skill files.
 	EnableSkillHarness             bool `yaml:"enable_skill_harness"`
