@@ -272,7 +272,7 @@ export type WorkflowStatus = Message<"taskguild.v1.WorkflowStatus"> & {
   skillHarnessExplicitlyDisabled: boolean;
 
   /**
-   * Effort controls thinking depth. Valid values: "low", "medium", "high", "max".
+   * Effort controls thinking depth. Valid values: "low", "medium", "high", "xhigh", "max".
    *
    * @generated from field: string effort = 19;
    */

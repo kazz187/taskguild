@@ -24,7 +24,7 @@ export interface StatusDraft {
   inheritSessionFrom: string // name of status to inherit session from (fork)
   // Execution configuration
   model: string
-  effort: string // "low" / "medium" / "high" / "max" (empty = inherit)
+  effort: string // "low" / "medium" / "high" / "xhigh" / "max" (empty = inherit)
   skillId: string // Single execution skill ID (empty = none)
   enableSkillHarness: boolean
   skillHarnessExplicitlyDisabled: boolean

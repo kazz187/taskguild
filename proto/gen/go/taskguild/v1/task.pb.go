@@ -94,7 +94,7 @@ type Task struct {
 	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// overrides WorkflowStatus.effort when non-empty.
-	// Valid values: "low", "medium", "high", "max".
+	// Valid values: "low", "medium", "high", "xhigh", "max".
 	Effort        string `protobuf:"bytes,14,opt,name=effort,proto3" json:"effort,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -236,7 +236,7 @@ type CreateTaskRequest struct {
 	// optional: specify initial status (defaults to workflow's IsInitial status)
 	StatusId *string `protobuf:"bytes,8,opt,name=status_id,json=statusId,proto3,oneof" json:"status_id,omitempty"`
 	// overrides WorkflowStatus.effort when non-empty.
-	// Valid values: "low", "medium", "high", "max".
+	// Valid values: "low", "medium", "high", "xhigh", "max".
 	Effort        string `protobuf:"bytes,9,opt,name=effort,proto3" json:"effort,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -593,7 +593,7 @@ type UpdateTaskRequest struct {
 	Metadata map[string]string `protobuf:"bytes,6,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// optional override of WorkflowStatus.effort.
 	// Empty string explicitly clears the override (falls back to WorkflowStatus).
-	// Valid non-empty values: "low", "medium", "high", "max".
+	// Valid non-empty values: "low", "medium", "high", "xhigh", "max".
 	Effort        *string `protobuf:"bytes,7,opt,name=effort,proto3,oneof" json:"effort,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
