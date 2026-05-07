@@ -84,6 +84,8 @@ export function WorkflowForm({
                   trigger: HookTrigger.BEFORE_TASK_EXECUTION,
                   order: s.hooks.length,
                   name: '',
+                  skillName: '',
+                  args: '',
                 },
               ],
             }

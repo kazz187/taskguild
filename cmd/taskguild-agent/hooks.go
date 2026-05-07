@@ -25,12 +25,36 @@ import (
 
 // hookEntry represents a resolved hook from metadata.
 type hookEntry struct {
-	ID      string `json:"id"`
-	SkillID string `json:"skill_id"`
-	Trigger string `json:"trigger"`
-	Order   int32  `json:"order"`
-	Name    string `json:"name"`
-	Content string `json:"content"`
+	ID         string `json:"id"`
+	SkillID    string `json:"skill_id"`
+	ActionType string `json:"action_type"`
+	Trigger    string `json:"trigger"`
+	Order      int32  `json:"order"`
+	Name       string `json:"name"`
+	Content    string `json:"content"`
+	SkillName  string `json:"skill_name"`
+	Args       string `json:"args"`
+}
+
+// buildHookPrompt constructs the prompt sent to the Claude CLI for a hook.
+// Custom Skill (or any entry whose Content is empty but SkillName is set)
+// is invoked as a slash command so Claude CLI can resolve built-in skills
+// such as /simplify. Otherwise, the resolved Skill content is used directly,
+// optionally with args appended at the bottom for backward compatibility.
+func buildHookPrompt(h hookEntry) string {
+	if h.ActionType == "custom_skill" || (h.Content == "" && h.SkillName != "") {
+		if h.Args != "" {
+			return fmt.Sprintf("/%s %s", h.SkillName, h.Args)
+		}
+
+		return "/" + h.SkillName
+	}
+
+	if h.Args != "" {
+		return h.Content + "\n\nArgs: " + h.Args
+	}
+
+	return h.Content
 }
 
 // executeHooks parses _hooks from metadata, filters by trigger, and runs each
@@ -95,7 +119,9 @@ func executeHooks(ctx context.Context, taskID string, trigger string, metadata m
 			opts.ForkSession = true
 		}
 
-		result, err := qr.RunQuerySync(hookCtx, h.Content, opts, workDir, taskID, "hook_"+h.Name)
+		prompt := buildHookPrompt(h)
+
+		result, err := qr.RunQuerySync(hookCtx, prompt, opts, workDir, taskID, "hook_"+h.Name)
 
 		cancel()
 

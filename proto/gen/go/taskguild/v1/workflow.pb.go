@@ -80,9 +80,10 @@ func (HookTrigger) EnumDescriptor() ([]byte, []int) {
 type HookActionType int32
 
 const (
-	HookActionType_HOOK_ACTION_TYPE_UNSPECIFIED HookActionType = 0
-	HookActionType_HOOK_ACTION_TYPE_SKILL       HookActionType = 1
-	HookActionType_HOOK_ACTION_TYPE_SCRIPT      HookActionType = 2
+	HookActionType_HOOK_ACTION_TYPE_UNSPECIFIED  HookActionType = 0
+	HookActionType_HOOK_ACTION_TYPE_SKILL        HookActionType = 1
+	HookActionType_HOOK_ACTION_TYPE_SCRIPT       HookActionType = 2
+	HookActionType_HOOK_ACTION_TYPE_CUSTOM_SKILL HookActionType = 3 // arbitrary skill name (not registered in DB)
 )
 
 // Enum value maps for HookActionType.
@@ -91,11 +92,13 @@ var (
 		0: "HOOK_ACTION_TYPE_UNSPECIFIED",
 		1: "HOOK_ACTION_TYPE_SKILL",
 		2: "HOOK_ACTION_TYPE_SCRIPT",
+		3: "HOOK_ACTION_TYPE_CUSTOM_SKILL",
 	}
 	HookActionType_value = map[string]int32{
-		"HOOK_ACTION_TYPE_UNSPECIFIED": 0,
-		"HOOK_ACTION_TYPE_SKILL":       1,
-		"HOOK_ACTION_TYPE_SCRIPT":      2,
+		"HOOK_ACTION_TYPE_UNSPECIFIED":  0,
+		"HOOK_ACTION_TYPE_SKILL":        1,
+		"HOOK_ACTION_TYPE_SCRIPT":       2,
+		"HOOK_ACTION_TYPE_CUSTOM_SKILL": 3,
 	}
 )
 
@@ -266,6 +269,8 @@ type StatusHook struct {
 	Name          string                 `protobuf:"bytes,5,opt,name=name,proto3" json:"name,omitempty"`
 	ActionType    HookActionType         `protobuf:"varint,6,opt,name=action_type,json=actionType,proto3,enum=taskguild.v1.HookActionType" json:"action_type,omitempty"` // type of action (skill or script)
 	ActionId      string                 `protobuf:"bytes,7,opt,name=action_id,json=actionId,proto3" json:"action_id,omitempty"`                                         // ID of the Skill or Script to execute
+	SkillName     string                 `protobuf:"bytes,8,opt,name=skill_name,json=skillName,proto3" json:"skill_name,omitempty"`                                      // skill name for CUSTOM_SKILL (slash omitted)
+	Args          string                 `protobuf:"bytes,9,opt,name=args,proto3" json:"args,omitempty"`                                                                 // args passed to the skill on invocation (all action types)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -345,6 +350,20 @@ func (x *StatusHook) GetActionType() HookActionType {
 func (x *StatusHook) GetActionId() string {
 	if x != nil {
 		return x.ActionId
+	}
+	return ""
+}
+
+func (x *StatusHook) GetSkillName() string {
+	if x != nil {
+		return x.SkillName
+	}
+	return ""
+}
+
+func (x *StatusHook) GetArgs() string {
+	if x != nil {
+		return x.Args
 	}
 	return ""
 }
@@ -1209,7 +1228,7 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\x17default_permission_mode\x18\t \x01(\tR\x15defaultPermissionMode\x120\n" +
 	"\x14default_use_worktree\x18\n" +
 	" \x01(\bR\x12defaultUseWorktree\x12#\n" +
-	"\rcustom_prompt\x18\v \x01(\tR\fcustomPrompt\"\xf2\x01\n" +
+	"\rcustom_prompt\x18\v \x01(\tR\fcustomPrompt\"\xa5\x02\n" +
 	"\n" +
 	"StatusHook\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
@@ -1219,7 +1238,10 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\x04name\x18\x05 \x01(\tR\x04name\x12=\n" +
 	"\vaction_type\x18\x06 \x01(\x0e2\x1c.taskguild.v1.HookActionTypeR\n" +
 	"actionType\x12\x1b\n" +
-	"\taction_id\x18\a \x01(\tR\bactionId\"\xaf\x05\n" +
+	"\taction_id\x18\a \x01(\tR\bactionId\x12\x1d\n" +
+	"\n" +
+	"skill_name\x18\b \x01(\tR\tskillName\x12\x12\n" +
+	"\x04args\x18\t \x01(\tR\x04args\"\xaf\x05\n" +
 	"\x0eWorkflowStatus\x12\x12\n" +
 	"\x02id\x18\x01 \x01(\tB\x02\x18\x01R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -1295,11 +1317,12 @@ const file_taskguild_v1_workflow_proto_rawDesc = "" +
 	"\"HOOK_TRIGGER_BEFORE_TASK_EXECUTION\x10\x01\x12%\n" +
 	"!HOOK_TRIGGER_AFTER_TASK_EXECUTION\x10\x02\x12(\n" +
 	"$HOOK_TRIGGER_AFTER_WORKTREE_CREATION\x10\x03\x12)\n" +
-	"%HOOK_TRIGGER_BEFORE_WORKTREE_CREATION\x10\x04*k\n" +
+	"%HOOK_TRIGGER_BEFORE_WORKTREE_CREATION\x10\x04*\x8e\x01\n" +
 	"\x0eHookActionType\x12 \n" +
 	"\x1cHOOK_ACTION_TYPE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16HOOK_ACTION_TYPE_SKILL\x10\x01\x12\x1b\n" +
-	"\x17HOOK_ACTION_TYPE_SCRIPT\x10\x022\xd6\x03\n" +
+	"\x17HOOK_ACTION_TYPE_SCRIPT\x10\x02\x12!\n" +
+	"\x1dHOOK_ACTION_TYPE_CUSTOM_SKILL\x10\x032\xd6\x03\n" +
 	"\x0fWorkflowService\x12[\n" +
 	"\x0eCreateWorkflow\x12#.taskguild.v1.CreateWorkflowRequest\x1a$.taskguild.v1.CreateWorkflowResponse\x12R\n" +
 	"\vGetWorkflow\x12 .taskguild.v1.GetWorkflowRequest\x1a!.taskguild.v1.GetWorkflowResponse\x12X\n" +

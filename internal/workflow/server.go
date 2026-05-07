@@ -219,6 +219,8 @@ func hookToProto(h StatusHook) *taskguildv1.StatusHook {
 		Name:       h.Name,
 		ActionType: hookActionTypeToProto(h.ActionType),
 		ActionId:   h.ActionID,
+		SkillName:  h.SkillName,
+		Args:       h.Args,
 	}
 }
 
@@ -306,6 +308,8 @@ func hookFromProto(ph *taskguildv1.StatusHook) StatusHook {
 		Name:       ph.GetName(),
 		ActionType: hookActionTypeFromProto(ph.GetActionType()),
 		ActionID:   ph.GetActionId(),
+		SkillName:  ph.GetSkillName(),
+		Args:       ph.GetArgs(),
 	}
 }
 
@@ -315,6 +319,8 @@ func hookActionTypeToProto(t HookActionType) taskguildv1.HookActionType {
 		return taskguildv1.HookActionType_HOOK_ACTION_TYPE_SKILL
 	case HookActionTypeScript:
 		return taskguildv1.HookActionType_HOOK_ACTION_TYPE_SCRIPT
+	case HookActionTypeCustomSkill:
+		return taskguildv1.HookActionType_HOOK_ACTION_TYPE_CUSTOM_SKILL
 	default:
 		return taskguildv1.HookActionType_HOOK_ACTION_TYPE_UNSPECIFIED
 	}
@@ -326,6 +332,8 @@ func hookActionTypeFromProto(t taskguildv1.HookActionType) HookActionType {
 		return HookActionTypeSkill
 	case taskguildv1.HookActionType_HOOK_ACTION_TYPE_SCRIPT:
 		return HookActionTypeScript
+	case taskguildv1.HookActionType_HOOK_ACTION_TYPE_CUSTOM_SKILL:
+		return HookActionTypeCustomSkill
 	default:
 		return HookActionTypeUnspecified
 	}

@@ -11,6 +11,165 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestBuildHookPrompt verifies the prompt construction logic for various
+// combinations of action_type / Content / SkillName / Args.
+func TestBuildHookPrompt(t *testing.T) {
+	cases := []struct {
+		name string
+		h    hookEntry
+		want string
+	}{
+		{
+			name: "skill with no args (legacy/registered) — Content only",
+			h:    hookEntry{ActionType: "skill", Content: "do X"},
+			want: "do X",
+		},
+		{
+			name: "skill with args appends args footer",
+			h:    hookEntry{ActionType: "skill", Content: "do X", Args: "urgent"},
+			want: "do X\n\nArgs: urgent",
+		},
+		{
+			name: "custom skill with args becomes slash command",
+			h:    hookEntry{ActionType: "custom_skill", SkillName: "simplify", Args: "foo bar"},
+			want: "/simplify foo bar",
+		},
+		{
+			name: "custom skill without args becomes bare slash command",
+			h:    hookEntry{ActionType: "custom_skill", SkillName: "simplify"},
+			want: "/simplify",
+		},
+		{
+			name: "missing Content with SkillName falls back to slash command",
+			h:    hookEntry{ActionType: "skill", SkillName: "review", Args: "src/foo.ts"},
+			want: "/review src/foo.ts",
+		},
+		{
+			name: "legacy entry with no action_type, only Content",
+			h:    hookEntry{Content: "legacy content"},
+			want: "legacy content",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := buildHookPrompt(tc.h)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+// TestExecuteHooks_CustomSkill verifies that a custom_skill hook is invoked
+// via QueryRunner with a slash-command prompt assembled from SkillName + Args.
+func TestExecuteHooks_CustomSkill(t *testing.T) {
+	tc := newTestClients()
+	defer tc.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	hooks := []hookEntry{
+		{
+			ID:         "hook-custom-1",
+			ActionType: "custom_skill",
+			Trigger:    "after_task_execution",
+			Order:      1,
+			Name:       "simplify",
+			SkillName:  "simplify",
+			Args:       "src/foo.ts",
+		},
+	}
+	hooksJSON, err := json.Marshal(hooks)
+	require.NoError(t, err)
+
+	metadata := map[string]string{
+		"_hooks": string(hooksJSON),
+	}
+
+	qr := &mockQueryRunner{
+		results: []mockQueryRunnerResult{
+			{Result: makeResult("simplified")},
+		},
+	}
+
+	tl := newTaskLogger(ctx, tc.agentClient, "task-custom-skill")
+	defer tl.Close()
+
+	executeHooks(ctx, "task-custom-skill", "after_task_execution", metadata, t.TempDir(), tc.taskClient, tl, qr, "")
+
+	calls := qr.getCalls()
+	require.Len(t, calls, 1)
+	assert.Equal(t, "/simplify src/foo.ts", calls[0].Prompt)
+	assert.Equal(t, "hook_simplify", calls[0].Label)
+}
+
+// TestExecuteHooks_SkillWithArgs verifies that a registered Skill hook with
+// args appends the args block to the resolved Skill content.
+func TestExecuteHooks_SkillWithArgs(t *testing.T) {
+	tc := newTestClients()
+	defer tc.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	hooks := []hookEntry{
+		{
+			ID:         "hook-skill-args",
+			ActionType: "skill",
+			Trigger:    "after_task_execution",
+			Order:      1,
+			Name:       "create-pr",
+			Content:    "Create a PR for the changes.",
+			Args:       "urgent",
+		},
+	}
+	hooksJSON, err := json.Marshal(hooks)
+	require.NoError(t, err)
+
+	metadata := map[string]string{
+		"_hooks": string(hooksJSON),
+	}
+
+	qr := &mockQueryRunner{
+		results: []mockQueryRunnerResult{
+			{Result: makeResult("ok")},
+		},
+	}
+
+	tl := newTaskLogger(ctx, tc.agentClient, "task-skill-args")
+	defer tl.Close()
+
+	executeHooks(ctx, "task-skill-args", "after_task_execution", metadata, t.TempDir(), tc.taskClient, tl, qr, "")
+
+	calls := qr.getCalls()
+	require.Len(t, calls, 1)
+	assert.Equal(t, "Create a PR for the changes.\n\nArgs: urgent", calls[0].Prompt)
+}
+
+// TestCollectStatusSkills_CustomSkill verifies that hooks with action_type
+// "custom_skill" are added to the auto-allow set.
+func TestCollectStatusSkills_CustomSkill(t *testing.T) {
+	hooks := []map[string]any{
+		{"name": "simplify", "action_type": "custom_skill"},
+		{"name": "create-pr", "action_type": "skill"},
+		{"name": "deploy", "action_type": "script"},
+		{"name": "legacy", "action_type": ""},
+	}
+	hooksJSON, err := json.Marshal(hooks)
+	require.NoError(t, err)
+
+	metadata := map[string]string{
+		"_hooks": string(hooksJSON),
+	}
+
+	got := collectStatusSkills(metadata)
+
+	assert.True(t, got["simplify"], "custom_skill hook should be auto-allowed")
+	assert.True(t, got["create-pr"], "skill hook should be auto-allowed")
+	assert.True(t, got["legacy"], "legacy hook (empty action_type) should be auto-allowed")
+	assert.False(t, got["deploy"], "script hook should NOT be auto-allowed")
+}
+
 // TestExecuteHooks_CreatePR verifies that a create-pr hook is executed via
 // QueryRunner and that TASK_METADATA directives in the hook output update
 // the task's metadata via UpdateTask.

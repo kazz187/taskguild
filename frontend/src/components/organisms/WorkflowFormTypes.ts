@@ -9,6 +9,8 @@ export interface HookDraft {
   trigger: HookTrigger
   order: number
   name: string
+  skillName: string // CUSTOM_SKILL: arbitrary skill name (slash omitted)
+  args: string // args passed to the skill on invocation
 }
 
 export interface StatusDraft {

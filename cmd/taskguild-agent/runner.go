@@ -712,7 +712,7 @@ func collectStatusSkills(metadata map[string]string) map[string]bool {
 					continue
 				}
 
-				if h.ActionType == "" || h.ActionType == "skill" {
+				if h.ActionType == "" || h.ActionType == "skill" || h.ActionType == "custom_skill" {
 					out[h.Name] = true
 				}
 			}

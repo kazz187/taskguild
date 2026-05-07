@@ -2,6 +2,7 @@ import type { SkillDefinition } from '@taskguild/proto/taskguild/v1/skill_pb.ts'
 import type { ScriptDefinition } from '@taskguild/proto/taskguild/v1/script_pb.ts'
 import { HookTrigger, HookActionType } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { Plus, Trash2, ChevronUp, ChevronDown, Zap, Wrench } from 'lucide-react'
+import { useState } from 'react'
 import { Button, Input, Select, Checkbox, Badge } from '../atoms/index.ts'
 import { FormField, Card } from '../molecules/index.ts'
 import { MODEL_OPTIONS, EFFORT_OPTIONS } from '@/lib/constants.ts'
@@ -298,112 +299,180 @@ function HookRow({ hook: h, hookIndex: hi, statusKey, totalHooks, skills, script
   onUpdateHook: (statusKey: string, hookKey: string, patch: Partial<HookDraft>) => void
   onRemoveHook: (statusKey: string, hookKey: string) => void
 }) {
+  const selectedSkill = skills.find((sk) => sk.id === h.actionId)
+  const argsPlaceholder = selectedSkill?.argumentHint || 'args (optional)'
+
   return (
-    <div className="flex items-center gap-2 bg-slate-900/50 rounded p-2">
-      <div className="flex flex-col -my-1">
+    <div className="flex flex-col gap-2 bg-slate-900/50 rounded p-2">
+      <div className="flex items-center gap-2">
+        <div className="flex flex-col -my-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            iconOnly
+            icon={<ChevronUp className="w-3 h-3" />}
+            onClick={() => onMoveHook(statusKey, hi, -1)}
+            disabled={hi === 0}
+            className="!p-0 !rounded-none"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            iconOnly
+            icon={<ChevronDown className="w-3 h-3" />}
+            onClick={() => onMoveHook(statusKey, hi, 1)}
+            disabled={hi === totalHooks - 1}
+            className="!p-0 !rounded-none"
+          />
+        </div>
+        <Select
+          value={h.trigger}
+          onChange={(e) =>
+            onUpdateHook(statusKey, h.key, { trigger: Number(e.target.value) as HookTrigger })
+          }
+          selectSize="xs"
+          className="flex-[2] min-w-0 rounded text-[11px]"
+        >
+          <option value={HookTrigger.BEFORE_TASK_EXECUTION}>Before Task</option>
+          <option value={HookTrigger.AFTER_TASK_EXECUTION}>After Task</option>
+          <option value={HookTrigger.AFTER_WORKTREE_CREATION}>After Worktree</option>
+          <option value={HookTrigger.BEFORE_WORKTREE_CREATION}>Before Worktree</option>
+        </Select>
+        <Select
+          value={h.actionType}
+          onChange={(e) => {
+            const newType = Number(e.target.value) as HookActionType
+            onUpdateHook(statusKey, h.key, {
+              actionType: newType,
+              actionId: '',
+              skillId: '',
+              skillName: '',
+              args: '',
+              name: '',
+            })
+          }}
+          selectSize="xs"
+          className="flex-[1] min-w-0 rounded text-[11px]"
+        >
+          <option value={HookActionType.SKILL}>Skill</option>
+          <option value={HookActionType.SCRIPT}>Script</option>
+          <option value={HookActionType.CUSTOM_SKILL}>Custom Skill</option>
+        </Select>
+        {h.actionType === HookActionType.SCRIPT ? (
+          <Select
+            value={h.actionId}
+            onChange={(e) => {
+              const sc = scripts.find((sc) => sc.id === e.target.value)
+              onUpdateHook(statusKey, h.key, {
+                actionId: e.target.value,
+                skillId: '',
+                name: sc?.name ?? h.name,
+              })
+            }}
+            selectSize="xs"
+            className="flex-[3] min-w-0 rounded text-[11px]"
+          >
+            <option value="">Select script...</option>
+            {scripts.map((sc) => (
+              <option key={sc.id} value={sc.id}>
+                {sc.name}
+              </option>
+            ))}
+          </Select>
+        ) : h.actionType === HookActionType.CUSTOM_SKILL ? (
+          <CustomSkillInput
+            skillName={h.skillName}
+            args={h.args}
+            onChange={(skillName, args) =>
+              onUpdateHook(statusKey, h.key, { skillName, args, name: skillName })
+            }
+          />
+        ) : (
+          <Select
+            value={h.actionId}
+            onChange={(e) => {
+              const sk = skills.find((sk) => sk.id === e.target.value)
+              onUpdateHook(statusKey, h.key, {
+                actionId: e.target.value,
+                skillId: e.target.value,
+                name: sk?.name ?? h.name,
+              })
+            }}
+            selectSize="xs"
+            className="flex-[3] min-w-0 rounded text-[11px]"
+          >
+            <option value="">Select skill...</option>
+            {skills.map((sk) => (
+              <option key={sk.id} value={sk.id}>
+                {sk.name}
+              </option>
+            ))}
+          </Select>
+        )}
         <Button
           type="button"
           variant="ghost"
           size="xs"
           iconOnly
-          icon={<ChevronUp className="w-3 h-3" />}
-          onClick={() => onMoveHook(statusKey, hi, -1)}
-          disabled={hi === 0}
-          className="!p-0 !rounded-none"
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          size="xs"
-          iconOnly
-          icon={<ChevronDown className="w-3 h-3" />}
-          onClick={() => onMoveHook(statusKey, hi, 1)}
-          disabled={hi === totalHooks - 1}
-          className="!p-0 !rounded-none"
+          icon={<Trash2 className="w-3.5 h-3.5" />}
+          onClick={() => onRemoveHook(statusKey, h.key)}
+          className="text-gray-600 hover:text-red-400 shrink-0"
         />
       </div>
-      <Select
-        value={h.trigger}
-        onChange={(e) =>
-          onUpdateHook(statusKey, h.key, { trigger: Number(e.target.value) as HookTrigger })
-        }
-        selectSize="xs"
-        className="flex-[2] min-w-0 rounded text-[11px]"
-      >
-        <option value={HookTrigger.BEFORE_TASK_EXECUTION}>Before Task</option>
-        <option value={HookTrigger.AFTER_TASK_EXECUTION}>After Task</option>
-        <option value={HookTrigger.AFTER_WORKTREE_CREATION}>After Worktree</option>
-        <option value={HookTrigger.BEFORE_WORKTREE_CREATION}>Before Worktree</option>
-      </Select>
-      <Select
-        value={h.actionType}
-        onChange={(e) => {
-          const newType = Number(e.target.value) as HookActionType
-          onUpdateHook(statusKey, h.key, {
-            actionType: newType,
-            actionId: '',
-            skillId: '',
-            name: '',
-          })
-        }}
-        selectSize="xs"
-        className="flex-[1] min-w-0 rounded text-[11px]"
-      >
-        <option value={HookActionType.SKILL}>Skill</option>
-        <option value={HookActionType.SCRIPT}>Script</option>
-      </Select>
-      {h.actionType === HookActionType.SCRIPT ? (
-        <Select
-          value={h.actionId}
-          onChange={(e) => {
-            const sc = scripts.find((sc) => sc.id === e.target.value)
-            onUpdateHook(statusKey, h.key, {
-              actionId: e.target.value,
-              skillId: '',
-              name: sc?.name ?? h.name,
-            })
-          }}
-          selectSize="xs"
-          className="flex-[3] min-w-0 rounded text-[11px]"
-        >
-          <option value="">Select script...</option>
-          {scripts.map((sc) => (
-            <option key={sc.id} value={sc.id}>
-              {sc.name}
-            </option>
-          ))}
-        </Select>
-      ) : (
-        <Select
-          value={h.actionId}
-          onChange={(e) => {
-            const sk = skills.find((sk) => sk.id === e.target.value)
-            onUpdateHook(statusKey, h.key, {
-              actionId: e.target.value,
-              skillId: e.target.value,
-              name: sk?.name ?? h.name,
-            })
-          }}
-          selectSize="xs"
-          className="flex-[3] min-w-0 rounded text-[11px]"
-        >
-          <option value="">Select skill...</option>
-          {skills.map((sk) => (
-            <option key={sk.id} value={sk.id}>
-              {sk.name}
-            </option>
-          ))}
-        </Select>
+      {/* args input for registered Skill (Custom Skill carries args inside the main input) */}
+      {h.actionType === HookActionType.SKILL && h.actionId && (
+        <div className="flex items-center gap-2 pl-6">
+          <span className="text-[10px] text-gray-500 shrink-0">Args</span>
+          <Input
+            type="text"
+            value={h.args}
+            onChange={(e) => onUpdateHook(statusKey, h.key, { args: e.target.value })}
+            placeholder={argsPlaceholder}
+            inputSize="xs"
+            className="flex-1 min-w-0 rounded text-[11px]"
+          />
+        </div>
       )}
-      <Button
-        type="button"
-        variant="ghost"
-        size="xs"
-        iconOnly
-        icon={<Trash2 className="w-3.5 h-3.5" />}
-        onClick={() => onRemoveHook(statusKey, h.key)}
-        className="text-gray-600 hover:text-red-400 shrink-0"
-      />
     </div>
+  )
+}
+
+// CustomSkillInput renders a single "/<skill> [args]" input with local state
+// so partial input (e.g. typing "/" before the skill name) is preserved
+// instead of being reverted on each keystroke when the regex fails to match.
+// Parsed `skillName` and `args` are pushed up to the form draft on every change.
+function CustomSkillInput({
+  skillName,
+  args,
+  onChange,
+}: {
+  skillName: string
+  args: string
+  onChange: (skillName: string, args: string) => void
+}) {
+  const initial = skillName ? `/${skillName}${args ? ' ' + args : ''}` : ''
+  const [raw, setRaw] = useState(initial)
+
+  return (
+    <Input
+      type="text"
+      value={raw}
+      onChange={(e) => {
+        const value = e.target.value
+        setRaw(value)
+        const trimmed = value.trim()
+        const m = /^\/(\S+)(?:\s+(.*))?$/.exec(trimmed)
+        if (m) {
+          onChange(m[1], (m[2] ?? '').trim())
+        } else {
+          onChange('', '')
+        }
+      }}
+      placeholder="/simplify [args...]"
+      inputSize="xs"
+      className="flex-[3] min-w-0 rounded text-[11px]"
+    />
   )
 }

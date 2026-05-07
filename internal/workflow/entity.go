@@ -36,6 +36,7 @@ const (
 	HookActionTypeUnspecified HookActionType = ""
 	HookActionTypeSkill       HookActionType = "skill"
 	HookActionTypeScript      HookActionType = "script"
+	HookActionTypeCustomSkill HookActionType = "custom_skill"
 )
 
 type StatusHook struct {
@@ -46,6 +47,8 @@ type StatusHook struct {
 	Name       string         `yaml:"name"`
 	ActionType HookActionType `yaml:"action_type,omitempty"`
 	ActionID   string         `yaml:"action_id,omitempty"`
+	SkillName  string         `yaml:"skill_name,omitempty"`
+	Args       string         `yaml:"args,omitempty"`
 }
 
 type Status struct {

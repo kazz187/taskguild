@@ -875,6 +875,8 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 				Order      int32  `json:"order"`
 				Name       string `json:"name"`
 				Content    string `json:"content"`
+				SkillName  string `json:"skill_name"`
+				Args       string `json:"args"`
 			}
 
 			var hooks []hookEntry
@@ -888,19 +890,32 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 					Trigger:    string(h.Trigger),
 					Order:      h.Order,
 					Name:       h.Name,
+					SkillName:  h.SkillName,
+					Args:       h.Args,
 				}
 
 				// Resolve content based on action type.
 				// New approach: use action_type + action_id.
-				if h.ActionType == workflow.HookActionTypeSkill && h.ActionID != "" {
+				switch {
+				case h.ActionType == workflow.HookActionTypeCustomSkill && h.SkillName != "":
+					// Custom skill: do not look up DB; rely on Claude CLI's
+					// slash command resolution at execute time. Sync Name to
+					// SkillName so collectStatusSkills can auto-allow it.
+					if entry.Name == "" {
+						entry.Name = h.SkillName
+					}
+				case h.ActionType == workflow.HookActionTypeSkill && h.ActionID != "":
 					if s.skillRepo != nil {
 						if sk, err := s.skillRepo.Get(ctx, h.ActionID); err == nil {
 							entry.Content = sk.Content
+							if entry.SkillName == "" {
+								entry.SkillName = sk.Name
+							}
 						} else {
 							slog.Warn("failed to resolve hook skill", "hook_id", h.ID, "action_id", h.ActionID, "error", err)
 						}
 					}
-				} else if h.ActionType == workflow.HookActionTypeScript && h.ActionID != "" {
+				case h.ActionType == workflow.HookActionTypeScript && h.ActionID != "":
 					if s.scriptRepo != nil {
 						if sc, err := s.scriptRepo.Get(ctx, h.ActionID); err == nil {
 							entry.Content = sc.Content
@@ -908,7 +923,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 							slog.Warn("failed to resolve hook script", "hook_id", h.ID, "action_id", h.ActionID, "error", err)
 						}
 					}
-				} else if h.SkillID != "" {
+				case h.SkillID != "":
 					// Legacy: use skill_id directly.
 					if s.skillRepo != nil {
 						if sk, err := s.skillRepo.Get(ctx, h.SkillID); err == nil {
