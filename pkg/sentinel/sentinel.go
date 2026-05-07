@@ -15,7 +15,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
+	"github.com/gofsnotify/fsnotify"
 	"github.com/sourcegraph/conc"
 )
 
@@ -346,7 +346,7 @@ func (s *Sentinel) watchBinary(updateCh chan<- struct{}) {
 	watchDir := filepath.Dir(s.binaryPath)
 	binaryName := filepath.Base(s.binaryPath)
 
-	if err := watcher.Add(watchDir); err != nil {
+	if err := watcher.Add(watchDir, fsnotify.Create|fsnotify.Write|fsnotify.Rename); err != nil {
 		slog.Error("failed to watch directory", "dir", watchDir, "error", err)
 		return
 	}

@@ -12,8 +12,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.9
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.0
 	github.com/fatih/color v1.19.0
-	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-chi/chi/v5 v5.2.2
+	github.com/gofsnotify/fsnotify v0.0.3
 	github.com/kazz187/claude-agent-sdk-go v0.1.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/oklog/ulid/v2 v2.1.1
@@ -101,6 +101,7 @@ require (
 	github.com/ettle/strcase v0.2.0 // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/firefart/nonamedreturns v1.0.6 // indirect
+	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fzipp/gocyclo v0.6.0 // indirect
 	github.com/ghostiam/protogetter v0.3.20 // indirect
 	github.com/go-critic/go-critic v0.14.3 // indirect
