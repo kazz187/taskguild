@@ -119,7 +119,12 @@ export function TaskDetailModal({
   }, [worktreeDraft, projectId, isTaskLocked])
 
   const currentStatus = statuses.find((s) => s.id === (task?.statusId ?? currentStatusId))
-  const allowedTransitions = currentStatus?.transitionsTo ?? []
+  // Sort allowed transitions by workflow status.order (statuses prop is already sorted by callers).
+  const allowedTransitions = useMemo(() => {
+    if (!currentStatus) return []
+    const allowed = new Set(currentStatus.transitionsTo ?? [])
+    return statuses.filter((s) => allowed.has(s.id)).map((s) => s.id)
+  }, [currentStatus, statuses])
 
   // Force transition targets: all statuses except current and normal transitions
   const forceTransitions = useMemo(() => {

@@ -88,7 +88,12 @@ function TaskDetailPage() {
   const workflow = workflows.find((w) => w.id === task?.workflowId)
   const sortedStatuses = workflow ? [...workflow.statuses].sort((a, b) => a.order - b.order) : []
   const currentStatus = sortedStatuses.find((s) => s.id === task?.statusId)
-  const allowedTransitions = currentStatus?.transitionsTo ?? []
+  // Sort allowed transitions by workflow status.order so buttons follow workflow progression.
+  const allowedTransitions = useMemo(() => {
+    if (!currentStatus) return []
+    const allowed = new Set(currentStatus.transitionsTo ?? [])
+    return sortedStatuses.filter((s) => allowed.has(s.id)).map((s) => s.id)
+  }, [currentStatus, sortedStatuses])
 
   // Fetch sibling tasks for parent-child relationship display
   const { data: allTasksData, refetch: refetchAllTasks } = useQuery(
