@@ -575,3 +575,172 @@ func TestHandlePermissionRequest_SkillToolAutoAllow(t *testing.T) {
 	})
 	<-blockedResultCh
 }
+
+// TestHandlePermissionRequest_AskUserQuestion_AutoMode verifies that
+// AskUserQuestion goes through handleAskUserQuestion (creating a QUESTION
+// interaction and waiting for the user's answer) even when the permission
+// mode is auto. Regression test for the bug where auto mode caused
+// AskUserQuestion to return empty answers without ever asking the user.
+func TestHandlePermissionRequest_AskUserQuestion_AutoMode(t *testing.T) {
+	mock := &mockAgentManagerClient{}
+
+	ctx := t.Context()
+	waiter := newInteractionWaiter()
+
+	resultCh := make(chan claudeagent.PermissionResult, 1)
+	errCh := make(chan error, 1)
+
+	input := map[string]any{
+		"questions": []any{
+			map[string]any{
+				"question": "Pick an option",
+				"header":   "Test",
+				"options": []any{
+					map[string]any{"label": "Option A", "description": "first"},
+					map[string]any{"label": "Option B", "description": "second"},
+				},
+			},
+		},
+	}
+
+	var wg conc.WaitGroup
+	wg.Go(func() {
+		result, err := handlePermissionRequest(
+			ctx, mock, "task-1", "agent-1",
+			"AskUserQuestion", input,
+			waiter, claudeagent.PermissionModeAuto,
+			claudeagent.ToolPermissionContext{},
+			nil, nil, nil,
+		)
+		resultCh <- result
+
+		errCh <- err
+	})
+
+	time.Sleep(50 * time.Millisecond)
+
+	// A QUESTION interaction must be created even though the permission mode
+	// is auto. Previously, the auto early-return short-circuited this path.
+	if len(mock.interactions) != 1 {
+		t.Fatalf("expected 1 interaction (auto mode must still ask), got %d", len(mock.interactions))
+	}
+
+	inter := mock.interactions[0]
+	if inter.GetType() != v1.InteractionType_INTERACTION_TYPE_QUESTION {
+		t.Errorf("expected INTERACTION_TYPE_QUESTION, got %v", inter.GetType())
+	}
+
+	if inter.GetTitle() != "Pick an option" {
+		t.Errorf("expected title 'Pick an option', got %q", inter.GetTitle())
+	}
+
+	// Options should include both labels plus the auto-appended "Other".
+	if len(inter.GetOptions()) != 3 {
+		t.Errorf("expected 3 options (2 + Other), got %d", len(inter.GetOptions()))
+	}
+
+	// Simulate the user picking Option A.
+	waiter.Deliver(&v1.Interaction{
+		Id:       "test-interaction-id",
+		Status:   v1.InteractionStatus_INTERACTION_STATUS_RESPONDED,
+		Response: "Option A",
+	})
+
+	result := <-resultCh
+
+	if err := <-errCh; err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	allow, ok := result.(claudeagent.PermissionResultAllow)
+	if !ok {
+		t.Fatalf("expected PermissionResultAllow, got %T", result)
+	}
+
+	// UpdatedInput must contain the answers populated from the user's response.
+	answersRaw, ok := allow.UpdatedInput["answers"]
+	if !ok {
+		t.Fatalf("expected UpdatedInput to contain 'answers', got %v", allow.UpdatedInput)
+	}
+
+	answers, ok := answersRaw.(map[string]any)
+	if !ok {
+		t.Fatalf("expected answers to be map[string]any, got %T", answersRaw)
+	}
+
+	got, ok := answers["Pick an option"].(string)
+	if !ok || got != "Option A" {
+		t.Errorf("expected answers[\"Pick an option\"] = \"Option A\", got %v", answers["Pick an option"])
+	}
+}
+
+// TestHandlePermissionRequest_AskUserQuestion_BypassPermissions verifies the
+// same regression for bypassPermissions mode: AskUserQuestion must still
+// create a QUESTION interaction and wait for the user's answer.
+func TestHandlePermissionRequest_AskUserQuestion_BypassPermissions(t *testing.T) {
+	mock := &mockAgentManagerClient{}
+
+	ctx := t.Context()
+	waiter := newInteractionWaiter()
+
+	resultCh := make(chan claudeagent.PermissionResult, 1)
+	errCh := make(chan error, 1)
+
+	input := map[string]any{
+		"questions": []any{
+			map[string]any{
+				"question": "Confirm?",
+				"options": []any{
+					map[string]any{"label": "Yes", "description": "go"},
+					map[string]any{"label": "No", "description": "stop"},
+				},
+			},
+		},
+	}
+
+	var wg conc.WaitGroup
+	wg.Go(func() {
+		result, err := handlePermissionRequest(
+			ctx, mock, "task-1", "agent-1",
+			"AskUserQuestion", input,
+			waiter, claudeagent.PermissionModeBypassPermissions,
+			claudeagent.ToolPermissionContext{},
+			nil, nil, nil,
+		)
+		resultCh <- result
+
+		errCh <- err
+	})
+
+	time.Sleep(50 * time.Millisecond)
+
+	if len(mock.interactions) != 1 {
+		t.Fatalf("expected 1 interaction (bypassPermissions must still ask), got %d", len(mock.interactions))
+	}
+
+	if mock.interactions[0].GetType() != v1.InteractionType_INTERACTION_TYPE_QUESTION {
+		t.Errorf("expected INTERACTION_TYPE_QUESTION, got %v", mock.interactions[0].GetType())
+	}
+
+	waiter.Deliver(&v1.Interaction{
+		Id:       "test-interaction-id",
+		Status:   v1.InteractionStatus_INTERACTION_STATUS_RESPONDED,
+		Response: "Yes",
+	})
+
+	result := <-resultCh
+
+	if err := <-errCh; err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	allow, ok := result.(claudeagent.PermissionResultAllow)
+	if !ok {
+		t.Fatalf("expected PermissionResultAllow, got %T", result)
+	}
+
+	answers, _ := allow.UpdatedInput["answers"].(map[string]any)
+	if got, _ := answers["Confirm?"].(string); got != "Yes" {
+		t.Errorf("expected answers[\"Confirm?\"] = \"Yes\", got %v", answers["Confirm?"])
+	}
+}

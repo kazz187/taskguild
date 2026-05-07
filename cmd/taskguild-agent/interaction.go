@@ -452,7 +452,17 @@ func handlePermissionRequest(
 ) (claudeagent.PermissionResult, error) {
 	logger := clog.LoggerFromContext(ctx)
 
-	// bypassPermissions / auto / dontAsk: allow everything
+	// AskUserQuestion is always presented as QUESTION interactions, regardless
+	// of permission mode. Even in auto / bypassPermissions / dontAsk, the agent
+	// has explicitly chosen to ask the user, so the user's actual answer is
+	// required to populate UpdatedInput["answers"]. Auto-allowing here would
+	// return empty answers and break the tool's contract — the agent would see
+	// `answers: {}` and have no way to know what the user wanted.
+	if toolName == "AskUserQuestion" {
+		return handleAskUserQuestion(ctx, client, taskID, agentID, input, waiter)
+	}
+
+	// bypassPermissions / auto / dontAsk: allow everything else
 	if permMode == claudeagent.PermissionModeBypassPermissions ||
 		permMode == claudeagent.PermissionModeAuto ||
 		permMode == claudeagent.PermissionModeDontAsk {
@@ -477,11 +487,6 @@ func handlePermissionRequest(
 	if toolName == "ExitPlanMode" || toolName == "EnterPlanMode" {
 		logger.Debug("auto-allowing plan mode tool", "tool", toolName)
 		return claudeagent.PermissionResultAllow{}, nil
-	}
-
-	// AskUserQuestion: present as QUESTION interactions instead of permission request
-	if toolName == "AskUserQuestion" {
-		return handleAskUserQuestion(ctx, client, taskID, agentID, input, waiter)
 	}
 
 	// Skill tool: auto-allow when the requested skill is one of the current
