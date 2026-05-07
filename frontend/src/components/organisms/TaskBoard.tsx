@@ -277,10 +277,9 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
     for (const s of sortedStatuses) {
       const normalIds = new Set(s.transitionsTo ?? [])
       const targets: { id: string; name: string; isForce: boolean }[] = []
-      // Normal transitions first
-      for (const toId of normalIds) {
-        const toStatus = statusById.get(toId)
-        if (toStatus) {
+      // Normal transitions first (status.order ascending)
+      for (const toStatus of sortedStatuses) {
+        if (toStatus.id !== s.id && normalIds.has(toStatus.id)) {
           targets.push({ id: toStatus.id, name: toStatus.name, isForce: false })
         }
       }
@@ -293,7 +292,7 @@ export function TaskBoard({ projectId, workflow, headerActionsRef }: TaskBoardPr
       map.set(s.id, targets)
     }
     return map
-  }, [sortedStatuses, statusById])
+  }, [sortedStatuses])
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     lastDropWasSuccessful.current = false
