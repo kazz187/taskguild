@@ -32,6 +32,8 @@ export function workflowToDrafts(wf: Workflow) {
         trigger: h.trigger,
         order: h.order,
         name: h.name,
+        skillName: h.skillName ?? '',
+        args: h.args ?? '',
       })),
     }
   })
@@ -70,15 +72,19 @@ export function buildProtoPayload(statuses: StatusDraft[]) {
     enableSkillHarness: s.enableSkillHarness,
     skillHarnessExplicitlyDisabled: s.skillHarnessExplicitlyDisabled,
     hooks: s.hooks
-      .filter((h) => h.actionId)
+      .filter((h) =>
+        h.actionType === HookActionType.CUSTOM_SKILL ? !!h.skillName : !!h.actionId,
+      )
       .map((h) => ({
         id: h.id,
         skillId: h.actionType === HookActionType.SKILL ? h.actionId : '',
         actionType: h.actionType,
-        actionId: h.actionId,
+        actionId: h.actionType === HookActionType.CUSTOM_SKILL ? '' : h.actionId,
         trigger: h.trigger,
         order: h.order,
         name: h.name,
+        skillName: h.actionType === HookActionType.CUSTOM_SKILL ? h.skillName : '',
+        args: h.args,
       })),
   }))
 

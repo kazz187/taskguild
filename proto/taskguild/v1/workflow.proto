@@ -51,6 +51,7 @@ enum HookActionType {
   HOOK_ACTION_TYPE_UNSPECIFIED = 0;
   HOOK_ACTION_TYPE_SKILL = 1;
   HOOK_ACTION_TYPE_SCRIPT = 2;
+  HOOK_ACTION_TYPE_CUSTOM_SKILL = 3; // arbitrary skill name (not registered in DB)
 }
 
 message StatusHook {
@@ -61,6 +62,8 @@ message StatusHook {
   string name = 5;
   HookActionType action_type = 6; // type of action (skill or script)
   string action_id = 7;           // ID of the Skill or Script to execute
+  string skill_name = 8;          // skill name for CUSTOM_SKILL (slash omitted)
+  string args = 9;                // args passed to the skill on invocation (all action types)
 }
 
 // WorkflowStatus defines a custom status in a workflow.
