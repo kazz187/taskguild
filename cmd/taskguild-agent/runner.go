@@ -822,6 +822,12 @@ func buildClaudeOptions(
 	// the TaskGuild workflow definition.
 	statusSkills := collectStatusSkills(metadata)
 
+	// Per-task Skill loop guard: blocks recursive same-skill invocations and
+	// caps repeated identical Skill calls in this task. Discarded when the
+	// task completes; lifetime is intentionally task-scoped so unrelated
+	// tasks are not affected.
+	loopGuard := newSkillLoopGuard()
+
 	opts := &claudeagent.ClaudeAgentOptions{
 		Cwd:            cwd,
 		PermissionMode: permMode,
@@ -831,7 +837,7 @@ func buildClaudeOptions(
 		StderrCallback: func(line string) {
 			logger.Debug("claude-stderr", "line", line)
 		},
-		Hooks: buildToolUseHooks(tl, taskID, onModeChange, client, interClient, agentManagerID, waiter),
+		Hooks: buildToolUseHooks(tl, taskID, onModeChange, client, interClient, agentManagerID, waiter, loopGuard),
 	}
 
 	// Skill-based mode: set model/tools/disallowedTools from status metadata.
