@@ -30,6 +30,7 @@
     "@tanstack/react-router-devtools": "^1.132.0",
     "@tanstack/router-plugin": "^1.132.0",
     "@taskguild/proto": "file:../proto/gen/ts",
+    "anser": "^2.3.5",
     "diff": "^8.0.3",
     "lucide-react": "^0.545.0",
     "react": "^19.2.0",
