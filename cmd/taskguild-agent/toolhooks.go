@@ -20,7 +20,9 @@ import (
 // It also tracks plan file writes and saves the plan content as a RESULT log
 // when ExitPlanMode is called.
 // The PreToolUse hook intercepts ExitPlanMode to require user approval before
-// the plan is accepted and the agent exits plan mode.
+// the plan is accepted and the agent exits plan mode. It also runs the
+// per-task skill loop guard to block recursive / runaway Skill invocations
+// before they consume forked-session tokens.
 func buildToolUseHooks(
 	tl *taskLogger,
 	taskID string,
@@ -29,6 +31,7 @@ func buildToolUseHooks(
 	interClient taskguildv1connect.InteractionServiceClient,
 	agentManagerID string,
 	waiter *interactionWaiter,
+	loopGuard *skillLoopGuard,
 ) map[claudeagent.HookEvent][]*claudeagent.HookMatcher {
 	// Track the most recently written plan file path across hook invocations.
 	var planFilePath string
@@ -39,6 +42,30 @@ func buildToolUseHooks(
 				Matcher: "",
 				Hooks: []claudeagent.HookCallback{
 					func(input claudeagent.HookInput, toolUseID string, hookCtx claudeagent.HookContext) (claudeagent.HookOutput, error) {
+						// Skill loop guard: block recursive / over-capped Skill
+						// invocations before they reach the permission UI or
+						// fork a new Claude session. This catches AI-side
+						// loops (e.g. codex:rescue calling itself
+						// recursively) and avoids runaway token consumption.
+						if input.ToolName == "Skill" && loopGuard != nil {
+							skillName, _ := input.ToolInput["skill"].(string)
+							if skillName != "" {
+								block, reason := loopGuard.CheckAndRegister(input.ToolUseID, skillName, input.ToolInput)
+								if block {
+									slog.Warn("skill loop guard blocked invocation",
+										"task_id", taskID,
+										"skill", skillName,
+										"tool_use_id", input.ToolUseID,
+										"reason", reason)
+
+									return claudeagent.HookOutput{
+										Decision: "block",
+										Reason:   reason,
+									}, nil
+								}
+							}
+						}
+
 						if input.ToolName != "ExitPlanMode" {
 							return claudeagent.HookOutput{}, nil
 						}
@@ -53,6 +80,12 @@ func buildToolUseHooks(
 				Matcher: "",
 				Hooks: []claudeagent.HookCallback{
 					func(input claudeagent.HookInput, toolUseID string, ctx claudeagent.HookContext) (claudeagent.HookOutput, error) {
+						// Release the skill loop guard slot for this Skill
+						// invocation now that it has finished.
+						if input.ToolName == "Skill" && loopGuard != nil {
+							loopGuard.Release(input.ToolUseID)
+						}
+
 						// Track permission mode changes from CLI.
 						if input.PermissionMode != "" && onModeChange != nil {
 							onModeChange(input.PermissionMode)
@@ -115,6 +148,14 @@ func buildToolUseHooks(
 				Matcher: "",
 				Hooks: []claudeagent.HookCallback{
 					func(input claudeagent.HookInput, toolUseID string, ctx claudeagent.HookContext) (claudeagent.HookOutput, error) {
+						// Release the skill loop guard slot for this Skill
+						// invocation. Note: when the guard itself blocked the
+						// invocation in PreToolUse, the slot was never
+						// registered, so this Release is a no-op — safe.
+						if input.ToolName == "Skill" && loopGuard != nil {
+							loopGuard.Release(input.ToolUseID)
+						}
+
 						// Track permission mode changes from CLI.
 						if input.PermissionMode != "" && onModeChange != nil {
 							onModeChange(input.PermissionMode)

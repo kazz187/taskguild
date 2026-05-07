@@ -199,8 +199,15 @@ func runTask(
 	userResponseRetries := 0
 	statusTransitionRetries := 0
 
+	// Per-task Skill loop guard: blocks recursive same-skill invocations and
+	// caps repeated identical Skill calls across all turns of this task. The
+	// guard MUST live outside the turn loop so the per-task cap is not reset
+	// each turn; per-turn scope would silently defeat the cap because every
+	// new turn would create a fresh guard.
+	loopGuard := newSkillLoopGuard()
+
 	for turn := 0; ; turn++ {
-		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, worktreeName, client, taskClient, interClient, ctx, taskID, agentManagerID, waiter, permCache, scpCache, tl, func(newMode string) {
+		opts := buildClaudeOptions(instructions, workDir, metadata, sessionID, worktreeName, client, taskClient, interClient, ctx, taskID, agentManagerID, waiter, permCache, scpCache, tl, loopGuard, func(newMode string) {
 			modeMu.Lock()
 			old := currentMode
 			currentMode = newMode
@@ -785,6 +792,7 @@ func buildClaudeOptions(
 	permCache *permissionCache,
 	scpCache *singleCommandPermissionCache,
 	tl *taskLogger,
+	loopGuard *skillLoopGuard,
 	onModeChange func(newMode string),
 ) *claudeagent.ClaudeAgentOptions {
 	logger := clog.LoggerFromContext(ctx)
@@ -793,6 +801,10 @@ func buildClaudeOptions(
 	permMode := claudeagent.PermissionModeDefault
 	if pm := metadata["_permission_mode"]; pm != "" {
 		permMode = claudeagent.PermissionMode(pm)
+	}
+
+	if loopGuard == nil {
+		loopGuard = newSkillLoopGuard()
 	}
 
 	cwd := workDir
@@ -831,7 +843,7 @@ func buildClaudeOptions(
 		StderrCallback: func(line string) {
 			logger.Debug("claude-stderr", "line", line)
 		},
-		Hooks: buildToolUseHooks(tl, taskID, onModeChange, client, interClient, agentManagerID, waiter),
+		Hooks: buildToolUseHooks(tl, taskID, onModeChange, client, interClient, agentManagerID, waiter, loopGuard),
 	}
 
 	// Skill-based mode: set model/tools/disallowedTools from status metadata.
