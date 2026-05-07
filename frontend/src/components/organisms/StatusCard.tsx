@@ -2,6 +2,7 @@ import type { SkillDefinition } from '@taskguild/proto/taskguild/v1/skill_pb.ts'
 import type { ScriptDefinition } from '@taskguild/proto/taskguild/v1/script_pb.ts'
 import { HookTrigger, HookActionType } from '@taskguild/proto/taskguild/v1/workflow_pb.ts'
 import { Plus, Trash2, ChevronUp, ChevronDown, Zap, Wrench } from 'lucide-react'
+import { useState } from 'react'
 import { Button, Input, Select, Checkbox, Badge } from '../atoms/index.ts'
 import { FormField, Card } from '../molecules/index.ts'
 import { MODEL_OPTIONS, EFFORT_OPTIONS } from '@/lib/constants.ts'
@@ -301,12 +302,6 @@ function HookRow({ hook: h, hookIndex: hi, statusKey, totalHooks, skills, script
   const selectedSkill = skills.find((sk) => sk.id === h.actionId)
   const argsPlaceholder = selectedSkill?.argumentHint || 'args (optional)'
 
-  // Custom Skill: a single input whose value is `/<skillName> <args>`.
-  // We parse it back into `skillName` + `args` in `onChange`.
-  const customSkillValue = h.skillName
-    ? `/${h.skillName}${h.args ? ' ' + h.args : ''}`
-    : ''
-
   return (
     <div className="flex flex-col gap-2 bg-slate-900/50 rounded p-2">
       <div className="flex items-center gap-2">
@@ -387,32 +382,12 @@ function HookRow({ hook: h, hookIndex: hi, statusKey, totalHooks, skills, script
             ))}
           </Select>
         ) : h.actionType === HookActionType.CUSTOM_SKILL ? (
-          <Input
-            type="text"
-            value={customSkillValue}
-            onChange={(e) => {
-              const raw = e.target.value
-              const trimmed = raw.trim()
-              const m = /^\/(\S+)(?:\s+(.*))?$/.exec(trimmed)
-              if (m) {
-                const skillName = m[1]
-                const args = (m[2] ?? '').trim()
-                onUpdateHook(statusKey, h.key, {
-                  skillName,
-                  args,
-                  name: skillName,
-                })
-              } else {
-                onUpdateHook(statusKey, h.key, {
-                  skillName: '',
-                  args: '',
-                  name: '',
-                })
-              }
-            }}
-            placeholder="/simplify [args...]"
-            inputSize="xs"
-            className="flex-[3] min-w-0 rounded text-[11px]"
+          <CustomSkillInput
+            skillName={h.skillName}
+            args={h.args}
+            onChange={(skillName, args) =>
+              onUpdateHook(statusKey, h.key, { skillName, args, name: skillName })
+            }
           />
         ) : (
           <Select
@@ -461,5 +436,43 @@ function HookRow({ hook: h, hookIndex: hi, statusKey, totalHooks, skills, script
         </div>
       )}
     </div>
+  )
+}
+
+// CustomSkillInput renders a single "/<skill> [args]" input with local state
+// so partial input (e.g. typing "/" before the skill name) is preserved
+// instead of being reverted on each keystroke when the regex fails to match.
+// Parsed `skillName` and `args` are pushed up to the form draft on every change.
+function CustomSkillInput({
+  skillName,
+  args,
+  onChange,
+}: {
+  skillName: string
+  args: string
+  onChange: (skillName: string, args: string) => void
+}) {
+  const initial = skillName ? `/${skillName}${args ? ' ' + args : ''}` : ''
+  const [raw, setRaw] = useState(initial)
+
+  return (
+    <Input
+      type="text"
+      value={raw}
+      onChange={(e) => {
+        const value = e.target.value
+        setRaw(value)
+        const trimmed = value.trim()
+        const m = /^\/(\S+)(?:\s+(.*))?$/.exec(trimmed)
+        if (m) {
+          onChange(m[1], (m[2] ?? '').trim())
+        } else {
+          onChange('', '')
+        }
+      }}
+      placeholder="/simplify [args...]"
+      inputSize="xs"
+      className="flex-[3] min-w-0 rounded text-[11px]"
+    />
   )
 }
