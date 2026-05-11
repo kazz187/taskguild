@@ -4,13 +4,20 @@ import { createAppTransport } from '@/lib/transport'
 import { getEffectiveConfig } from '@/lib/config'
 import { PushNotificationService } from '@taskguild/proto/taskguild/v1/push_notification_pb.ts'
 
-type PushStatus = 'unsupported' | 'default' | 'denied' | 'granted' | 'subscribed'
+type PushStatus = 'unsupported' | 'ios-browser' | 'default' | 'denied' | 'granted' | 'subscribed'
 
 export function usePushNotifications() {
   const [status, setStatus] = useState<PushStatus>('unsupported')
 
   useEffect(() => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    const isIos = isIOSDevice()
+    const isStandalone = isStandaloneApp()
+    if (isIos && !isStandalone) {
+      setStatus('ios-browser')
+      return
+    }
+
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
       setStatus('unsupported')
       return
     }
@@ -29,6 +36,29 @@ export function usePushNotifications() {
 
   const subscribe = useCallback(async () => {
     try {
+      if (!('Notification' in window)) {
+        setStatus('unsupported')
+        return
+      }
+
+      if (Notification.permission === 'denied') {
+        setStatus('denied')
+        return
+      }
+
+      if (Notification.permission !== 'granted') {
+        const permission = await Notification.requestPermission()
+        if (permission === 'denied') {
+          setStatus('denied')
+          return
+        }
+        if (permission !== 'granted') {
+          setStatus('default')
+          return
+        }
+        setStatus('granted')
+      }
+
       const config = getEffectiveConfig()
       const transport = createAppTransport(config)
       const client = createClient(PushNotificationService, transport)
@@ -80,6 +110,16 @@ export function usePushNotifications() {
   }, [])
 
   return { status, subscribe, unsubscribe }
+}
+
+function isIOSDevice(): boolean {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
+function isStandaloneApp(): boolean {
+  return (navigator as any).standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {

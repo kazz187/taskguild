@@ -44,7 +44,7 @@ type StorageEnv struct {
 type VAPIDEnv struct {
 	VAPIDPrivateKey string `envconfig:"VAPID_PRIVATE_KEY"`
 	VAPIDPublicKey  string `envconfig:"VAPID_PUBLIC_KEY"`
-	VAPIDContact    string `envconfig:"VAPID_CONTACT" default:"mailto:admin@taskguild.dev"`
+	VAPIDContact    string `envconfig:"VAPID_CONTACT" default:"admin@taskguild.dev"`
 }
 
 type Env struct {
