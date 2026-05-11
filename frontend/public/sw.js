@@ -53,6 +53,25 @@ async function navigateToUrl(url) {
   return clients.openWindow(url)
 }
 
+/**
+ * Show a notification, retrying without interactive actions for browsers that
+ * expose Web Push but do not support action buttons.
+ */
+async function showNotification(title, options) {
+  try {
+    await self.registration.showNotification(title, options)
+  } catch (err) {
+    if (!options.actions) {
+      throw err
+    }
+
+    console.warn('SW: Notification actions not supported, retrying without actions', err)
+    const fallbackOptions = { ...options }
+    delete fallbackOptions.actions
+    await self.registration.showNotification(title, fallbackOptions)
+  }
+}
+
 // ============================================================================
 // Push event — show notification with action buttons when available
 // ============================================================================
@@ -83,7 +102,11 @@ self.addEventListener('push', (event) => {
 
   // Build notification actions from payload.
   if (payload.actions && payload.actions.length > 0) {
-    options.actions = payload.actions.map((a) => {
+    const maxActions = typeof Notification !== 'undefined' && typeof Notification.maxActions === 'number'
+      ? Notification.maxActions
+      : payload.actions.length
+
+    options.actions = payload.actions.slice(0, maxActions).map((a) => {
       const actionDef = { action: a.action, title: a.title }
       // Chrome Android supports type: "text" for inline reply.
       if (a.type === 'text') {
@@ -95,7 +118,7 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(payload.title || 'TaskGuild', options)
+    showNotification(payload.title || 'TaskGuild', options)
   )
 })
 

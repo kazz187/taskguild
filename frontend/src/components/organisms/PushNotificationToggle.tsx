@@ -6,6 +6,15 @@ export function PushNotificationToggle() {
 
   if (status === 'unsupported') return null
 
+  if (status === 'ios-browser') {
+    return (
+      <div className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-500 rounded-lg">
+        <Bell className="w-3.5 h-3.5 shrink-0" />
+        <span>ホーム画面に追加して通知を有効化</span>
+      </div>
+    )
+  }
+
   const isSubscribed = status === 'subscribed'
   const isDenied = status === 'denied'
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
 
@@ -82,7 +83,7 @@ func (s *Sender) sendToSubscription(ctx context.Context, sub *pushsubscription.S
 	resp, err := webpush.SendNotification(data, wpSub, &webpush.Options{
 		VAPIDPublicKey:  s.vapidEnv.VAPIDPublicKey,
 		VAPIDPrivateKey: s.vapidEnv.VAPIDPrivateKey,
-		Subscriber:      s.vapidEnv.VAPIDContact,
+		Subscriber:      normalizeVAPIDSubscriber(s.vapidEnv.VAPIDContact),
 		TTL:             86400,
 	})
 	if err != nil {
@@ -105,4 +106,13 @@ func (s *Sender) sendToSubscription(ctx context.Context, sub *pushsubscription.S
 	if resp.StatusCode >= 400 {
 		slog.Warn("push notification: unexpected status", "endpoint", sub.Endpoint, "status", resp.StatusCode)
 	}
+}
+
+func normalizeVAPIDSubscriber(contact string) string {
+	contact = strings.TrimSpace(contact)
+	if strings.HasPrefix(strings.ToLower(contact), "mailto:") {
+		return contact[len("mailto:"):]
+	}
+
+	return contact
 }
