@@ -1,0 +1,114 @@
+syntax = "proto3";
+
+package taskguild.v1;
+
+import "google/protobuf/timestamp.proto";
+import "taskguild/v1/common.proto";
+
+// ScheduleService manages cron-based schedules that automatically create tasks
+// at specified times.
+service ScheduleService {
+  rpc CreateSchedule(CreateScheduleRequest) returns (CreateScheduleResponse);
+  rpc GetSchedule(GetScheduleRequest) returns (GetScheduleResponse);
+  rpc ListSchedules(ListSchedulesRequest) returns (ListSchedulesResponse);
+  rpc UpdateSchedule(UpdateScheduleRequest) returns (UpdateScheduleResponse);
+  rpc DeleteSchedule(DeleteScheduleRequest) returns (DeleteScheduleResponse);
+  rpc SetScheduleEnabled(SetScheduleEnabledRequest) returns (SetScheduleEnabledResponse);
+}
+
+// Schedule defines a cron-based recurring task creation.
+message Schedule {
+  // identity
+  string id = 1;
+  string project_id = 2;
+  string workflow_id = 3;
+
+  // schedule display
+  string name = 4;          // display name shown in the list
+  string description = 5;   // description of the schedule itself
+
+  // cron
+  string cron_expression = 6; // standard 5-field cron, server local TZ
+  bool enabled = 7;
+
+  // task content (CreateTaskRequest equivalents)
+  string task_title = 8;
+  string task_description = 9;
+  string status_id = 10;     // status name; empty = workflow's initial status
+  bool use_worktree = 11;
+  string effort = 12;        // "" / low / medium / high / xhigh / max
+  map<string, string> task_metadata = 13;
+
+  // state
+  google.protobuf.Timestamp last_run_at = 14;
+  google.protobuf.Timestamp next_run_at = 15;
+  string last_error = 16;
+
+  // timestamps
+  google.protobuf.Timestamp created_at = 17;
+  google.protobuf.Timestamp updated_at = 18;
+}
+
+message CreateScheduleRequest {
+  string project_id = 1;
+  string workflow_id = 2;
+  string name = 3;
+  string description = 4;
+  string cron_expression = 5;
+  bool enabled = 6;
+  string task_title = 7;
+  string task_description = 8;
+  optional string status_id = 9;
+  bool use_worktree = 10;
+  string effort = 11;
+  map<string, string> task_metadata = 12;
+}
+message CreateScheduleResponse {
+  Schedule schedule = 1;
+}
+
+message GetScheduleRequest {
+  string id = 1;
+}
+message GetScheduleResponse {
+  Schedule schedule = 1;
+}
+
+message ListSchedulesRequest {
+  string project_id = 1;
+  PaginationRequest pagination = 2;
+}
+message ListSchedulesResponse {
+  repeated Schedule schedules = 1;
+  PaginationResponse pagination = 2;
+}
+
+message UpdateScheduleRequest {
+  string id = 1;
+  string workflow_id = 2;
+  string name = 3;
+  string description = 4;
+  string cron_expression = 5;
+  string task_title = 6;
+  string task_description = 7;
+  optional string status_id = 8;
+  optional bool use_worktree = 9;
+  string effort = 10;
+  map<string, string> task_metadata = 11;
+}
+message UpdateScheduleResponse {
+  Schedule schedule = 1;
+}
+
+message DeleteScheduleRequest {
+  string id = 1;
+}
+message DeleteScheduleResponse {}
+
+message SetScheduleEnabledRequest {
+  string id = 1;
+  bool enabled = 2;
+}
+message SetScheduleEnabledResponse {
+  Schedule schedule = 1;
+}

@@ -18,6 +18,7 @@ import { Route as ProjectsProjectIdWorkflowsRouteImport } from './routes/project
 import { Route as ProjectsProjectIdSkillsRouteImport } from './routes/projects/$projectId/skills'
 import { Route as ProjectsProjectIdSettingsRouteImport } from './routes/projects/$projectId/settings'
 import { Route as ProjectsProjectIdScriptsRouteImport } from './routes/projects/$projectId/scripts'
+import { Route as ProjectsProjectIdSchedulesRouteImport } from './routes/projects/$projectId/schedules'
 import { Route as ProjectsProjectIdPermissionsRouteImport } from './routes/projects/$projectId/permissions'
 import { Route as ProjectsProjectIdChatRouteImport } from './routes/projects/$projectId/chat'
 import { Route as ProjectsProjectIdAgentsRouteImport } from './routes/projects/$projectId/agents'
@@ -72,6 +73,12 @@ const ProjectsProjectIdScriptsRoute =
     path: '/projects/$projectId/scripts',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ProjectsProjectIdSchedulesRoute =
+  ProjectsProjectIdSchedulesRouteImport.update({
+    id: '/projects/$projectId/schedules',
+    path: '/projects/$projectId/schedules',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ProjectsProjectIdPermissionsRoute =
   ProjectsProjectIdPermissionsRouteImport.update({
     id: '/projects/$projectId/permissions',
@@ -102,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/agents': typeof ProjectsProjectIdAgentsRoute
   '/projects/$projectId/chat': typeof ProjectsProjectIdChatRoute
   '/projects/$projectId/permissions': typeof ProjectsProjectIdPermissionsRoute
+  '/projects/$projectId/schedules': typeof ProjectsProjectIdSchedulesRoute
   '/projects/$projectId/scripts': typeof ProjectsProjectIdScriptsRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId/skills': typeof ProjectsProjectIdSkillsRoute
@@ -117,6 +125,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/agents': typeof ProjectsProjectIdAgentsRoute
   '/projects/$projectId/chat': typeof ProjectsProjectIdChatRoute
   '/projects/$projectId/permissions': typeof ProjectsProjectIdPermissionsRoute
+  '/projects/$projectId/schedules': typeof ProjectsProjectIdSchedulesRoute
   '/projects/$projectId/scripts': typeof ProjectsProjectIdScriptsRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId/skills': typeof ProjectsProjectIdSkillsRoute
@@ -133,6 +142,7 @@ export interface FileRoutesById {
   '/projects/$projectId/agents': typeof ProjectsProjectIdAgentsRoute
   '/projects/$projectId/chat': typeof ProjectsProjectIdChatRoute
   '/projects/$projectId/permissions': typeof ProjectsProjectIdPermissionsRoute
+  '/projects/$projectId/schedules': typeof ProjectsProjectIdSchedulesRoute
   '/projects/$projectId/scripts': typeof ProjectsProjectIdScriptsRoute
   '/projects/$projectId/settings': typeof ProjectsProjectIdSettingsRoute
   '/projects/$projectId/skills': typeof ProjectsProjectIdSkillsRoute
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/agents'
     | '/projects/$projectId/chat'
     | '/projects/$projectId/permissions'
+    | '/projects/$projectId/schedules'
     | '/projects/$projectId/scripts'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/skills'
@@ -165,6 +176,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/agents'
     | '/projects/$projectId/chat'
     | '/projects/$projectId/permissions'
+    | '/projects/$projectId/schedules'
     | '/projects/$projectId/scripts'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/skills'
@@ -180,6 +192,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/agents'
     | '/projects/$projectId/chat'
     | '/projects/$projectId/permissions'
+    | '/projects/$projectId/schedules'
     | '/projects/$projectId/scripts'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/skills'
@@ -196,6 +209,7 @@ export interface RootRouteChildren {
   ProjectsProjectIdAgentsRoute: typeof ProjectsProjectIdAgentsRoute
   ProjectsProjectIdChatRoute: typeof ProjectsProjectIdChatRoute
   ProjectsProjectIdPermissionsRoute: typeof ProjectsProjectIdPermissionsRoute
+  ProjectsProjectIdSchedulesRoute: typeof ProjectsProjectIdSchedulesRoute
   ProjectsProjectIdScriptsRoute: typeof ProjectsProjectIdScriptsRoute
   ProjectsProjectIdSettingsRoute: typeof ProjectsProjectIdSettingsRoute
   ProjectsProjectIdSkillsRoute: typeof ProjectsProjectIdSkillsRoute
@@ -270,6 +284,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdScriptsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/projects/$projectId/schedules': {
+      id: '/projects/$projectId/schedules'
+      path: '/projects/$projectId/schedules'
+      fullPath: '/projects/$projectId/schedules'
+      preLoaderRoute: typeof ProjectsProjectIdSchedulesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/projects/$projectId/permissions': {
       id: '/projects/$projectId/permissions'
       path: '/projects/$projectId/permissions'
@@ -308,6 +329,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProjectsProjectIdAgentsRoute: ProjectsProjectIdAgentsRoute,
   ProjectsProjectIdChatRoute: ProjectsProjectIdChatRoute,
   ProjectsProjectIdPermissionsRoute: ProjectsProjectIdPermissionsRoute,
+  ProjectsProjectIdSchedulesRoute: ProjectsProjectIdSchedulesRoute,
   ProjectsProjectIdScriptsRoute: ProjectsProjectIdScriptsRoute,
   ProjectsProjectIdSettingsRoute: ProjectsProjectIdSettingsRoute,
   ProjectsProjectIdSkillsRoute: ProjectsProjectIdSkillsRoute,
