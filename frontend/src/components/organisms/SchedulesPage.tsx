@@ -111,6 +111,13 @@ export function SchedulesPage({ projectId, editScheduleId, mode }: SchedulesPage
       useWorktree: form.useWorktree,
       effort: form.effort,
     })
+    // `enabled` is intentionally absent from UpdateScheduleRequest — toggling
+    // routes through SetScheduleEnabled so the in-process cron runner picks up
+    // the change. If the user flipped Enabled in the edit modal, mirror that
+    // change through the dedicated RPC.
+    if (form.enabled !== editing.enabled) {
+      await enableMut.mutateAsync({ id: editing.id, enabled: form.enabled })
+    }
     refetch()
     closeForm()
   }
