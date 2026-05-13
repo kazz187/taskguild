@@ -33,6 +33,9 @@ import (
 	projectrepo "github.com/kazz187/taskguild/internal/project/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/pushnotification"
 	pushsubrepo "github.com/kazz187/taskguild/internal/pushsubscription/repositoryimpl"
+	"github.com/kazz187/taskguild/internal/schedule"
+	schedulerepo "github.com/kazz187/taskguild/internal/schedule/repositoryimpl"
+	"github.com/kazz187/taskguild/internal/scheduler"
 	"github.com/kazz187/taskguild/internal/script"
 	scriptrepo "github.com/kazz187/taskguild/internal/script/repositoryimpl"
 	"github.com/kazz187/taskguild/internal/singlecommandpermission"
@@ -263,6 +266,7 @@ func runServer() {
 	scpRepo := scprepo.NewYAMLRepository(store)
 	templateRepo := tmplrepo.NewYAMLRepository(store)
 	claudeSettingsRepo := claudesettingsrepo.NewYAMLRepository(store)
+	scheduleRepo := schedulerepo.NewYAMLRepository(store)
 
 	// Setup agent-manager registry
 	agentManagerRegistry := agentmanager.NewRegistry()
@@ -319,6 +323,12 @@ func runServer() {
 	}
 	claudeSettingsServer := claudesettings.NewServer(claudeSettingsRepo, csChangeNotifier, wdResolver)
 
+	// Setup scheduler (cron-based task creator). The scheduler is wired before
+	// the schedule server so the latter can hand it CRUD-time cache updates.
+	taskCreatorAdapter := scheduler.NewTaskCreatorAdapter(taskServer)
+	sched := scheduler.New(scheduleRepo, taskCreatorAdapter)
+	scheduleServer := schedule.NewServer(scheduleRepo, workflowRepo, sched)
+
 	// Setup push notification
 	vapidEnv := config.VAPIDEnvFromEnv(env)
 	pushSender := pushnotification.NewSender(vapidEnv, pushSubRepo)
@@ -343,6 +353,7 @@ func runServer() {
 		scpServer,
 		templateServer,
 		claudeSettingsServer,
+		scheduleServer,
 	)
 
 	// Setup orchestrator
@@ -413,6 +424,7 @@ func runServer() {
 	svcWg.Go(func() { orch.Start(ctx) })
 	svcWg.Go(func() { pushDispatcher.Start(ctx) })
 	svcWg.Go(func() { chatNotifier.Start(ctx) })
+	svcWg.Go(func() { sched.Start(ctx) })
 
 	// Periodic task log cleanup every 6 hours.
 	svcWg.Go(func() {

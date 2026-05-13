@@ -79,21 +79,37 @@ func (s *Server) SetImageStore(store ImageStore) {
 	s.imageStore = store
 }
 
-func (s *Server) CreateTask(ctx context.Context, req *connect.Request[taskguildv1.CreateTaskRequest]) (*connect.Response[taskguildv1.CreateTaskResponse], error) {
-	// Fetch workflow to determine the status for the new task.
-	wf, err := s.workflowRepo.Get(ctx, req.Msg.GetWorkflowId())
+// CreateTaskInput is the proto-independent argument to CreateTaskInternal.
+// Allows scheduler / tests to invoke the create flow without constructing a
+// connect.Request.
+type CreateTaskInput struct {
+	ProjectID   string
+	WorkflowID  string
+	Title       string
+	Description string
+	// StatusID, when empty, defaults to the workflow's initial status.
+	StatusID    string
+	UseWorktree bool
+	Effort      string
+	Metadata    map[string]string
+}
+
+// CreateTaskInternal performs the same business logic as the CreateTask
+// Connect handler but accepts a Go struct so non-RPC callers (e.g. the
+// scheduler) can invoke it directly.
+func (s *Server) CreateTaskInternal(ctx context.Context, in CreateTaskInput) (*Task, error) {
+	wf, err := s.workflowRepo.Get(ctx, in.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
 
 	var statusID string
 
-	if req.Msg.StatusId != nil && req.Msg.GetStatusId() != "" {
-		// Validate specified status exists in the workflow.
+	if in.StatusID != "" {
 		found := false
 
 		for _, st := range wf.Statuses {
-			if st.Name == req.Msg.GetStatusId() {
+			if st.Name == in.StatusID {
 				found = true
 				break
 			}
@@ -101,12 +117,11 @@ func (s *Server) CreateTask(ctx context.Context, req *connect.Request[taskguildv
 
 		if !found {
 			return nil, cerr.NewError(cerr.InvalidArgument,
-				fmt.Sprintf("specified status %q not found in workflow", req.Msg.GetStatusId()), nil).ConnectError()
+				fmt.Sprintf("specified status %q not found in workflow", in.StatusID), nil).ConnectError()
 		}
 
-		statusID = req.Msg.GetStatusId()
+		statusID = in.StatusID
 	} else {
-		// Default: use the workflow's initial status.
 		for _, st := range wf.Statuses {
 			if st.IsInitial {
 				statusID = st.Name
@@ -123,15 +138,15 @@ func (s *Server) CreateTask(ctx context.Context, req *connect.Request[taskguildv
 
 	t := &Task{
 		ID:               ulid.Make().String(),
-		ProjectID:        req.Msg.GetProjectId(),
-		WorkflowID:       req.Msg.GetWorkflowId(),
-		Title:            req.Msg.GetTitle(),
-		Description:      req.Msg.GetDescription(),
+		ProjectID:        in.ProjectID,
+		WorkflowID:       in.WorkflowID,
+		Title:            in.Title,
+		Description:      in.Description,
 		StatusID:         statusID,
 		AssignmentStatus: AssignmentStatusUnassigned,
-		Metadata:         req.Msg.GetMetadata(),
-		UseWorktree:      req.Msg.GetUseWorktree(),
-		Effort:           req.Msg.GetEffort(),
+		Metadata:         in.Metadata,
+		UseWorktree:      in.UseWorktree,
+		Effort:           in.Effort,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
@@ -145,6 +160,28 @@ func (s *Server) CreateTask(ctx context.Context, req *connect.Request[taskguildv
 		"",
 		map[string]string{"project_id": t.ProjectID, "workflow_id": t.WorkflowID},
 	)
+
+	return t, nil
+}
+
+func (s *Server) CreateTask(ctx context.Context, req *connect.Request[taskguildv1.CreateTaskRequest]) (*connect.Response[taskguildv1.CreateTaskResponse], error) {
+	in := CreateTaskInput{
+		ProjectID:   req.Msg.GetProjectId(),
+		WorkflowID:  req.Msg.GetWorkflowId(),
+		Title:       req.Msg.GetTitle(),
+		Description: req.Msg.GetDescription(),
+		UseWorktree: req.Msg.GetUseWorktree(),
+		Effort:      req.Msg.GetEffort(),
+		Metadata:    req.Msg.GetMetadata(),
+	}
+	if req.Msg.StatusId != nil {
+		in.StatusID = req.Msg.GetStatusId()
+	}
+
+	t, err := s.CreateTaskInternal(ctx, in)
+	if err != nil {
+		return nil, err
+	}
 
 	return connect.NewResponse(&taskguildv1.CreateTaskResponse{
 		Task: toProto(t),
