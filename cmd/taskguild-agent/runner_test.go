@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -580,4 +581,104 @@ func TestRunTask_SessionSavedOnCancel(t *testing.T) {
 	}
 
 	assert.True(t, savedSessionID, "session_id_Plan should be saved from intermediate messages even when turn is interrupted")
+}
+
+func TestIsAuthenticationError(t *testing.T) {
+	tests := []struct {
+		name   string
+		errMsg string
+		want   bool
+	}{
+		{"oauth expired", "OAuth token has expired", true},
+		{"authentication_error", "API error: authentication_error", true},
+		{"invalid api key", "Invalid API key · Please run /login", true},
+		{"please run claude login", "Please run `claude login` to continue", true},
+		{"not logged in", "You are not logged in", true},
+		{"login required", "Login required", true},
+		// The transport/session symptoms must NOT be classified as auth errors,
+		// otherwise stale-session recovery would be wrongly short-circuited.
+		{"transport closed is not auth", "control request error: transport closed", false},
+		{"no conversation found is not auth", "No conversation found with session ID: abc", false},
+		{"context canceled is not auth", "context canceled", false},
+		{"empty", "", false},
+		{"generic", "some random failure", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isAuthenticationError(tt.errMsg))
+		})
+	}
+}
+
+func TestIsStartupFailure(t *testing.T) {
+	tests := []struct {
+		name   string
+		result *claudeagent.QueryResult
+		err    error
+		want   bool
+	}{
+		{"no error", &claudeagent.QueryResult{}, nil, false},
+		{"nil result with error", nil, errors.New("control request error: transport closed"), true},
+		{"empty result with error", &claudeagent.QueryResult{}, errors.New("boom"), true},
+		{
+			"result with intermediate messages is not startup failure",
+			&claudeagent.QueryResult{Messages: []claudeagent.Message{&claudeagent.StreamEvent{}}},
+			context.Canceled,
+			false,
+		},
+		{
+			"result with ResultMessage is not startup failure",
+			&claudeagent.QueryResult{Result: &claudeagent.ResultMessage{}},
+			errors.New("boom"),
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isStartupFailure(tt.result, tt.err))
+		})
+	}
+}
+
+// TestRunTask_FreshSessionStartupFailure_PromptsLogin verifies that when the
+// Claude CLI fails to start a fresh session (returns a nil result with a
+// transport error — the signature of an authentication/environment failure),
+// runTask does NOT panic and does NOT retry-loop, but reports a login-prompt
+// error and returns. This is the regression test for the nil-pointer panic in
+// runTask and for the hybrid auth-failure handling.
+func TestRunTask_FreshSessionStartupFailure_PromptsLogin(t *testing.T) {
+	tc := newTestClients()
+	defer tc.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	metadata := baseMetadata("Plan", `[{"name":"Develop"}]`)
+
+	// Fresh session (no session_id_* in metadata) that fails to start with a
+	// nil result — exactly what RunQuerySync returns when the CLI dies during
+	// initialization.
+	qr := &mockQueryRunner{
+		results: []mockQueryRunnerResult{
+			{Result: nil, Err: errors.New("control request error: transport closed")},
+		},
+	}
+
+	permCache := newPermissionCache("test", tc.agentClient)
+	scpCache := newSingleCommandPermissionCache("test", tc.agentClient)
+
+	runTask(ctx, tc.agentClient, tc.taskClient, tc.interClient,
+		"agent-mgr-1", "task-auth", "instructions", metadata,
+		t.TempDir(), permCache, scpCache, qr, func() bool { return false })
+
+	// No retry loop: the CLI must be invoked exactly once.
+	assert.Len(t, qr.getCalls(), 1, "startup failure on a fresh session must not retry")
+
+	// A login-prompt error result was reported.
+	tc.agentHandler.mu.Lock()
+	defer tc.agentHandler.mu.Unlock()
+
+	require.Len(t, tc.agentHandler.reportTaskResultReqs, 1, "expected exactly one task result")
+	gotErr := tc.agentHandler.reportTaskResultReqs[0].GetErrorMessage()
+	assert.Contains(t, gotErr, "claude login", "result should prompt the user to re-authenticate")
 }

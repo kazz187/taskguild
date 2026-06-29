@@ -221,10 +221,25 @@ func runTask(
 				saveClaudeMode(ctx, taskClient, taskID, newMode)
 			}
 		})
+		// Capture this turn's stderr so we can inspect it for authentication
+		// failures below. The Claude CLI prints auth/login errors (e.g. invalid
+		// API key, "please run /login") to stderr, not to the error returned by
+		// RunQuerySync, so the returned error alone is not enough to detect
+		// them. Reset per turn.
+		var (
+			turnStderrMu sync.Mutex
+			turnStderr   strings.Builder
+		)
+
 		// Override StderrCallback to also send to task logger.
 		opts.StderrCallback = func(line string) {
 			logger.Debug("claude-stderr", "line", line)
 			tl.LogStderr(line)
+
+			turnStderrMu.Lock()
+			turnStderr.WriteString(line)
+			turnStderr.WriteByte('\n')
+			turnStderrMu.Unlock()
 		}
 
 		modeMu.Lock()
@@ -298,10 +313,12 @@ func runTask(
 		// messages (StreamEvent, etc.) when the turn was interrupted before
 		// the ResultMessage arrived (e.g., user-stopped task).
 		newSessionID := ""
-		if result.Result != nil && result.Result.SessionID != "" {
-			newSessionID = result.Result.SessionID
-		} else {
-			newSessionID = extractSessionIDFromMessages(result.Messages)
+		if result != nil {
+			if result.Result != nil && result.Result.SessionID != "" {
+				newSessionID = result.Result.SessionID
+			} else {
+				newSessionID = extractSessionIDFromMessages(result.Messages)
+			}
 		}
 
 		if newSessionID != "" {
@@ -331,12 +348,31 @@ func runTask(
 		}
 
 		if isError {
-			// Authentication errors (e.g. expired OAuth token) are not
-			// recoverable by retrying. Fail immediately and tell the user
-			// to run 'claude login' to re-authenticate.
-			if isAuthenticationError(errMsg) {
-				authErrMsg := fmt.Sprintf("Authentication failed: %s\nRun 'claude login' to re-authenticate.", errMsg)
-				logger.Error("authentication error detected, not retrying", "error", errMsg)
+			// Authentication failures are not recoverable by retrying — the
+			// user must re-authenticate. Detect them two ways:
+			//   1. Explicit auth markers in the returned error or the CLI's
+			//      stderr (e.g. expired OAuth token, "invalid api key",
+			//      "please run /login"). The CLI prints these to stderr, so we
+			//      check the captured stderr in addition to errMsg.
+			//   2. The CLI failed to even start a *fresh* session (sessionID
+			//      == "", so there is no stale session to blame). A subprocess
+			//      that dies during startup without producing any output is
+			//      almost always an environment/authentication problem, not a
+			//      transient error. Stale-resume failures (sessionID != "")
+			//      fall through to the retry / restart-fresh recovery below,
+			//      which clears the session and converges here on a fresh one.
+			stderrText := func() string {
+				turnStderrMu.Lock()
+				defer turnStderrMu.Unlock()
+
+				return turnStderr.String()
+			}()
+
+			if isAuthenticationError(errMsg) || isAuthenticationError(stderrText) ||
+				(sessionID == "" && isStartupFailure(result, err)) {
+				authErrMsg := buildAuthErrorMessage(errMsg, stderrText)
+				logger.Error("authentication/startup failure detected, not retrying",
+					"error", errMsg, "stderr", stderrText, "session_id", sessionID)
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_ERROR, v1.TaskLogLevel_TASK_LOG_LEVEL_ERROR,
 					authErrMsg, nil)
 				reportTaskResult(ctx, client, taskID, "", authErrMsg)
@@ -396,7 +432,12 @@ func runTask(
 		consecutiveErrors = 0
 		backoff = initialBackoff
 
-		logger.Info("processing successful result", "turn", turn, "result_len", len(result.Result.Result))
+		resultLen := 0
+		if result.Result != nil {
+			resultLen = len(result.Result.Result)
+		}
+
+		logger.Info("processing successful result", "turn", turn, "result_len", resultLen)
 
 		// Extract and persist task description updates from agent output.
 		if result.Result != nil {
@@ -951,6 +992,16 @@ func isAuthenticationError(errMsg string) bool {
 		"authentication_failed",
 		"oauth token has expired",
 		"failed to authenticate",
+		// Not-logged-in / missing or invalid credential markers printed by
+		// the Claude CLI (typically to stderr) when it cannot authenticate.
+		"invalid api key",
+		"invalid_api_key",
+		"please run /login",
+		"please run `claude login`",
+		"please run claude login",
+		"not logged in",
+		"please log in",
+		"login required",
 	}
 	for _, pattern := range authPatterns {
 		if strings.Contains(lower, pattern) {
@@ -959,4 +1010,50 @@ func isAuthenticationError(errMsg string) bool {
 	}
 
 	return false
+}
+
+// isStartupFailure reports whether a failed turn died during CLI startup —
+// i.e. the subprocess produced no messages and no ResultMessage before
+// erroring out. This is the signature of the Claude CLI exiting immediately
+// (e.g. missing/invalid credentials, or an environment problem preventing the
+// CLI from launching), as distinct from a failure that occurs mid-conversation
+// after the CLI has already produced output.
+func isStartupFailure(result *claudeagent.QueryResult, err error) bool {
+	if err == nil {
+		return false
+	}
+
+	if result == nil {
+		return true
+	}
+
+	return result.Result == nil && len(result.Messages) == 0
+}
+
+// buildAuthErrorMessage produces a user-facing message telling them to
+// re-authenticate, appending whatever detail the CLI provided (truncated so a
+// long-running turn's accumulated stderr cannot bloat the message).
+func buildAuthErrorMessage(errMsg, stderrText string) string {
+	detail := strings.TrimSpace(errMsg)
+
+	if s := strings.TrimSpace(stderrText); s != "" {
+		const maxStderr = 1000
+		if len(s) > maxStderr {
+			s = "..." + s[len(s)-maxStderr:]
+		}
+
+		if detail != "" {
+			detail += "\n"
+		}
+
+		detail += s
+	}
+
+	msg := "Authentication failed: the Claude CLI could not authenticate. " +
+		"Run 'claude login' to re-authenticate, then restart the task."
+	if detail != "" {
+		msg += "\n\nDetails:\n" + detail
+	}
+
+	return msg
 }
