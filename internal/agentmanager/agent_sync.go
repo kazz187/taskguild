@@ -9,6 +9,7 @@ import (
 
 	"github.com/kazz187/taskguild/internal/agent"
 	"github.com/kazz187/taskguild/internal/claudesettings"
+	"github.com/kazz187/taskguild/internal/eventbus"
 	"github.com/kazz187/taskguild/internal/permission"
 	"github.com/kazz187/taskguild/pkg/cerr"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
@@ -101,9 +102,9 @@ func (s *Server) ReportAgentStatus(ctx context.Context, req *connect.Request[tas
 		req.Msg.GetTaskId(),
 		"",
 		map[string]string{
-			"agent_manager_id": req.Msg.GetAgentManagerId(),
-			"agent_status":     req.Msg.GetStatus().String(),
-			"message":          req.Msg.GetMessage(),
+			eventbus.MetaAgentManagerID: req.Msg.GetAgentManagerId(),
+			eventbus.MetaAgentStatus:    req.Msg.GetStatus().String(),
+			eventbus.MetaMessage:        req.Msg.GetMessage(),
 		},
 	)
 

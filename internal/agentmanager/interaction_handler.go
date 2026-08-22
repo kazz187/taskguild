@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
 
+	"github.com/kazz187/taskguild/internal/eventbus"
 	"github.com/kazz187/taskguild/internal/interaction"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 )
@@ -62,7 +63,7 @@ func (s *Server) CreateInteraction(ctx context.Context, req *connect.Request[tas
 		taskguildv1.EventType_EVENT_TYPE_INTERACTION_CREATED,
 		inter.ID,
 		interaction.MarshalInteractionPayload(interProto),
-		map[string]string{"task_id": inter.TaskID, "agent_id": inter.AgentID},
+		map[string]string{eventbus.MetaTaskID: inter.TaskID, eventbus.MetaAgentID: inter.AgentID},
 	)
 
 	return connect.NewResponse(&taskguildv1.CreateInteractionResponse{

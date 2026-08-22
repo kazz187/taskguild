@@ -107,6 +107,7 @@ func (r *memWorkflowRepo) Get(_ context.Context, id string) (*workflow.Workflow,
 
 	return &c, nil
 }
+
 func (r *memWorkflowRepo) List(_ context.Context, _ string, _, _ int) ([]*workflow.Workflow, int, error) {
 	if r.wf == nil {
 		return nil, 0, nil
@@ -128,13 +129,16 @@ func (s *stubScheduler) Add(sc *schedule.Schedule) error {
 	s.added = append(s.added, sc.ID)
 	return nil
 }
+
 func (s *stubScheduler) Update(sc *schedule.Schedule) error {
 	s.updated = append(s.updated, sc.ID)
 	return nil
 }
+
 func (s *stubScheduler) Remove(id string) {
 	s.removed = append(s.removed, id)
 }
+
 func (s *stubScheduler) NextRun(_ string, _ time.Time) time.Time {
 	return time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)
 }

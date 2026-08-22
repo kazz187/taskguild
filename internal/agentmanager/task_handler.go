@@ -14,6 +14,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
 
+	"github.com/kazz187/taskguild/internal/eventbus"
 	"github.com/kazz187/taskguild/internal/task"
 	"github.com/kazz187/taskguild/internal/tasklog"
 	"github.com/kazz187/taskguild/internal/version"
@@ -185,8 +186,8 @@ func (s *Server) handleReleasedTask(ctx context.Context, agentManagerID string, 
 			t.ID,
 			"",
 			map[string]string{
-				"task_id": t.ID,
-				"reason":  "agent_released",
+				eventbus.MetaTaskID: t.ID,
+				eventbus.MetaReason: "agent_released",
 			},
 		)
 	}
@@ -223,9 +224,9 @@ func (s *Server) handleReleasedTask(ctx context.Context, agentManagerID string, 
 		t.ID,
 		"",
 		map[string]string{
-			"project_id":  t.ProjectID,
-			"workflow_id": t.WorkflowID,
-			"reason":      "agent_released",
+			eventbus.MetaProjectID:  t.ProjectID,
+			eventbus.MetaWorkflowID: t.WorkflowID,
+			eventbus.MetaReason:     "agent_released",
 		},
 	)
 }
@@ -366,8 +367,8 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 	s.emitResultLog(ctx, t, req.Msg.GetSummary(), req.Msg.GetErrorMessage())
 
 	eventMeta := map[string]string{
-		"project_id":  t.ProjectID,
-		"workflow_id": t.WorkflowID,
+		eventbus.MetaProjectID:  t.ProjectID,
+		eventbus.MetaWorkflowID: t.WorkflowID,
 	}
 
 	if req.Msg.GetErrorMessage() != "" {
@@ -386,7 +387,7 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 				return nil, err
 			}
 
-			eventMeta["reason"] = "stopped_by_user"
+			eventMeta[eventbus.MetaReason] = "stopped_by_user"
 			s.eventBus.PublishNew(
 				taskguildv1.EventType_EVENT_TYPE_TASK_UPDATED,
 				t.ID, "", eventMeta,
@@ -428,8 +429,8 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 			// Schedule delayed re-broadcast in a goroutine.
 			go s.delayedRebroadcast(t.ID, t.ProjectID, t.WorkflowID, delay)
 
-			eventMeta["reason"] = "retry_scheduled"
-			eventMeta["retry_count"] = strconv.Itoa(retryCount)
+			eventMeta[eventbus.MetaReason] = "retry_scheduled"
+			eventMeta[eventbus.MetaRetryCount] = strconv.Itoa(retryCount)
 			s.eventBus.PublishNew(
 				taskguildv1.EventType_EVENT_TYPE_TASK_UPDATED,
 				t.ID, "", eventMeta,
@@ -593,7 +594,7 @@ func (s *Server) emitResultLog(ctx context.Context, t *task.Task, summary, errMs
 		taskguildv1.EventType_EVENT_TYPE_TASK_LOG,
 		l.ID,
 		"",
-		map[string]string{"task_id": t.ID, "project_id": t.ProjectID},
+		map[string]string{eventbus.MetaTaskID: t.ID, eventbus.MetaProjectID: t.ProjectID},
 	)
 }
 
@@ -997,10 +998,10 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		t.ID,
 		"",
 		map[string]string{
-			"agent_manager_id": req.Msg.GetAgentManagerId(),
-			"agent_config_id":  agentConfigID,
-			"project_id":       t.ProjectID,
-			"workflow_id":      t.WorkflowID,
+			eventbus.MetaAgentManagerID: req.Msg.GetAgentManagerId(),
+			eventbus.MetaAgentConfigID:  agentConfigID,
+			eventbus.MetaProjectID:      t.ProjectID,
+			eventbus.MetaWorkflowID:     t.WorkflowID,
 		},
 	)
 

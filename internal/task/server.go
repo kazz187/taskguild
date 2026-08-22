@@ -158,7 +158,7 @@ func (s *Server) CreateTaskInternal(ctx context.Context, in CreateTaskInput) (*T
 		taskguildv1.EventType_EVENT_TYPE_TASK_CREATED,
 		t.ID,
 		"",
-		map[string]string{"project_id": t.ProjectID, "workflow_id": t.WorkflowID},
+		map[string]string{eventbus.MetaProjectID: t.ProjectID, eventbus.MetaWorkflowID: t.WorkflowID},
 	)
 
 	return t, nil
@@ -276,7 +276,7 @@ func (s *Server) UpdateTask(ctx context.Context, req *connect.Request[taskguildv
 		taskguildv1.EventType_EVENT_TYPE_TASK_UPDATED,
 		t.ID,
 		"",
-		map[string]string{"project_id": t.ProjectID, "workflow_id": t.WorkflowID},
+		map[string]string{eventbus.MetaProjectID: t.ProjectID, eventbus.MetaWorkflowID: t.WorkflowID},
 	)
 
 	return connect.NewResponse(&taskguildv1.UpdateTaskResponse{
@@ -309,7 +309,7 @@ func (s *Server) DeleteTask(ctx context.Context, req *connect.Request[taskguildv
 		taskguildv1.EventType_EVENT_TYPE_TASK_DELETED,
 		req.Msg.GetId(),
 		"",
-		map[string]string{"project_id": t.ProjectID, "workflow_id": t.WorkflowID},
+		map[string]string{eventbus.MetaProjectID: t.ProjectID, eventbus.MetaWorkflowID: t.WorkflowID},
 	)
 
 	return connect.NewResponse(&taskguildv1.DeleteTaskResponse{}), nil
@@ -416,9 +416,9 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *connect.Request[task
 		t.ID,
 		"",
 		map[string]string{
-			"project_id":    t.ProjectID,
-			"workflow_id":   t.WorkflowID,
-			"new_status_id": req.Msg.GetStatusId(),
+			eventbus.MetaProjectID:   t.ProjectID,
+			eventbus.MetaWorkflowID:  t.WorkflowID,
+			eventbus.MetaNewStatusID: req.Msg.GetStatusId(),
 		},
 	)
 
@@ -474,9 +474,9 @@ func (s *Server) StopTask(ctx context.Context, req *connect.Request[taskguildv1.
 		t.ID,
 		"",
 		map[string]string{
-			"project_id":  t.ProjectID,
-			"workflow_id": t.WorkflowID,
-			"reason":      "stopped_by_user",
+			eventbus.MetaProjectID:  t.ProjectID,
+			eventbus.MetaWorkflowID: t.WorkflowID,
+			eventbus.MetaReason:     "stopped_by_user",
 		},
 	)
 
@@ -535,9 +535,9 @@ func (s *Server) ResumeTask(ctx context.Context, req *connect.Request[taskguildv
 		t.ID,
 		"",
 		map[string]string{
-			"project_id":  t.ProjectID,
-			"workflow_id": t.WorkflowID,
-			"reason":      "resumed_by_user",
+			eventbus.MetaProjectID:  t.ProjectID,
+			eventbus.MetaWorkflowID: t.WorkflowID,
+			eventbus.MetaReason:     "resumed_by_user",
 		},
 	)
 
@@ -568,7 +568,7 @@ func (s *Server) ArchiveTask(ctx context.Context, req *connect.Request[taskguild
 		taskguildv1.EventType_EVENT_TYPE_TASK_ARCHIVED,
 		t.ID,
 		"",
-		map[string]string{"project_id": t.ProjectID, "workflow_id": t.WorkflowID},
+		map[string]string{eventbus.MetaProjectID: t.ProjectID, eventbus.MetaWorkflowID: t.WorkflowID},
 	)
 
 	return connect.NewResponse(&taskguildv1.ArchiveTaskResponse{
@@ -633,7 +633,7 @@ func (s *Server) ArchiveTerminalTasks(ctx context.Context, req *connect.Request[
 			taskguildv1.EventType_EVENT_TYPE_TASK_ARCHIVED,
 			t.ID,
 			"",
-			map[string]string{"project_id": t.ProjectID, "workflow_id": t.WorkflowID},
+			map[string]string{eventbus.MetaProjectID: t.ProjectID, eventbus.MetaWorkflowID: t.WorkflowID},
 		)
 	}
 
@@ -665,7 +665,7 @@ func (s *Server) UnarchiveTask(ctx context.Context, req *connect.Request[taskgui
 		taskguildv1.EventType_EVENT_TYPE_TASK_UNARCHIVED,
 		t.ID,
 		"",
-		map[string]string{"project_id": t.ProjectID, "workflow_id": t.WorkflowID},
+		map[string]string{eventbus.MetaProjectID: t.ProjectID, eventbus.MetaWorkflowID: t.WorkflowID},
 	)
 
 	return connect.NewResponse(&taskguildv1.UnarchiveTaskResponse{

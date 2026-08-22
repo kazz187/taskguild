@@ -111,7 +111,7 @@ func (h *ConnectTextHandler) Handle(ctx context.Context, record slog.Record) err
 		return true
 	})
 
-	for _, key := range []string{"method", "stream_type", "procedure"} {
+	for _, key := range []string{MethodAttributeKey, StreamTypeAttributeKey, ProcedureAttributeKey} {
 		err := printColumn(c, kv, key)
 		if err != nil {
 			return err
@@ -123,8 +123,8 @@ func (h *ConnectTextHandler) Handle(ctx context.Context, record slog.Record) err
 		return fmt.Errorf("can't write quote: %w", err)
 	}
 
-	if v, ok := kv["code"]; ok {
-		delete(kv, "code")
+	if v, ok := kv[CodeAttributeKey]; ok {
+		delete(kv, CodeAttributeKey)
 
 		if _, err := c.Printf("[%s] ", v); err != nil {
 			return fmt.Errorf("can't write code: %w", err)

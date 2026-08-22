@@ -129,7 +129,7 @@ func matchPermissionRule(rule string, toolName string, input map[string]any) boo
 	}
 
 	// For Bash tools, match the command input against the pattern.
-	if toolName == "Bash" {
+	if toolName == toolBash {
 		cmd, _ := input["command"].(string)
 		return matchGlob(rPattern, cmd)
 	}

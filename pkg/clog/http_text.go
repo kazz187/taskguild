@@ -128,7 +128,7 @@ func (h *HTTPTextHandler) Handle(ctx context.Context, record slog.Record) error 
 		return true
 	})
 
-	for _, key := range []string{"proto", "method", "path", "status"} {
+	for _, key := range []string{ProtoAttributeKey, MethodAttributeKey, PathAttributeKey, StatusAttributeKey} {
 		err := printColumn(c, kv, key)
 		if err != nil {
 			return err

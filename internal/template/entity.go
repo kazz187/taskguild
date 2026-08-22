@@ -2,6 +2,15 @@ package template
 
 import "time"
 
+// Template entity types. Mirrored on the wire (proto template.proto) and in the
+// frontend (frontend/src/components/organisms/TemplateListTypes.ts), and stored
+// verbatim in the on-disk YAML. Do not rename the values.
+const (
+	EntityTypeAgent  = "agent"
+	EntityTypeSkill  = "skill"
+	EntityTypeScript = "script"
+)
+
 // Template represents a reusable snapshot of an Agent, Skill, or Script configuration.
 // Templates are global (not project-scoped) and can be used across any project.
 type Template struct {

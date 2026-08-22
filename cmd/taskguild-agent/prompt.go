@@ -122,8 +122,8 @@ func buildUserPromptWithImages(ctx context.Context, metadata map[string]string, 
 			textBefore := textPrompt[lastEnd:fullStart]
 			if strings.TrimSpace(textBefore) != "" {
 				blocks = append(blocks, map[string]any{
-					"type": "text",
-					"text": textBefore,
+					blockFieldType: blockTypeText,
+					blockFieldText: textBefore,
 				})
 			}
 		}
@@ -136,25 +136,25 @@ func buildUserPromptWithImages(ctx context.Context, metadata map[string]string, 
 			}))
 			if err == nil {
 				blocks = append(blocks, map[string]any{
-					"type": "image",
+					blockFieldType: blockTypeImage,
 					"source": map[string]any{
-						"type":       "base64",
-						"media_type": imgResp.Msg.GetImage().GetMediaType(),
-						"data":       base64.StdEncoding.EncodeToString(imgResp.Msg.GetData()),
+						blockFieldType: "base64",
+						"media_type":   imgResp.Msg.GetImage().GetMediaType(),
+						"data":         base64.StdEncoding.EncodeToString(imgResp.Msg.GetData()),
 					},
 				})
 			} else {
 				// Keep the reference as text if fetch fails.
 				blocks = append(blocks, map[string]any{
-					"type": "text",
-					"text": textPrompt[fullStart:fullEnd],
+					blockFieldType: blockTypeText,
+					blockFieldText: textPrompt[fullStart:fullEnd],
 				})
 			}
 		} else {
 			// Image not found — keep the reference as text.
 			blocks = append(blocks, map[string]any{
-				"type": "text",
-				"text": textPrompt[fullStart:fullEnd],
+				blockFieldType: blockTypeText,
+				blockFieldText: textPrompt[fullStart:fullEnd],
 			})
 		}
 
@@ -166,8 +166,8 @@ func buildUserPromptWithImages(ctx context.Context, metadata map[string]string, 
 		remaining := textPrompt[lastEnd:]
 		if strings.TrimSpace(remaining) != "" {
 			blocks = append(blocks, map[string]any{
-				"type": "text",
-				"text": remaining,
+				blockFieldType: blockTypeText,
+				blockFieldText: remaining,
 			})
 		}
 	}

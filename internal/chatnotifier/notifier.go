@@ -60,7 +60,7 @@ func (n *Notifier) Start(ctx context.Context) {
 
 func (n *Notifier) handleTaskStatusChanged(ctx context.Context, event *taskguildv1.Event) {
 	taskID := event.GetResourceId()
-	newStatusID := event.GetMetadata()["new_status_id"]
+	newStatusID := event.GetMetadata()[eventbus.MetaNewStatusID]
 
 	t, err := n.taskRepo.Get(ctx, taskID)
 	if err != nil {
@@ -107,7 +107,7 @@ func (n *Notifier) handleTaskStatusChanged(ctx context.Context, event *taskguild
 		taskguildv1.EventType_EVENT_TYPE_INTERACTION_CREATED,
 		inter.ID,
 		interaction.MarshalInteractionPayload(interProto),
-		map[string]string{"task_id": inter.TaskID, "project_id": t.ProjectID},
+		map[string]string{eventbus.MetaTaskID: inter.TaskID, eventbus.MetaProjectID: t.ProjectID},
 	)
 
 	slog.Info("chat notifier: status change notification created",

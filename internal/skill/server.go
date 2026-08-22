@@ -1,18 +1,17 @@
 package skill
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/kazz187/taskguild/internal/claudemd"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -300,210 +299,21 @@ func (s *Server) SyncSkillsFromDir(ctx context.Context, req *connect.Request[tas
 	}), nil
 }
 
-// parsedSkill holds data extracted from a .claude/skills/*/SKILL.md file.
-type parsedSkill struct {
-	Name                   string
-	Description            string
-	Content                string
-	DisableModelInvocation bool
-	UserInvocable          bool
-	AllowedTools           []string
-	Model                  string
-	Context                string
-	Agent                  string
-	ArgumentHint           string
-}
-
-// parseSkillMDFile parses a Claude Code skill definition markdown file.
-// Format: YAML frontmatter between --- delimiters, followed by the content body.
-func parseSkillMDFile(filePath string, dirName string) (*parsedSkill, error) {
-	f, err := os.Open(filePath)
+// parseSkillMDFile reads a Claude Code skill definition markdown file and
+// parses its YAML frontmatter. dirName is used as the skill name when the
+// frontmatter carries no name.
+func parseSkillMDFile(filePath string, dirName string) (*claudemd.Skill, error) {
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 
-	scanner := bufio.NewScanner(f)
-
-	// Detect frontmatter start.
-	hasFrontmatter := false
-
-	var (
-		frontmatterLines []string
-		bodyLines        []string
-	)
-
-	inFrontmatter := false
-	frontmatterDone := false
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		if !hasFrontmatter && !frontmatterDone {
-			if strings.TrimSpace(line) == "---" {
-				hasFrontmatter = true
-				inFrontmatter = true
-
-				continue
-			}
-			// No frontmatter, everything is body.
-			frontmatterDone = true
-
-			bodyLines = append(bodyLines, line)
-
-			continue
-		}
-
-		if inFrontmatter {
-			if strings.TrimSpace(line) == "---" {
-				inFrontmatter = false
-				frontmatterDone = true
-
-				continue
-			}
-
-			frontmatterLines = append(frontmatterLines, line)
-		} else {
-			bodyLines = append(bodyLines, line)
-		}
+	parsed := claudemd.ParseSkill(string(data))
+	if parsed.Name == "" {
+		parsed.Name = dirName
 	}
 
-	result := &parsedSkill{
-		Name:          dirName,
-		UserInvocable: true, // Default is true per skill spec.
-	}
-
-	// Parse frontmatter as simple key: value pairs.
-	// Also supports YAML list format (  - item) for list fields like allowed-tools,
-	// and YAML block scalar indicators (| and >) for multi-line string values.
-	var (
-		currentListKey   string
-		blockScalarKey   string
-		blockScalarLines []string
-		blockIndent      int
-	)
-
-	assignSkillBlockScalar := func(key string, lines []string) {
-		value := strings.TrimRight(strings.Join(lines, "\n"), "\n ")
-
-		switch key {
-		case "name":
-			result.Name = value
-		case "description":
-			result.Description = value
-		case "model":
-			result.Model = value
-		case "context":
-			result.Context = value
-		case "agent":
-			result.Agent = value
-		case "argument-hint":
-			result.ArgumentHint = value
-		}
-	}
-
-	for _, line := range frontmatterLines {
-		trimmed := strings.TrimSpace(line)
-
-		// If collecting a block scalar, check if this line continues it.
-		if blockScalarKey != "" {
-			if len(line) > 0 && (line[0] == ' ' || line[0] == '\t') {
-				// Indented line: part of the block scalar.
-				if len(blockScalarLines) == 0 {
-					blockIndent = len(line) - len(strings.TrimLeft(line, " \t"))
-				}
-
-				stripped := line
-				if len(line) >= blockIndent {
-					stripped = line[blockIndent:]
-				}
-
-				blockScalarLines = append(blockScalarLines, stripped)
-
-				continue
-			}
-
-			if trimmed == "" {
-				// Blank line within block scalar.
-				blockScalarLines = append(blockScalarLines, "")
-				continue
-			}
-			// Non-indented line: finalize block scalar and fall through.
-			assignSkillBlockScalar(blockScalarKey, blockScalarLines)
-			blockScalarKey = ""
-			blockScalarLines = nil
-		}
-
-		// Check for YAML list item (e.g. "  - Read").
-		if strings.HasPrefix(trimmed, "- ") && currentListKey != "" {
-			item := strings.TrimSpace(strings.TrimPrefix(trimmed, "- "))
-			if item != "" {
-				switch currentListKey {
-				case "allowed-tools":
-					result.AllowedTools = append(result.AllowedTools, item)
-				}
-			}
-
-			continue
-		}
-
-		if idx := strings.Index(line, ":"); idx > 0 {
-			key := strings.TrimSpace(line[:idx])
-			value := strings.TrimSpace(line[idx+1:])
-			currentListKey = "" // Reset list context.
-
-			// Detect block scalar indicator.
-			if value == "|" || value == ">" {
-				blockScalarKey = key
-				blockScalarLines = nil
-				blockIndent = 0
-
-				continue
-			}
-
-			switch key {
-			case "name":
-				result.Name = value
-			case "description":
-				result.Description = value
-			case "disable-model-invocation":
-				result.DisableModelInvocation = strings.EqualFold(value, "true")
-			case "user-invocable":
-				result.UserInvocable = strings.EqualFold(value, "true")
-			case "allowed-tools":
-				if value == "" {
-					currentListKey = "allowed-tools"
-				} else {
-					parts := strings.SplitSeq(value, ",")
-					for p := range parts {
-						p = strings.TrimSpace(p)
-						if p != "" {
-							result.AllowedTools = append(result.AllowedTools, p)
-						}
-					}
-				}
-			case "model":
-				result.Model = value
-			case "context":
-				result.Context = value
-			case "agent":
-				result.Agent = value
-			case "argument-hint":
-				result.ArgumentHint = value
-			}
-		}
-	}
-
-	// Finalize any trailing block scalar.
-	if blockScalarKey != "" {
-		assignSkillBlockScalar(blockScalarKey, blockScalarLines)
-	}
-
-	// The body is the skill content.
-	body := strings.Join(bodyLines, "\n")
-	body = strings.TrimSpace(body)
-	result.Content = body
-
-	return result, nil
+	return parsed, nil
 }
 
 func toProto(s *Skill) *taskguildv1.SkillDefinition {

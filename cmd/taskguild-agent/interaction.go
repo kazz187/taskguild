@@ -13,6 +13,7 @@ import (
 	"connectrpc.com/connect"
 
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
+	scp "github.com/kazz187/taskguild/internal/singlecommandpermission"
 	"github.com/kazz187/taskguild/pkg/clog"
 	"github.com/kazz187/taskguild/pkg/shellparse"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
@@ -263,18 +264,18 @@ func waitForUserResponse(
 
 // readOnlyTools are always auto-allowed regardless of permission mode.
 var readOnlyTools = map[string]bool{
-	"Read":      true,
-	"Glob":      true,
-	"Grep":      true,
-	"WebSearch": true,
-	"WebFetch":  true,
+	toolRead:      true,
+	toolGlob:      true,
+	toolGrep:      true,
+	toolWebSearch: true,
+	toolWebFetch:  true,
 }
 
 // editTools are auto-allowed in acceptEdits and bypassPermissions modes.
 var editTools = map[string]bool{
-	"Edit":         true,
-	"Write":        true,
-	"NotebookEdit": true,
+	toolEdit:         true,
+	toolWrite:        true,
+	toolNotebookEdit: true,
 }
 
 // handleAskUserQuestion processes the AskUserQuestion tool by presenting each question
@@ -378,7 +379,7 @@ func handleAskUserQuestion(
 		select {
 		case <-ctx.Done():
 			waiter.Unregister(interactionID)
-			return claudeagent.PermissionResultDeny{Message: "context canceled"}, nil
+			return claudeagent.PermissionResultDeny{Message: msgContextCanceled}, nil
 		case inter := <-ch:
 			waiter.Unregister(interactionID)
 
@@ -410,7 +411,7 @@ func handleAskUserQuestion(
 			select {
 			case <-ctx.Done():
 				waiter.Unregister(followID)
-				return claudeagent.PermissionResultDeny{Message: "context canceled"}, nil
+				return claudeagent.PermissionResultDeny{Message: msgContextCanceled}, nil
 			case inter := <-followCh:
 				waiter.Unregister(followID)
 
@@ -458,7 +459,7 @@ func handlePermissionRequest(
 	// required to populate UpdatedInput["answers"]. Auto-allowing here would
 	// return empty answers and break the tool's contract — the agent would see
 	// `answers: {}` and have no way to know what the user wanted.
-	if toolName == "AskUserQuestion" {
+	if toolName == toolAskUserQuestion {
 		return handleAskUserQuestion(ctx, client, taskID, agentID, input, waiter)
 	}
 
@@ -484,7 +485,7 @@ func handlePermissionRequest(
 
 	// Plan mode tools: ExitPlanMode approval is handled by PreToolUse hook,
 	// EnterPlanMode is a safe mode switch — both skip permission requests.
-	if toolName == "ExitPlanMode" || toolName == "EnterPlanMode" {
+	if toolName == toolExitPlanMode || toolName == toolEnterPlanMode {
 		logger.Debug("auto-allowing plan mode tool", "tool", toolName)
 		return claudeagent.PermissionResultAllow{}, nil
 	}
@@ -493,7 +494,7 @@ func handlePermissionRequest(
 	// status's execution skills or a skill registered as a hook for the
 	// current status. These are skills TaskGuild itself has wired up for the
 	// task, so there is no user decision needed.
-	if toolName == "Skill" && len(statusSkills) > 0 {
+	if toolName == toolSkill && len(statusSkills) > 0 {
 		if skillRaw, ok := input["skill"]; ok {
 			if skillName, ok := skillRaw.(string); ok && statusSkills[skillName] {
 				logger.Debug("auto-allowing Skill tool (configured for status)", "skill", skillName)
@@ -513,7 +514,7 @@ func handlePermissionRequest(
 	// Single-command permission check for Bash tool.
 	var bashMeta *bashPermissionMetadata
 
-	if toolName == "Bash" && scpCache != nil {
+	if toolName == toolBash && scpCache != nil {
 		if cmdRaw, ok := input["command"]; ok {
 			if cmdStr, ok := cmdRaw.(string); ok && cmdStr != "" {
 				parsed := shellparse.Parse(cmdStr)
@@ -533,16 +534,16 @@ func handlePermissionRequest(
 
 	// Build interaction options based on tool type.
 	var options []*v1.InteractionOption
-	if toolName == "Bash" {
+	if toolName == toolBash {
 		options = []*v1.InteractionOption{
-			{Label: "Allow", Value: "allow", Description: "Allow this tool use"},
-			{Label: "Always Allow Command", Value: "always_allow_command", Description: "Allow and create rules for individual commands"},
-			{Label: "Deny", Value: "deny", Description: "Deny this tool use"},
+			{Label: "Allow", Value: optionAllow, Description: "Allow this tool use"},
+			{Label: "Always Allow Command", Value: optionAlwaysAllowCommand, Description: "Allow and create rules for individual commands"},
+			{Label: "Deny", Value: optionDeny, Description: "Deny this tool use"},
 		}
 	} else {
 		options = []*v1.InteractionOption{
-			{Label: "Allow", Value: "allow", Description: "Allow this tool use"},
-			{Label: "Deny", Value: "deny", Description: "Deny this tool use"},
+			{Label: "Allow", Value: optionAllow, Description: "Allow this tool use"},
+			{Label: "Deny", Value: optionDeny, Description: "Deny this tool use"},
 		}
 	}
 
@@ -576,7 +577,7 @@ func handlePermissionRequest(
 
 	select {
 	case <-ctx.Done():
-		return claudeagent.PermissionResultDeny{Message: "context canceled"}, nil
+		return claudeagent.PermissionResultDeny{Message: msgContextCanceled}, nil
 	case inter := <-ch:
 		if inter.GetStatus() == v1.InteractionStatus_INTERACTION_STATUS_EXPIRED {
 			logger.Info("permission request expired", "tool", toolName)
@@ -587,12 +588,12 @@ func handlePermissionRequest(
 
 		// Try to parse the response as JSON (always_allow_command from frontend).
 		var aacResp alwaysAllowCommandResponse
-		if json.Unmarshal([]byte(responseStr), &aacResp) == nil && aacResp.Action == "always_allow_command" {
+		if json.Unmarshal([]byte(responseStr), &aacResp) == nil && aacResp.Action == optionAlwaysAllowCommand {
 			return handleAlwaysAllowCommand(ctx, client, scpCache, aacResp.Rules, toolName, logger)
 		}
 
 		switch responseStr {
-		case "allow":
+		case optionAllow:
 			logger.Info("permission granted", "tool", toolName)
 			return claudeagent.PermissionResultAllow{}, nil
 		default:
@@ -633,7 +634,7 @@ func handleAlwaysAllowCommand(
 
 		ruleType := rule.Type
 		if ruleType == "" {
-			ruleType = "command"
+			ruleType = scp.TypeCommand
 		}
 
 		_, err := client.AddSingleCommandPermission(ctx, connect.NewRequest(&v1.AddSingleCommandPermissionRequest{

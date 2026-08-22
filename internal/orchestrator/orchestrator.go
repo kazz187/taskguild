@@ -147,7 +147,7 @@ func (o *Orchestrator) handleTaskEvent(ctx context.Context, event *taskguildv1.E
 // manual status change or resume.
 func (o *Orchestrator) handleInteractionCreated(ctx context.Context, event *taskguildv1.Event) {
 	// The event's ResourceId is the interaction ID; task_id is in metadata.
-	taskID := event.GetMetadata()["task_id"]
+	taskID := event.GetMetadata()[eventbus.MetaTaskID]
 	if taskID == "" {
 		return
 	}

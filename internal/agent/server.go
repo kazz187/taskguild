@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/kazz187/taskguild/internal/claudemd"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -303,232 +303,21 @@ func (s *Server) SyncAgentsFromDir(ctx context.Context, req *connect.Request[tas
 	}), nil
 }
 
-// parsedAgent holds data extracted from a .claude/agents/*.md file.
-type parsedAgent struct {
-	Name            string
-	Description     string
-	Prompt          string
-	Tools           []string
-	DisallowedTools []string
-	Model           string
-	PermissionMode  string
-	Skills          []string
-	Memory          string
-}
-
-// parseAgentMDFile parses a Claude Code agent definition markdown file.
-// Format: YAML frontmatter between --- delimiters, followed by the prompt body.
-func parseAgentMDFile(filePath string) (*parsedAgent, error) {
-	f, err := os.Open(filePath)
+// parseAgentMDFile reads a Claude Code agent definition markdown file and
+// parses its YAML frontmatter. The file name (without extension) is used as the
+// agent name when the frontmatter carries no name.
+func parseAgentMDFile(filePath string) (*claudemd.Agent, error) {
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 
-	scanner := bufio.NewScanner(f)
-
-	// Detect frontmatter start.
-	hasFrontmatter := false
-
-	var (
-		frontmatterLines []string
-		bodyLines        []string
-	)
-
-	inFrontmatter := false
-	frontmatterDone := false
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		if !hasFrontmatter && !frontmatterDone {
-			if strings.TrimSpace(line) == "---" {
-				hasFrontmatter = true
-				inFrontmatter = true
-
-				continue
-			}
-			// No frontmatter, everything is body.
-			frontmatterDone = true
-
-			bodyLines = append(bodyLines, line)
-
-			continue
-		}
-
-		if inFrontmatter {
-			if strings.TrimSpace(line) == "---" {
-				inFrontmatter = false
-				frontmatterDone = true
-
-				continue
-			}
-
-			frontmatterLines = append(frontmatterLines, line)
-		} else {
-			bodyLines = append(bodyLines, line)
-		}
+	parsed := claudemd.ParseAgent(string(data))
+	if parsed.Name == "" {
+		parsed.Name = strings.TrimSuffix(filepath.Base(filePath), ".md")
 	}
 
-	// Extract name from filename.
-	base := filepath.Base(filePath)
-	name := strings.TrimSuffix(base, ".md")
-
-	result := &parsedAgent{
-		Name: name,
-	}
-
-	// Parse frontmatter as simple key: value pairs.
-	// Also supports YAML list format (  - item) for list fields like skills,
-	// and YAML block scalar indicators (| and >) for multi-line string values.
-	var (
-		currentListKey   string
-		blockScalarKey   string
-		blockScalarLines []string
-		blockIndent      int
-	)
-
-	assignAgentBlockScalar := func(key string, lines []string) {
-		value := strings.TrimRight(strings.Join(lines, "\n"), "\n ")
-
-		switch key {
-		case "name":
-			result.Name = value
-		case "description":
-			result.Description = value
-		case "model":
-			result.Model = value
-		case "permissionMode":
-			result.PermissionMode = value
-		case "memory":
-			result.Memory = value
-		}
-	}
-
-	for _, line := range frontmatterLines {
-		trimmed := strings.TrimSpace(line)
-
-		// If collecting a block scalar, check if this line continues it.
-		if blockScalarKey != "" {
-			if len(line) > 0 && (line[0] == ' ' || line[0] == '\t') {
-				// Indented line: part of the block scalar.
-				if len(blockScalarLines) == 0 {
-					blockIndent = len(line) - len(strings.TrimLeft(line, " \t"))
-				}
-
-				stripped := line
-				if len(line) >= blockIndent {
-					stripped = line[blockIndent:]
-				}
-
-				blockScalarLines = append(blockScalarLines, stripped)
-
-				continue
-			}
-
-			if trimmed == "" {
-				// Blank line within block scalar.
-				blockScalarLines = append(blockScalarLines, "")
-				continue
-			}
-			// Non-indented line: finalize block scalar and fall through.
-			assignAgentBlockScalar(blockScalarKey, blockScalarLines)
-			blockScalarKey = ""
-			blockScalarLines = nil
-		}
-
-		// Check for YAML list item (e.g. "  - skill-name").
-		if strings.HasPrefix(trimmed, "- ") && currentListKey != "" {
-			item := strings.TrimSpace(strings.TrimPrefix(trimmed, "- "))
-			if item != "" {
-				switch currentListKey {
-				case "skills":
-					result.Skills = append(result.Skills, item)
-				case "tools":
-					result.Tools = append(result.Tools, item)
-				case "disallowedTools":
-					result.DisallowedTools = append(result.DisallowedTools, item)
-				}
-			}
-
-			continue
-		}
-
-		if idx := strings.Index(line, ":"); idx > 0 {
-			key := strings.TrimSpace(line[:idx])
-			value := strings.TrimSpace(line[idx+1:])
-			currentListKey = "" // Reset list context.
-
-			// Detect block scalar indicator.
-			if value == "|" || value == ">" {
-				blockScalarKey = key
-				blockScalarLines = nil
-				blockIndent = 0
-
-				continue
-			}
-
-			switch key {
-			case "name":
-				result.Name = value
-			case "description":
-				result.Description = value
-			case "tools":
-				if value == "" {
-					currentListKey = "tools"
-				} else {
-					parts := strings.SplitSeq(value, ",")
-					for p := range parts {
-						p = strings.TrimSpace(p)
-						if p != "" {
-							result.Tools = append(result.Tools, p)
-						}
-					}
-				}
-			case "disallowedTools":
-				if value == "" {
-					currentListKey = "disallowedTools"
-				} else {
-					parts := strings.SplitSeq(value, ",")
-					for p := range parts {
-						p = strings.TrimSpace(p)
-						if p != "" {
-							result.DisallowedTools = append(result.DisallowedTools, p)
-						}
-					}
-				}
-			case "model":
-				result.Model = value
-			case "permissionMode":
-				result.PermissionMode = value
-			case "skills":
-				if value == "" {
-					currentListKey = "skills"
-				} else {
-					parts := strings.SplitSeq(value, ",")
-					for p := range parts {
-						p = strings.TrimSpace(p)
-						if p != "" {
-							result.Skills = append(result.Skills, p)
-						}
-					}
-				}
-			case "memory":
-				result.Memory = value
-			}
-		}
-	}
-
-	// Finalize any trailing block scalar.
-	if blockScalarKey != "" {
-		assignAgentBlockScalar(blockScalarKey, blockScalarLines)
-	}
-
-	// The body is the system prompt.
-	body := strings.Join(bodyLines, "\n")
-	body = strings.TrimSpace(body)
-	result.Prompt = body
-
-	return result, nil
+	return parsed, nil
 }
 
 func toProto(a *Agent) *taskguildv1.AgentDefinition {

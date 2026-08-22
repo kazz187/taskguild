@@ -105,6 +105,19 @@ func buildDefaultSkillDefinitions() []*skill.Skill {
 	}
 }
 
+// Default workflow status names created by Seed. Workflow statuses are
+// user-editable, so these are seed defaults rather than a closed enum.
+const (
+	statusDraft   = "Draft"
+	statusPlan    = "Plan"
+	statusDevelop = "Develop"
+	statusReview  = "Review"
+	statusClosed  = "Closed"
+)
+
+// modelOpus is the default model for the seeded Plan / Develop / Review statuses.
+const modelOpus = "opus"
+
 // Seed creates the default development workflow with role skills, guard
 // skills, and hook skills for a newly created project.
 func (s *Seeder) Seed(ctx context.Context, projectID string) error {
@@ -143,27 +156,27 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 		Name:      "development",
 		Statuses: []workflow.Status{
 			{
-				Name:               "Draft",
+				Name:               statusDraft,
 				Order:              0,
 				IsInitial:          true,
-				TransitionsTo:      []string{"Plan", "Develop"},
+				TransitionsTo:      []string{statusPlan, statusDevelop},
 				EnableSkillHarness: true,
 			},
 			{
-				Name:               "Plan",
+				Name:               statusPlan,
 				Order:              1,
-				TransitionsTo:      []string{"Develop"},
+				TransitionsTo:      []string{statusDevelop},
 				PermissionMode:     "plan",
-				Model:              "opus",
+				Model:              modelOpus,
 				Effort:             "high",
 				SkillIDs:           []string{architectSkill.ID},
 				EnableSkillHarness: true,
 			},
 			{
-				Name:               "Develop",
+				Name:               statusDevelop,
 				Order:              2,
-				TransitionsTo:      []string{"Review"},
-				InheritSessionFrom: "Plan",
+				TransitionsTo:      []string{statusReview},
+				InheritSessionFrom: statusPlan,
 				Hooks: []workflow.StatusHook{
 					{
 						ID:         ulid.Make().String(),
@@ -184,23 +197,23 @@ func (s *Seeder) Seed(ctx context.Context, projectID string) error {
 					},
 				},
 				PermissionMode:     "acceptEdits",
-				Model:              "opus",
+				Model:              modelOpus,
 				Effort:             "max",
 				SkillIDs:           []string{softwareEngineerSkill.ID},
 				EnableSkillHarness: true,
 			},
 			{
-				Name:               "Review",
+				Name:               statusReview,
 				Order:              3,
-				TransitionsTo:      []string{"Closed"},
+				TransitionsTo:      []string{statusClosed},
 				PermissionMode:     "acceptEdits",
-				Model:              "opus",
+				Model:              modelOpus,
 				Effort:             "high",
 				SkillIDs:           []string{seniorEngineerSkill.ID},
 				EnableSkillHarness: true,
 			},
 			{
-				Name:          "Closed",
+				Name:          statusClosed,
 				Order:         4,
 				IsTerminal:    true,
 				TransitionsTo: []string{},

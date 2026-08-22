@@ -96,7 +96,7 @@ func formatToolDescription(toolName string, input map[string]any) string {
 	var sb strings.Builder
 
 	switch toolName {
-	case "Bash":
+	case toolBash:
 		sb.WriteString("**Tool:** `Bash`\n")
 
 		if desc := str("description"); desc != "" {
@@ -118,7 +118,7 @@ func formatToolDescription(toolName string, input map[string]any) string {
 			fmt.Fprintf(&sb, "\n%s\n", fence)
 		}
 
-	case "Edit":
+	case toolEdit:
 		sb.WriteString("**Tool:** `Edit`\n")
 
 		filePath := str("file_path")
@@ -149,7 +149,7 @@ func formatToolDescription(toolName string, input map[string]any) string {
 			sb.WriteString(fence + "\n")
 		}
 
-	case "Write":
+	case toolWrite:
 		sb.WriteString("**Tool:** `Write`\n")
 
 		filePath := str("file_path")
@@ -165,14 +165,14 @@ func formatToolDescription(toolName string, input map[string]any) string {
 			fmt.Fprintf(&sb, "\n%s\n", fence)
 		}
 
-	case "Read":
+	case toolRead:
 		sb.WriteString("**Tool:** `Read`\n")
 
 		if filePath := str("file_path"); filePath != "" {
 			fmt.Fprintf(&sb, "**File:** `%s`\n", filePath)
 		}
 
-	case "Glob":
+	case toolGlob:
 		sb.WriteString("**Tool:** `Glob`\n")
 
 		if pattern := str("pattern"); pattern != "" {
@@ -183,7 +183,7 @@ func formatToolDescription(toolName string, input map[string]any) string {
 			fmt.Fprintf(&sb, "**Path:** `%s`\n", path)
 		}
 
-	case "Grep":
+	case toolGrep:
 		sb.WriteString("**Tool:** `Grep`\n")
 
 		if pattern := str("pattern"); pattern != "" {

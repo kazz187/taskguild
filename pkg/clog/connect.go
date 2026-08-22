@@ -46,10 +46,10 @@ func NewSlogConnectUnaryInterceptor(opts ...ConnectOption) connect.UnaryIntercep
 			newCtx := ContextWithSlog(ctx)
 
 			AddAttributes(newCtx, map[string]any{
-				"method":            req.HTTPMethod(),
-				"procedure":         req.Spec().Procedure,
-				"stream_type":       req.Spec().StreamType.String(),
-				"idempotency_level": req.Spec().IdempotencyLevel.String(),
+				MethodAttributeKey:           req.HTTPMethod(),
+				ProcedureAttributeKey:        req.Spec().Procedure,
+				StreamTypeAttributeKey:       req.Spec().StreamType.String(),
+				IdempotencyLevelAttributeKey: req.Spec().IdempotencyLevel.String(),
 			})
 
 			resp, err := next(newCtx, req)
@@ -69,8 +69,8 @@ func NewSlogConnectUnaryInterceptor(opts ...ConnectOption) connect.UnaryIntercep
 			}
 
 			AddAttributes(newCtx, map[string]any{
-				"code":     codeStr,
-				"duration": time.Since(startTime),
+				CodeAttributeKey:     codeStr,
+				DurationAttributeKey: time.Since(startTime),
 			})
 
 			if cerr == nil {
@@ -103,9 +103,9 @@ func (s *slogConnectInterceptor) WrapStreamingHandler(next connect.StreamingHand
 		newCtx := ContextWithSlog(ctx)
 
 		AddAttributes(newCtx, map[string]any{
-			"procedure":         conn.Spec().Procedure,
-			"stream_type":       conn.Spec().StreamType.String(),
-			"idempotency_level": conn.Spec().IdempotencyLevel.String(),
+			ProcedureAttributeKey:        conn.Spec().Procedure,
+			StreamTypeAttributeKey:       conn.Spec().StreamType.String(),
+			IdempotencyLevelAttributeKey: conn.Spec().IdempotencyLevel.String(),
 		})
 		slog.InfoContext(newCtx, "Connected")
 
@@ -128,8 +128,8 @@ func (s *slogConnectInterceptor) WrapStreamingHandler(next connect.StreamingHand
 		}
 
 		AddAttributes(newCtx, map[string]any{
-			"code":     codeStr,
-			"duration": time.Since(startTime),
+			CodeAttributeKey:     codeStr,
+			DurationAttributeKey: time.Since(startTime),
 		})
 
 		if cerr == nil {
