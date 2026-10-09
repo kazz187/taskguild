@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/kazz187/taskguild/internal/agent"
@@ -15,8 +14,8 @@ import (
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 )
 
-func (s *Server) SyncAgents(ctx context.Context, req *connect.Request[taskguildv1.SyncAgentsRequest]) (*connect.Response[taskguildv1.SyncAgentsResponse], error) {
-	projectName := req.Msg.GetProjectName()
+func (s *Server) SyncAgents(ctx context.Context, req *taskguildv1.SyncAgentsRequest) (*taskguildv1.SyncAgentsResponse, error) {
+	projectName := req.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -36,13 +35,13 @@ func (s *Server) SyncAgents(ctx context.Context, req *connect.Request[taskguildv
 		protos[i] = agentToProto(ag)
 	}
 
-	return connect.NewResponse(&taskguildv1.SyncAgentsResponse{
+	return &taskguildv1.SyncAgentsResponse{
 		Agents: protos,
-	}), nil
+	}, nil
 }
 
-func (s *Server) SyncPermissions(ctx context.Context, req *connect.Request[taskguildv1.SyncPermissionsRequest]) (*connect.Response[taskguildv1.SyncPermissionsResponse], error) {
-	projectName := req.Msg.GetProjectName()
+func (s *Server) SyncPermissions(ctx context.Context, req *taskguildv1.SyncPermissionsRequest) (*taskguildv1.SyncPermissionsResponse, error) {
+	projectName := req.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -59,14 +58,14 @@ func (s *Server) SyncPermissions(ctx context.Context, req *connect.Request[taskg
 	}
 
 	// Merge local permissions with stored (union strategy).
-	merged := permission.Merge(stored, req.Msg.GetLocalAllow(), req.Msg.GetLocalAsk(), req.Msg.GetLocalDeny())
+	merged := permission.Merge(stored, req.GetLocalAllow(), req.GetLocalAsk(), req.GetLocalDeny())
 
 	// Save merged result.
 	if err := s.permissionRepo.Upsert(ctx, merged); err != nil {
 		return nil, cerr.ExtractConnectError(ctx, err)
 	}
 
-	return connect.NewResponse(&taskguildv1.SyncPermissionsResponse{
+	return &taskguildv1.SyncPermissionsResponse{
 		Permissions: &taskguildv1.PermissionSet{
 			ProjectId: proj.ID,
 			Allow:     merged.Allow,
@@ -74,7 +73,7 @@ func (s *Server) SyncPermissions(ctx context.Context, req *connect.Request[taskg
 			Deny:      merged.Deny,
 			UpdatedAt: timestamppb.New(merged.UpdatedAt),
 		},
-	}), nil
+	}, nil
 }
 
 func agentToProto(a *agent.Agent) *taskguildv1.AgentDefinition {
@@ -96,23 +95,23 @@ func agentToProto(a *agent.Agent) *taskguildv1.AgentDefinition {
 	}
 }
 
-func (s *Server) ReportAgentStatus(ctx context.Context, req *connect.Request[taskguildv1.ReportAgentStatusRequest]) (*connect.Response[taskguildv1.ReportAgentStatusResponse], error) {
+func (s *Server) ReportAgentStatus(ctx context.Context, req *taskguildv1.ReportAgentStatusRequest) (*taskguildv1.ReportAgentStatusResponse, error) {
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_AGENT_STATUS_CHANGED,
-		req.Msg.GetTaskId(),
+		req.GetTaskId(),
 		"",
 		map[string]string{
-			eventbus.MetaAgentManagerID: req.Msg.GetAgentManagerId(),
-			eventbus.MetaAgentStatus:    req.Msg.GetStatus().String(),
-			eventbus.MetaMessage:        req.Msg.GetMessage(),
+			eventbus.MetaAgentManagerID: req.GetAgentManagerId(),
+			eventbus.MetaAgentStatus:    req.GetStatus().String(),
+			eventbus.MetaMessage:        req.GetMessage(),
 		},
 	)
 
-	return connect.NewResponse(&taskguildv1.ReportAgentStatusResponse{}), nil
+	return &taskguildv1.ReportAgentStatusResponse{}, nil
 }
 
-func (s *Server) SyncClaudeSettings(ctx context.Context, req *connect.Request[taskguildv1.SyncClaudeSettingsAgentRequest]) (*connect.Response[taskguildv1.SyncClaudeSettingsAgentResponse], error) {
-	projectName := req.Msg.GetProjectName()
+func (s *Server) SyncClaudeSettings(ctx context.Context, req *taskguildv1.SyncClaudeSettingsAgentRequest) (*taskguildv1.SyncClaudeSettingsAgentResponse, error) {
+	projectName := req.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -128,20 +127,20 @@ func (s *Server) SyncClaudeSettings(ctx context.Context, req *connect.Request[ta
 	}
 
 	// Merge: local value fills in nil fields.
-	merged := mergeClaudeSettings(stored, req.Msg.LocalLanguage, attributionFromProto(req.Msg.GetLocalAttribution()))
+	merged := mergeClaudeSettings(stored, req.LocalLanguage, attributionFromProto(req.GetLocalAttribution()))
 
 	if err := s.claudeSettingsRepo.Upsert(ctx, merged); err != nil {
 		return nil, cerr.ExtractConnectError(ctx, err)
 	}
 
-	return connect.NewResponse(&taskguildv1.SyncClaudeSettingsAgentResponse{
+	return &taskguildv1.SyncClaudeSettingsAgentResponse{
 		Settings: &taskguildv1.ClaudeSettings{
 			ProjectId:   proj.ID,
 			Language:    merged.Language, // both are *string
 			Attribution: attributionToProto(merged.Attribution),
 			UpdatedAt:   timestamppb.New(merged.UpdatedAt),
 		},
-	}), nil
+	}, nil
 }
 
 func attributionFromProto(a *taskguildv1.Attribution) *claudesettings.Attribution {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -18,8 +17,8 @@ import (
 
 // ListSingleCommandPermissions returns all wildcard-based single-command permission
 // rules for a project (used by agents to populate their permission cache).
-func (s *Server) ListSingleCommandPermissions(ctx context.Context, req *connect.Request[taskguildv1.ListSingleCommandPermissionsAgentRequest]) (*connect.Response[taskguildv1.ListSingleCommandPermissionsAgentResponse], error) {
-	projectName := req.Msg.GetProjectName()
+func (s *Server) ListSingleCommandPermissions(ctx context.Context, req *taskguildv1.ListSingleCommandPermissionsAgentRequest) (*taskguildv1.ListSingleCommandPermissionsAgentResponse, error) {
+	projectName := req.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -46,17 +45,17 @@ func (s *Server) ListSingleCommandPermissions(ctx context.Context, req *connect.
 		})
 	}
 
-	return connect.NewResponse(&taskguildv1.ListSingleCommandPermissionsAgentResponse{
+	return &taskguildv1.ListSingleCommandPermissionsAgentResponse{
 		Permissions: pbPerms,
-	}), nil
+	}, nil
 }
 
 // AddSingleCommandPermission adds a new wildcard permission rule from an agent.
 // If a rule with the same pattern+type already exists in the project, any extra
 // duplicates are removed. This makes the operation idempotent and cleans up
 // legacy duplicates.
-func (s *Server) AddSingleCommandPermission(ctx context.Context, req *connect.Request[taskguildv1.AddSingleCommandPermissionRequest]) (*connect.Response[taskguildv1.AddSingleCommandPermissionResponse], error) {
-	projectName := req.Msg.GetProjectName()
+func (s *Server) AddSingleCommandPermission(ctx context.Context, req *taskguildv1.AddSingleCommandPermissionRequest) (*taskguildv1.AddSingleCommandPermissionResponse, error) {
+	projectName := req.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -68,7 +67,7 @@ func (s *Server) AddSingleCommandPermission(ctx context.Context, req *connect.Re
 	}
 
 	// Check for existing duplicates (pattern + type within the same project).
-	existing, err := s.scpRepo.FindByPatternAndType(ctx, proj.ID, req.Msg.GetPattern(), req.Msg.GetType())
+	existing, err := s.scpRepo.FindByPatternAndType(ctx, proj.ID, req.GetPattern(), req.GetType())
 	if err != nil {
 		return nil, fmt.Errorf("failed to check existing single command permissions: %w", err)
 	}
@@ -88,8 +87,8 @@ func (s *Server) AddSingleCommandPermission(ctx context.Context, req *connect.Re
 		p = &scp.SingleCommandPermission{
 			ID:        ulid.Make().String(),
 			ProjectID: proj.ID,
-			Pattern:   req.Msg.GetPattern(),
-			Type:      req.Msg.GetType(),
+			Pattern:   req.GetPattern(),
+			Type:      req.GetType(),
 			CreatedAt: time.Now(),
 		}
 
@@ -99,7 +98,7 @@ func (s *Server) AddSingleCommandPermission(ctx context.Context, req *connect.Re
 		}
 	}
 
-	return connect.NewResponse(&taskguildv1.AddSingleCommandPermissionResponse{
+	return &taskguildv1.AddSingleCommandPermissionResponse{
 		Permission: &taskguildv1.SingleCommandPermission{
 			Id:        p.ID,
 			ProjectId: p.ProjectID,
@@ -107,5 +106,5 @@ func (s *Server) AddSingleCommandPermission(ctx context.Context, req *connect.Re
 			Type:      p.Type,
 			CreatedAt: timestamppb.New(p.CreatedAt),
 		},
-	}), nil
+	}, nil
 }

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 
 	"github.com/kazz187/taskguild/internal/schedule"
 	"github.com/kazz187/taskguild/internal/workflow"
@@ -161,19 +161,19 @@ func TestCreateScheduleSuccess(t *testing.T) {
 	sched := &stubScheduler{}
 	srv := schedule.NewServer(repo, wfr, sched)
 
-	resp, err := srv.CreateSchedule(context.Background(), connect.NewRequest(&taskguildv1.CreateScheduleRequest{
+	resp, err := srv.CreateSchedule(context.Background(), &taskguildv1.CreateScheduleRequest{
 		ProjectId:      "p1",
 		WorkflowId:     "w1",
 		Name:           "every minute",
 		CronExpression: "* * * * *",
 		Enabled:        true,
 		TaskTitle:      "[scheduled] {{datetime}}",
-	}))
+	})
 	if err != nil {
 		t.Fatalf("CreateSchedule: %v", err)
 	}
 
-	got := resp.Msg.GetSchedule()
+	got := resp.GetSchedule()
 	if got.GetId() == "" {
 		t.Error("expected non-empty ID")
 	}
@@ -197,13 +197,13 @@ func TestCreateScheduleInvalidCron(t *testing.T) {
 	sched := &stubScheduler{}
 	srv := schedule.NewServer(repo, wfr, sched)
 
-	_, err := srv.CreateSchedule(context.Background(), connect.NewRequest(&taskguildv1.CreateScheduleRequest{
+	_, err := srv.CreateSchedule(context.Background(), &taskguildv1.CreateScheduleRequest{
 		ProjectId:      "p1",
 		WorkflowId:     "w1",
 		Name:           "bad",
 		CronExpression: "this is not a cron",
 		TaskTitle:      "x",
-	}))
+	})
 	if err == nil {
 		t.Fatal("expected error for invalid cron expression")
 	}
@@ -226,14 +226,14 @@ func TestCreateScheduleStatusValidation(t *testing.T) {
 
 	bogus := "nonexistent"
 
-	_, err := srv.CreateSchedule(context.Background(), connect.NewRequest(&taskguildv1.CreateScheduleRequest{
+	_, err := srv.CreateSchedule(context.Background(), &taskguildv1.CreateScheduleRequest{
 		ProjectId:      "p1",
 		WorkflowId:     "w1",
 		Name:           "bad status",
 		CronExpression: "* * * * *",
 		TaskTitle:      "x",
 		StatusId:       &bogus,
-	}))
+	})
 	if err == nil {
 		t.Fatal("expected error for nonexistent status")
 	}
@@ -246,28 +246,28 @@ func TestSetScheduleEnabledTogglesScheduler(t *testing.T) {
 	srv := schedule.NewServer(repo, wfr, sched)
 
 	// Create disabled.
-	createResp, err := srv.CreateSchedule(context.Background(), connect.NewRequest(&taskguildv1.CreateScheduleRequest{
+	createResp, err := srv.CreateSchedule(context.Background(), &taskguildv1.CreateScheduleRequest{
 		ProjectId:      "p1",
 		WorkflowId:     "w1",
 		Name:           "s",
 		CronExpression: "* * * * *",
 		Enabled:        false,
 		TaskTitle:      "x",
-	}))
+	})
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
 
-	id := createResp.Msg.GetSchedule().GetId()
+	id := createResp.GetSchedule().GetId()
 	if len(sched.added) != 0 {
 		t.Errorf("expected scheduler.Add to NOT be called for disabled create, got %d", len(sched.added))
 	}
 
 	// Enable.
-	_, err = srv.SetScheduleEnabled(context.Background(), connect.NewRequest(&taskguildv1.SetScheduleEnabledRequest{
+	_, err = srv.SetScheduleEnabled(context.Background(), &taskguildv1.SetScheduleEnabledRequest{
 		Id:      id,
 		Enabled: true,
-	}))
+	})
 	if err != nil {
 		t.Fatalf("enable: %v", err)
 	}
@@ -277,10 +277,10 @@ func TestSetScheduleEnabledTogglesScheduler(t *testing.T) {
 	}
 
 	// Disable.
-	_, err = srv.SetScheduleEnabled(context.Background(), connect.NewRequest(&taskguildv1.SetScheduleEnabledRequest{
+	_, err = srv.SetScheduleEnabled(context.Background(), &taskguildv1.SetScheduleEnabledRequest{
 		Id:      id,
 		Enabled: false,
-	}))
+	})
 	if err != nil {
 		t.Fatalf("disable: %v", err)
 	}
@@ -296,21 +296,21 @@ func TestDeleteScheduleCallsRemove(t *testing.T) {
 	sched := &stubScheduler{}
 	srv := schedule.NewServer(repo, wfr, sched)
 
-	createResp, err := srv.CreateSchedule(context.Background(), connect.NewRequest(&taskguildv1.CreateScheduleRequest{
+	createResp, err := srv.CreateSchedule(context.Background(), &taskguildv1.CreateScheduleRequest{
 		ProjectId:      "p1",
 		WorkflowId:     "w1",
 		Name:           "s",
 		CronExpression: "* * * * *",
 		Enabled:        true,
 		TaskTitle:      "x",
-	}))
+	})
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
 
-	id := createResp.Msg.GetSchedule().GetId()
+	id := createResp.GetSchedule().GetId()
 
-	_, err = srv.DeleteSchedule(context.Background(), connect.NewRequest(&taskguildv1.DeleteScheduleRequest{Id: id}))
+	_, err = srv.DeleteSchedule(context.Background(), &taskguildv1.DeleteScheduleRequest{Id: id})
 	if err != nil {
 		t.Fatalf("delete: %v", err)
 	}

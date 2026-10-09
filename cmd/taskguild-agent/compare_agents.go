@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"connectrpc.com/connect"
-
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -78,11 +76,11 @@ func handleCompareAgents(ctx context.Context, client taskguildv1connect.AgentMan
 	slog.Info("agent comparison complete", "request_id", requestID, "total_diffs", len(diffs))
 
 	// Report diffs to server.
-	_, err := client.ReportAgentComparison(ctx, connect.NewRequest(&v1.ReportAgentComparisonRequest{
+	_, err := client.ReportAgentComparison(ctx, &v1.ReportAgentComparisonRequest{
 		RequestId:   requestID,
 		ProjectName: cfg.ProjectName,
 		Diffs:       diffs,
-	}))
+	})
 	if err != nil {
 		slog.Error("failed to report agent comparison", "request_id", requestID, "error", err)
 	}

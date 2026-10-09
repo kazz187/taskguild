@@ -5,105 +5,94 @@
 package taskguildv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// TaskLogServiceName is the fully-qualified name of the TaskLogService service.
 	TaskLogServiceName = "taskguild.v1.TaskLogService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// TaskLogServiceListTaskLogsProcedure is the fully-qualified name of the TaskLogService's
-	// ListTaskLogs RPC.
+	// TaskLogServiceListTaskLogsProcedure is the procedure name of the TaskLogService's ListTaskLogs
+	// RPC.
 	TaskLogServiceListTaskLogsProcedure = "/taskguild.v1.TaskLogService/ListTaskLogs"
+)
+
+var (
+	taskLogServiceListTaskLogsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_task_log_proto.Services().ByName("TaskLogService").Methods().ByName("ListTaskLogs"),
+			Procedure:  TaskLogServiceListTaskLogsProcedure,
+		}
+	})
 )
 
 // TaskLogServiceClient is a client for the taskguild.v1.TaskLogService service.
 type TaskLogServiceClient interface {
-	ListTaskLogs(context.Context, *connect.Request[v1.ListTaskLogsRequest]) (*connect.Response[v1.ListTaskLogsResponse], error)
+	ListTaskLogs(context.Context, *v1.ListTaskLogsRequest) (*v1.ListTaskLogsResponse, error)
 }
 
-// NewTaskLogServiceClient constructs a client for the taskguild.v1.TaskLogService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewTaskLogServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) TaskLogServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	taskLogServiceMethods := v1.File_taskguild_v1_task_log_proto.Services().ByName("TaskLogService").Methods()
-	return &taskLogServiceClient{
-		listTaskLogs: connect.NewClient[v1.ListTaskLogsRequest, v1.ListTaskLogsResponse](
-			httpClient,
-			baseURL+TaskLogServiceListTaskLogsProcedure,
-			connect.WithSchema(taskLogServiceMethods.ByName("ListTaskLogs")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// taskLogServiceClient implements TaskLogServiceClient.
-type taskLogServiceClient struct {
-	listTaskLogs *connect.Client[v1.ListTaskLogsRequest, v1.ListTaskLogsResponse]
-}
-
-// ListTaskLogs calls taskguild.v1.TaskLogService.ListTaskLogs.
-func (c *taskLogServiceClient) ListTaskLogs(ctx context.Context, req *connect.Request[v1.ListTaskLogsRequest]) (*connect.Response[v1.ListTaskLogsResponse], error) {
-	return c.listTaskLogs.CallUnary(ctx, req)
+// NewTaskLogServiceClient constructs a client for the taskguild.v1.TaskLogService service. Multiple
+// service clients may share a single connect.Client.
+func NewTaskLogServiceClient(client *connect.Client) TaskLogServiceClient {
+	return &taskLogServiceClient{client: client}
 }
 
 // TaskLogServiceHandler is an implementation of the taskguild.v1.TaskLogService service.
 type TaskLogServiceHandler interface {
-	ListTaskLogs(context.Context, *connect.Request[v1.ListTaskLogsRequest]) (*connect.Response[v1.ListTaskLogsResponse], error)
+	ListTaskLogs(context.Context, *v1.ListTaskLogsRequest) (*v1.ListTaskLogsResponse, error)
 }
 
-// NewTaskLogServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewTaskLogServiceHandler(svc TaskLogServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	taskLogServiceMethods := v1.File_taskguild_v1_task_log_proto.Services().ByName("TaskLogService").Methods()
-	taskLogServiceListTaskLogsHandler := connect.NewUnaryHandler(
-		TaskLogServiceListTaskLogsProcedure,
-		svc.ListTaskLogs,
-		connect.WithSchema(taskLogServiceMethods.ByName("ListTaskLogs")),
-		connect.WithHandlerOptions(opts...),
+// RegisterTaskLogServiceHandler registers svc as the taskguild.v1.TaskLogService implementation on
+// server.
+func RegisterTaskLogServiceHandler(server *connect.Server, svc TaskLogServiceHandler) {
+	adapter := taskLogServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: taskLogServiceListTaskLogsSpec(), Handler: adapter.listTaskLogs},
 	)
-	return "/taskguild.v1.TaskLogService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case TaskLogServiceListTaskLogsProcedure:
-			taskLogServiceListTaskLogsHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedTaskLogServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedTaskLogServiceHandler struct{}
 
-func (UnimplementedTaskLogServiceHandler) ListTaskLogs(context.Context, *connect.Request[v1.ListTaskLogsRequest]) (*connect.Response[v1.ListTaskLogsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TaskLogService.ListTaskLogs is not implemented"))
+func (UnimplementedTaskLogServiceHandler) ListTaskLogs(context.Context, *v1.ListTaskLogsRequest) (*v1.ListTaskLogsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.TaskLogService.ListTaskLogs is not implemented")
+}
+
+type taskLogServiceClient struct {
+	client *connect.Client
+}
+
+func (c *taskLogServiceClient) ListTaskLogs(ctx context.Context, req *v1.ListTaskLogsRequest) (*v1.ListTaskLogsResponse, error) {
+	var res v1.ListTaskLogsResponse
+	if err := c.client.CallUnary(ctx, taskLogServiceListTaskLogsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type taskLogServiceHandler struct{ svc TaskLogServiceHandler }
+
+func (h taskLogServiceHandler) listTaskLogs(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListTaskLogsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListTaskLogs(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

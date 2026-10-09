@@ -3,7 +3,7 @@ package cerr
 import (
 	"net/http"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 )
 
 //go:generate go tool stringer -type=Code -output=code_string.go code.go

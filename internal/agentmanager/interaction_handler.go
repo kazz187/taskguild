@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
 
 	"github.com/kazz187/taskguild/internal/eventbus"
@@ -14,9 +13,9 @@ import (
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 )
 
-func (s *Server) CreateInteraction(ctx context.Context, req *connect.Request[taskguildv1.CreateInteractionRequest]) (*connect.Response[taskguildv1.CreateInteractionResponse], error) {
+func (s *Server) CreateInteraction(ctx context.Context, req *taskguildv1.CreateInteractionRequest) (*taskguildv1.CreateInteractionResponse, error) {
 	// Look up the task to get ProjectID for storage path construction.
-	t, err := s.taskRepo.Get(ctx, req.Msg.GetTaskId())
+	t, err := s.taskRepo.Get(ctx, req.GetTaskId())
 	if err != nil {
 		return nil, err
 	}
@@ -26,16 +25,16 @@ func (s *Server) CreateInteraction(ctx context.Context, req *connect.Request[tas
 	inter := &interaction.Interaction{
 		ID:          ulid.Make().String(),
 		ProjectID:   t.ProjectID,
-		TaskID:      req.Msg.GetTaskId(),
-		AgentID:     req.Msg.GetAgentId(),
-		Type:        interaction.InteractionType(req.Msg.GetType()),
+		TaskID:      req.GetTaskId(),
+		AgentID:     req.GetAgentId(),
+		Type:        interaction.InteractionType(req.GetType()),
 		Status:      interaction.StatusPending,
-		Title:       req.Msg.GetTitle(),
-		Description: req.Msg.GetDescription(),
-		Metadata:    req.Msg.GetMetadata(),
+		Title:       req.GetTitle(),
+		Description: req.GetDescription(),
+		Metadata:    req.GetMetadata(),
 		CreatedAt:   now,
 	}
-	for _, opt := range req.Msg.GetOptions() {
+	for _, opt := range req.GetOptions() {
 		inter.Options = append(inter.Options, interaction.Option{
 			Label:       opt.GetLabel(),
 			Value:       opt.GetValue(),
@@ -46,7 +45,7 @@ func (s *Server) CreateInteraction(ctx context.Context, req *connect.Request[tas
 	// Generate a single-use response token for push notification actions.
 	// This allows the Service Worker to respond to interactions without
 	// exposing the main API key.
-	interType := interaction.InteractionType(req.Msg.GetType())
+	interType := interaction.InteractionType(req.GetType())
 	if interType == interaction.TypePermissionRequest || interType == interaction.TypeQuestion {
 		tokenBytes := make([]byte, 32)
 		if _, err := rand.Read(tokenBytes); err == nil {
@@ -66,18 +65,18 @@ func (s *Server) CreateInteraction(ctx context.Context, req *connect.Request[tas
 		map[string]string{eventbus.MetaTaskID: inter.TaskID, eventbus.MetaAgentID: inter.AgentID},
 	)
 
-	return connect.NewResponse(&taskguildv1.CreateInteractionResponse{
+	return &taskguildv1.CreateInteractionResponse{
 		Interaction: interProto,
-	}), nil
+	}, nil
 }
 
-func (s *Server) GetInteractionResponse(ctx context.Context, req *connect.Request[taskguildv1.GetInteractionResponseRequest]) (*connect.Response[taskguildv1.GetInteractionResponseResponse], error) {
-	inter, err := s.interactionRepo.Get(ctx, req.Msg.GetInteractionId())
+func (s *Server) GetInteractionResponse(ctx context.Context, req *taskguildv1.GetInteractionResponseRequest) (*taskguildv1.GetInteractionResponseResponse, error) {
+	inter, err := s.interactionRepo.Get(ctx, req.GetInteractionId())
 	if err != nil {
 		return nil, err
 	}
 
-	return connect.NewResponse(&taskguildv1.GetInteractionResponseResponse{
+	return &taskguildv1.GetInteractionResponseResponse{
 		Interaction: interaction.ToProto(inter),
-	}), nil
+	}, nil
 }

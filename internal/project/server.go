@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -23,7 +22,7 @@ func NewServer(repo Repository, seeder *Seeder) *Server {
 	return &Server{repo: repo, seeder: seeder}
 }
 
-func (s *Server) CreateProject(ctx context.Context, req *connect.Request[taskguildv1.CreateProjectRequest]) (*connect.Response[taskguildv1.CreateProjectResponse], error) {
+func (s *Server) CreateProject(ctx context.Context, req *taskguildv1.CreateProjectRequest) (*taskguildv1.CreateProjectResponse, error) {
 	// Determine order for the new project (append to end).
 	allProjects, err := s.repo.ListAll(ctx)
 	if err != nil {
@@ -41,10 +40,10 @@ func (s *Server) CreateProject(ctx context.Context, req *connect.Request[taskgui
 
 	p := &Project{
 		ID:            ulid.Make().String(),
-		Name:          req.Msg.GetName(),
-		Description:   req.Msg.GetDescription(),
-		RepositoryURL: req.Msg.GetRepositoryUrl(),
-		DefaultBranch: req.Msg.GetDefaultBranch(),
+		Name:          req.GetName(),
+		Description:   req.GetDescription(),
+		RepositoryURL: req.GetRepositoryUrl(),
+		DefaultBranch: req.GetDefaultBranch(),
 		Order:         maxOrder + 1,
 		CreatedAt:     now,
 		UpdatedAt:     now,
@@ -63,31 +62,31 @@ func (s *Server) CreateProject(ctx context.Context, req *connect.Request[taskgui
 		}
 	}
 
-	return connect.NewResponse(&taskguildv1.CreateProjectResponse{
+	return &taskguildv1.CreateProjectResponse{
 		Project: toProto(p),
-	}), nil
+	}, nil
 }
 
-func (s *Server) GetProject(ctx context.Context, req *connect.Request[taskguildv1.GetProjectRequest]) (*connect.Response[taskguildv1.GetProjectResponse], error) {
-	p, err := s.repo.Get(ctx, req.Msg.GetId())
+func (s *Server) GetProject(ctx context.Context, req *taskguildv1.GetProjectRequest) (*taskguildv1.GetProjectResponse, error) {
+	p, err := s.repo.Get(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	return connect.NewResponse(&taskguildv1.GetProjectResponse{
+	return &taskguildv1.GetProjectResponse{
 		Project: toProto(p),
-	}), nil
+	}, nil
 }
 
-func (s *Server) ListProjects(ctx context.Context, req *connect.Request[taskguildv1.ListProjectsRequest]) (*connect.Response[taskguildv1.ListProjectsResponse], error) {
+func (s *Server) ListProjects(ctx context.Context, req *taskguildv1.ListProjectsRequest) (*taskguildv1.ListProjectsResponse, error) {
 	limit, offset := int32(50), int32(0)
 
-	if req.Msg.GetPagination() != nil {
-		if req.Msg.GetPagination().GetLimit() > 0 {
-			limit = req.Msg.GetPagination().GetLimit()
+	if req.GetPagination() != nil {
+		if req.GetPagination().GetLimit() > 0 {
+			limit = req.GetPagination().GetLimit()
 		}
 
-		offset = req.Msg.GetPagination().GetOffset()
+		offset = req.GetPagination().GetOffset()
 	}
 
 	projects, total, err := s.repo.List(ctx, int(limit), int(offset))
@@ -100,40 +99,40 @@ func (s *Server) ListProjects(ctx context.Context, req *connect.Request[taskguil
 		protos[i] = toProto(p)
 	}
 
-	return connect.NewResponse(&taskguildv1.ListProjectsResponse{
+	return &taskguildv1.ListProjectsResponse{
 		Projects: protos,
 		Pagination: &taskguildv1.PaginationResponse{
 			Total:  int32(total),
 			Limit:  limit,
 			Offset: offset,
 		},
-	}), nil
+	}, nil
 }
 
-func (s *Server) UpdateProject(ctx context.Context, req *connect.Request[taskguildv1.UpdateProjectRequest]) (*connect.Response[taskguildv1.UpdateProjectResponse], error) {
-	p, err := s.repo.Get(ctx, req.Msg.GetId())
+func (s *Server) UpdateProject(ctx context.Context, req *taskguildv1.UpdateProjectRequest) (*taskguildv1.UpdateProjectResponse, error) {
+	p, err := s.repo.Get(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	if req.Msg.GetName() != "" {
-		p.Name = req.Msg.GetName()
+	if req.GetName() != "" {
+		p.Name = req.GetName()
 	}
 
-	if req.Msg.GetDescription() != "" {
-		p.Description = req.Msg.GetDescription()
+	if req.GetDescription() != "" {
+		p.Description = req.GetDescription()
 	}
 
-	if req.Msg.GetRepositoryUrl() != "" {
-		p.RepositoryURL = req.Msg.GetRepositoryUrl()
+	if req.GetRepositoryUrl() != "" {
+		p.RepositoryURL = req.GetRepositoryUrl()
 	}
 
-	if req.Msg.GetDefaultBranch() != "" {
-		p.DefaultBranch = req.Msg.GetDefaultBranch()
+	if req.GetDefaultBranch() != "" {
+		p.DefaultBranch = req.GetDefaultBranch()
 	}
 
-	if req.Msg.HiddenFromSidebar != nil {
-		p.HiddenFromSidebar = req.Msg.GetHiddenFromSidebar()
+	if req.HiddenFromSidebar != nil {
+		p.HiddenFromSidebar = req.GetHiddenFromSidebar()
 	}
 
 	p.UpdatedAt = time.Now()
@@ -141,24 +140,24 @@ func (s *Server) UpdateProject(ctx context.Context, req *connect.Request[taskgui
 		return nil, err
 	}
 
-	return connect.NewResponse(&taskguildv1.UpdateProjectResponse{
+	return &taskguildv1.UpdateProjectResponse{
 		Project: toProto(p),
-	}), nil
+	}, nil
 }
 
-func (s *Server) DeleteProject(ctx context.Context, req *connect.Request[taskguildv1.DeleteProjectRequest]) (*connect.Response[taskguildv1.DeleteProjectResponse], error) {
-	err := s.repo.Delete(ctx, req.Msg.GetId())
+func (s *Server) DeleteProject(ctx context.Context, req *taskguildv1.DeleteProjectRequest) (*taskguildv1.DeleteProjectResponse, error) {
+	err := s.repo.Delete(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	return connect.NewResponse(&taskguildv1.DeleteProjectResponse{}), nil
+	return &taskguildv1.DeleteProjectResponse{}, nil
 }
 
-func (s *Server) ReorderProjects(ctx context.Context, req *connect.Request[taskguildv1.ReorderProjectsRequest]) (*connect.Response[taskguildv1.ReorderProjectsResponse], error) {
+func (s *Server) ReorderProjects(ctx context.Context, req *taskguildv1.ReorderProjectsRequest) (*taskguildv1.ReorderProjectsResponse, error) {
 	now := time.Now()
 
-	for i, id := range req.Msg.GetProjectIds() {
+	for i, id := range req.GetProjectIds() {
 		p, err := s.repo.Get(ctx, id)
 		if err != nil {
 			return nil, err
@@ -183,9 +182,9 @@ func (s *Server) ReorderProjects(ctx context.Context, req *connect.Request[taskg
 		protos[i] = toProto(p)
 	}
 
-	return connect.NewResponse(&taskguildv1.ReorderProjectsResponse{
+	return &taskguildv1.ReorderProjectsResponse{
 		Projects: protos,
-	}), nil
+	}, nil
 }
 
 func toProto(p *Project) *taskguildv1.Project {

@@ -1,7 +1,7 @@
 package clog
 
 import (
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 )
 
 type Level int

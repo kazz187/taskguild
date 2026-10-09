@@ -5,221 +5,242 @@
 package taskguildv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// WorkflowServiceName is the fully-qualified name of the WorkflowService service.
 	WorkflowServiceName = "taskguild.v1.WorkflowService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// WorkflowServiceCreateWorkflowProcedure is the fully-qualified name of the WorkflowService's
+	// WorkflowServiceCreateWorkflowProcedure is the procedure name of the WorkflowService's
 	// CreateWorkflow RPC.
 	WorkflowServiceCreateWorkflowProcedure = "/taskguild.v1.WorkflowService/CreateWorkflow"
-	// WorkflowServiceGetWorkflowProcedure is the fully-qualified name of the WorkflowService's
-	// GetWorkflow RPC.
+	// WorkflowServiceGetWorkflowProcedure is the procedure name of the WorkflowService's GetWorkflow
+	// RPC.
 	WorkflowServiceGetWorkflowProcedure = "/taskguild.v1.WorkflowService/GetWorkflow"
-	// WorkflowServiceListWorkflowsProcedure is the fully-qualified name of the WorkflowService's
+	// WorkflowServiceListWorkflowsProcedure is the procedure name of the WorkflowService's
 	// ListWorkflows RPC.
 	WorkflowServiceListWorkflowsProcedure = "/taskguild.v1.WorkflowService/ListWorkflows"
-	// WorkflowServiceUpdateWorkflowProcedure is the fully-qualified name of the WorkflowService's
+	// WorkflowServiceUpdateWorkflowProcedure is the procedure name of the WorkflowService's
 	// UpdateWorkflow RPC.
 	WorkflowServiceUpdateWorkflowProcedure = "/taskguild.v1.WorkflowService/UpdateWorkflow"
-	// WorkflowServiceDeleteWorkflowProcedure is the fully-qualified name of the WorkflowService's
+	// WorkflowServiceDeleteWorkflowProcedure is the procedure name of the WorkflowService's
 	// DeleteWorkflow RPC.
 	WorkflowServiceDeleteWorkflowProcedure = "/taskguild.v1.WorkflowService/DeleteWorkflow"
 )
 
+var (
+	workflowServiceCreateWorkflowSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_workflow_proto.Services().ByName("WorkflowService").Methods().ByName("CreateWorkflow"),
+			Procedure:  WorkflowServiceCreateWorkflowProcedure,
+		}
+	})
+	workflowServiceGetWorkflowSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_workflow_proto.Services().ByName("WorkflowService").Methods().ByName("GetWorkflow"),
+			Procedure:  WorkflowServiceGetWorkflowProcedure,
+		}
+	})
+	workflowServiceListWorkflowsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_workflow_proto.Services().ByName("WorkflowService").Methods().ByName("ListWorkflows"),
+			Procedure:  WorkflowServiceListWorkflowsProcedure,
+		}
+	})
+	workflowServiceUpdateWorkflowSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_workflow_proto.Services().ByName("WorkflowService").Methods().ByName("UpdateWorkflow"),
+			Procedure:  WorkflowServiceUpdateWorkflowProcedure,
+		}
+	})
+	workflowServiceDeleteWorkflowSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_workflow_proto.Services().ByName("WorkflowService").Methods().ByName("DeleteWorkflow"),
+			Procedure:  WorkflowServiceDeleteWorkflowProcedure,
+		}
+	})
+)
+
 // WorkflowServiceClient is a client for the taskguild.v1.WorkflowService service.
 type WorkflowServiceClient interface {
-	CreateWorkflow(context.Context, *connect.Request[v1.CreateWorkflowRequest]) (*connect.Response[v1.CreateWorkflowResponse], error)
-	GetWorkflow(context.Context, *connect.Request[v1.GetWorkflowRequest]) (*connect.Response[v1.GetWorkflowResponse], error)
-	ListWorkflows(context.Context, *connect.Request[v1.ListWorkflowsRequest]) (*connect.Response[v1.ListWorkflowsResponse], error)
-	UpdateWorkflow(context.Context, *connect.Request[v1.UpdateWorkflowRequest]) (*connect.Response[v1.UpdateWorkflowResponse], error)
-	DeleteWorkflow(context.Context, *connect.Request[v1.DeleteWorkflowRequest]) (*connect.Response[v1.DeleteWorkflowResponse], error)
+	CreateWorkflow(context.Context, *v1.CreateWorkflowRequest) (*v1.CreateWorkflowResponse, error)
+	GetWorkflow(context.Context, *v1.GetWorkflowRequest) (*v1.GetWorkflowResponse, error)
+	ListWorkflows(context.Context, *v1.ListWorkflowsRequest) (*v1.ListWorkflowsResponse, error)
+	UpdateWorkflow(context.Context, *v1.UpdateWorkflowRequest) (*v1.UpdateWorkflowResponse, error)
+	DeleteWorkflow(context.Context, *v1.DeleteWorkflowRequest) (*v1.DeleteWorkflowResponse, error)
 }
 
-// NewWorkflowServiceClient constructs a client for the taskguild.v1.WorkflowService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewWorkflowServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) WorkflowServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	workflowServiceMethods := v1.File_taskguild_v1_workflow_proto.Services().ByName("WorkflowService").Methods()
-	return &workflowServiceClient{
-		createWorkflow: connect.NewClient[v1.CreateWorkflowRequest, v1.CreateWorkflowResponse](
-			httpClient,
-			baseURL+WorkflowServiceCreateWorkflowProcedure,
-			connect.WithSchema(workflowServiceMethods.ByName("CreateWorkflow")),
-			connect.WithClientOptions(opts...),
-		),
-		getWorkflow: connect.NewClient[v1.GetWorkflowRequest, v1.GetWorkflowResponse](
-			httpClient,
-			baseURL+WorkflowServiceGetWorkflowProcedure,
-			connect.WithSchema(workflowServiceMethods.ByName("GetWorkflow")),
-			connect.WithClientOptions(opts...),
-		),
-		listWorkflows: connect.NewClient[v1.ListWorkflowsRequest, v1.ListWorkflowsResponse](
-			httpClient,
-			baseURL+WorkflowServiceListWorkflowsProcedure,
-			connect.WithSchema(workflowServiceMethods.ByName("ListWorkflows")),
-			connect.WithClientOptions(opts...),
-		),
-		updateWorkflow: connect.NewClient[v1.UpdateWorkflowRequest, v1.UpdateWorkflowResponse](
-			httpClient,
-			baseURL+WorkflowServiceUpdateWorkflowProcedure,
-			connect.WithSchema(workflowServiceMethods.ByName("UpdateWorkflow")),
-			connect.WithClientOptions(opts...),
-		),
-		deleteWorkflow: connect.NewClient[v1.DeleteWorkflowRequest, v1.DeleteWorkflowResponse](
-			httpClient,
-			baseURL+WorkflowServiceDeleteWorkflowProcedure,
-			connect.WithSchema(workflowServiceMethods.ByName("DeleteWorkflow")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// workflowServiceClient implements WorkflowServiceClient.
-type workflowServiceClient struct {
-	createWorkflow *connect.Client[v1.CreateWorkflowRequest, v1.CreateWorkflowResponse]
-	getWorkflow    *connect.Client[v1.GetWorkflowRequest, v1.GetWorkflowResponse]
-	listWorkflows  *connect.Client[v1.ListWorkflowsRequest, v1.ListWorkflowsResponse]
-	updateWorkflow *connect.Client[v1.UpdateWorkflowRequest, v1.UpdateWorkflowResponse]
-	deleteWorkflow *connect.Client[v1.DeleteWorkflowRequest, v1.DeleteWorkflowResponse]
-}
-
-// CreateWorkflow calls taskguild.v1.WorkflowService.CreateWorkflow.
-func (c *workflowServiceClient) CreateWorkflow(ctx context.Context, req *connect.Request[v1.CreateWorkflowRequest]) (*connect.Response[v1.CreateWorkflowResponse], error) {
-	return c.createWorkflow.CallUnary(ctx, req)
-}
-
-// GetWorkflow calls taskguild.v1.WorkflowService.GetWorkflow.
-func (c *workflowServiceClient) GetWorkflow(ctx context.Context, req *connect.Request[v1.GetWorkflowRequest]) (*connect.Response[v1.GetWorkflowResponse], error) {
-	return c.getWorkflow.CallUnary(ctx, req)
-}
-
-// ListWorkflows calls taskguild.v1.WorkflowService.ListWorkflows.
-func (c *workflowServiceClient) ListWorkflows(ctx context.Context, req *connect.Request[v1.ListWorkflowsRequest]) (*connect.Response[v1.ListWorkflowsResponse], error) {
-	return c.listWorkflows.CallUnary(ctx, req)
-}
-
-// UpdateWorkflow calls taskguild.v1.WorkflowService.UpdateWorkflow.
-func (c *workflowServiceClient) UpdateWorkflow(ctx context.Context, req *connect.Request[v1.UpdateWorkflowRequest]) (*connect.Response[v1.UpdateWorkflowResponse], error) {
-	return c.updateWorkflow.CallUnary(ctx, req)
-}
-
-// DeleteWorkflow calls taskguild.v1.WorkflowService.DeleteWorkflow.
-func (c *workflowServiceClient) DeleteWorkflow(ctx context.Context, req *connect.Request[v1.DeleteWorkflowRequest]) (*connect.Response[v1.DeleteWorkflowResponse], error) {
-	return c.deleteWorkflow.CallUnary(ctx, req)
+// NewWorkflowServiceClient constructs a client for the taskguild.v1.WorkflowService service.
+// Multiple service clients may share a single connect.Client.
+func NewWorkflowServiceClient(client *connect.Client) WorkflowServiceClient {
+	return &workflowServiceClient{client: client}
 }
 
 // WorkflowServiceHandler is an implementation of the taskguild.v1.WorkflowService service.
 type WorkflowServiceHandler interface {
-	CreateWorkflow(context.Context, *connect.Request[v1.CreateWorkflowRequest]) (*connect.Response[v1.CreateWorkflowResponse], error)
-	GetWorkflow(context.Context, *connect.Request[v1.GetWorkflowRequest]) (*connect.Response[v1.GetWorkflowResponse], error)
-	ListWorkflows(context.Context, *connect.Request[v1.ListWorkflowsRequest]) (*connect.Response[v1.ListWorkflowsResponse], error)
-	UpdateWorkflow(context.Context, *connect.Request[v1.UpdateWorkflowRequest]) (*connect.Response[v1.UpdateWorkflowResponse], error)
-	DeleteWorkflow(context.Context, *connect.Request[v1.DeleteWorkflowRequest]) (*connect.Response[v1.DeleteWorkflowResponse], error)
+	CreateWorkflow(context.Context, *v1.CreateWorkflowRequest) (*v1.CreateWorkflowResponse, error)
+	GetWorkflow(context.Context, *v1.GetWorkflowRequest) (*v1.GetWorkflowResponse, error)
+	ListWorkflows(context.Context, *v1.ListWorkflowsRequest) (*v1.ListWorkflowsResponse, error)
+	UpdateWorkflow(context.Context, *v1.UpdateWorkflowRequest) (*v1.UpdateWorkflowResponse, error)
+	DeleteWorkflow(context.Context, *v1.DeleteWorkflowRequest) (*v1.DeleteWorkflowResponse, error)
 }
 
-// NewWorkflowServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewWorkflowServiceHandler(svc WorkflowServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	workflowServiceMethods := v1.File_taskguild_v1_workflow_proto.Services().ByName("WorkflowService").Methods()
-	workflowServiceCreateWorkflowHandler := connect.NewUnaryHandler(
-		WorkflowServiceCreateWorkflowProcedure,
-		svc.CreateWorkflow,
-		connect.WithSchema(workflowServiceMethods.ByName("CreateWorkflow")),
-		connect.WithHandlerOptions(opts...),
+// RegisterWorkflowServiceHandler registers svc as the taskguild.v1.WorkflowService implementation
+// on server.
+func RegisterWorkflowServiceHandler(server *connect.Server, svc WorkflowServiceHandler) {
+	adapter := workflowServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: workflowServiceCreateWorkflowSpec(), Handler: adapter.createWorkflow},
+		connect.Method{Spec: workflowServiceGetWorkflowSpec(), Handler: adapter.getWorkflow},
+		connect.Method{Spec: workflowServiceListWorkflowsSpec(), Handler: adapter.listWorkflows},
+		connect.Method{Spec: workflowServiceUpdateWorkflowSpec(), Handler: adapter.updateWorkflow},
+		connect.Method{Spec: workflowServiceDeleteWorkflowSpec(), Handler: adapter.deleteWorkflow},
 	)
-	workflowServiceGetWorkflowHandler := connect.NewUnaryHandler(
-		WorkflowServiceGetWorkflowProcedure,
-		svc.GetWorkflow,
-		connect.WithSchema(workflowServiceMethods.ByName("GetWorkflow")),
-		connect.WithHandlerOptions(opts...),
-	)
-	workflowServiceListWorkflowsHandler := connect.NewUnaryHandler(
-		WorkflowServiceListWorkflowsProcedure,
-		svc.ListWorkflows,
-		connect.WithSchema(workflowServiceMethods.ByName("ListWorkflows")),
-		connect.WithHandlerOptions(opts...),
-	)
-	workflowServiceUpdateWorkflowHandler := connect.NewUnaryHandler(
-		WorkflowServiceUpdateWorkflowProcedure,
-		svc.UpdateWorkflow,
-		connect.WithSchema(workflowServiceMethods.ByName("UpdateWorkflow")),
-		connect.WithHandlerOptions(opts...),
-	)
-	workflowServiceDeleteWorkflowHandler := connect.NewUnaryHandler(
-		WorkflowServiceDeleteWorkflowProcedure,
-		svc.DeleteWorkflow,
-		connect.WithSchema(workflowServiceMethods.ByName("DeleteWorkflow")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/taskguild.v1.WorkflowService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case WorkflowServiceCreateWorkflowProcedure:
-			workflowServiceCreateWorkflowHandler.ServeHTTP(w, r)
-		case WorkflowServiceGetWorkflowProcedure:
-			workflowServiceGetWorkflowHandler.ServeHTTP(w, r)
-		case WorkflowServiceListWorkflowsProcedure:
-			workflowServiceListWorkflowsHandler.ServeHTTP(w, r)
-		case WorkflowServiceUpdateWorkflowProcedure:
-			workflowServiceUpdateWorkflowHandler.ServeHTTP(w, r)
-		case WorkflowServiceDeleteWorkflowProcedure:
-			workflowServiceDeleteWorkflowHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedWorkflowServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedWorkflowServiceHandler struct{}
 
-func (UnimplementedWorkflowServiceHandler) CreateWorkflow(context.Context, *connect.Request[v1.CreateWorkflowRequest]) (*connect.Response[v1.CreateWorkflowResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.WorkflowService.CreateWorkflow is not implemented"))
+func (UnimplementedWorkflowServiceHandler) CreateWorkflow(context.Context, *v1.CreateWorkflowRequest) (*v1.CreateWorkflowResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.WorkflowService.CreateWorkflow is not implemented")
 }
 
-func (UnimplementedWorkflowServiceHandler) GetWorkflow(context.Context, *connect.Request[v1.GetWorkflowRequest]) (*connect.Response[v1.GetWorkflowResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.WorkflowService.GetWorkflow is not implemented"))
+func (UnimplementedWorkflowServiceHandler) GetWorkflow(context.Context, *v1.GetWorkflowRequest) (*v1.GetWorkflowResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.WorkflowService.GetWorkflow is not implemented")
 }
 
-func (UnimplementedWorkflowServiceHandler) ListWorkflows(context.Context, *connect.Request[v1.ListWorkflowsRequest]) (*connect.Response[v1.ListWorkflowsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.WorkflowService.ListWorkflows is not implemented"))
+func (UnimplementedWorkflowServiceHandler) ListWorkflows(context.Context, *v1.ListWorkflowsRequest) (*v1.ListWorkflowsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.WorkflowService.ListWorkflows is not implemented")
 }
 
-func (UnimplementedWorkflowServiceHandler) UpdateWorkflow(context.Context, *connect.Request[v1.UpdateWorkflowRequest]) (*connect.Response[v1.UpdateWorkflowResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.WorkflowService.UpdateWorkflow is not implemented"))
+func (UnimplementedWorkflowServiceHandler) UpdateWorkflow(context.Context, *v1.UpdateWorkflowRequest) (*v1.UpdateWorkflowResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.WorkflowService.UpdateWorkflow is not implemented")
 }
 
-func (UnimplementedWorkflowServiceHandler) DeleteWorkflow(context.Context, *connect.Request[v1.DeleteWorkflowRequest]) (*connect.Response[v1.DeleteWorkflowResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.WorkflowService.DeleteWorkflow is not implemented"))
+func (UnimplementedWorkflowServiceHandler) DeleteWorkflow(context.Context, *v1.DeleteWorkflowRequest) (*v1.DeleteWorkflowResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.WorkflowService.DeleteWorkflow is not implemented")
+}
+
+type workflowServiceClient struct {
+	client *connect.Client
+}
+
+func (c *workflowServiceClient) CreateWorkflow(ctx context.Context, req *v1.CreateWorkflowRequest) (*v1.CreateWorkflowResponse, error) {
+	var res v1.CreateWorkflowResponse
+	if err := c.client.CallUnary(ctx, workflowServiceCreateWorkflowSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *workflowServiceClient) GetWorkflow(ctx context.Context, req *v1.GetWorkflowRequest) (*v1.GetWorkflowResponse, error) {
+	var res v1.GetWorkflowResponse
+	if err := c.client.CallUnary(ctx, workflowServiceGetWorkflowSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *workflowServiceClient) ListWorkflows(ctx context.Context, req *v1.ListWorkflowsRequest) (*v1.ListWorkflowsResponse, error) {
+	var res v1.ListWorkflowsResponse
+	if err := c.client.CallUnary(ctx, workflowServiceListWorkflowsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *workflowServiceClient) UpdateWorkflow(ctx context.Context, req *v1.UpdateWorkflowRequest) (*v1.UpdateWorkflowResponse, error) {
+	var res v1.UpdateWorkflowResponse
+	if err := c.client.CallUnary(ctx, workflowServiceUpdateWorkflowSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *workflowServiceClient) DeleteWorkflow(ctx context.Context, req *v1.DeleteWorkflowRequest) (*v1.DeleteWorkflowResponse, error) {
+	var res v1.DeleteWorkflowResponse
+	if err := c.client.CallUnary(ctx, workflowServiceDeleteWorkflowSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type workflowServiceHandler struct{ svc WorkflowServiceHandler }
+
+func (h workflowServiceHandler) createWorkflow(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.CreateWorkflowRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.CreateWorkflow(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h workflowServiceHandler) getWorkflow(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetWorkflowRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetWorkflow(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h workflowServiceHandler) listWorkflows(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListWorkflowsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListWorkflows(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h workflowServiceHandler) updateWorkflow(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.UpdateWorkflowRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.UpdateWorkflow(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h workflowServiceHandler) deleteWorkflow(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.DeleteWorkflowRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.DeleteWorkflow(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

@@ -4,8 +4,8 @@ go 1.27.0
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.6-20250717185734-6c6e0d3c608e.1
-	connectrpc.com/connect v1.18.1
-	connectrpc.com/grpchealth v1.4.0
+	connectrpc.com/connect/v2 v2.0.0
+	connectrpc.com/grpchealth/v2 v2.0.0
 	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/aws/aws-sdk-go-v2 v1.41.1

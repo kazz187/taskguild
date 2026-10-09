@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -32,18 +31,18 @@ func NewServer(repo Repository, taskRepo task.Repository, eventBus *eventbus.Bus
 	}
 }
 
-func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[taskguildv1.ListInteractionsRequest]) (*connect.Response[taskguildv1.ListInteractionsResponse], error) {
+func (s *Server) ListInteractions(ctx context.Context, req *taskguildv1.ListInteractionsRequest) (*taskguildv1.ListInteractionsResponse, error) {
 	limit, offset := int32(0), int32(0)
-	if req.Msg.GetPagination() != nil {
-		limit = req.Msg.GetPagination().GetLimit() // 0 means no limit
-		offset = req.Msg.GetPagination().GetOffset()
+	if req.GetPagination() != nil {
+		limit = req.GetPagination().GetLimit() // 0 means no limit
+		offset = req.GetPagination().GetOffset()
 	}
 
 	// When project_id is provided, resolve to task IDs for filtering.
 	var taskIDs []string
 
-	if req.Msg.GetProjectId() != "" {
-		tasks, _, err := s.taskRepo.List(ctx, req.Msg.GetProjectId(), "", "", 0, 0)
+	if req.GetProjectId() != "" {
+		tasks, _, err := s.taskRepo.List(ctx, req.GetProjectId(), "", "", 0, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -54,9 +53,9 @@ func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[task
 		}
 	}
 
-	statusFilter := InteractionStatus(req.Msg.GetStatusFilter())
+	statusFilter := InteractionStatus(req.GetStatusFilter())
 
-	interactions, total, err := s.repo.List(ctx, req.Msg.GetTaskId(), taskIDs, statusFilter, int(limit), int(offset))
+	interactions, total, err := s.repo.List(ctx, req.GetTaskId(), taskIDs, statusFilter, int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +78,7 @@ func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[task
 		protos[i] = ToProto(inter)
 	}
 
-	return connect.NewResponse(&taskguildv1.ListInteractionsResponse{
+	return &taskguildv1.ListInteractionsResponse{
 		Interactions: protos,
 		Pagination: &taskguildv1.PaginationResponse{
 			Total:  int32(total),
@@ -88,11 +87,11 @@ func (s *Server) ListInteractions(ctx context.Context, req *connect.Request[task
 		},
 		TaskTitles:     taskTitles,
 		TaskProjectIds: taskProjectIDs,
-	}), nil
+	}, nil
 }
 
-func (s *Server) RespondToInteraction(ctx context.Context, req *connect.Request[taskguildv1.RespondToInteractionRequest]) (*connect.Response[taskguildv1.RespondToInteractionResponse], error) {
-	inter, err := s.repo.Get(ctx, req.Msg.GetId())
+func (s *Server) RespondToInteraction(ctx context.Context, req *taskguildv1.RespondToInteractionRequest) (*taskguildv1.RespondToInteractionResponse, error) {
+	inter, err := s.repo.Get(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +101,7 @@ func (s *Server) RespondToInteraction(ctx context.Context, req *connect.Request[
 	}
 
 	now := time.Now()
-	inter.Response = req.Msg.GetResponse()
+	inter.Response = req.GetResponse()
 	inter.Status = StatusResponded
 	inter.RespondedAt = &now
 
@@ -118,21 +117,21 @@ func (s *Server) RespondToInteraction(ctx context.Context, req *connect.Request[
 		map[string]string{eventbus.MetaTaskID: inter.TaskID, eventbus.MetaAgentID: inter.AgentID},
 	)
 
-	return connect.NewResponse(&taskguildv1.RespondToInteractionResponse{
+	return &taskguildv1.RespondToInteractionResponse{
 		Interaction: interProto,
-	}), nil
+	}, nil
 }
 
-func (s *Server) RespondToInteractionByToken(ctx context.Context, req *connect.Request[taskguildv1.RespondToInteractionByTokenRequest]) (*connect.Response[taskguildv1.RespondToInteractionByTokenResponse], error) {
-	if req.Msg.GetToken() == "" {
+func (s *Server) RespondToInteractionByToken(ctx context.Context, req *taskguildv1.RespondToInteractionByTokenRequest) (*taskguildv1.RespondToInteractionByTokenResponse, error) {
+	if req.GetToken() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "token is required", nil).ConnectError()
 	}
 
-	if req.Msg.GetResponse() == "" {
+	if req.GetResponse() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "response is required", nil).ConnectError()
 	}
 
-	inter, err := s.repo.GetByResponseToken(ctx, req.Msg.GetToken())
+	inter, err := s.repo.GetByResponseToken(ctx, req.GetToken())
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +141,7 @@ func (s *Server) RespondToInteractionByToken(ctx context.Context, req *connect.R
 	}
 
 	now := time.Now()
-	inter.Response = req.Msg.GetResponse()
+	inter.Response = req.GetResponse()
 	inter.Status = StatusResponded
 	inter.RespondedAt = &now
 	// Invalidate the token after use.
@@ -160,13 +159,13 @@ func (s *Server) RespondToInteractionByToken(ctx context.Context, req *connect.R
 		map[string]string{eventbus.MetaTaskID: inter.TaskID, eventbus.MetaAgentID: inter.AgentID},
 	)
 
-	return connect.NewResponse(&taskguildv1.RespondToInteractionByTokenResponse{
+	return &taskguildv1.RespondToInteractionByTokenResponse{
 		Interaction: interProto,
-	}), nil
+	}, nil
 }
 
-func (s *Server) ExpireInteraction(ctx context.Context, req *connect.Request[taskguildv1.ExpireInteractionRequest]) (*connect.Response[taskguildv1.ExpireInteractionResponse], error) {
-	inter, err := s.repo.Get(ctx, req.Msg.GetId())
+func (s *Server) ExpireInteraction(ctx context.Context, req *taskguildv1.ExpireInteractionRequest) (*taskguildv1.ExpireInteractionResponse, error) {
+	inter, err := s.repo.Get(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
@@ -191,21 +190,21 @@ func (s *Server) ExpireInteraction(ctx context.Context, req *connect.Request[tas
 		map[string]string{eventbus.MetaTaskID: inter.TaskID, eventbus.MetaAgentID: inter.AgentID},
 	)
 
-	return connect.NewResponse(&taskguildv1.ExpireInteractionResponse{
+	return &taskguildv1.ExpireInteractionResponse{
 		Interaction: interProto,
-	}), nil
+	}, nil
 }
 
-func (s *Server) SendMessage(ctx context.Context, req *connect.Request[taskguildv1.SendMessageRequest]) (*connect.Response[taskguildv1.SendMessageResponse], error) {
-	if req.Msg.GetTaskId() == "" {
+func (s *Server) SendMessage(ctx context.Context, req *taskguildv1.SendMessageRequest) (*taskguildv1.SendMessageResponse, error) {
+	if req.GetTaskId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "task_id is required", nil).ConnectError()
 	}
 
-	if req.Msg.GetMessage() == "" {
+	if req.GetMessage() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "message is required", nil).ConnectError()
 	}
 
-	t, err := s.taskRepo.Get(ctx, req.Msg.GetTaskId())
+	t, err := s.taskRepo.Get(ctx, req.GetTaskId())
 	if err != nil {
 		return nil, err
 	}
@@ -214,10 +213,10 @@ func (s *Server) SendMessage(ctx context.Context, req *connect.Request[taskguild
 	inter := &Interaction{
 		ID:          ulid.Make().String(),
 		ProjectID:   t.ProjectID,
-		TaskID:      req.Msg.GetTaskId(),
+		TaskID:      req.GetTaskId(),
 		Type:        TypeUserMessage,
 		Status:      StatusResponded,
-		Title:       req.Msg.GetMessage(),
+		Title:       req.GetMessage(),
 		CreatedAt:   now,
 		RespondedAt: &now,
 	}
@@ -234,16 +233,16 @@ func (s *Server) SendMessage(ctx context.Context, req *connect.Request[taskguild
 		map[string]string{eventbus.MetaTaskID: inter.TaskID, eventbus.MetaProjectID: t.ProjectID},
 	)
 
-	return connect.NewResponse(&taskguildv1.SendMessageResponse{
+	return &taskguildv1.SendMessageResponse{
 		Interaction: interProto,
-	}), nil
+	}, nil
 }
 
-func (s *Server) SubscribeInteractions(ctx context.Context, req *connect.Request[taskguildv1.SubscribeInteractionsRequest], stream *connect.ServerStream[taskguildv1.InteractionEvent]) error {
+func (s *Server) SubscribeInteractions(ctx context.Context, req *taskguildv1.SubscribeInteractionsRequest, stream taskguildv1connect.InteractionServiceSubscribeInteractionsServerStream) error {
 	subID, ch := s.eventBus.Subscribe(64)
 	defer s.eventBus.Unsubscribe(subID)
 
-	taskID := req.Msg.GetTaskId()
+	taskID := req.GetTaskId()
 
 	for {
 		select {

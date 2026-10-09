@@ -5,250 +5,278 @@
 package taskguildv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// ProjectServiceName is the fully-qualified name of the ProjectService service.
 	ProjectServiceName = "taskguild.v1.ProjectService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// ProjectServiceCreateProjectProcedure is the fully-qualified name of the ProjectService's
-	// CreateProject RPC.
-	ProjectServiceCreateProjectProcedure = "/taskguild.v1.ProjectService/CreateProject"
-	// ProjectServiceGetProjectProcedure is the fully-qualified name of the ProjectService's GetProject
+	// ProjectServiceCreateProjectProcedure is the procedure name of the ProjectService's CreateProject
 	// RPC.
+	ProjectServiceCreateProjectProcedure = "/taskguild.v1.ProjectService/CreateProject"
+	// ProjectServiceGetProjectProcedure is the procedure name of the ProjectService's GetProject RPC.
 	ProjectServiceGetProjectProcedure = "/taskguild.v1.ProjectService/GetProject"
-	// ProjectServiceListProjectsProcedure is the fully-qualified name of the ProjectService's
-	// ListProjects RPC.
+	// ProjectServiceListProjectsProcedure is the procedure name of the ProjectService's ListProjects
+	// RPC.
 	ProjectServiceListProjectsProcedure = "/taskguild.v1.ProjectService/ListProjects"
-	// ProjectServiceUpdateProjectProcedure is the fully-qualified name of the ProjectService's
-	// UpdateProject RPC.
+	// ProjectServiceUpdateProjectProcedure is the procedure name of the ProjectService's UpdateProject
+	// RPC.
 	ProjectServiceUpdateProjectProcedure = "/taskguild.v1.ProjectService/UpdateProject"
-	// ProjectServiceDeleteProjectProcedure is the fully-qualified name of the ProjectService's
-	// DeleteProject RPC.
+	// ProjectServiceDeleteProjectProcedure is the procedure name of the ProjectService's DeleteProject
+	// RPC.
 	ProjectServiceDeleteProjectProcedure = "/taskguild.v1.ProjectService/DeleteProject"
-	// ProjectServiceReorderProjectsProcedure is the fully-qualified name of the ProjectService's
+	// ProjectServiceReorderProjectsProcedure is the procedure name of the ProjectService's
 	// ReorderProjects RPC.
 	ProjectServiceReorderProjectsProcedure = "/taskguild.v1.ProjectService/ReorderProjects"
 )
 
+var (
+	projectServiceCreateProjectSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_project_proto.Services().ByName("ProjectService").Methods().ByName("CreateProject"),
+			Procedure:  ProjectServiceCreateProjectProcedure,
+		}
+	})
+	projectServiceGetProjectSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_project_proto.Services().ByName("ProjectService").Methods().ByName("GetProject"),
+			Procedure:  ProjectServiceGetProjectProcedure,
+		}
+	})
+	projectServiceListProjectsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_project_proto.Services().ByName("ProjectService").Methods().ByName("ListProjects"),
+			Procedure:  ProjectServiceListProjectsProcedure,
+		}
+	})
+	projectServiceUpdateProjectSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_project_proto.Services().ByName("ProjectService").Methods().ByName("UpdateProject"),
+			Procedure:  ProjectServiceUpdateProjectProcedure,
+		}
+	})
+	projectServiceDeleteProjectSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_project_proto.Services().ByName("ProjectService").Methods().ByName("DeleteProject"),
+			Procedure:  ProjectServiceDeleteProjectProcedure,
+		}
+	})
+	projectServiceReorderProjectsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_project_proto.Services().ByName("ProjectService").Methods().ByName("ReorderProjects"),
+			Procedure:  ProjectServiceReorderProjectsProcedure,
+		}
+	})
+)
+
 // ProjectServiceClient is a client for the taskguild.v1.ProjectService service.
 type ProjectServiceClient interface {
-	CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error)
-	GetProject(context.Context, *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.GetProjectResponse], error)
-	ListProjects(context.Context, *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error)
-	UpdateProject(context.Context, *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[v1.UpdateProjectResponse], error)
-	DeleteProject(context.Context, *connect.Request[v1.DeleteProjectRequest]) (*connect.Response[v1.DeleteProjectResponse], error)
-	ReorderProjects(context.Context, *connect.Request[v1.ReorderProjectsRequest]) (*connect.Response[v1.ReorderProjectsResponse], error)
+	CreateProject(context.Context, *v1.CreateProjectRequest) (*v1.CreateProjectResponse, error)
+	GetProject(context.Context, *v1.GetProjectRequest) (*v1.GetProjectResponse, error)
+	ListProjects(context.Context, *v1.ListProjectsRequest) (*v1.ListProjectsResponse, error)
+	UpdateProject(context.Context, *v1.UpdateProjectRequest) (*v1.UpdateProjectResponse, error)
+	DeleteProject(context.Context, *v1.DeleteProjectRequest) (*v1.DeleteProjectResponse, error)
+	ReorderProjects(context.Context, *v1.ReorderProjectsRequest) (*v1.ReorderProjectsResponse, error)
 }
 
-// NewProjectServiceClient constructs a client for the taskguild.v1.ProjectService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewProjectServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) ProjectServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	projectServiceMethods := v1.File_taskguild_v1_project_proto.Services().ByName("ProjectService").Methods()
-	return &projectServiceClient{
-		createProject: connect.NewClient[v1.CreateProjectRequest, v1.CreateProjectResponse](
-			httpClient,
-			baseURL+ProjectServiceCreateProjectProcedure,
-			connect.WithSchema(projectServiceMethods.ByName("CreateProject")),
-			connect.WithClientOptions(opts...),
-		),
-		getProject: connect.NewClient[v1.GetProjectRequest, v1.GetProjectResponse](
-			httpClient,
-			baseURL+ProjectServiceGetProjectProcedure,
-			connect.WithSchema(projectServiceMethods.ByName("GetProject")),
-			connect.WithClientOptions(opts...),
-		),
-		listProjects: connect.NewClient[v1.ListProjectsRequest, v1.ListProjectsResponse](
-			httpClient,
-			baseURL+ProjectServiceListProjectsProcedure,
-			connect.WithSchema(projectServiceMethods.ByName("ListProjects")),
-			connect.WithClientOptions(opts...),
-		),
-		updateProject: connect.NewClient[v1.UpdateProjectRequest, v1.UpdateProjectResponse](
-			httpClient,
-			baseURL+ProjectServiceUpdateProjectProcedure,
-			connect.WithSchema(projectServiceMethods.ByName("UpdateProject")),
-			connect.WithClientOptions(opts...),
-		),
-		deleteProject: connect.NewClient[v1.DeleteProjectRequest, v1.DeleteProjectResponse](
-			httpClient,
-			baseURL+ProjectServiceDeleteProjectProcedure,
-			connect.WithSchema(projectServiceMethods.ByName("DeleteProject")),
-			connect.WithClientOptions(opts...),
-		),
-		reorderProjects: connect.NewClient[v1.ReorderProjectsRequest, v1.ReorderProjectsResponse](
-			httpClient,
-			baseURL+ProjectServiceReorderProjectsProcedure,
-			connect.WithSchema(projectServiceMethods.ByName("ReorderProjects")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// projectServiceClient implements ProjectServiceClient.
-type projectServiceClient struct {
-	createProject   *connect.Client[v1.CreateProjectRequest, v1.CreateProjectResponse]
-	getProject      *connect.Client[v1.GetProjectRequest, v1.GetProjectResponse]
-	listProjects    *connect.Client[v1.ListProjectsRequest, v1.ListProjectsResponse]
-	updateProject   *connect.Client[v1.UpdateProjectRequest, v1.UpdateProjectResponse]
-	deleteProject   *connect.Client[v1.DeleteProjectRequest, v1.DeleteProjectResponse]
-	reorderProjects *connect.Client[v1.ReorderProjectsRequest, v1.ReorderProjectsResponse]
-}
-
-// CreateProject calls taskguild.v1.ProjectService.CreateProject.
-func (c *projectServiceClient) CreateProject(ctx context.Context, req *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error) {
-	return c.createProject.CallUnary(ctx, req)
-}
-
-// GetProject calls taskguild.v1.ProjectService.GetProject.
-func (c *projectServiceClient) GetProject(ctx context.Context, req *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.GetProjectResponse], error) {
-	return c.getProject.CallUnary(ctx, req)
-}
-
-// ListProjects calls taskguild.v1.ProjectService.ListProjects.
-func (c *projectServiceClient) ListProjects(ctx context.Context, req *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error) {
-	return c.listProjects.CallUnary(ctx, req)
-}
-
-// UpdateProject calls taskguild.v1.ProjectService.UpdateProject.
-func (c *projectServiceClient) UpdateProject(ctx context.Context, req *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[v1.UpdateProjectResponse], error) {
-	return c.updateProject.CallUnary(ctx, req)
-}
-
-// DeleteProject calls taskguild.v1.ProjectService.DeleteProject.
-func (c *projectServiceClient) DeleteProject(ctx context.Context, req *connect.Request[v1.DeleteProjectRequest]) (*connect.Response[v1.DeleteProjectResponse], error) {
-	return c.deleteProject.CallUnary(ctx, req)
-}
-
-// ReorderProjects calls taskguild.v1.ProjectService.ReorderProjects.
-func (c *projectServiceClient) ReorderProjects(ctx context.Context, req *connect.Request[v1.ReorderProjectsRequest]) (*connect.Response[v1.ReorderProjectsResponse], error) {
-	return c.reorderProjects.CallUnary(ctx, req)
+// NewProjectServiceClient constructs a client for the taskguild.v1.ProjectService service. Multiple
+// service clients may share a single connect.Client.
+func NewProjectServiceClient(client *connect.Client) ProjectServiceClient {
+	return &projectServiceClient{client: client}
 }
 
 // ProjectServiceHandler is an implementation of the taskguild.v1.ProjectService service.
 type ProjectServiceHandler interface {
-	CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error)
-	GetProject(context.Context, *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.GetProjectResponse], error)
-	ListProjects(context.Context, *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error)
-	UpdateProject(context.Context, *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[v1.UpdateProjectResponse], error)
-	DeleteProject(context.Context, *connect.Request[v1.DeleteProjectRequest]) (*connect.Response[v1.DeleteProjectResponse], error)
-	ReorderProjects(context.Context, *connect.Request[v1.ReorderProjectsRequest]) (*connect.Response[v1.ReorderProjectsResponse], error)
+	CreateProject(context.Context, *v1.CreateProjectRequest) (*v1.CreateProjectResponse, error)
+	GetProject(context.Context, *v1.GetProjectRequest) (*v1.GetProjectResponse, error)
+	ListProjects(context.Context, *v1.ListProjectsRequest) (*v1.ListProjectsResponse, error)
+	UpdateProject(context.Context, *v1.UpdateProjectRequest) (*v1.UpdateProjectResponse, error)
+	DeleteProject(context.Context, *v1.DeleteProjectRequest) (*v1.DeleteProjectResponse, error)
+	ReorderProjects(context.Context, *v1.ReorderProjectsRequest) (*v1.ReorderProjectsResponse, error)
 }
 
-// NewProjectServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewProjectServiceHandler(svc ProjectServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	projectServiceMethods := v1.File_taskguild_v1_project_proto.Services().ByName("ProjectService").Methods()
-	projectServiceCreateProjectHandler := connect.NewUnaryHandler(
-		ProjectServiceCreateProjectProcedure,
-		svc.CreateProject,
-		connect.WithSchema(projectServiceMethods.ByName("CreateProject")),
-		connect.WithHandlerOptions(opts...),
+// RegisterProjectServiceHandler registers svc as the taskguild.v1.ProjectService implementation on
+// server.
+func RegisterProjectServiceHandler(server *connect.Server, svc ProjectServiceHandler) {
+	adapter := projectServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: projectServiceCreateProjectSpec(), Handler: adapter.createProject},
+		connect.Method{Spec: projectServiceGetProjectSpec(), Handler: adapter.getProject},
+		connect.Method{Spec: projectServiceListProjectsSpec(), Handler: adapter.listProjects},
+		connect.Method{Spec: projectServiceUpdateProjectSpec(), Handler: adapter.updateProject},
+		connect.Method{Spec: projectServiceDeleteProjectSpec(), Handler: adapter.deleteProject},
+		connect.Method{Spec: projectServiceReorderProjectsSpec(), Handler: adapter.reorderProjects},
 	)
-	projectServiceGetProjectHandler := connect.NewUnaryHandler(
-		ProjectServiceGetProjectProcedure,
-		svc.GetProject,
-		connect.WithSchema(projectServiceMethods.ByName("GetProject")),
-		connect.WithHandlerOptions(opts...),
-	)
-	projectServiceListProjectsHandler := connect.NewUnaryHandler(
-		ProjectServiceListProjectsProcedure,
-		svc.ListProjects,
-		connect.WithSchema(projectServiceMethods.ByName("ListProjects")),
-		connect.WithHandlerOptions(opts...),
-	)
-	projectServiceUpdateProjectHandler := connect.NewUnaryHandler(
-		ProjectServiceUpdateProjectProcedure,
-		svc.UpdateProject,
-		connect.WithSchema(projectServiceMethods.ByName("UpdateProject")),
-		connect.WithHandlerOptions(opts...),
-	)
-	projectServiceDeleteProjectHandler := connect.NewUnaryHandler(
-		ProjectServiceDeleteProjectProcedure,
-		svc.DeleteProject,
-		connect.WithSchema(projectServiceMethods.ByName("DeleteProject")),
-		connect.WithHandlerOptions(opts...),
-	)
-	projectServiceReorderProjectsHandler := connect.NewUnaryHandler(
-		ProjectServiceReorderProjectsProcedure,
-		svc.ReorderProjects,
-		connect.WithSchema(projectServiceMethods.ByName("ReorderProjects")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/taskguild.v1.ProjectService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case ProjectServiceCreateProjectProcedure:
-			projectServiceCreateProjectHandler.ServeHTTP(w, r)
-		case ProjectServiceGetProjectProcedure:
-			projectServiceGetProjectHandler.ServeHTTP(w, r)
-		case ProjectServiceListProjectsProcedure:
-			projectServiceListProjectsHandler.ServeHTTP(w, r)
-		case ProjectServiceUpdateProjectProcedure:
-			projectServiceUpdateProjectHandler.ServeHTTP(w, r)
-		case ProjectServiceDeleteProjectProcedure:
-			projectServiceDeleteProjectHandler.ServeHTTP(w, r)
-		case ProjectServiceReorderProjectsProcedure:
-			projectServiceReorderProjectsHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedProjectServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedProjectServiceHandler struct{}
 
-func (UnimplementedProjectServiceHandler) CreateProject(context.Context, *connect.Request[v1.CreateProjectRequest]) (*connect.Response[v1.CreateProjectResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ProjectService.CreateProject is not implemented"))
+func (UnimplementedProjectServiceHandler) CreateProject(context.Context, *v1.CreateProjectRequest) (*v1.CreateProjectResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ProjectService.CreateProject is not implemented")
 }
 
-func (UnimplementedProjectServiceHandler) GetProject(context.Context, *connect.Request[v1.GetProjectRequest]) (*connect.Response[v1.GetProjectResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ProjectService.GetProject is not implemented"))
+func (UnimplementedProjectServiceHandler) GetProject(context.Context, *v1.GetProjectRequest) (*v1.GetProjectResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ProjectService.GetProject is not implemented")
 }
 
-func (UnimplementedProjectServiceHandler) ListProjects(context.Context, *connect.Request[v1.ListProjectsRequest]) (*connect.Response[v1.ListProjectsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ProjectService.ListProjects is not implemented"))
+func (UnimplementedProjectServiceHandler) ListProjects(context.Context, *v1.ListProjectsRequest) (*v1.ListProjectsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ProjectService.ListProjects is not implemented")
 }
 
-func (UnimplementedProjectServiceHandler) UpdateProject(context.Context, *connect.Request[v1.UpdateProjectRequest]) (*connect.Response[v1.UpdateProjectResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ProjectService.UpdateProject is not implemented"))
+func (UnimplementedProjectServiceHandler) UpdateProject(context.Context, *v1.UpdateProjectRequest) (*v1.UpdateProjectResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ProjectService.UpdateProject is not implemented")
 }
 
-func (UnimplementedProjectServiceHandler) DeleteProject(context.Context, *connect.Request[v1.DeleteProjectRequest]) (*connect.Response[v1.DeleteProjectResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ProjectService.DeleteProject is not implemented"))
+func (UnimplementedProjectServiceHandler) DeleteProject(context.Context, *v1.DeleteProjectRequest) (*v1.DeleteProjectResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ProjectService.DeleteProject is not implemented")
 }
 
-func (UnimplementedProjectServiceHandler) ReorderProjects(context.Context, *connect.Request[v1.ReorderProjectsRequest]) (*connect.Response[v1.ReorderProjectsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ProjectService.ReorderProjects is not implemented"))
+func (UnimplementedProjectServiceHandler) ReorderProjects(context.Context, *v1.ReorderProjectsRequest) (*v1.ReorderProjectsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ProjectService.ReorderProjects is not implemented")
+}
+
+type projectServiceClient struct {
+	client *connect.Client
+}
+
+func (c *projectServiceClient) CreateProject(ctx context.Context, req *v1.CreateProjectRequest) (*v1.CreateProjectResponse, error) {
+	var res v1.CreateProjectResponse
+	if err := c.client.CallUnary(ctx, projectServiceCreateProjectSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *projectServiceClient) GetProject(ctx context.Context, req *v1.GetProjectRequest) (*v1.GetProjectResponse, error) {
+	var res v1.GetProjectResponse
+	if err := c.client.CallUnary(ctx, projectServiceGetProjectSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *projectServiceClient) ListProjects(ctx context.Context, req *v1.ListProjectsRequest) (*v1.ListProjectsResponse, error) {
+	var res v1.ListProjectsResponse
+	if err := c.client.CallUnary(ctx, projectServiceListProjectsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *projectServiceClient) UpdateProject(ctx context.Context, req *v1.UpdateProjectRequest) (*v1.UpdateProjectResponse, error) {
+	var res v1.UpdateProjectResponse
+	if err := c.client.CallUnary(ctx, projectServiceUpdateProjectSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *projectServiceClient) DeleteProject(ctx context.Context, req *v1.DeleteProjectRequest) (*v1.DeleteProjectResponse, error) {
+	var res v1.DeleteProjectResponse
+	if err := c.client.CallUnary(ctx, projectServiceDeleteProjectSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *projectServiceClient) ReorderProjects(ctx context.Context, req *v1.ReorderProjectsRequest) (*v1.ReorderProjectsResponse, error) {
+	var res v1.ReorderProjectsResponse
+	if err := c.client.CallUnary(ctx, projectServiceReorderProjectsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type projectServiceHandler struct{ svc ProjectServiceHandler }
+
+func (h projectServiceHandler) createProject(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.CreateProjectRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.CreateProject(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h projectServiceHandler) getProject(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetProjectRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetProject(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h projectServiceHandler) listProjects(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListProjectsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListProjects(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h projectServiceHandler) updateProject(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.UpdateProjectRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.UpdateProject(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h projectServiceHandler) deleteProject(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.DeleteProjectRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.DeleteProject(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h projectServiceHandler) reorderProjects(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ReorderProjectsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ReorderProjects(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

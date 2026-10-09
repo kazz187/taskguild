@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 
-	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/kazz187/taskguild/internal/skill"
@@ -14,8 +13,8 @@ import (
 
 // --- Skill sync RPCs ---
 
-func (s *Server) SyncSkills(ctx context.Context, req *connect.Request[taskguildv1.SyncSkillsRequest]) (*connect.Response[taskguildv1.SyncSkillsResponse], error) {
-	projectName := req.Msg.GetProjectName()
+func (s *Server) SyncSkills(ctx context.Context, req *taskguildv1.SyncSkillsRequest) (*taskguildv1.SyncSkillsResponse, error) {
+	projectName := req.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -37,9 +36,9 @@ func (s *Server) SyncSkills(ctx context.Context, req *connect.Request[taskguildv
 
 	slog.Info("syncing skills to agent", "project_name", projectName, "count", len(protos))
 
-	return connect.NewResponse(&taskguildv1.SyncSkillsResponse{
+	return &taskguildv1.SyncSkillsResponse{
 		Skills: protos,
-	}), nil
+	}, nil
 }
 
 func skillToProto(s *skill.Skill) *taskguildv1.SkillDefinition {

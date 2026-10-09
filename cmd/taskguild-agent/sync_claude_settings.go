@@ -7,8 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"connectrpc.com/connect"
-
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -28,17 +26,17 @@ func syncClaudeSettings(ctx context.Context, client taskguildv1connect.AgentMana
 	localLanguage, localAttribution, rawSettings := readLocalClaudeSettings(settingsPath)
 
 	// Call SyncClaudeSettings RPC.
-	resp, err := client.SyncClaudeSettings(ctx, connect.NewRequest(&v1.SyncClaudeSettingsAgentRequest{
+	resp, err := client.SyncClaudeSettings(ctx, &v1.SyncClaudeSettingsAgentRequest{
 		ProjectName:      cfg.ProjectName,
 		LocalLanguage:    localLanguage, // *string, matches proto optional
 		LocalAttribution: localAttribution,
-	}))
+	})
 	if err != nil {
 		slog.Error("claude settings sync failed", "error", err)
 		return
 	}
 
-	merged := resp.Msg.GetSettings()
+	merged := resp.GetSettings()
 	slog.Info("claude settings sync complete",
 		"language", merged.Language,
 	)

@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"connectrpc.com/connect"
-
 	"github.com/kazz187/taskguild/pkg/clog"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
@@ -192,13 +190,13 @@ func createTaskFromDirective(
 		req.StatusId = &statusID
 	}
 
-	resp, err := taskClient.CreateTask(ctx, connect.NewRequest(req))
+	resp, err := taskClient.CreateTask(ctx, req)
 	if err != nil {
 		logger.Error("failed to create task", "title", directive.Title, "error", err)
 		return
 	}
 
-	newTask := resp.Msg.GetTask()
+	newTask := resp.GetTask()
 	if newTask != nil {
 		logger.Info("created child task", "child_task_id", newTask.GetId(), "title", directive.Title)
 	} else {
@@ -448,10 +446,10 @@ func handleStatusTransition(
 	// Per-status session IDs (session_id_{StatusName}) are never cleared.
 	// They survive all transitions for subtask inheritance and session resume.
 
-	_, err = taskClient.UpdateTaskStatus(ctx, connect.NewRequest(&v1.UpdateTaskStatusRequest{
+	_, err = taskClient.UpdateTaskStatus(ctx, &v1.UpdateTaskStatusRequest{
 		Id:       taskID,
 		StatusId: nextStatusID,
-	}))
+	})
 	if err != nil {
 		return fmt.Errorf("UpdateTaskStatus RPC failed for %s: %w", nextStatusID, err)
 	}
@@ -495,10 +493,10 @@ func saveSessionID(ctx context.Context, taskClient taskguildv1connect.TaskServic
 
 	logger := clog.LoggerFromContext(ctx)
 
-	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
+	_, err := taskClient.UpdateTask(ctx, &v1.UpdateTaskRequest{
 		Id:       taskID,
 		Metadata: map[string]string{"session_id_" + statusName: sessionID},
-	}))
+	})
 	if err != nil {
 		logger.Error("failed to save session_id", "error", err)
 	}
@@ -507,10 +505,10 @@ func saveSessionID(ctx context.Context, taskClient taskguildv1connect.TaskServic
 func saveWorktreeName(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, name string) {
 	logger := clog.LoggerFromContext(ctx)
 
-	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
+	_, err := taskClient.UpdateTask(ctx, &v1.UpdateTaskRequest{
 		Id:       taskID,
 		Metadata: map[string]string{"worktree": name},
-	}))
+	})
 	if err != nil {
 		logger.Error("failed to save worktree_name", "error", err)
 	} else {
@@ -521,10 +519,10 @@ func saveWorktreeName(ctx context.Context, taskClient taskguildv1connect.TaskSer
 func saveClaudeMode(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, mode string) {
 	logger := clog.LoggerFromContext(ctx)
 
-	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
+	_, err := taskClient.UpdateTask(ctx, &v1.UpdateTaskRequest{
 		Id:       taskID,
 		Metadata: map[string]string{metaClaudeMode: mode},
-	}))
+	})
 	if err != nil {
 		logger.Error("failed to save claude_mode", "error", err)
 	}
@@ -533,10 +531,10 @@ func saveClaudeMode(ctx context.Context, taskClient taskguildv1connect.TaskServi
 func saveTaskDescription(ctx context.Context, taskClient taskguildv1connect.TaskServiceClient, taskID, description string) {
 	logger := clog.LoggerFromContext(ctx)
 
-	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
+	_, err := taskClient.UpdateTask(ctx, &v1.UpdateTaskRequest{
 		Id:          taskID,
 		Description: description,
-	}))
+	})
 	if err != nil {
 		logger.Error("failed to save task description", "error", err)
 	} else {

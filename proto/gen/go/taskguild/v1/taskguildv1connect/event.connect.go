@@ -5,105 +5,127 @@
 package taskguildv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// EventServiceName is the fully-qualified name of the EventService service.
 	EventServiceName = "taskguild.v1.EventService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// EventServiceSubscribeEventsProcedure is the fully-qualified name of the EventService's
-	// SubscribeEvents RPC.
+	// EventServiceSubscribeEventsProcedure is the procedure name of the EventService's SubscribeEvents
+	// RPC.
 	EventServiceSubscribeEventsProcedure = "/taskguild.v1.EventService/SubscribeEvents"
+)
+
+var (
+	eventServiceSubscribeEventsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeServer,
+			Schema:     v1.File_taskguild_v1_event_proto.Services().ByName("EventService").Methods().ByName("SubscribeEvents"),
+			Procedure:  EventServiceSubscribeEventsProcedure,
+		}
+	})
 )
 
 // EventServiceClient is a client for the taskguild.v1.EventService service.
 type EventServiceClient interface {
-	SubscribeEvents(context.Context, *connect.Request[v1.SubscribeEventsRequest]) (*connect.ServerStreamForClient[v1.Event], error)
+	SubscribeEvents(context.Context, *v1.SubscribeEventsRequest) (EventServiceSubscribeEventsClientStream, error)
 }
 
-// NewEventServiceClient constructs a client for the taskguild.v1.EventService service. By default,
-// it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and
-// sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC()
-// or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewEventServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) EventServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	eventServiceMethods := v1.File_taskguild_v1_event_proto.Services().ByName("EventService").Methods()
-	return &eventServiceClient{
-		subscribeEvents: connect.NewClient[v1.SubscribeEventsRequest, v1.Event](
-			httpClient,
-			baseURL+EventServiceSubscribeEventsProcedure,
-			connect.WithSchema(eventServiceMethods.ByName("SubscribeEvents")),
-			connect.WithClientOptions(opts...),
-		),
+// NewEventServiceClient constructs a client for the taskguild.v1.EventService service. Multiple
+// service clients may share a single connect.Client.
+func NewEventServiceClient(client *connect.Client) EventServiceClient {
+	return &eventServiceClient{client: client}
+}
+
+// EventServiceSubscribeEventsClientStream is the client stream for the EventService's
+// SubscribeEvents RPC.
+type EventServiceSubscribeEventsClientStream struct {
+	stream connect.ClientStream
+}
+
+// Receive returns the next response message from the server.
+func (s EventServiceSubscribeEventsClientStream) Receive() (*v1.Event, error) {
+	var res v1.Event
+	if err := s.stream.Receive(&res); err != nil {
+		return nil, err
 	}
+	return &res, nil
 }
 
-// eventServiceClient implements EventServiceClient.
-type eventServiceClient struct {
-	subscribeEvents *connect.Client[v1.SubscribeEventsRequest, v1.Event]
-}
-
-// SubscribeEvents calls taskguild.v1.EventService.SubscribeEvents.
-func (c *eventServiceClient) SubscribeEvents(ctx context.Context, req *connect.Request[v1.SubscribeEventsRequest]) (*connect.ServerStreamForClient[v1.Event], error) {
-	return c.subscribeEvents.CallServerStream(ctx, req)
+// Close releases the stream's resources. It is idempotent and is typically deferred to clean up a
+// stream abandoned before io.EOF.
+func (s EventServiceSubscribeEventsClientStream) Close() error {
+	return s.stream.Close()
 }
 
 // EventServiceHandler is an implementation of the taskguild.v1.EventService service.
 type EventServiceHandler interface {
-	SubscribeEvents(context.Context, *connect.Request[v1.SubscribeEventsRequest], *connect.ServerStream[v1.Event]) error
+	SubscribeEvents(context.Context, *v1.SubscribeEventsRequest, EventServiceSubscribeEventsServerStream) error
 }
 
-// NewEventServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewEventServiceHandler(svc EventServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	eventServiceMethods := v1.File_taskguild_v1_event_proto.Services().ByName("EventService").Methods()
-	eventServiceSubscribeEventsHandler := connect.NewServerStreamHandler(
-		EventServiceSubscribeEventsProcedure,
-		svc.SubscribeEvents,
-		connect.WithSchema(eventServiceMethods.ByName("SubscribeEvents")),
-		connect.WithHandlerOptions(opts...),
+// RegisterEventServiceHandler registers svc as the taskguild.v1.EventService implementation on
+// server.
+func RegisterEventServiceHandler(server *connect.Server, svc EventServiceHandler) {
+	adapter := eventServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: eventServiceSubscribeEventsSpec(), Handler: adapter.subscribeEvents},
 	)
-	return "/taskguild.v1.EventService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case EventServiceSubscribeEventsProcedure:
-			eventServiceSubscribeEventsHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
+}
+
+// EventServiceSubscribeEventsServerStream is the server stream for the EventService's
+// SubscribeEvents RPC.
+type EventServiceSubscribeEventsServerStream struct {
+	stream connect.ServerStream
+}
+
+// SendHeaders flushes the response headers without a message. The first Send does this implicitly.
+func (s EventServiceSubscribeEventsServerStream) SendHeaders() error {
+	return s.stream.SendHeaders()
+}
+
+// Send sends a response message to the client.
+func (s EventServiceSubscribeEventsServerStream) Send(res *v1.Event) error {
+	return s.stream.Send(res)
 }
 
 // UnimplementedEventServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedEventServiceHandler struct{}
 
-func (UnimplementedEventServiceHandler) SubscribeEvents(context.Context, *connect.Request[v1.SubscribeEventsRequest], *connect.ServerStream[v1.Event]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.EventService.SubscribeEvents is not implemented"))
+func (UnimplementedEventServiceHandler) SubscribeEvents(context.Context, *v1.SubscribeEventsRequest, EventServiceSubscribeEventsServerStream) error {
+	return connect.NewError(connect.CodeUnimplemented, "taskguild.v1.EventService.SubscribeEvents is not implemented")
+}
+
+type eventServiceClient struct {
+	client *connect.Client
+}
+
+func (c *eventServiceClient) SubscribeEvents(ctx context.Context, req *v1.SubscribeEventsRequest) (EventServiceSubscribeEventsClientStream, error) {
+	stream, err := c.client.CallServerStream(ctx, eventServiceSubscribeEventsSpec(), req)
+	if err != nil {
+		return EventServiceSubscribeEventsClientStream{}, err
+	}
+	return EventServiceSubscribeEventsClientStream{stream: stream}, nil
+}
+
+type eventServiceHandler struct{ svc EventServiceHandler }
+
+func (h eventServiceHandler) subscribeEvents(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.SubscribeEventsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	return h.svc.SubscribeEvents(ctx, &req, EventServiceSubscribeEventsServerStream{stream: stream})
 }

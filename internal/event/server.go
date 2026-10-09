@@ -3,8 +3,6 @@ package event
 import (
 	"context"
 
-	"connectrpc.com/connect"
-
 	"github.com/kazz187/taskguild/internal/eventbus"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
@@ -20,7 +18,7 @@ func NewServer(eventBus *eventbus.Bus) *Server {
 	return &Server{eventBus: eventBus}
 }
 
-func (s *Server) SubscribeEvents(ctx context.Context, req *connect.Request[taskguildv1.SubscribeEventsRequest], stream *connect.ServerStream[taskguildv1.Event]) error {
+func (s *Server) SubscribeEvents(ctx context.Context, req *taskguildv1.SubscribeEventsRequest, stream taskguildv1connect.EventServiceSubscribeEventsServerStream) error {
 	subID, ch := s.eventBus.Subscribe(64)
 	defer s.eventBus.Unsubscribe(subID)
 
@@ -34,12 +32,12 @@ func (s *Server) SubscribeEvents(ctx context.Context, req *connect.Request[taskg
 	}
 
 	// Build event type filter set.
-	typeFilter := make(map[taskguildv1.EventType]struct{}, len(req.Msg.GetEventTypes()))
-	for _, et := range req.Msg.GetEventTypes() {
+	typeFilter := make(map[taskguildv1.EventType]struct{}, len(req.GetEventTypes()))
+	for _, et := range req.GetEventTypes() {
 		typeFilter[et] = struct{}{}
 	}
 
-	projectID := req.Msg.GetProjectId()
+	projectID := req.GetProjectId()
 
 	for {
 		select {

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	"github.com/sourcegraph/conc"
 
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
@@ -28,88 +28,88 @@ type mockAgentManagerClient struct {
 	listPermissions []*v1.SingleCommandPermission
 }
 
-func (m *mockAgentManagerClient) CreateInteraction(_ context.Context, req *connect.Request[v1.CreateInteractionRequest]) (*connect.Response[v1.CreateInteractionResponse], error) {
-	m.interactions = append(m.interactions, req.Msg)
+func (m *mockAgentManagerClient) CreateInteraction(_ context.Context, req *v1.CreateInteractionRequest) (*v1.CreateInteractionResponse, error) {
+	m.interactions = append(m.interactions, req)
 
-	return connect.NewResponse(&v1.CreateInteractionResponse{
+	return &v1.CreateInteractionResponse{
 		Interaction: &v1.Interaction{
 			Id: "test-interaction-id",
 		},
-	}), nil
+	}, nil
 }
 
-func (m *mockAgentManagerClient) AddSingleCommandPermission(_ context.Context, req *connect.Request[v1.AddSingleCommandPermissionRequest]) (*connect.Response[v1.AddSingleCommandPermissionResponse], error) {
-	m.addedPermissions = append(m.addedPermissions, req.Msg)
+func (m *mockAgentManagerClient) AddSingleCommandPermission(_ context.Context, req *v1.AddSingleCommandPermissionRequest) (*v1.AddSingleCommandPermissionResponse, error) {
+	m.addedPermissions = append(m.addedPermissions, req)
 
-	return connect.NewResponse(&v1.AddSingleCommandPermissionResponse{
+	return &v1.AddSingleCommandPermissionResponse{
 		Permission: &v1.SingleCommandPermission{
-			Id:      "perm-" + req.Msg.GetPattern(),
-			Pattern: req.Msg.GetPattern(),
-			Type:    req.Msg.GetType(),
+			Id:      "perm-" + req.GetPattern(),
+			Pattern: req.GetPattern(),
+			Type:    req.GetType(),
 		},
-	}), nil
+	}, nil
 }
 
-func (m *mockAgentManagerClient) ListSingleCommandPermissions(_ context.Context, _ *connect.Request[v1.ListSingleCommandPermissionsAgentRequest]) (*connect.Response[v1.ListSingleCommandPermissionsAgentResponse], error) {
-	return connect.NewResponse(&v1.ListSingleCommandPermissionsAgentResponse{
+func (m *mockAgentManagerClient) ListSingleCommandPermissions(_ context.Context, _ *v1.ListSingleCommandPermissionsAgentRequest) (*v1.ListSingleCommandPermissionsAgentResponse, error) {
+	return &v1.ListSingleCommandPermissionsAgentResponse{
 		Permissions: m.listPermissions,
-	}), nil
+	}, nil
 }
 
-func (m *mockAgentManagerClient) GetInteractionResponse(_ context.Context, _ *connect.Request[v1.GetInteractionResponseRequest]) (*connect.Response[v1.GetInteractionResponseResponse], error) {
-	return connect.NewResponse(&v1.GetInteractionResponseResponse{}), nil
+func (m *mockAgentManagerClient) GetInteractionResponse(_ context.Context, _ *v1.GetInteractionResponseRequest) (*v1.GetInteractionResponseResponse, error) {
+	return &v1.GetInteractionResponseResponse{}, nil
 }
 
-func (m *mockAgentManagerClient) Subscribe(_ context.Context, _ *connect.Request[v1.AgentManagerSubscribeRequest]) (*connect.ServerStreamForClient[v1.AgentCommand], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, nil)
+func (m *mockAgentManagerClient) Subscribe(_ context.Context, _ *v1.AgentManagerSubscribeRequest) (taskguildv1connect.AgentManagerServiceSubscribeClientStream, error) {
+	return taskguildv1connect.AgentManagerServiceSubscribeClientStream{}, connect.NewError(connect.CodeUnimplemented, "")
 }
 
-func (m *mockAgentManagerClient) Heartbeat(_ context.Context, _ *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error) {
-	return connect.NewResponse(&v1.HeartbeatResponse{}), nil
+func (m *mockAgentManagerClient) Heartbeat(_ context.Context, _ *v1.HeartbeatRequest) (*v1.HeartbeatResponse, error) {
+	return &v1.HeartbeatResponse{}, nil
 }
 
-func (m *mockAgentManagerClient) ClaimTask(_ context.Context, _ *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error) {
-	return connect.NewResponse(&v1.ClaimTaskResponse{}), nil
+func (m *mockAgentManagerClient) ClaimTask(_ context.Context, _ *v1.ClaimTaskRequest) (*v1.ClaimTaskResponse, error) {
+	return &v1.ClaimTaskResponse{}, nil
 }
 
-func (m *mockAgentManagerClient) ReportTaskResult(_ context.Context, _ *connect.Request[v1.ReportTaskResultRequest]) (*connect.Response[v1.ReportTaskResultResponse], error) {
-	return connect.NewResponse(&v1.ReportTaskResultResponse{}), nil
+func (m *mockAgentManagerClient) ReportTaskResult(_ context.Context, _ *v1.ReportTaskResultRequest) (*v1.ReportTaskResultResponse, error) {
+	return &v1.ReportTaskResultResponse{}, nil
 }
 
-func (m *mockAgentManagerClient) ReportAgentStatus(_ context.Context, _ *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error) {
-	return connect.NewResponse(&v1.ReportAgentStatusResponse{}), nil
+func (m *mockAgentManagerClient) ReportAgentStatus(_ context.Context, _ *v1.ReportAgentStatusRequest) (*v1.ReportAgentStatusResponse, error) {
+	return &v1.ReportAgentStatusResponse{}, nil
 }
 
-func (m *mockAgentManagerClient) SyncPermissions(_ context.Context, _ *connect.Request[v1.SyncPermissionsRequest]) (*connect.Response[v1.SyncPermissionsResponse], error) {
-	return connect.NewResponse(&v1.SyncPermissionsResponse{
+func (m *mockAgentManagerClient) SyncPermissions(_ context.Context, _ *v1.SyncPermissionsRequest) (*v1.SyncPermissionsResponse, error) {
+	return &v1.SyncPermissionsResponse{
 		Permissions: &v1.PermissionSet{},
-	}), nil
+	}, nil
 }
 
-func (m *mockAgentManagerClient) SyncAgents(_ context.Context, _ *connect.Request[v1.SyncAgentsRequest]) (*connect.Response[v1.SyncAgentsResponse], error) {
-	return connect.NewResponse(&v1.SyncAgentsResponse{}), nil
+func (m *mockAgentManagerClient) SyncAgents(_ context.Context, _ *v1.SyncAgentsRequest) (*v1.SyncAgentsResponse, error) {
+	return &v1.SyncAgentsResponse{}, nil
 }
 
-func (m *mockAgentManagerClient) SyncScripts(_ context.Context, _ *connect.Request[v1.SyncScriptsRequest]) (*connect.Response[v1.SyncScriptsResponse], error) {
-	return connect.NewResponse(&v1.SyncScriptsResponse{}), nil
+func (m *mockAgentManagerClient) SyncScripts(_ context.Context, _ *v1.SyncScriptsRequest) (*v1.SyncScriptsResponse, error) {
+	return &v1.SyncScriptsResponse{}, nil
 }
 
-func (m *mockAgentManagerClient) ReportWorktreeList(_ context.Context, _ *connect.Request[v1.ReportWorktreeListRequest]) (*connect.Response[v1.ReportWorktreeListResponse], error) {
-	return connect.NewResponse(&v1.ReportWorktreeListResponse{}), nil
+func (m *mockAgentManagerClient) ReportWorktreeList(_ context.Context, _ *v1.ReportWorktreeListRequest) (*v1.ReportWorktreeListResponse, error) {
+	return &v1.ReportWorktreeListResponse{}, nil
 }
 
-func (m *mockAgentManagerClient) ReportWorktreeDeleteResult(_ context.Context, _ *connect.Request[v1.ReportWorktreeDeleteResultRequest]) (*connect.Response[v1.ReportWorktreeDeleteResultResponse], error) {
-	return connect.NewResponse(&v1.ReportWorktreeDeleteResultResponse{}), nil
+func (m *mockAgentManagerClient) ReportWorktreeDeleteResult(_ context.Context, _ *v1.ReportWorktreeDeleteResultRequest) (*v1.ReportWorktreeDeleteResultResponse, error) {
+	return &v1.ReportWorktreeDeleteResultResponse{}, nil
 }
 
-func (m *mockAgentManagerClient) ReportGitPullMainResult(_ context.Context, _ *connect.Request[v1.ReportGitPullMainResultRequest]) (*connect.Response[v1.ReportGitPullMainResultResponse], error) {
-	return connect.NewResponse(&v1.ReportGitPullMainResultResponse{}), nil
+func (m *mockAgentManagerClient) ReportGitPullMainResult(_ context.Context, _ *v1.ReportGitPullMainResultRequest) (*v1.ReportGitPullMainResultResponse, error) {
+	return &v1.ReportGitPullMainResultResponse{}, nil
 }
 
-func (m *mockAgentManagerClient) SyncClaudeSettings(_ context.Context, _ *connect.Request[v1.SyncClaudeSettingsAgentRequest]) (*connect.Response[v1.SyncClaudeSettingsAgentResponse], error) {
-	return connect.NewResponse(&v1.SyncClaudeSettingsAgentResponse{
+func (m *mockAgentManagerClient) SyncClaudeSettings(_ context.Context, _ *v1.SyncClaudeSettingsAgentRequest) (*v1.SyncClaudeSettingsAgentResponse, error) {
+	return &v1.SyncClaudeSettingsAgentResponse{
 		Settings: &v1.ClaudeSettings{},
-	}), nil
+	}, nil
 }
 
 func TestHandlePermissionRequest_BashAutoAllow(t *testing.T) {

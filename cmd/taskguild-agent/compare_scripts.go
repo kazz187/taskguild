@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"connectrpc.com/connect"
-
 	"github.com/kazz187/taskguild/internal/script"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
@@ -82,11 +80,11 @@ func handleCompareScripts(ctx context.Context, client taskguildv1connect.AgentMa
 	slog.Info("script comparison complete", "request_id", requestID, "total_diffs", len(diffs))
 
 	// Report diffs to server.
-	_, err := client.ReportScriptComparison(ctx, connect.NewRequest(&v1.ReportScriptComparisonRequest{
+	_, err := client.ReportScriptComparison(ctx, &v1.ReportScriptComparisonRequest{
 		RequestId:   requestID,
 		ProjectName: cfg.ProjectName,
 		Diffs:       diffs,
-	}))
+	})
 	if err != nil {
 		slog.Error("failed to report script comparison", "request_id", requestID, "error", err)
 	}

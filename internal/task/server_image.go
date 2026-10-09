@@ -2,30 +2,28 @@ package task
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 )
 
-func (s *Server) UploadTaskImage(ctx context.Context, req *connect.Request[taskguildv1.UploadTaskImageRequest]) (*connect.Response[taskguildv1.UploadTaskImageResponse], error) {
+func (s *Server) UploadTaskImage(ctx context.Context, req *taskguildv1.UploadTaskImageRequest) (*taskguildv1.UploadTaskImageResponse, error) {
 	if s.imageStore == nil {
-		return nil, connect.NewError(connect.CodeUnimplemented, errors.New("image storage not configured"))
+		return nil, connect.NewError(connect.CodeUnimplemented, "image storage not configured")
 	}
 
-	msg := req.Msg
+	msg := req
 
 	// Validate media type.
 	if !ValidImageMediaTypes[msg.GetMediaType()] {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unsupported media type: %s", msg.GetMediaType()))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "unsupported media type: %s", msg.GetMediaType())
 	}
 
 	// Validate size.
 	if len(msg.GetData()) > MaxImageSizeBytes {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("image too large: %d bytes (max %d)", len(msg.GetData()), MaxImageSizeBytes))
+		return nil, connect.Errorf(connect.CodeInvalidArgument, "image too large: %d bytes (max %d)", len(msg.GetData()), MaxImageSizeBytes)
 	}
 
 	// Look up task to get project ID.
@@ -36,48 +34,48 @@ func (s *Server) UploadTaskImage(ctx context.Context, req *connect.Request[taskg
 
 	meta, err := s.imageStore.Upload(ctx, t.ProjectID, t.ID, msg.GetFilename(), msg.GetMediaType(), msg.GetData())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("upload image: %w", err))
+		return nil, connect.Errorf(connect.CodeInternal, "upload image: %v", err).WithCause(err)
 	}
 
-	return connect.NewResponse(&taskguildv1.UploadTaskImageResponse{
+	return &taskguildv1.UploadTaskImageResponse{
 		Image: imageMetaToProto(meta),
-	}), nil
+	}, nil
 }
 
-func (s *Server) GetTaskImage(ctx context.Context, req *connect.Request[taskguildv1.GetTaskImageRequest]) (*connect.Response[taskguildv1.GetTaskImageResponse], error) {
+func (s *Server) GetTaskImage(ctx context.Context, req *taskguildv1.GetTaskImageRequest) (*taskguildv1.GetTaskImageResponse, error) {
 	if s.imageStore == nil {
-		return nil, connect.NewError(connect.CodeUnimplemented, errors.New("image storage not configured"))
+		return nil, connect.NewError(connect.CodeUnimplemented, "image storage not configured")
 	}
 
-	t, err := s.repo.Get(ctx, req.Msg.GetTaskId())
+	t, err := s.repo.Get(ctx, req.GetTaskId())
 	if err != nil {
 		return nil, err
 	}
 
-	meta, data, err := s.imageStore.Get(ctx, t.ProjectID, t.ID, req.Msg.GetImageId())
+	meta, data, err := s.imageStore.Get(ctx, t.ProjectID, t.ID, req.GetImageId())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("image not found: %w", err))
+		return nil, connect.Errorf(connect.CodeNotFound, "image not found: %v", err).WithCause(err)
 	}
 
-	return connect.NewResponse(&taskguildv1.GetTaskImageResponse{
+	return &taskguildv1.GetTaskImageResponse{
 		Image: imageMetaToProto(meta),
 		Data:  data,
-	}), nil
+	}, nil
 }
 
-func (s *Server) ListTaskImages(ctx context.Context, req *connect.Request[taskguildv1.ListTaskImagesRequest]) (*connect.Response[taskguildv1.ListTaskImagesResponse], error) {
+func (s *Server) ListTaskImages(ctx context.Context, req *taskguildv1.ListTaskImagesRequest) (*taskguildv1.ListTaskImagesResponse, error) {
 	if s.imageStore == nil {
-		return nil, connect.NewError(connect.CodeUnimplemented, errors.New("image storage not configured"))
+		return nil, connect.NewError(connect.CodeUnimplemented, "image storage not configured")
 	}
 
-	t, err := s.repo.Get(ctx, req.Msg.GetTaskId())
+	t, err := s.repo.Get(ctx, req.GetTaskId())
 	if err != nil {
 		return nil, err
 	}
 
 	metas, err := s.imageStore.List(ctx, t.ProjectID, t.ID)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("list images: %w", err))
+		return nil, connect.Errorf(connect.CodeInternal, "list images: %v", err).WithCause(err)
 	}
 
 	images := make([]*taskguildv1.TaskImage, len(metas))
@@ -85,26 +83,26 @@ func (s *Server) ListTaskImages(ctx context.Context, req *connect.Request[taskgu
 		images[i] = imageMetaToProto(m)
 	}
 
-	return connect.NewResponse(&taskguildv1.ListTaskImagesResponse{
+	return &taskguildv1.ListTaskImagesResponse{
 		Images: images,
-	}), nil
+	}, nil
 }
 
-func (s *Server) DeleteTaskImage(ctx context.Context, req *connect.Request[taskguildv1.DeleteTaskImageRequest]) (*connect.Response[taskguildv1.DeleteTaskImageResponse], error) {
+func (s *Server) DeleteTaskImage(ctx context.Context, req *taskguildv1.DeleteTaskImageRequest) (*taskguildv1.DeleteTaskImageResponse, error) {
 	if s.imageStore == nil {
-		return nil, connect.NewError(connect.CodeUnimplemented, errors.New("image storage not configured"))
+		return nil, connect.NewError(connect.CodeUnimplemented, "image storage not configured")
 	}
 
-	t, err := s.repo.Get(ctx, req.Msg.GetTaskId())
+	t, err := s.repo.Get(ctx, req.GetTaskId())
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.imageStore.Delete(ctx, t.ProjectID, t.ID, req.Msg.GetImageId()); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("delete image: %w", err))
+	if err := s.imageStore.Delete(ctx, t.ProjectID, t.ID, req.GetImageId()); err != nil {
+		return nil, connect.Errorf(connect.CodeInternal, "delete image: %v", err).WithCause(err)
 	}
 
-	return connect.NewResponse(&taskguildv1.DeleteTaskImageResponse{}), nil
+	return &taskguildv1.DeleteTaskImageResponse{}, nil
 }
 
 func imageMetaToProto(m *ImageMeta) *taskguildv1.TaskImage {

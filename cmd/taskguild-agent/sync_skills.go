@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"connectrpc.com/connect"
-
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -25,15 +23,15 @@ func syncSkills(ctx context.Context, client taskguildv1connect.AgentManagerServi
 		return
 	}
 
-	resp, err := client.SyncSkills(ctx, connect.NewRequest(&v1.SyncSkillsRequest{
+	resp, err := client.SyncSkills(ctx, &v1.SyncSkillsRequest{
 		ProjectName: cfg.ProjectName,
-	}))
+	})
 	if err != nil {
 		slog.Error("skill sync failed", "error", err)
 		return
 	}
 
-	skills := resp.Msg.GetSkills()
+	skills := resp.GetSkills()
 	slog.Info("syncing skills from server", "count", len(skills))
 
 	skillsDir := filepath.Join(cfg.WorkDir, ".claude", "skills")

@@ -15,8 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"connectrpc.com/connect"
-
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	"github.com/kazz187/taskguild/pkg/clog"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
@@ -211,10 +209,10 @@ func applyHookMetadata(ctx context.Context, taskID string, output string, taskCl
 		logger.Debug("hook metadata", "key", key, "value", value)
 	}
 
-	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
+	_, err := taskClient.UpdateTask(ctx, &v1.UpdateTaskRequest{
 		Id:       taskID,
 		Metadata: meta,
-	}))
+	})
 	if err != nil {
 		logger.Error("failed to update task metadata from hook", "error", err)
 	}

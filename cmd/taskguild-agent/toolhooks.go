@@ -8,8 +8,6 @@ import (
 	"os"
 	"strings"
 
-	"connectrpc.com/connect"
-
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
@@ -332,7 +330,7 @@ func handleExitPlanModeApproval(
 	}
 
 	// Create an interaction for user approval.
-	resp, err := client.CreateInteraction(ctx, connect.NewRequest(&v1.CreateInteractionRequest{
+	resp, err := client.CreateInteraction(ctx, &v1.CreateInteractionRequest{
 		TaskId:      taskID,
 		AgentId:     agentManagerID,
 		Type:        v1.InteractionType_INTERACTION_TYPE_QUESTION,
@@ -342,14 +340,14 @@ func handleExitPlanModeApproval(
 			{Label: "Approve", Value: optionApprove, Description: "Approve the plan and proceed"},
 			{Label: "Reject", Value: optionReject, Description: "Reject the plan with feedback"},
 		},
-	}))
+	})
 	if err != nil {
 		logger.Error("failed to create plan approval interaction", "error", err)
 		// On failure, allow ExitPlanMode to proceed rather than blocking indefinitely.
 		return claudeagent.HookOutput{}, nil
 	}
 
-	interactionID := resp.Msg.GetInteraction().GetId()
+	interactionID := resp.GetInteraction().GetId()
 	logger.Info("waiting for plan approval", "interaction_id", interactionID)
 
 	ch := waiter.Register(interactionID)
@@ -393,9 +391,9 @@ func handleExitPlanModeApproval(
 		// User sent a free-form message — treat as feedback and block.
 		logger.Info("user sent message during plan approval", "message_id", msg.GetId())
 
-		if _, expErr := interClient.ExpireInteraction(ctx, connect.NewRequest(&v1.ExpireInteractionRequest{
+		if _, expErr := interClient.ExpireInteraction(ctx, &v1.ExpireInteractionRequest{
 			Id: interactionID,
-		})); expErr != nil {
+		}); expErr != nil {
 			logger.Error("failed to expire plan approval interaction", "error", expErr)
 		}
 

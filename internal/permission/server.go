@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
@@ -48,24 +48,24 @@ func (s *Server) notifyChange(projectID string) {
 }
 
 // GetPermissions returns the permission set for a project.
-func (s *Server) GetPermissions(ctx context.Context, req *connect.Request[taskguildv1.GetPermissionsRequest]) (*connect.Response[taskguildv1.GetPermissionsResponse], error) {
-	ps, err := s.repo.Get(ctx, req.Msg.GetProjectId())
+func (s *Server) GetPermissions(ctx context.Context, req *taskguildv1.GetPermissionsRequest) (*taskguildv1.GetPermissionsResponse, error) {
+	ps, err := s.repo.Get(ctx, req.GetProjectId())
 	if err != nil {
 		return nil, err
 	}
 
-	return connect.NewResponse(&taskguildv1.GetPermissionsResponse{
+	return &taskguildv1.GetPermissionsResponse{
 		Permissions: toProto(ps),
-	}), nil
+	}, nil
 }
 
 // UpdatePermissions replaces the full permission set for a project.
-func (s *Server) UpdatePermissions(ctx context.Context, req *connect.Request[taskguildv1.UpdatePermissionsRequest]) (*connect.Response[taskguildv1.UpdatePermissionsResponse], error) {
+func (s *Server) UpdatePermissions(ctx context.Context, req *taskguildv1.UpdatePermissionsRequest) (*taskguildv1.UpdatePermissionsResponse, error) {
 	ps := &PermissionSet{
-		ProjectID: req.Msg.GetProjectId(),
-		Allow:     dedup(req.Msg.GetAllow()),
-		Ask:       dedup(req.Msg.GetAsk()),
-		Deny:      dedup(req.Msg.GetDeny()),
+		ProjectID: req.GetProjectId(),
+		Allow:     dedup(req.GetAllow()),
+		Ask:       dedup(req.GetAsk()),
+		Deny:      dedup(req.GetDeny()),
 		UpdatedAt: time.Now(),
 	}
 
@@ -76,19 +76,19 @@ func (s *Server) UpdatePermissions(ctx context.Context, req *connect.Request[tas
 
 	s.notifyChange(ps.ProjectID)
 
-	return connect.NewResponse(&taskguildv1.UpdatePermissionsResponse{
+	return &taskguildv1.UpdatePermissionsResponse{
 		Permissions: toProto(ps),
-	}), nil
+	}, nil
 }
 
 // SyncPermissionsFromDir reads .claude/settings.json from the given directory
 // and merges its permission rules into the stored set using union strategy.
-func (s *Server) SyncPermissionsFromDir(ctx context.Context, req *connect.Request[taskguildv1.SyncPermissionsFromDirRequest]) (*connect.Response[taskguildv1.SyncPermissionsFromDirResponse], error) {
-	dir := req.Msg.GetDirectory()
+func (s *Server) SyncPermissionsFromDir(ctx context.Context, req *taskguildv1.SyncPermissionsFromDirRequest) (*taskguildv1.SyncPermissionsFromDirResponse, error) {
+	dir := req.GetDirectory()
 	if (dir == "" || dir == ".") && s.resolver != nil {
-		resolved, err := s.resolver.ResolveWorkDir(req.Msg.GetProjectId())
+		resolved, err := s.resolver.ResolveWorkDir(req.GetProjectId())
 		if err != nil {
-			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("failed to resolve work directory: %w", err))
+			return nil, connect.Errorf(connect.CodeFailedPrecondition, "failed to resolve work directory: %v", err).WithCause(err)
 		}
 
 		dir = resolved
@@ -107,18 +107,18 @@ func (s *Server) SyncPermissionsFromDir(ctx context.Context, req *connect.Reques
 
 	// If no local permissions found, return existing stored permissions as-is.
 	if len(localAllow) == 0 && len(localAsk) == 0 && len(localDeny) == 0 {
-		stored, err := s.repo.Get(ctx, req.Msg.GetProjectId())
+		stored, err := s.repo.Get(ctx, req.GetProjectId())
 		if err != nil {
 			return nil, err
 		}
 
-		return connect.NewResponse(&taskguildv1.SyncPermissionsFromDirResponse{
+		return &taskguildv1.SyncPermissionsFromDirResponse{
 			Permissions: toProto(stored),
-		}), nil
+		}, nil
 	}
 
 	// Get stored permissions and merge with local.
-	stored, err := s.repo.Get(ctx, req.Msg.GetProjectId())
+	stored, err := s.repo.Get(ctx, req.GetProjectId())
 	if err != nil {
 		return nil, err
 	}
@@ -130,9 +130,9 @@ func (s *Server) SyncPermissionsFromDir(ctx context.Context, req *connect.Reques
 
 	s.notifyChange(merged.ProjectID)
 
-	return connect.NewResponse(&taskguildv1.SyncPermissionsFromDirResponse{
+	return &taskguildv1.SyncPermissionsFromDirResponse{
 		Permissions: toProto(merged),
-	}), nil
+	}, nil
 }
 
 // readSettingsPermissions reads and parses permission rules from a .claude/settings.json file.

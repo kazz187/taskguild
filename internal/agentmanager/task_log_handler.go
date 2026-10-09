@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
 
 	"github.com/kazz187/taskguild/internal/eventbus"
@@ -13,13 +12,13 @@ import (
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 )
 
-func (s *Server) ReportTaskLog(ctx context.Context, req *connect.Request[taskguildv1.ReportTaskLogRequest]) (*connect.Response[taskguildv1.ReportTaskLogResponse], error) {
-	if req.Msg.GetTaskId() == "" {
+func (s *Server) ReportTaskLog(ctx context.Context, req *taskguildv1.ReportTaskLogRequest) (*taskguildv1.ReportTaskLogResponse, error) {
+	if req.GetTaskId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "task_id is required", nil).ConnectError()
 	}
 
 	// Look up the task to get ProjectID for storage path construction.
-	t, err := s.taskRepo.Get(ctx, req.Msg.GetTaskId())
+	t, err := s.taskRepo.Get(ctx, req.GetTaskId())
 	if err != nil {
 		return nil, err
 	}
@@ -28,11 +27,11 @@ func (s *Server) ReportTaskLog(ctx context.Context, req *connect.Request[taskgui
 	l := &tasklog.TaskLog{
 		ID:        ulid.Make().String(),
 		ProjectID: t.ProjectID,
-		TaskID:    req.Msg.GetTaskId(),
-		Level:     int32(req.Msg.GetLevel()),
-		Category:  int32(req.Msg.GetCategory()),
-		Message:   req.Msg.GetMessage(),
-		Metadata:  req.Msg.GetMetadata(),
+		TaskID:    req.GetTaskId(),
+		Level:     int32(req.GetLevel()),
+		Category:  int32(req.GetCategory()),
+		Message:   req.GetMessage(),
+		Metadata:  req.GetMetadata(),
 		CreatedAt: now,
 	}
 
@@ -40,7 +39,7 @@ func (s *Server) ReportTaskLog(ctx context.Context, req *connect.Request[taskgui
 		return nil, err
 	}
 
-	eventMeta := map[string]string{eventbus.MetaTaskID: req.Msg.GetTaskId(), eventbus.MetaProjectID: t.ProjectID}
+	eventMeta := map[string]string{eventbus.MetaTaskID: req.GetTaskId(), eventbus.MetaProjectID: t.ProjectID}
 
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_TASK_LOG,
@@ -49,5 +48,5 @@ func (s *Server) ReportTaskLog(ctx context.Context, req *connect.Request[taskgui
 		eventMeta,
 	)
 
-	return connect.NewResponse(&taskguildv1.ReportTaskLogResponse{}), nil
+	return &taskguildv1.ReportTaskLogResponse{}, nil
 }

@@ -6,8 +6,6 @@ import (
 	"strings"
 	"sync"
 
-	"connectrpc.com/connect"
-
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -72,17 +70,17 @@ func (c *permissionCache) AddAndSync(ctx context.Context, newRules []string) {
 	slog.Info("permission cache: added rules, syncing to backend", "new_rules", len(newRules))
 
 	// Sync to backend – send only the new rules; the backend merges them.
-	resp, err := c.client.SyncPermissions(ctx, connect.NewRequest(&v1.SyncPermissionsRequest{
+	resp, err := c.client.SyncPermissions(ctx, &v1.SyncPermissionsRequest{
 		ProjectName: c.projectName,
 		LocalAllow:  newRules,
-	}))
+	})
 	if err != nil {
 		slog.Error("permission cache: failed to sync rules to backend", "error", err)
 		return
 	}
 
 	// Replace cache with the backend's authoritative merged list.
-	merged := resp.Msg.GetPermissions()
+	merged := resp.GetPermissions()
 
 	c.mu.Lock()
 	c.allowRules = merged.GetAllow()

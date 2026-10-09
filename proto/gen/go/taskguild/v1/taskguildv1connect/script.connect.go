@@ -5,377 +5,467 @@
 package taskguildv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// ScriptServiceName is the fully-qualified name of the ScriptService service.
 	ScriptServiceName = "taskguild.v1.ScriptService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// ScriptServiceCreateScriptProcedure is the fully-qualified name of the ScriptService's
-	// CreateScript RPC.
+	// ScriptServiceCreateScriptProcedure is the procedure name of the ScriptService's CreateScript RPC.
 	ScriptServiceCreateScriptProcedure = "/taskguild.v1.ScriptService/CreateScript"
-	// ScriptServiceGetScriptProcedure is the fully-qualified name of the ScriptService's GetScript RPC.
+	// ScriptServiceGetScriptProcedure is the procedure name of the ScriptService's GetScript RPC.
 	ScriptServiceGetScriptProcedure = "/taskguild.v1.ScriptService/GetScript"
-	// ScriptServiceListScriptsProcedure is the fully-qualified name of the ScriptService's ListScripts
-	// RPC.
+	// ScriptServiceListScriptsProcedure is the procedure name of the ScriptService's ListScripts RPC.
 	ScriptServiceListScriptsProcedure = "/taskguild.v1.ScriptService/ListScripts"
-	// ScriptServiceUpdateScriptProcedure is the fully-qualified name of the ScriptService's
-	// UpdateScript RPC.
+	// ScriptServiceUpdateScriptProcedure is the procedure name of the ScriptService's UpdateScript RPC.
 	ScriptServiceUpdateScriptProcedure = "/taskguild.v1.ScriptService/UpdateScript"
-	// ScriptServiceDeleteScriptProcedure is the fully-qualified name of the ScriptService's
-	// DeleteScript RPC.
+	// ScriptServiceDeleteScriptProcedure is the procedure name of the ScriptService's DeleteScript RPC.
 	ScriptServiceDeleteScriptProcedure = "/taskguild.v1.ScriptService/DeleteScript"
-	// ScriptServiceSyncScriptsFromDirProcedure is the fully-qualified name of the ScriptService's
+	// ScriptServiceSyncScriptsFromDirProcedure is the procedure name of the ScriptService's
 	// SyncScriptsFromDir RPC.
 	ScriptServiceSyncScriptsFromDirProcedure = "/taskguild.v1.ScriptService/SyncScriptsFromDir"
-	// ScriptServiceExecuteScriptProcedure is the fully-qualified name of the ScriptService's
-	// ExecuteScript RPC.
+	// ScriptServiceExecuteScriptProcedure is the procedure name of the ScriptService's ExecuteScript
+	// RPC.
 	ScriptServiceExecuteScriptProcedure = "/taskguild.v1.ScriptService/ExecuteScript"
-	// ScriptServiceStopScriptExecutionProcedure is the fully-qualified name of the ScriptService's
+	// ScriptServiceStopScriptExecutionProcedure is the procedure name of the ScriptService's
 	// StopScriptExecution RPC.
 	ScriptServiceStopScriptExecutionProcedure = "/taskguild.v1.ScriptService/StopScriptExecution"
-	// ScriptServiceStreamScriptExecutionProcedure is the fully-qualified name of the ScriptService's
+	// ScriptServiceStreamScriptExecutionProcedure is the procedure name of the ScriptService's
 	// StreamScriptExecution RPC.
 	ScriptServiceStreamScriptExecutionProcedure = "/taskguild.v1.ScriptService/StreamScriptExecution"
-	// ScriptServiceListActiveExecutionsProcedure is the fully-qualified name of the ScriptService's
+	// ScriptServiceListActiveExecutionsProcedure is the procedure name of the ScriptService's
 	// ListActiveExecutions RPC.
 	ScriptServiceListActiveExecutionsProcedure = "/taskguild.v1.ScriptService/ListActiveExecutions"
 )
 
+var (
+	scriptServiceCreateScriptSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_script_proto.Services().ByName("ScriptService").Methods().ByName("CreateScript"),
+			Procedure:  ScriptServiceCreateScriptProcedure,
+		}
+	})
+	scriptServiceGetScriptSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_script_proto.Services().ByName("ScriptService").Methods().ByName("GetScript"),
+			Procedure:  ScriptServiceGetScriptProcedure,
+		}
+	})
+	scriptServiceListScriptsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_script_proto.Services().ByName("ScriptService").Methods().ByName("ListScripts"),
+			Procedure:  ScriptServiceListScriptsProcedure,
+		}
+	})
+	scriptServiceUpdateScriptSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_script_proto.Services().ByName("ScriptService").Methods().ByName("UpdateScript"),
+			Procedure:  ScriptServiceUpdateScriptProcedure,
+		}
+	})
+	scriptServiceDeleteScriptSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_script_proto.Services().ByName("ScriptService").Methods().ByName("DeleteScript"),
+			Procedure:  ScriptServiceDeleteScriptProcedure,
+		}
+	})
+	scriptServiceSyncScriptsFromDirSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_script_proto.Services().ByName("ScriptService").Methods().ByName("SyncScriptsFromDir"),
+			Procedure:  ScriptServiceSyncScriptsFromDirProcedure,
+		}
+	})
+	scriptServiceExecuteScriptSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_script_proto.Services().ByName("ScriptService").Methods().ByName("ExecuteScript"),
+			Procedure:  ScriptServiceExecuteScriptProcedure,
+		}
+	})
+	scriptServiceStopScriptExecutionSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_script_proto.Services().ByName("ScriptService").Methods().ByName("StopScriptExecution"),
+			Procedure:  ScriptServiceStopScriptExecutionProcedure,
+		}
+	})
+	scriptServiceStreamScriptExecutionSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeServer,
+			Schema:     v1.File_taskguild_v1_script_proto.Services().ByName("ScriptService").Methods().ByName("StreamScriptExecution"),
+			Procedure:  ScriptServiceStreamScriptExecutionProcedure,
+		}
+	})
+	scriptServiceListActiveExecutionsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_script_proto.Services().ByName("ScriptService").Methods().ByName("ListActiveExecutions"),
+			Procedure:  ScriptServiceListActiveExecutionsProcedure,
+		}
+	})
+)
+
 // ScriptServiceClient is a client for the taskguild.v1.ScriptService service.
 type ScriptServiceClient interface {
-	CreateScript(context.Context, *connect.Request[v1.CreateScriptRequest]) (*connect.Response[v1.CreateScriptResponse], error)
-	GetScript(context.Context, *connect.Request[v1.GetScriptRequest]) (*connect.Response[v1.GetScriptResponse], error)
-	ListScripts(context.Context, *connect.Request[v1.ListScriptsRequest]) (*connect.Response[v1.ListScriptsResponse], error)
-	UpdateScript(context.Context, *connect.Request[v1.UpdateScriptRequest]) (*connect.Response[v1.UpdateScriptResponse], error)
-	DeleteScript(context.Context, *connect.Request[v1.DeleteScriptRequest]) (*connect.Response[v1.DeleteScriptResponse], error)
+	CreateScript(context.Context, *v1.CreateScriptRequest) (*v1.CreateScriptResponse, error)
+	GetScript(context.Context, *v1.GetScriptRequest) (*v1.GetScriptResponse, error)
+	ListScripts(context.Context, *v1.ListScriptsRequest) (*v1.ListScriptsResponse, error)
+	UpdateScript(context.Context, *v1.UpdateScriptRequest) (*v1.UpdateScriptResponse, error)
+	DeleteScript(context.Context, *v1.DeleteScriptRequest) (*v1.DeleteScriptResponse, error)
 	// SyncScriptsFromDir scans the given directory for .taskguild/scripts/* files
 	// and creates/updates scripts for the specified project.
-	SyncScriptsFromDir(context.Context, *connect.Request[v1.SyncScriptsFromDirRequest]) (*connect.Response[v1.SyncScriptsFromDirResponse], error)
+	SyncScriptsFromDir(context.Context, *v1.SyncScriptsFromDirRequest) (*v1.SyncScriptsFromDirResponse, error)
 	// ExecuteScript triggers execution of a script on a connected agent-manager.
-	ExecuteScript(context.Context, *connect.Request[v1.ExecuteScriptRequest]) (*connect.Response[v1.ExecuteScriptResponse], error)
+	ExecuteScript(context.Context, *v1.ExecuteScriptRequest) (*v1.ExecuteScriptResponse, error)
 	// StopScriptExecution stops a running script execution.
-	StopScriptExecution(context.Context, *connect.Request[v1.StopScriptExecutionRequest]) (*connect.Response[v1.StopScriptExecutionResponse], error)
+	StopScriptExecution(context.Context, *v1.StopScriptExecutionRequest) (*v1.StopScriptExecutionResponse, error)
 	// StreamScriptExecution streams real-time output from a script execution.
-	StreamScriptExecution(context.Context, *connect.Request[v1.StreamScriptExecutionRequest]) (*connect.ServerStreamForClient[v1.ScriptExecutionEvent], error)
+	StreamScriptExecution(context.Context, *v1.StreamScriptExecutionRequest) (ScriptServiceStreamScriptExecutionClientStream, error)
 	// ListActiveExecutions lists currently running and recently completed script executions.
-	ListActiveExecutions(context.Context, *connect.Request[v1.ListActiveExecutionsRequest]) (*connect.Response[v1.ListActiveExecutionsResponse], error)
+	ListActiveExecutions(context.Context, *v1.ListActiveExecutionsRequest) (*v1.ListActiveExecutionsResponse, error)
 }
 
-// NewScriptServiceClient constructs a client for the taskguild.v1.ScriptService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewScriptServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) ScriptServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	scriptServiceMethods := v1.File_taskguild_v1_script_proto.Services().ByName("ScriptService").Methods()
-	return &scriptServiceClient{
-		createScript: connect.NewClient[v1.CreateScriptRequest, v1.CreateScriptResponse](
-			httpClient,
-			baseURL+ScriptServiceCreateScriptProcedure,
-			connect.WithSchema(scriptServiceMethods.ByName("CreateScript")),
-			connect.WithClientOptions(opts...),
-		),
-		getScript: connect.NewClient[v1.GetScriptRequest, v1.GetScriptResponse](
-			httpClient,
-			baseURL+ScriptServiceGetScriptProcedure,
-			connect.WithSchema(scriptServiceMethods.ByName("GetScript")),
-			connect.WithClientOptions(opts...),
-		),
-		listScripts: connect.NewClient[v1.ListScriptsRequest, v1.ListScriptsResponse](
-			httpClient,
-			baseURL+ScriptServiceListScriptsProcedure,
-			connect.WithSchema(scriptServiceMethods.ByName("ListScripts")),
-			connect.WithClientOptions(opts...),
-		),
-		updateScript: connect.NewClient[v1.UpdateScriptRequest, v1.UpdateScriptResponse](
-			httpClient,
-			baseURL+ScriptServiceUpdateScriptProcedure,
-			connect.WithSchema(scriptServiceMethods.ByName("UpdateScript")),
-			connect.WithClientOptions(opts...),
-		),
-		deleteScript: connect.NewClient[v1.DeleteScriptRequest, v1.DeleteScriptResponse](
-			httpClient,
-			baseURL+ScriptServiceDeleteScriptProcedure,
-			connect.WithSchema(scriptServiceMethods.ByName("DeleteScript")),
-			connect.WithClientOptions(opts...),
-		),
-		syncScriptsFromDir: connect.NewClient[v1.SyncScriptsFromDirRequest, v1.SyncScriptsFromDirResponse](
-			httpClient,
-			baseURL+ScriptServiceSyncScriptsFromDirProcedure,
-			connect.WithSchema(scriptServiceMethods.ByName("SyncScriptsFromDir")),
-			connect.WithClientOptions(opts...),
-		),
-		executeScript: connect.NewClient[v1.ExecuteScriptRequest, v1.ExecuteScriptResponse](
-			httpClient,
-			baseURL+ScriptServiceExecuteScriptProcedure,
-			connect.WithSchema(scriptServiceMethods.ByName("ExecuteScript")),
-			connect.WithClientOptions(opts...),
-		),
-		stopScriptExecution: connect.NewClient[v1.StopScriptExecutionRequest, v1.StopScriptExecutionResponse](
-			httpClient,
-			baseURL+ScriptServiceStopScriptExecutionProcedure,
-			connect.WithSchema(scriptServiceMethods.ByName("StopScriptExecution")),
-			connect.WithClientOptions(opts...),
-		),
-		streamScriptExecution: connect.NewClient[v1.StreamScriptExecutionRequest, v1.ScriptExecutionEvent](
-			httpClient,
-			baseURL+ScriptServiceStreamScriptExecutionProcedure,
-			connect.WithSchema(scriptServiceMethods.ByName("StreamScriptExecution")),
-			connect.WithClientOptions(opts...),
-		),
-		listActiveExecutions: connect.NewClient[v1.ListActiveExecutionsRequest, v1.ListActiveExecutionsResponse](
-			httpClient,
-			baseURL+ScriptServiceListActiveExecutionsProcedure,
-			connect.WithSchema(scriptServiceMethods.ByName("ListActiveExecutions")),
-			connect.WithClientOptions(opts...),
-		),
+// NewScriptServiceClient constructs a client for the taskguild.v1.ScriptService service. Multiple
+// service clients may share a single connect.Client.
+func NewScriptServiceClient(client *connect.Client) ScriptServiceClient {
+	return &scriptServiceClient{client: client}
+}
+
+// ScriptServiceStreamScriptExecutionClientStream is the client stream for the ScriptService's
+// StreamScriptExecution RPC.
+type ScriptServiceStreamScriptExecutionClientStream struct {
+	stream connect.ClientStream
+}
+
+// Receive returns the next response message from the server.
+func (s ScriptServiceStreamScriptExecutionClientStream) Receive() (*v1.ScriptExecutionEvent, error) {
+	var res v1.ScriptExecutionEvent
+	if err := s.stream.Receive(&res); err != nil {
+		return nil, err
 	}
+	return &res, nil
 }
 
-// scriptServiceClient implements ScriptServiceClient.
-type scriptServiceClient struct {
-	createScript          *connect.Client[v1.CreateScriptRequest, v1.CreateScriptResponse]
-	getScript             *connect.Client[v1.GetScriptRequest, v1.GetScriptResponse]
-	listScripts           *connect.Client[v1.ListScriptsRequest, v1.ListScriptsResponse]
-	updateScript          *connect.Client[v1.UpdateScriptRequest, v1.UpdateScriptResponse]
-	deleteScript          *connect.Client[v1.DeleteScriptRequest, v1.DeleteScriptResponse]
-	syncScriptsFromDir    *connect.Client[v1.SyncScriptsFromDirRequest, v1.SyncScriptsFromDirResponse]
-	executeScript         *connect.Client[v1.ExecuteScriptRequest, v1.ExecuteScriptResponse]
-	stopScriptExecution   *connect.Client[v1.StopScriptExecutionRequest, v1.StopScriptExecutionResponse]
-	streamScriptExecution *connect.Client[v1.StreamScriptExecutionRequest, v1.ScriptExecutionEvent]
-	listActiveExecutions  *connect.Client[v1.ListActiveExecutionsRequest, v1.ListActiveExecutionsResponse]
-}
-
-// CreateScript calls taskguild.v1.ScriptService.CreateScript.
-func (c *scriptServiceClient) CreateScript(ctx context.Context, req *connect.Request[v1.CreateScriptRequest]) (*connect.Response[v1.CreateScriptResponse], error) {
-	return c.createScript.CallUnary(ctx, req)
-}
-
-// GetScript calls taskguild.v1.ScriptService.GetScript.
-func (c *scriptServiceClient) GetScript(ctx context.Context, req *connect.Request[v1.GetScriptRequest]) (*connect.Response[v1.GetScriptResponse], error) {
-	return c.getScript.CallUnary(ctx, req)
-}
-
-// ListScripts calls taskguild.v1.ScriptService.ListScripts.
-func (c *scriptServiceClient) ListScripts(ctx context.Context, req *connect.Request[v1.ListScriptsRequest]) (*connect.Response[v1.ListScriptsResponse], error) {
-	return c.listScripts.CallUnary(ctx, req)
-}
-
-// UpdateScript calls taskguild.v1.ScriptService.UpdateScript.
-func (c *scriptServiceClient) UpdateScript(ctx context.Context, req *connect.Request[v1.UpdateScriptRequest]) (*connect.Response[v1.UpdateScriptResponse], error) {
-	return c.updateScript.CallUnary(ctx, req)
-}
-
-// DeleteScript calls taskguild.v1.ScriptService.DeleteScript.
-func (c *scriptServiceClient) DeleteScript(ctx context.Context, req *connect.Request[v1.DeleteScriptRequest]) (*connect.Response[v1.DeleteScriptResponse], error) {
-	return c.deleteScript.CallUnary(ctx, req)
-}
-
-// SyncScriptsFromDir calls taskguild.v1.ScriptService.SyncScriptsFromDir.
-func (c *scriptServiceClient) SyncScriptsFromDir(ctx context.Context, req *connect.Request[v1.SyncScriptsFromDirRequest]) (*connect.Response[v1.SyncScriptsFromDirResponse], error) {
-	return c.syncScriptsFromDir.CallUnary(ctx, req)
-}
-
-// ExecuteScript calls taskguild.v1.ScriptService.ExecuteScript.
-func (c *scriptServiceClient) ExecuteScript(ctx context.Context, req *connect.Request[v1.ExecuteScriptRequest]) (*connect.Response[v1.ExecuteScriptResponse], error) {
-	return c.executeScript.CallUnary(ctx, req)
-}
-
-// StopScriptExecution calls taskguild.v1.ScriptService.StopScriptExecution.
-func (c *scriptServiceClient) StopScriptExecution(ctx context.Context, req *connect.Request[v1.StopScriptExecutionRequest]) (*connect.Response[v1.StopScriptExecutionResponse], error) {
-	return c.stopScriptExecution.CallUnary(ctx, req)
-}
-
-// StreamScriptExecution calls taskguild.v1.ScriptService.StreamScriptExecution.
-func (c *scriptServiceClient) StreamScriptExecution(ctx context.Context, req *connect.Request[v1.StreamScriptExecutionRequest]) (*connect.ServerStreamForClient[v1.ScriptExecutionEvent], error) {
-	return c.streamScriptExecution.CallServerStream(ctx, req)
-}
-
-// ListActiveExecutions calls taskguild.v1.ScriptService.ListActiveExecutions.
-func (c *scriptServiceClient) ListActiveExecutions(ctx context.Context, req *connect.Request[v1.ListActiveExecutionsRequest]) (*connect.Response[v1.ListActiveExecutionsResponse], error) {
-	return c.listActiveExecutions.CallUnary(ctx, req)
+// Close releases the stream's resources. It is idempotent and is typically deferred to clean up a
+// stream abandoned before io.EOF.
+func (s ScriptServiceStreamScriptExecutionClientStream) Close() error {
+	return s.stream.Close()
 }
 
 // ScriptServiceHandler is an implementation of the taskguild.v1.ScriptService service.
 type ScriptServiceHandler interface {
-	CreateScript(context.Context, *connect.Request[v1.CreateScriptRequest]) (*connect.Response[v1.CreateScriptResponse], error)
-	GetScript(context.Context, *connect.Request[v1.GetScriptRequest]) (*connect.Response[v1.GetScriptResponse], error)
-	ListScripts(context.Context, *connect.Request[v1.ListScriptsRequest]) (*connect.Response[v1.ListScriptsResponse], error)
-	UpdateScript(context.Context, *connect.Request[v1.UpdateScriptRequest]) (*connect.Response[v1.UpdateScriptResponse], error)
-	DeleteScript(context.Context, *connect.Request[v1.DeleteScriptRequest]) (*connect.Response[v1.DeleteScriptResponse], error)
+	CreateScript(context.Context, *v1.CreateScriptRequest) (*v1.CreateScriptResponse, error)
+	GetScript(context.Context, *v1.GetScriptRequest) (*v1.GetScriptResponse, error)
+	ListScripts(context.Context, *v1.ListScriptsRequest) (*v1.ListScriptsResponse, error)
+	UpdateScript(context.Context, *v1.UpdateScriptRequest) (*v1.UpdateScriptResponse, error)
+	DeleteScript(context.Context, *v1.DeleteScriptRequest) (*v1.DeleteScriptResponse, error)
 	// SyncScriptsFromDir scans the given directory for .taskguild/scripts/* files
 	// and creates/updates scripts for the specified project.
-	SyncScriptsFromDir(context.Context, *connect.Request[v1.SyncScriptsFromDirRequest]) (*connect.Response[v1.SyncScriptsFromDirResponse], error)
+	SyncScriptsFromDir(context.Context, *v1.SyncScriptsFromDirRequest) (*v1.SyncScriptsFromDirResponse, error)
 	// ExecuteScript triggers execution of a script on a connected agent-manager.
-	ExecuteScript(context.Context, *connect.Request[v1.ExecuteScriptRequest]) (*connect.Response[v1.ExecuteScriptResponse], error)
+	ExecuteScript(context.Context, *v1.ExecuteScriptRequest) (*v1.ExecuteScriptResponse, error)
 	// StopScriptExecution stops a running script execution.
-	StopScriptExecution(context.Context, *connect.Request[v1.StopScriptExecutionRequest]) (*connect.Response[v1.StopScriptExecutionResponse], error)
+	StopScriptExecution(context.Context, *v1.StopScriptExecutionRequest) (*v1.StopScriptExecutionResponse, error)
 	// StreamScriptExecution streams real-time output from a script execution.
-	StreamScriptExecution(context.Context, *connect.Request[v1.StreamScriptExecutionRequest], *connect.ServerStream[v1.ScriptExecutionEvent]) error
+	StreamScriptExecution(context.Context, *v1.StreamScriptExecutionRequest, ScriptServiceStreamScriptExecutionServerStream) error
 	// ListActiveExecutions lists currently running and recently completed script executions.
-	ListActiveExecutions(context.Context, *connect.Request[v1.ListActiveExecutionsRequest]) (*connect.Response[v1.ListActiveExecutionsResponse], error)
+	ListActiveExecutions(context.Context, *v1.ListActiveExecutionsRequest) (*v1.ListActiveExecutionsResponse, error)
 }
 
-// NewScriptServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewScriptServiceHandler(svc ScriptServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	scriptServiceMethods := v1.File_taskguild_v1_script_proto.Services().ByName("ScriptService").Methods()
-	scriptServiceCreateScriptHandler := connect.NewUnaryHandler(
-		ScriptServiceCreateScriptProcedure,
-		svc.CreateScript,
-		connect.WithSchema(scriptServiceMethods.ByName("CreateScript")),
-		connect.WithHandlerOptions(opts...),
+// RegisterScriptServiceHandler registers svc as the taskguild.v1.ScriptService implementation on
+// server.
+func RegisterScriptServiceHandler(server *connect.Server, svc ScriptServiceHandler) {
+	adapter := scriptServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: scriptServiceCreateScriptSpec(), Handler: adapter.createScript},
+		connect.Method{Spec: scriptServiceGetScriptSpec(), Handler: adapter.getScript},
+		connect.Method{Spec: scriptServiceListScriptsSpec(), Handler: adapter.listScripts},
+		connect.Method{Spec: scriptServiceUpdateScriptSpec(), Handler: adapter.updateScript},
+		connect.Method{Spec: scriptServiceDeleteScriptSpec(), Handler: adapter.deleteScript},
+		connect.Method{Spec: scriptServiceSyncScriptsFromDirSpec(), Handler: adapter.syncScriptsFromDir},
+		connect.Method{Spec: scriptServiceExecuteScriptSpec(), Handler: adapter.executeScript},
+		connect.Method{Spec: scriptServiceStopScriptExecutionSpec(), Handler: adapter.stopScriptExecution},
+		connect.Method{Spec: scriptServiceStreamScriptExecutionSpec(), Handler: adapter.streamScriptExecution},
+		connect.Method{Spec: scriptServiceListActiveExecutionsSpec(), Handler: adapter.listActiveExecutions},
 	)
-	scriptServiceGetScriptHandler := connect.NewUnaryHandler(
-		ScriptServiceGetScriptProcedure,
-		svc.GetScript,
-		connect.WithSchema(scriptServiceMethods.ByName("GetScript")),
-		connect.WithHandlerOptions(opts...),
-	)
-	scriptServiceListScriptsHandler := connect.NewUnaryHandler(
-		ScriptServiceListScriptsProcedure,
-		svc.ListScripts,
-		connect.WithSchema(scriptServiceMethods.ByName("ListScripts")),
-		connect.WithHandlerOptions(opts...),
-	)
-	scriptServiceUpdateScriptHandler := connect.NewUnaryHandler(
-		ScriptServiceUpdateScriptProcedure,
-		svc.UpdateScript,
-		connect.WithSchema(scriptServiceMethods.ByName("UpdateScript")),
-		connect.WithHandlerOptions(opts...),
-	)
-	scriptServiceDeleteScriptHandler := connect.NewUnaryHandler(
-		ScriptServiceDeleteScriptProcedure,
-		svc.DeleteScript,
-		connect.WithSchema(scriptServiceMethods.ByName("DeleteScript")),
-		connect.WithHandlerOptions(opts...),
-	)
-	scriptServiceSyncScriptsFromDirHandler := connect.NewUnaryHandler(
-		ScriptServiceSyncScriptsFromDirProcedure,
-		svc.SyncScriptsFromDir,
-		connect.WithSchema(scriptServiceMethods.ByName("SyncScriptsFromDir")),
-		connect.WithHandlerOptions(opts...),
-	)
-	scriptServiceExecuteScriptHandler := connect.NewUnaryHandler(
-		ScriptServiceExecuteScriptProcedure,
-		svc.ExecuteScript,
-		connect.WithSchema(scriptServiceMethods.ByName("ExecuteScript")),
-		connect.WithHandlerOptions(opts...),
-	)
-	scriptServiceStopScriptExecutionHandler := connect.NewUnaryHandler(
-		ScriptServiceStopScriptExecutionProcedure,
-		svc.StopScriptExecution,
-		connect.WithSchema(scriptServiceMethods.ByName("StopScriptExecution")),
-		connect.WithHandlerOptions(opts...),
-	)
-	scriptServiceStreamScriptExecutionHandler := connect.NewServerStreamHandler(
-		ScriptServiceStreamScriptExecutionProcedure,
-		svc.StreamScriptExecution,
-		connect.WithSchema(scriptServiceMethods.ByName("StreamScriptExecution")),
-		connect.WithHandlerOptions(opts...),
-	)
-	scriptServiceListActiveExecutionsHandler := connect.NewUnaryHandler(
-		ScriptServiceListActiveExecutionsProcedure,
-		svc.ListActiveExecutions,
-		connect.WithSchema(scriptServiceMethods.ByName("ListActiveExecutions")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/taskguild.v1.ScriptService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case ScriptServiceCreateScriptProcedure:
-			scriptServiceCreateScriptHandler.ServeHTTP(w, r)
-		case ScriptServiceGetScriptProcedure:
-			scriptServiceGetScriptHandler.ServeHTTP(w, r)
-		case ScriptServiceListScriptsProcedure:
-			scriptServiceListScriptsHandler.ServeHTTP(w, r)
-		case ScriptServiceUpdateScriptProcedure:
-			scriptServiceUpdateScriptHandler.ServeHTTP(w, r)
-		case ScriptServiceDeleteScriptProcedure:
-			scriptServiceDeleteScriptHandler.ServeHTTP(w, r)
-		case ScriptServiceSyncScriptsFromDirProcedure:
-			scriptServiceSyncScriptsFromDirHandler.ServeHTTP(w, r)
-		case ScriptServiceExecuteScriptProcedure:
-			scriptServiceExecuteScriptHandler.ServeHTTP(w, r)
-		case ScriptServiceStopScriptExecutionProcedure:
-			scriptServiceStopScriptExecutionHandler.ServeHTTP(w, r)
-		case ScriptServiceStreamScriptExecutionProcedure:
-			scriptServiceStreamScriptExecutionHandler.ServeHTTP(w, r)
-		case ScriptServiceListActiveExecutionsProcedure:
-			scriptServiceListActiveExecutionsHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
+}
+
+// ScriptServiceStreamScriptExecutionServerStream is the server stream for the ScriptService's
+// StreamScriptExecution RPC.
+type ScriptServiceStreamScriptExecutionServerStream struct {
+	stream connect.ServerStream
+}
+
+// SendHeaders flushes the response headers without a message. The first Send does this implicitly.
+func (s ScriptServiceStreamScriptExecutionServerStream) SendHeaders() error {
+	return s.stream.SendHeaders()
+}
+
+// Send sends a response message to the client.
+func (s ScriptServiceStreamScriptExecutionServerStream) Send(res *v1.ScriptExecutionEvent) error {
+	return s.stream.Send(res)
 }
 
 // UnimplementedScriptServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedScriptServiceHandler struct{}
 
-func (UnimplementedScriptServiceHandler) CreateScript(context.Context, *connect.Request[v1.CreateScriptRequest]) (*connect.Response[v1.CreateScriptResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScriptService.CreateScript is not implemented"))
+func (UnimplementedScriptServiceHandler) CreateScript(context.Context, *v1.CreateScriptRequest) (*v1.CreateScriptResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ScriptService.CreateScript is not implemented")
 }
 
-func (UnimplementedScriptServiceHandler) GetScript(context.Context, *connect.Request[v1.GetScriptRequest]) (*connect.Response[v1.GetScriptResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScriptService.GetScript is not implemented"))
+func (UnimplementedScriptServiceHandler) GetScript(context.Context, *v1.GetScriptRequest) (*v1.GetScriptResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ScriptService.GetScript is not implemented")
 }
 
-func (UnimplementedScriptServiceHandler) ListScripts(context.Context, *connect.Request[v1.ListScriptsRequest]) (*connect.Response[v1.ListScriptsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScriptService.ListScripts is not implemented"))
+func (UnimplementedScriptServiceHandler) ListScripts(context.Context, *v1.ListScriptsRequest) (*v1.ListScriptsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ScriptService.ListScripts is not implemented")
 }
 
-func (UnimplementedScriptServiceHandler) UpdateScript(context.Context, *connect.Request[v1.UpdateScriptRequest]) (*connect.Response[v1.UpdateScriptResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScriptService.UpdateScript is not implemented"))
+func (UnimplementedScriptServiceHandler) UpdateScript(context.Context, *v1.UpdateScriptRequest) (*v1.UpdateScriptResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ScriptService.UpdateScript is not implemented")
 }
 
-func (UnimplementedScriptServiceHandler) DeleteScript(context.Context, *connect.Request[v1.DeleteScriptRequest]) (*connect.Response[v1.DeleteScriptResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScriptService.DeleteScript is not implemented"))
+func (UnimplementedScriptServiceHandler) DeleteScript(context.Context, *v1.DeleteScriptRequest) (*v1.DeleteScriptResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ScriptService.DeleteScript is not implemented")
 }
 
-func (UnimplementedScriptServiceHandler) SyncScriptsFromDir(context.Context, *connect.Request[v1.SyncScriptsFromDirRequest]) (*connect.Response[v1.SyncScriptsFromDirResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScriptService.SyncScriptsFromDir is not implemented"))
+func (UnimplementedScriptServiceHandler) SyncScriptsFromDir(context.Context, *v1.SyncScriptsFromDirRequest) (*v1.SyncScriptsFromDirResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ScriptService.SyncScriptsFromDir is not implemented")
 }
 
-func (UnimplementedScriptServiceHandler) ExecuteScript(context.Context, *connect.Request[v1.ExecuteScriptRequest]) (*connect.Response[v1.ExecuteScriptResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScriptService.ExecuteScript is not implemented"))
+func (UnimplementedScriptServiceHandler) ExecuteScript(context.Context, *v1.ExecuteScriptRequest) (*v1.ExecuteScriptResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ScriptService.ExecuteScript is not implemented")
 }
 
-func (UnimplementedScriptServiceHandler) StopScriptExecution(context.Context, *connect.Request[v1.StopScriptExecutionRequest]) (*connect.Response[v1.StopScriptExecutionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScriptService.StopScriptExecution is not implemented"))
+func (UnimplementedScriptServiceHandler) StopScriptExecution(context.Context, *v1.StopScriptExecutionRequest) (*v1.StopScriptExecutionResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ScriptService.StopScriptExecution is not implemented")
 }
 
-func (UnimplementedScriptServiceHandler) StreamScriptExecution(context.Context, *connect.Request[v1.StreamScriptExecutionRequest], *connect.ServerStream[v1.ScriptExecutionEvent]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScriptService.StreamScriptExecution is not implemented"))
+func (UnimplementedScriptServiceHandler) StreamScriptExecution(context.Context, *v1.StreamScriptExecutionRequest, ScriptServiceStreamScriptExecutionServerStream) error {
+	return connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ScriptService.StreamScriptExecution is not implemented")
 }
 
-func (UnimplementedScriptServiceHandler) ListActiveExecutions(context.Context, *connect.Request[v1.ListActiveExecutionsRequest]) (*connect.Response[v1.ListActiveExecutionsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScriptService.ListActiveExecutions is not implemented"))
+func (UnimplementedScriptServiceHandler) ListActiveExecutions(context.Context, *v1.ListActiveExecutionsRequest) (*v1.ListActiveExecutionsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ScriptService.ListActiveExecutions is not implemented")
+}
+
+type scriptServiceClient struct {
+	client *connect.Client
+}
+
+func (c *scriptServiceClient) CreateScript(ctx context.Context, req *v1.CreateScriptRequest) (*v1.CreateScriptResponse, error) {
+	var res v1.CreateScriptResponse
+	if err := c.client.CallUnary(ctx, scriptServiceCreateScriptSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *scriptServiceClient) GetScript(ctx context.Context, req *v1.GetScriptRequest) (*v1.GetScriptResponse, error) {
+	var res v1.GetScriptResponse
+	if err := c.client.CallUnary(ctx, scriptServiceGetScriptSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *scriptServiceClient) ListScripts(ctx context.Context, req *v1.ListScriptsRequest) (*v1.ListScriptsResponse, error) {
+	var res v1.ListScriptsResponse
+	if err := c.client.CallUnary(ctx, scriptServiceListScriptsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *scriptServiceClient) UpdateScript(ctx context.Context, req *v1.UpdateScriptRequest) (*v1.UpdateScriptResponse, error) {
+	var res v1.UpdateScriptResponse
+	if err := c.client.CallUnary(ctx, scriptServiceUpdateScriptSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *scriptServiceClient) DeleteScript(ctx context.Context, req *v1.DeleteScriptRequest) (*v1.DeleteScriptResponse, error) {
+	var res v1.DeleteScriptResponse
+	if err := c.client.CallUnary(ctx, scriptServiceDeleteScriptSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *scriptServiceClient) SyncScriptsFromDir(ctx context.Context, req *v1.SyncScriptsFromDirRequest) (*v1.SyncScriptsFromDirResponse, error) {
+	var res v1.SyncScriptsFromDirResponse
+	if err := c.client.CallUnary(ctx, scriptServiceSyncScriptsFromDirSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *scriptServiceClient) ExecuteScript(ctx context.Context, req *v1.ExecuteScriptRequest) (*v1.ExecuteScriptResponse, error) {
+	var res v1.ExecuteScriptResponse
+	if err := c.client.CallUnary(ctx, scriptServiceExecuteScriptSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *scriptServiceClient) StopScriptExecution(ctx context.Context, req *v1.StopScriptExecutionRequest) (*v1.StopScriptExecutionResponse, error) {
+	var res v1.StopScriptExecutionResponse
+	if err := c.client.CallUnary(ctx, scriptServiceStopScriptExecutionSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *scriptServiceClient) StreamScriptExecution(ctx context.Context, req *v1.StreamScriptExecutionRequest) (ScriptServiceStreamScriptExecutionClientStream, error) {
+	stream, err := c.client.CallServerStream(ctx, scriptServiceStreamScriptExecutionSpec(), req)
+	if err != nil {
+		return ScriptServiceStreamScriptExecutionClientStream{}, err
+	}
+	return ScriptServiceStreamScriptExecutionClientStream{stream: stream}, nil
+}
+
+func (c *scriptServiceClient) ListActiveExecutions(ctx context.Context, req *v1.ListActiveExecutionsRequest) (*v1.ListActiveExecutionsResponse, error) {
+	var res v1.ListActiveExecutionsResponse
+	if err := c.client.CallUnary(ctx, scriptServiceListActiveExecutionsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type scriptServiceHandler struct{ svc ScriptServiceHandler }
+
+func (h scriptServiceHandler) createScript(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.CreateScriptRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.CreateScript(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h scriptServiceHandler) getScript(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetScriptRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetScript(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h scriptServiceHandler) listScripts(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListScriptsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListScripts(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h scriptServiceHandler) updateScript(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.UpdateScriptRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.UpdateScript(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h scriptServiceHandler) deleteScript(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.DeleteScriptRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.DeleteScript(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h scriptServiceHandler) syncScriptsFromDir(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.SyncScriptsFromDirRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.SyncScriptsFromDir(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h scriptServiceHandler) executeScript(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ExecuteScriptRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ExecuteScript(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h scriptServiceHandler) stopScriptExecution(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.StopScriptExecutionRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.StopScriptExecution(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h scriptServiceHandler) streamScriptExecution(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.StreamScriptExecutionRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	return h.svc.StreamScriptExecution(ctx, &req, ScriptServiceStreamScriptExecutionServerStream{stream: stream})
+}
+
+func (h scriptServiceHandler) listActiveExecutions(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListActiveExecutionsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListActiveExecutions(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

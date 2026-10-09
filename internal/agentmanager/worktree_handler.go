@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"strconv"
 
-	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
 
 	"github.com/kazz187/taskguild/internal/eventbus"
@@ -15,12 +14,12 @@ import (
 
 // --- Worktree management RPCs ---
 
-func (s *Server) RequestWorktreeList(ctx context.Context, req *connect.Request[taskguildv1.RequestWorktreeListRequest]) (*connect.Response[taskguildv1.RequestWorktreeListResponse], error) {
-	if req.Msg.GetProjectId() == "" {
+func (s *Server) RequestWorktreeList(ctx context.Context, req *taskguildv1.RequestWorktreeListRequest) (*taskguildv1.RequestWorktreeListResponse, error) {
+	if req.GetProjectId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
 	}
 
-	proj, err := s.projectRepo.Get(ctx, req.Msg.GetProjectId())
+	proj, err := s.projectRepo.Get(ctx, req.GetProjectId())
 	if err != nil {
 		return nil, cerr.ExtractConnectError(ctx, err)
 	}
@@ -37,18 +36,18 @@ func (s *Server) RequestWorktreeList(ctx context.Context, req *connect.Request[t
 	})
 
 	slog.Info("worktree list requested",
-		"project_id", req.Msg.GetProjectId(),
+		"project_id", req.GetProjectId(),
 		"project_name", proj.Name,
 		"request_id", requestID,
 	)
 
-	return connect.NewResponse(&taskguildv1.RequestWorktreeListResponse{
+	return &taskguildv1.RequestWorktreeListResponse{
 		RequestId: requestID,
-	}), nil
+	}, nil
 }
 
-func (s *Server) ReportWorktreeList(ctx context.Context, req *connect.Request[taskguildv1.ReportWorktreeListRequest]) (*connect.Response[taskguildv1.ReportWorktreeListResponse], error) {
-	projectName := req.Msg.GetProjectName()
+func (s *Server) ReportWorktreeList(ctx context.Context, req *taskguildv1.ReportWorktreeListRequest) (*taskguildv1.ReportWorktreeListResponse, error) {
+	projectName := req.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -60,54 +59,54 @@ func (s *Server) ReportWorktreeList(ctx context.Context, req *connect.Request[ta
 
 	// Cache the worktree list for this project.
 	s.worktreeMu.Lock()
-	s.worktreeCache[proj.ID] = req.Msg.GetWorktrees()
+	s.worktreeCache[proj.ID] = req.GetWorktrees()
 	s.worktreeMu.Unlock()
 
 	// Publish event so frontend can pick up the update.
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_WORKTREE_LIST,
-		req.Msg.GetRequestId(),
+		req.GetRequestId(),
 		"",
 		map[string]string{
 			eventbus.MetaProjectID: proj.ID,
-			eventbus.MetaRequestID: req.Msg.GetRequestId(),
+			eventbus.MetaRequestID: req.GetRequestId(),
 		},
 	)
 
 	slog.Info("worktree list reported",
 		"project_id", proj.ID,
 		"project_name", projectName,
-		"request_id", req.Msg.GetRequestId(),
-		"count", len(req.Msg.GetWorktrees()),
+		"request_id", req.GetRequestId(),
+		"count", len(req.GetWorktrees()),
 	)
 
-	return connect.NewResponse(&taskguildv1.ReportWorktreeListResponse{}), nil
+	return &taskguildv1.ReportWorktreeListResponse{}, nil
 }
 
-func (s *Server) GetWorktreeList(ctx context.Context, req *connect.Request[taskguildv1.GetWorktreeListRequest]) (*connect.Response[taskguildv1.GetWorktreeListResponse], error) {
-	if req.Msg.GetProjectId() == "" {
+func (s *Server) GetWorktreeList(ctx context.Context, req *taskguildv1.GetWorktreeListRequest) (*taskguildv1.GetWorktreeListResponse, error) {
+	if req.GetProjectId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
 	}
 
 	s.worktreeMu.RLock()
-	worktrees := s.worktreeCache[req.Msg.GetProjectId()]
+	worktrees := s.worktreeCache[req.GetProjectId()]
 	s.worktreeMu.RUnlock()
 
-	return connect.NewResponse(&taskguildv1.GetWorktreeListResponse{
+	return &taskguildv1.GetWorktreeListResponse{
 		Worktrees: worktrees,
-	}), nil
+	}, nil
 }
 
-func (s *Server) RequestWorktreeDelete(ctx context.Context, req *connect.Request[taskguildv1.RequestWorktreeDeleteRequest]) (*connect.Response[taskguildv1.RequestWorktreeDeleteResponse], error) {
-	if req.Msg.GetProjectId() == "" {
+func (s *Server) RequestWorktreeDelete(ctx context.Context, req *taskguildv1.RequestWorktreeDeleteRequest) (*taskguildv1.RequestWorktreeDeleteResponse, error) {
+	if req.GetProjectId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
 	}
 
-	if req.Msg.GetWorktreeName() == "" {
+	if req.GetWorktreeName() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "worktree_name is required", nil).ConnectError()
 	}
 
-	proj, err := s.projectRepo.Get(ctx, req.Msg.GetProjectId())
+	proj, err := s.projectRepo.Get(ctx, req.GetProjectId())
 	if err != nil {
 		return nil, cerr.ExtractConnectError(ctx, err)
 	}
@@ -119,27 +118,27 @@ func (s *Server) RequestWorktreeDelete(ctx context.Context, req *connect.Request
 		Command: &taskguildv1.AgentCommand_DeleteWorktree{
 			DeleteWorktree: &taskguildv1.DeleteWorktreeCommand{
 				RequestId:    requestID,
-				WorktreeName: req.Msg.GetWorktreeName(),
-				Force:        req.Msg.GetForce(),
+				WorktreeName: req.GetWorktreeName(),
+				Force:        req.GetForce(),
 			},
 		},
 	})
 
 	slog.Info("worktree delete requested",
-		"project_id", req.Msg.GetProjectId(),
+		"project_id", req.GetProjectId(),
 		"project_name", proj.Name,
-		"worktree_name", req.Msg.GetWorktreeName(),
-		"force", req.Msg.GetForce(),
+		"worktree_name", req.GetWorktreeName(),
+		"force", req.GetForce(),
 		"request_id", requestID,
 	)
 
-	return connect.NewResponse(&taskguildv1.RequestWorktreeDeleteResponse{
+	return &taskguildv1.RequestWorktreeDeleteResponse{
 		RequestId: requestID,
-	}), nil
+	}, nil
 }
 
-func (s *Server) ReportWorktreeDeleteResult(ctx context.Context, req *connect.Request[taskguildv1.ReportWorktreeDeleteResultRequest]) (*connect.Response[taskguildv1.ReportWorktreeDeleteResultResponse], error) {
-	projectName := req.Msg.GetProjectName()
+func (s *Server) ReportWorktreeDeleteResult(ctx context.Context, req *taskguildv1.ReportWorktreeDeleteResultRequest) (*taskguildv1.ReportWorktreeDeleteResultResponse, error) {
+	projectName := req.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -150,12 +149,12 @@ func (s *Server) ReportWorktreeDeleteResult(ctx context.Context, req *connect.Re
 	}
 
 	// If deletion was successful, remove the worktree from the cache.
-	if req.Msg.GetSuccess() {
+	if req.GetSuccess() {
 		s.worktreeMu.Lock()
 		if cached, ok := s.worktreeCache[proj.ID]; ok {
 			filtered := make([]*taskguildv1.WorktreeInfo, 0, len(cached))
 			for _, wt := range cached {
-				if wt.GetName() != req.Msg.GetWorktreeName() {
+				if wt.GetName() != req.GetWorktreeName() {
 					filtered = append(filtered, wt)
 				}
 			}
@@ -168,23 +167,23 @@ func (s *Server) ReportWorktreeDeleteResult(ctx context.Context, req *connect.Re
 	// Publish event so frontend can pick up the result.
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_WORKTREE_DELETED,
-		req.Msg.GetRequestId(),
+		req.GetRequestId(),
 		"",
 		map[string]string{
 			eventbus.MetaProjectID:    proj.ID,
-			eventbus.MetaRequestID:    req.Msg.GetRequestId(),
-			eventbus.MetaWorktreeName: req.Msg.GetWorktreeName(),
-			eventbus.MetaSuccess:      strconv.FormatBool(req.Msg.GetSuccess()),
-			eventbus.MetaErrorMessage: req.Msg.GetErrorMessage(),
+			eventbus.MetaRequestID:    req.GetRequestId(),
+			eventbus.MetaWorktreeName: req.GetWorktreeName(),
+			eventbus.MetaSuccess:      strconv.FormatBool(req.GetSuccess()),
+			eventbus.MetaErrorMessage: req.GetErrorMessage(),
 		},
 	)
 
 	slog.Info("worktree delete result reported",
 		"project_id", proj.ID,
-		"worktree_name", req.Msg.GetWorktreeName(),
-		"success", req.Msg.GetSuccess(),
-		"error_message", req.Msg.GetErrorMessage(),
+		"worktree_name", req.GetWorktreeName(),
+		"success", req.GetSuccess(),
+		"error_message", req.GetErrorMessage(),
 	)
 
-	return connect.NewResponse(&taskguildv1.ReportWorktreeDeleteResultResponse{}), nil
+	return &taskguildv1.ReportWorktreeDeleteResultResponse{}, nil
 }

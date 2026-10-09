@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
 
 	"github.com/kazz187/taskguild/internal/eventbus"
@@ -21,24 +20,25 @@ import (
 	"github.com/kazz187/taskguild/internal/workflow"
 	"github.com/kazz187/taskguild/pkg/cerr"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
+	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
 
-func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1.AgentManagerSubscribeRequest], stream *connect.ServerStream[taskguildv1.AgentCommand]) error {
-	agentManagerID := req.Msg.GetAgentManagerId()
+func (s *Server) Subscribe(ctx context.Context, req *taskguildv1.AgentManagerSubscribeRequest, stream taskguildv1connect.AgentManagerServiceSubscribeServerStream) error {
+	agentManagerID := req.GetAgentManagerId()
 	if agentManagerID == "" {
 		return cerr.NewError(cerr.InvalidArgument, "agent_manager_id is required", nil).ConnectError()
 	}
 
-	projectName := req.Msg.GetProjectName()
-	activeTaskIDs := req.Msg.GetActiveTaskIds()
-	agentVersion := req.Msg.GetAgentVersion()
+	projectName := req.GetProjectName()
+	activeTaskIDs := req.GetActiveTaskIds()
+	agentVersion := req.GetAgentVersion()
 	serverVersion := version.Short()
 
 	slog.Info("agent-manager connected",
 		"agent_manager_id", agentManagerID,
 		"agent_version", agentVersion,
 		"server_version", serverVersion,
-		"max_concurrent_tasks", req.Msg.GetMaxConcurrentTasks(),
+		"max_concurrent_tasks", req.GetMaxConcurrentTasks(),
 		"project_name", projectName,
 		"active_tasks", len(activeTaskIDs),
 	)
@@ -57,7 +57,7 @@ func (s *Server) Subscribe(ctx context.Context, req *connect.Request[taskguildv1
 	// transient stream disconnection.
 	s.releaseAgentTasksExcept(ctx, agentManagerID, activeTaskIDs)
 
-	commandCh := s.registry.Register(agentManagerID, req.Msg.GetMaxConcurrentTasks(), projectName, req.Msg.GetWorkDir())
+	commandCh := s.registry.Register(agentManagerID, req.GetMaxConcurrentTasks(), projectName, req.GetWorkDir())
 
 	defer func() {
 		wasActive := s.registry.UnregisterIfMatch(agentManagerID, commandCh)
@@ -235,7 +235,7 @@ func (s *Server) handleReleasedTask(ctx context.Context, agentManagerID string, 
 // sends TaskAvailableCommand for each directly on the agent's stream. This
 // ensures that tasks pending before an agent connects (or tasks released
 // during reconnection before the agent was registered) are picked up.
-func (s *Server) sendPendingTasksToStream(ctx context.Context, projectName string, stream *connect.ServerStream[taskguildv1.AgentCommand]) {
+func (s *Server) sendPendingTasksToStream(ctx context.Context, projectName string, stream taskguildv1connect.AgentManagerServiceSubscribeServerStream) {
 	if projectName == "" {
 		return
 	}
@@ -307,16 +307,16 @@ func (s *Server) sendPendingTasksToStream(ctx context.Context, projectName strin
 	}
 }
 
-func (s *Server) Heartbeat(ctx context.Context, req *connect.Request[taskguildv1.HeartbeatRequest]) (*connect.Response[taskguildv1.HeartbeatResponse], error) {
-	if req.Msg.GetAgentManagerId() == "" {
+func (s *Server) Heartbeat(ctx context.Context, req *taskguildv1.HeartbeatRequest) (*taskguildv1.HeartbeatResponse, error) {
+	if req.GetAgentManagerId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "agent_manager_id is required", nil).ConnectError()
 	}
 
-	if !s.registry.UpdateHeartbeat(req.Msg.GetAgentManagerId(), req.Msg.GetActiveTasks()) {
+	if !s.registry.UpdateHeartbeat(req.GetAgentManagerId(), req.GetActiveTasks()) {
 		return nil, cerr.NewError(cerr.NotFound, "agent-manager not connected", nil).ConnectError()
 	}
 
-	return connect.NewResponse(&taskguildv1.HeartbeatResponse{}), nil
+	return &taskguildv1.HeartbeatResponse{}, nil
 }
 
 // Retry constants for failed task auto-retry.
@@ -326,8 +326,8 @@ const (
 	retryBaseDelay   = 30 * time.Second
 )
 
-func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[taskguildv1.ReportTaskResultRequest]) (*connect.Response[taskguildv1.ReportTaskResultResponse], error) {
-	t, err := s.taskRepo.Get(ctx, req.Msg.GetTaskId())
+func (s *Server) ReportTaskResult(ctx context.Context, req *taskguildv1.ReportTaskResultRequest) (*taskguildv1.ReportTaskResultResponse, error) {
+	t, err := s.taskRepo.Get(ctx, req.GetTaskId())
 	if err != nil {
 		return nil, err
 	}
@@ -349,9 +349,9 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 		}
 
 		slog.Info("task already unassigned, updated metadata only", "task_id", t.ID)
-		s.emitResultLog(ctx, t, req.Msg.GetSummary(), req.Msg.GetErrorMessage())
+		s.emitResultLog(ctx, t, req.GetSummary(), req.GetErrorMessage())
 
-		return connect.NewResponse(&taskguildv1.ReportTaskResultResponse{}), nil
+		return &taskguildv1.ReportTaskResultResponse{}, nil
 	}
 
 	// Clear assigned agent.
@@ -364,14 +364,14 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 
 	// Emit a chronological RESULT log entry (append-only).
 	// Result data is no longer stored in metadata to avoid overwrites.
-	s.emitResultLog(ctx, t, req.Msg.GetSummary(), req.Msg.GetErrorMessage())
+	s.emitResultLog(ctx, t, req.GetSummary(), req.GetErrorMessage())
 
 	eventMeta := map[string]string{
 		eventbus.MetaProjectID:  t.ProjectID,
 		eventbus.MetaWorkflowID: t.WorkflowID,
 	}
 
-	if req.Msg.GetErrorMessage() != "" {
+	if req.GetErrorMessage() != "" {
 		// If stopped by user, skip retry and go straight to UNASSIGNED.
 		if t.Metadata["_stopped_by_user"] == "true" {
 			slog.Info("task stopped by user, skipping retry",
@@ -393,7 +393,7 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 				t.ID, "", eventMeta,
 			)
 
-			return connect.NewResponse(&taskguildv1.ReportTaskResultResponse{}), nil
+			return &taskguildv1.ReportTaskResultResponse{}, nil
 		}
 
 		// Task failed — check if we should retry.
@@ -436,7 +436,7 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 				t.ID, "", eventMeta,
 			)
 
-			return connect.NewResponse(&taskguildv1.ReportTaskResultResponse{}), nil
+			return &taskguildv1.ReportTaskResultResponse{}, nil
 		}
 
 		// Max retries reached — leave as UNASSIGNED.
@@ -468,7 +468,7 @@ func (s *Server) ReportTaskResult(ctx context.Context, req *connect.Request[task
 		s.rebroadcastWorktreeWaiters(ctx, t.ProjectID, worktreeName, t.ID)
 	}
 
-	return connect.NewResponse(&taskguildv1.ReportTaskResultResponse{}), nil
+	return &taskguildv1.ReportTaskResultResponse{}, nil
 }
 
 // delayedRebroadcast waits for the specified delay, then re-checks the task
@@ -598,13 +598,13 @@ func (s *Server) emitResultLog(ctx context.Context, t *task.Task, summary, errMs
 	)
 }
 
-func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1.ClaimTaskRequest]) (*connect.Response[taskguildv1.ClaimTaskResponse], error) {
-	if req.Msg.GetTaskId() == "" || req.Msg.GetAgentManagerId() == "" {
+func (s *Server) ClaimTask(ctx context.Context, req *taskguildv1.ClaimTaskRequest) (*taskguildv1.ClaimTaskResponse, error) {
+	if req.GetTaskId() == "" || req.GetAgentManagerId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "task_id and agent_manager_id are required", nil).ConnectError()
 	}
 
 	// Pre-read the task to check worktree occupancy before claiming.
-	taskForCheck, err := s.taskRepo.Get(ctx, req.Msg.GetTaskId())
+	taskForCheck, err := s.taskRepo.Get(ctx, req.GetTaskId())
 	if err != nil {
 		return nil, cerr.ExtractConnectError(ctx, err)
 	}
@@ -637,29 +637,29 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 				"occupant_task_id", occupantID,
 			)
 
-			return connect.NewResponse(&taskguildv1.ClaimTaskResponse{
+			return &taskguildv1.ClaimTaskResponse{
 				Success: false,
-			}), nil
+			}, nil
 		}
 
-		t, err = s.taskRepo.Claim(ctx, req.Msg.GetTaskId(), req.Msg.GetAgentManagerId())
+		t, err = s.taskRepo.Claim(ctx, req.GetTaskId(), req.GetAgentManagerId())
 		mu.Unlock()
 	} else {
-		t, err = s.taskRepo.Claim(ctx, req.Msg.GetTaskId(), req.Msg.GetAgentManagerId())
+		t, err = s.taskRepo.Claim(ctx, req.GetTaskId(), req.GetAgentManagerId())
 	}
 
 	if err != nil {
 		if cerr.IsCode(err, cerr.FailedPrecondition) {
-			return connect.NewResponse(&taskguildv1.ClaimTaskResponse{
+			return &taskguildv1.ClaimTaskResponse{
 				Success: false,
-			}), nil
+			}, nil
 		}
 
 		return nil, cerr.ExtractConnectError(ctx, err)
 	}
 
 	// Validate project name: if the agent declared a project, verify it matches.
-	if agentProject, ok := s.registry.GetProjectName(req.Msg.GetAgentManagerId()); ok && agentProject != "" {
+	if agentProject, ok := s.registry.GetProjectName(req.GetAgentManagerId()); ok && agentProject != "" {
 		var taskProjectName string
 		if p, pErr := s.projectRepo.Get(ctx, t.ProjectID); pErr == nil {
 			taskProjectName = p.Name
@@ -677,9 +677,9 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 				"task_project", taskProjectName,
 			)
 
-			return connect.NewResponse(&taskguildv1.ClaimTaskResponse{
+			return &taskguildv1.ClaimTaskResponse{
 				Success: false,
-			}), nil
+			}, nil
 		}
 	}
 
@@ -998,7 +998,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 		t.ID,
 		"",
 		map[string]string{
-			eventbus.MetaAgentManagerID: req.Msg.GetAgentManagerId(),
+			eventbus.MetaAgentManagerID: req.GetAgentManagerId(),
 			eventbus.MetaAgentConfigID:  agentConfigID,
 			eventbus.MetaProjectID:      t.ProjectID,
 			eventbus.MetaWorkflowID:     t.WorkflowID,
@@ -1007,16 +1007,16 @@ func (s *Server) ClaimTask(ctx context.Context, req *connect.Request[taskguildv1
 
 	slog.Info("agent claimed task",
 		"task_id", t.ID,
-		"agent_manager_id", req.Msg.GetAgentManagerId(),
+		"agent_manager_id", req.GetAgentManagerId(),
 		"agent_config_id", agentConfigID,
 	)
 
-	return connect.NewResponse(&taskguildv1.ClaimTaskResponse{
+	return &taskguildv1.ClaimTaskResponse{
 		Success:       true,
 		Instructions:  instructions,
 		AgentConfigId: agentConfigID,
 		Metadata:      enrichedMetadata,
-	}), nil
+	}, nil
 }
 
 // isWorktreeOccupied checks whether any other ASSIGNED task in the same project

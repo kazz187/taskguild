@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"maps"
 	"sync"
 	"time"
-
-	"connectrpc.com/connect"
 
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	scp "github.com/kazz187/taskguild/internal/singlecommandpermission"
@@ -141,9 +140,9 @@ func runInteractionListener(ctx context.Context, interClient taskguildv1connect.
 func runInteractionStream(ctx context.Context, interClient taskguildv1connect.InteractionServiceClient, taskID string, waiter *interactionWaiter) error {
 	logger := clog.LoggerFromContext(ctx)
 
-	stream, err := interClient.SubscribeInteractions(ctx, connect.NewRequest(&v1.SubscribeInteractionsRequest{
+	stream, err := interClient.SubscribeInteractions(ctx, &v1.SubscribeInteractionsRequest{
 		TaskId: taskID,
-	}))
+	})
 	if err != nil {
 		return fmt.Errorf("failed to subscribe: %w", err)
 	}
@@ -151,15 +150,18 @@ func runInteractionStream(ctx context.Context, interClient taskguildv1connect.In
 
 	logger.Debug("interaction stream connected")
 
-	for stream.Receive() {
-		deliverInteraction(taskID, stream.Msg().GetInteraction(), waiter, "stream")
-	}
+	for {
+		msg, err := stream.Receive()
+		if err != nil {
+			if errors.Is(err, io.EOF) || ctx.Err() != nil {
+				return nil
+			}
 
-	if err := stream.Err(); err != nil && ctx.Err() == nil {
-		return fmt.Errorf("stream error: %w", err)
-	}
+			return fmt.Errorf("stream error: %w", err)
+		}
 
-	return nil
+		deliverInteraction(taskID, msg.GetInteraction(), waiter, "stream")
+	}
 }
 
 // deliverInteraction checks the interaction status and delivers responded/expired
@@ -209,18 +211,18 @@ func waitForUserResponse(
 ) (string, error) {
 	logger := clog.LoggerFromContext(ctx)
 
-	resp, err := client.CreateInteraction(ctx, connect.NewRequest(&v1.CreateInteractionRequest{
+	resp, err := client.CreateInteraction(ctx, &v1.CreateInteractionRequest{
 		TaskId:      taskID,
 		AgentId:     agentManagerID,
 		Type:        v1.InteractionType_INTERACTION_TYPE_QUESTION,
 		Title:       "Agent needs your input",
 		Description: claudeOutput,
-	}))
+	})
 	if err != nil {
 		return "", fmt.Errorf("failed to create interaction: %w", err)
 	}
 
-	interactionID := resp.Msg.GetInteraction().GetId()
+	interactionID := resp.GetInteraction().GetId()
 	logger.Info("waiting for user response", "interaction_id", interactionID)
 
 	ch := waiter.Register(interactionID)
@@ -232,9 +234,9 @@ func waitForUserResponse(
 	case <-time.After(waitForUserResponseTimeout):
 		logger.Warn("user response timeout, expiring interaction", "interaction_id", interactionID)
 		// Expire the pending interaction so it disappears from the UI.
-		if _, expErr := interClient.ExpireInteraction(ctx, connect.NewRequest(&v1.ExpireInteractionRequest{
+		if _, expErr := interClient.ExpireInteraction(ctx, &v1.ExpireInteractionRequest{
 			Id: interactionID,
-		})); expErr != nil {
+		}); expErr != nil {
 			logger.Error("failed to expire interaction", "interaction_id", interactionID, "error", expErr)
 		}
 
@@ -252,9 +254,9 @@ func waitForUserResponse(
 		// the response and expire the pending QUESTION interaction.
 		logger.Info("user sent message while waiting for input", "interaction_id", interactionID, "message_id", msg.GetId())
 
-		if _, expErr := interClient.ExpireInteraction(ctx, connect.NewRequest(&v1.ExpireInteractionRequest{
+		if _, expErr := interClient.ExpireInteraction(ctx, &v1.ExpireInteractionRequest{
 			Id: interactionID,
-		})); expErr != nil {
+		}); expErr != nil {
 			logger.Error("failed to expire interaction", "interaction_id", interactionID, "error", expErr)
 		}
 
@@ -357,19 +359,19 @@ func handleAskUserQuestion(
 			description = header
 		}
 
-		resp, err := client.CreateInteraction(ctx, connect.NewRequest(&v1.CreateInteractionRequest{
+		resp, err := client.CreateInteraction(ctx, &v1.CreateInteractionRequest{
 			TaskId:      taskID,
 			AgentId:     agentID,
 			Type:        v1.InteractionType_INTERACTION_TYPE_QUESTION,
 			Title:       questionText,
 			Description: description,
 			Options:     interactionOpts,
-		}))
+		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create question interaction: %w", err)
 		}
 
-		interactionID := resp.Msg.GetInteraction().GetId()
+		interactionID := resp.GetInteraction().GetId()
 		logger.Info("AskUserQuestion: waiting for answer", "question_index", i, "interaction_id", interactionID)
 
 		ch := waiter.Register(interactionID)
@@ -392,18 +394,18 @@ func handleAskUserQuestion(
 
 		// If user chose "Other", create a follow-up interaction for free-text input.
 		if selectedAnswer == "__other__" {
-			followResp, err := client.CreateInteraction(ctx, connect.NewRequest(&v1.CreateInteractionRequest{
+			followResp, err := client.CreateInteraction(ctx, &v1.CreateInteractionRequest{
 				TaskId:      taskID,
 				AgentId:     agentID,
 				Type:        v1.InteractionType_INTERACTION_TYPE_QUESTION,
 				Title:       questionText,
 				Description: "Enter your custom answer:",
-			}))
+			})
 			if err != nil {
 				return nil, fmt.Errorf("failed to create follow-up interaction: %w", err)
 			}
 
-			followID := followResp.Msg.GetInteraction().GetId()
+			followID := followResp.GetInteraction().GetId()
 			logger.Info("AskUserQuestion: waiting for free-text answer", "interaction_id", followID)
 
 			followCh := waiter.Register(followID)
@@ -556,7 +558,7 @@ func handlePermissionRequest(
 		}
 	}
 
-	resp, err := client.CreateInteraction(ctx, connect.NewRequest(&v1.CreateInteractionRequest{
+	resp, err := client.CreateInteraction(ctx, &v1.CreateInteractionRequest{
 		TaskId:      taskID,
 		AgentId:     agentID,
 		Type:        v1.InteractionType_INTERACTION_TYPE_PERMISSION_REQUEST,
@@ -564,12 +566,12 @@ func handlePermissionRequest(
 		Description: description,
 		Options:     options,
 		Metadata:    metadataJSON,
-	}))
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create interaction: %w", err)
 	}
 
-	interactionID := resp.Msg.GetInteraction().GetId()
+	interactionID := resp.GetInteraction().GetId()
 	logger.Info("waiting for permission response", "interaction_id", interactionID, "tool", toolName)
 
 	ch := waiter.Register(interactionID)
@@ -637,11 +639,11 @@ func handleAlwaysAllowCommand(
 			ruleType = scp.TypeCommand
 		}
 
-		_, err := client.AddSingleCommandPermission(ctx, connect.NewRequest(&v1.AddSingleCommandPermissionRequest{
+		_, err := client.AddSingleCommandPermission(ctx, &v1.AddSingleCommandPermissionRequest{
 			ProjectName: scpCache.projectName,
 			Pattern:     rule.Pattern,
 			Type:        ruleType,
-		}))
+		})
 		if err != nil {
 			logger.Error("failed to add single command permission", "pattern", rule.Pattern, "error", err)
 			continue

@@ -5,258 +5,320 @@
 package taskguildv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// InteractionServiceName is the fully-qualified name of the InteractionService service.
 	InteractionServiceName = "taskguild.v1.InteractionService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// InteractionServiceListInteractionsProcedure is the fully-qualified name of the
-	// InteractionService's ListInteractions RPC.
+	// InteractionServiceListInteractionsProcedure is the procedure name of the InteractionService's
+	// ListInteractions RPC.
 	InteractionServiceListInteractionsProcedure = "/taskguild.v1.InteractionService/ListInteractions"
-	// InteractionServiceRespondToInteractionProcedure is the fully-qualified name of the
-	// InteractionService's RespondToInteraction RPC.
+	// InteractionServiceRespondToInteractionProcedure is the procedure name of the InteractionService's
+	// RespondToInteraction RPC.
 	InteractionServiceRespondToInteractionProcedure = "/taskguild.v1.InteractionService/RespondToInteraction"
-	// InteractionServiceRespondToInteractionByTokenProcedure is the fully-qualified name of the
+	// InteractionServiceRespondToInteractionByTokenProcedure is the procedure name of the
 	// InteractionService's RespondToInteractionByToken RPC.
 	InteractionServiceRespondToInteractionByTokenProcedure = "/taskguild.v1.InteractionService/RespondToInteractionByToken"
-	// InteractionServiceExpireInteractionProcedure is the fully-qualified name of the
-	// InteractionService's ExpireInteraction RPC.
+	// InteractionServiceExpireInteractionProcedure is the procedure name of the InteractionService's
+	// ExpireInteraction RPC.
 	InteractionServiceExpireInteractionProcedure = "/taskguild.v1.InteractionService/ExpireInteraction"
-	// InteractionServiceSendMessageProcedure is the fully-qualified name of the InteractionService's
+	// InteractionServiceSendMessageProcedure is the procedure name of the InteractionService's
 	// SendMessage RPC.
 	InteractionServiceSendMessageProcedure = "/taskguild.v1.InteractionService/SendMessage"
-	// InteractionServiceSubscribeInteractionsProcedure is the fully-qualified name of the
+	// InteractionServiceSubscribeInteractionsProcedure is the procedure name of the
 	// InteractionService's SubscribeInteractions RPC.
 	InteractionServiceSubscribeInteractionsProcedure = "/taskguild.v1.InteractionService/SubscribeInteractions"
 )
 
+var (
+	interactionServiceListInteractionsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_interaction_proto.Services().ByName("InteractionService").Methods().ByName("ListInteractions"),
+			Procedure:  InteractionServiceListInteractionsProcedure,
+		}
+	})
+	interactionServiceRespondToInteractionSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_interaction_proto.Services().ByName("InteractionService").Methods().ByName("RespondToInteraction"),
+			Procedure:  InteractionServiceRespondToInteractionProcedure,
+		}
+	})
+	interactionServiceRespondToInteractionByTokenSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_interaction_proto.Services().ByName("InteractionService").Methods().ByName("RespondToInteractionByToken"),
+			Procedure:  InteractionServiceRespondToInteractionByTokenProcedure,
+		}
+	})
+	interactionServiceExpireInteractionSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_interaction_proto.Services().ByName("InteractionService").Methods().ByName("ExpireInteraction"),
+			Procedure:  InteractionServiceExpireInteractionProcedure,
+		}
+	})
+	interactionServiceSendMessageSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_interaction_proto.Services().ByName("InteractionService").Methods().ByName("SendMessage"),
+			Procedure:  InteractionServiceSendMessageProcedure,
+		}
+	})
+	interactionServiceSubscribeInteractionsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeServer,
+			Schema:     v1.File_taskguild_v1_interaction_proto.Services().ByName("InteractionService").Methods().ByName("SubscribeInteractions"),
+			Procedure:  InteractionServiceSubscribeInteractionsProcedure,
+		}
+	})
+)
+
 // InteractionServiceClient is a client for the taskguild.v1.InteractionService service.
 type InteractionServiceClient interface {
-	ListInteractions(context.Context, *connect.Request[v1.ListInteractionsRequest]) (*connect.Response[v1.ListInteractionsResponse], error)
-	RespondToInteraction(context.Context, *connect.Request[v1.RespondToInteractionRequest]) (*connect.Response[v1.RespondToInteractionResponse], error)
+	ListInteractions(context.Context, *v1.ListInteractionsRequest) (*v1.ListInteractionsResponse, error)
+	RespondToInteraction(context.Context, *v1.RespondToInteractionRequest) (*v1.RespondToInteractionResponse, error)
 	// RespondToInteractionByToken responds to an interaction using a single-use
 	// response token instead of API key authentication. This allows Service
 	// Workers to respond to push notification actions without exposing the API key.
-	RespondToInteractionByToken(context.Context, *connect.Request[v1.RespondToInteractionByTokenRequest]) (*connect.Response[v1.RespondToInteractionByTokenResponse], error)
+	RespondToInteractionByToken(context.Context, *v1.RespondToInteractionByTokenRequest) (*v1.RespondToInteractionByTokenResponse, error)
 	// ExpireInteraction sets a PENDING interaction to EXPIRED.
-	ExpireInteraction(context.Context, *connect.Request[v1.ExpireInteractionRequest]) (*connect.Response[v1.ExpireInteractionResponse], error)
-	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
-	SubscribeInteractions(context.Context, *connect.Request[v1.SubscribeInteractionsRequest]) (*connect.ServerStreamForClient[v1.InteractionEvent], error)
+	ExpireInteraction(context.Context, *v1.ExpireInteractionRequest) (*v1.ExpireInteractionResponse, error)
+	SendMessage(context.Context, *v1.SendMessageRequest) (*v1.SendMessageResponse, error)
+	SubscribeInteractions(context.Context, *v1.SubscribeInteractionsRequest) (InteractionServiceSubscribeInteractionsClientStream, error)
 }
 
 // NewInteractionServiceClient constructs a client for the taskguild.v1.InteractionService service.
-// By default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped
-// responses, and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewInteractionServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) InteractionServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	interactionServiceMethods := v1.File_taskguild_v1_interaction_proto.Services().ByName("InteractionService").Methods()
-	return &interactionServiceClient{
-		listInteractions: connect.NewClient[v1.ListInteractionsRequest, v1.ListInteractionsResponse](
-			httpClient,
-			baseURL+InteractionServiceListInteractionsProcedure,
-			connect.WithSchema(interactionServiceMethods.ByName("ListInteractions")),
-			connect.WithClientOptions(opts...),
-		),
-		respondToInteraction: connect.NewClient[v1.RespondToInteractionRequest, v1.RespondToInteractionResponse](
-			httpClient,
-			baseURL+InteractionServiceRespondToInteractionProcedure,
-			connect.WithSchema(interactionServiceMethods.ByName("RespondToInteraction")),
-			connect.WithClientOptions(opts...),
-		),
-		respondToInteractionByToken: connect.NewClient[v1.RespondToInteractionByTokenRequest, v1.RespondToInteractionByTokenResponse](
-			httpClient,
-			baseURL+InteractionServiceRespondToInteractionByTokenProcedure,
-			connect.WithSchema(interactionServiceMethods.ByName("RespondToInteractionByToken")),
-			connect.WithClientOptions(opts...),
-		),
-		expireInteraction: connect.NewClient[v1.ExpireInteractionRequest, v1.ExpireInteractionResponse](
-			httpClient,
-			baseURL+InteractionServiceExpireInteractionProcedure,
-			connect.WithSchema(interactionServiceMethods.ByName("ExpireInteraction")),
-			connect.WithClientOptions(opts...),
-		),
-		sendMessage: connect.NewClient[v1.SendMessageRequest, v1.SendMessageResponse](
-			httpClient,
-			baseURL+InteractionServiceSendMessageProcedure,
-			connect.WithSchema(interactionServiceMethods.ByName("SendMessage")),
-			connect.WithClientOptions(opts...),
-		),
-		subscribeInteractions: connect.NewClient[v1.SubscribeInteractionsRequest, v1.InteractionEvent](
-			httpClient,
-			baseURL+InteractionServiceSubscribeInteractionsProcedure,
-			connect.WithSchema(interactionServiceMethods.ByName("SubscribeInteractions")),
-			connect.WithClientOptions(opts...),
-		),
+// Multiple service clients may share a single connect.Client.
+func NewInteractionServiceClient(client *connect.Client) InteractionServiceClient {
+	return &interactionServiceClient{client: client}
+}
+
+// InteractionServiceSubscribeInteractionsClientStream is the client stream for the
+// InteractionService's SubscribeInteractions RPC.
+type InteractionServiceSubscribeInteractionsClientStream struct {
+	stream connect.ClientStream
+}
+
+// Receive returns the next response message from the server.
+func (s InteractionServiceSubscribeInteractionsClientStream) Receive() (*v1.InteractionEvent, error) {
+	var res v1.InteractionEvent
+	if err := s.stream.Receive(&res); err != nil {
+		return nil, err
 	}
+	return &res, nil
 }
 
-// interactionServiceClient implements InteractionServiceClient.
-type interactionServiceClient struct {
-	listInteractions            *connect.Client[v1.ListInteractionsRequest, v1.ListInteractionsResponse]
-	respondToInteraction        *connect.Client[v1.RespondToInteractionRequest, v1.RespondToInteractionResponse]
-	respondToInteractionByToken *connect.Client[v1.RespondToInteractionByTokenRequest, v1.RespondToInteractionByTokenResponse]
-	expireInteraction           *connect.Client[v1.ExpireInteractionRequest, v1.ExpireInteractionResponse]
-	sendMessage                 *connect.Client[v1.SendMessageRequest, v1.SendMessageResponse]
-	subscribeInteractions       *connect.Client[v1.SubscribeInteractionsRequest, v1.InteractionEvent]
-}
-
-// ListInteractions calls taskguild.v1.InteractionService.ListInteractions.
-func (c *interactionServiceClient) ListInteractions(ctx context.Context, req *connect.Request[v1.ListInteractionsRequest]) (*connect.Response[v1.ListInteractionsResponse], error) {
-	return c.listInteractions.CallUnary(ctx, req)
-}
-
-// RespondToInteraction calls taskguild.v1.InteractionService.RespondToInteraction.
-func (c *interactionServiceClient) RespondToInteraction(ctx context.Context, req *connect.Request[v1.RespondToInteractionRequest]) (*connect.Response[v1.RespondToInteractionResponse], error) {
-	return c.respondToInteraction.CallUnary(ctx, req)
-}
-
-// RespondToInteractionByToken calls taskguild.v1.InteractionService.RespondToInteractionByToken.
-func (c *interactionServiceClient) RespondToInteractionByToken(ctx context.Context, req *connect.Request[v1.RespondToInteractionByTokenRequest]) (*connect.Response[v1.RespondToInteractionByTokenResponse], error) {
-	return c.respondToInteractionByToken.CallUnary(ctx, req)
-}
-
-// ExpireInteraction calls taskguild.v1.InteractionService.ExpireInteraction.
-func (c *interactionServiceClient) ExpireInteraction(ctx context.Context, req *connect.Request[v1.ExpireInteractionRequest]) (*connect.Response[v1.ExpireInteractionResponse], error) {
-	return c.expireInteraction.CallUnary(ctx, req)
-}
-
-// SendMessage calls taskguild.v1.InteractionService.SendMessage.
-func (c *interactionServiceClient) SendMessage(ctx context.Context, req *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error) {
-	return c.sendMessage.CallUnary(ctx, req)
-}
-
-// SubscribeInteractions calls taskguild.v1.InteractionService.SubscribeInteractions.
-func (c *interactionServiceClient) SubscribeInteractions(ctx context.Context, req *connect.Request[v1.SubscribeInteractionsRequest]) (*connect.ServerStreamForClient[v1.InteractionEvent], error) {
-	return c.subscribeInteractions.CallServerStream(ctx, req)
+// Close releases the stream's resources. It is idempotent and is typically deferred to clean up a
+// stream abandoned before io.EOF.
+func (s InteractionServiceSubscribeInteractionsClientStream) Close() error {
+	return s.stream.Close()
 }
 
 // InteractionServiceHandler is an implementation of the taskguild.v1.InteractionService service.
 type InteractionServiceHandler interface {
-	ListInteractions(context.Context, *connect.Request[v1.ListInteractionsRequest]) (*connect.Response[v1.ListInteractionsResponse], error)
-	RespondToInteraction(context.Context, *connect.Request[v1.RespondToInteractionRequest]) (*connect.Response[v1.RespondToInteractionResponse], error)
+	ListInteractions(context.Context, *v1.ListInteractionsRequest) (*v1.ListInteractionsResponse, error)
+	RespondToInteraction(context.Context, *v1.RespondToInteractionRequest) (*v1.RespondToInteractionResponse, error)
 	// RespondToInteractionByToken responds to an interaction using a single-use
 	// response token instead of API key authentication. This allows Service
 	// Workers to respond to push notification actions without exposing the API key.
-	RespondToInteractionByToken(context.Context, *connect.Request[v1.RespondToInteractionByTokenRequest]) (*connect.Response[v1.RespondToInteractionByTokenResponse], error)
+	RespondToInteractionByToken(context.Context, *v1.RespondToInteractionByTokenRequest) (*v1.RespondToInteractionByTokenResponse, error)
 	// ExpireInteraction sets a PENDING interaction to EXPIRED.
-	ExpireInteraction(context.Context, *connect.Request[v1.ExpireInteractionRequest]) (*connect.Response[v1.ExpireInteractionResponse], error)
-	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
-	SubscribeInteractions(context.Context, *connect.Request[v1.SubscribeInteractionsRequest], *connect.ServerStream[v1.InteractionEvent]) error
+	ExpireInteraction(context.Context, *v1.ExpireInteractionRequest) (*v1.ExpireInteractionResponse, error)
+	SendMessage(context.Context, *v1.SendMessageRequest) (*v1.SendMessageResponse, error)
+	SubscribeInteractions(context.Context, *v1.SubscribeInteractionsRequest, InteractionServiceSubscribeInteractionsServerStream) error
 }
 
-// NewInteractionServiceHandler builds an HTTP handler from the service implementation. It returns
-// the path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewInteractionServiceHandler(svc InteractionServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	interactionServiceMethods := v1.File_taskguild_v1_interaction_proto.Services().ByName("InteractionService").Methods()
-	interactionServiceListInteractionsHandler := connect.NewUnaryHandler(
-		InteractionServiceListInteractionsProcedure,
-		svc.ListInteractions,
-		connect.WithSchema(interactionServiceMethods.ByName("ListInteractions")),
-		connect.WithHandlerOptions(opts...),
+// RegisterInteractionServiceHandler registers svc as the taskguild.v1.InteractionService
+// implementation on server.
+func RegisterInteractionServiceHandler(server *connect.Server, svc InteractionServiceHandler) {
+	adapter := interactionServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: interactionServiceListInteractionsSpec(), Handler: adapter.listInteractions},
+		connect.Method{Spec: interactionServiceRespondToInteractionSpec(), Handler: adapter.respondToInteraction},
+		connect.Method{Spec: interactionServiceRespondToInteractionByTokenSpec(), Handler: adapter.respondToInteractionByToken},
+		connect.Method{Spec: interactionServiceExpireInteractionSpec(), Handler: adapter.expireInteraction},
+		connect.Method{Spec: interactionServiceSendMessageSpec(), Handler: adapter.sendMessage},
+		connect.Method{Spec: interactionServiceSubscribeInteractionsSpec(), Handler: adapter.subscribeInteractions},
 	)
-	interactionServiceRespondToInteractionHandler := connect.NewUnaryHandler(
-		InteractionServiceRespondToInteractionProcedure,
-		svc.RespondToInteraction,
-		connect.WithSchema(interactionServiceMethods.ByName("RespondToInteraction")),
-		connect.WithHandlerOptions(opts...),
-	)
-	interactionServiceRespondToInteractionByTokenHandler := connect.NewUnaryHandler(
-		InteractionServiceRespondToInteractionByTokenProcedure,
-		svc.RespondToInteractionByToken,
-		connect.WithSchema(interactionServiceMethods.ByName("RespondToInteractionByToken")),
-		connect.WithHandlerOptions(opts...),
-	)
-	interactionServiceExpireInteractionHandler := connect.NewUnaryHandler(
-		InteractionServiceExpireInteractionProcedure,
-		svc.ExpireInteraction,
-		connect.WithSchema(interactionServiceMethods.ByName("ExpireInteraction")),
-		connect.WithHandlerOptions(opts...),
-	)
-	interactionServiceSendMessageHandler := connect.NewUnaryHandler(
-		InteractionServiceSendMessageProcedure,
-		svc.SendMessage,
-		connect.WithSchema(interactionServiceMethods.ByName("SendMessage")),
-		connect.WithHandlerOptions(opts...),
-	)
-	interactionServiceSubscribeInteractionsHandler := connect.NewServerStreamHandler(
-		InteractionServiceSubscribeInteractionsProcedure,
-		svc.SubscribeInteractions,
-		connect.WithSchema(interactionServiceMethods.ByName("SubscribeInteractions")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/taskguild.v1.InteractionService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case InteractionServiceListInteractionsProcedure:
-			interactionServiceListInteractionsHandler.ServeHTTP(w, r)
-		case InteractionServiceRespondToInteractionProcedure:
-			interactionServiceRespondToInteractionHandler.ServeHTTP(w, r)
-		case InteractionServiceRespondToInteractionByTokenProcedure:
-			interactionServiceRespondToInteractionByTokenHandler.ServeHTTP(w, r)
-		case InteractionServiceExpireInteractionProcedure:
-			interactionServiceExpireInteractionHandler.ServeHTTP(w, r)
-		case InteractionServiceSendMessageProcedure:
-			interactionServiceSendMessageHandler.ServeHTTP(w, r)
-		case InteractionServiceSubscribeInteractionsProcedure:
-			interactionServiceSubscribeInteractionsHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
+}
+
+// InteractionServiceSubscribeInteractionsServerStream is the server stream for the
+// InteractionService's SubscribeInteractions RPC.
+type InteractionServiceSubscribeInteractionsServerStream struct {
+	stream connect.ServerStream
+}
+
+// SendHeaders flushes the response headers without a message. The first Send does this implicitly.
+func (s InteractionServiceSubscribeInteractionsServerStream) SendHeaders() error {
+	return s.stream.SendHeaders()
+}
+
+// Send sends a response message to the client.
+func (s InteractionServiceSubscribeInteractionsServerStream) Send(res *v1.InteractionEvent) error {
+	return s.stream.Send(res)
 }
 
 // UnimplementedInteractionServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedInteractionServiceHandler struct{}
 
-func (UnimplementedInteractionServiceHandler) ListInteractions(context.Context, *connect.Request[v1.ListInteractionsRequest]) (*connect.Response[v1.ListInteractionsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.InteractionService.ListInteractions is not implemented"))
+func (UnimplementedInteractionServiceHandler) ListInteractions(context.Context, *v1.ListInteractionsRequest) (*v1.ListInteractionsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.InteractionService.ListInteractions is not implemented")
 }
 
-func (UnimplementedInteractionServiceHandler) RespondToInteraction(context.Context, *connect.Request[v1.RespondToInteractionRequest]) (*connect.Response[v1.RespondToInteractionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.InteractionService.RespondToInteraction is not implemented"))
+func (UnimplementedInteractionServiceHandler) RespondToInteraction(context.Context, *v1.RespondToInteractionRequest) (*v1.RespondToInteractionResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.InteractionService.RespondToInteraction is not implemented")
 }
 
-func (UnimplementedInteractionServiceHandler) RespondToInteractionByToken(context.Context, *connect.Request[v1.RespondToInteractionByTokenRequest]) (*connect.Response[v1.RespondToInteractionByTokenResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.InteractionService.RespondToInteractionByToken is not implemented"))
+func (UnimplementedInteractionServiceHandler) RespondToInteractionByToken(context.Context, *v1.RespondToInteractionByTokenRequest) (*v1.RespondToInteractionByTokenResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.InteractionService.RespondToInteractionByToken is not implemented")
 }
 
-func (UnimplementedInteractionServiceHandler) ExpireInteraction(context.Context, *connect.Request[v1.ExpireInteractionRequest]) (*connect.Response[v1.ExpireInteractionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.InteractionService.ExpireInteraction is not implemented"))
+func (UnimplementedInteractionServiceHandler) ExpireInteraction(context.Context, *v1.ExpireInteractionRequest) (*v1.ExpireInteractionResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.InteractionService.ExpireInteraction is not implemented")
 }
 
-func (UnimplementedInteractionServiceHandler) SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.InteractionService.SendMessage is not implemented"))
+func (UnimplementedInteractionServiceHandler) SendMessage(context.Context, *v1.SendMessageRequest) (*v1.SendMessageResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.InteractionService.SendMessage is not implemented")
 }
 
-func (UnimplementedInteractionServiceHandler) SubscribeInteractions(context.Context, *connect.Request[v1.SubscribeInteractionsRequest], *connect.ServerStream[v1.InteractionEvent]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.InteractionService.SubscribeInteractions is not implemented"))
+func (UnimplementedInteractionServiceHandler) SubscribeInteractions(context.Context, *v1.SubscribeInteractionsRequest, InteractionServiceSubscribeInteractionsServerStream) error {
+	return connect.NewError(connect.CodeUnimplemented, "taskguild.v1.InteractionService.SubscribeInteractions is not implemented")
+}
+
+type interactionServiceClient struct {
+	client *connect.Client
+}
+
+func (c *interactionServiceClient) ListInteractions(ctx context.Context, req *v1.ListInteractionsRequest) (*v1.ListInteractionsResponse, error) {
+	var res v1.ListInteractionsResponse
+	if err := c.client.CallUnary(ctx, interactionServiceListInteractionsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *interactionServiceClient) RespondToInteraction(ctx context.Context, req *v1.RespondToInteractionRequest) (*v1.RespondToInteractionResponse, error) {
+	var res v1.RespondToInteractionResponse
+	if err := c.client.CallUnary(ctx, interactionServiceRespondToInteractionSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *interactionServiceClient) RespondToInteractionByToken(ctx context.Context, req *v1.RespondToInteractionByTokenRequest) (*v1.RespondToInteractionByTokenResponse, error) {
+	var res v1.RespondToInteractionByTokenResponse
+	if err := c.client.CallUnary(ctx, interactionServiceRespondToInteractionByTokenSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *interactionServiceClient) ExpireInteraction(ctx context.Context, req *v1.ExpireInteractionRequest) (*v1.ExpireInteractionResponse, error) {
+	var res v1.ExpireInteractionResponse
+	if err := c.client.CallUnary(ctx, interactionServiceExpireInteractionSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *interactionServiceClient) SendMessage(ctx context.Context, req *v1.SendMessageRequest) (*v1.SendMessageResponse, error) {
+	var res v1.SendMessageResponse
+	if err := c.client.CallUnary(ctx, interactionServiceSendMessageSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *interactionServiceClient) SubscribeInteractions(ctx context.Context, req *v1.SubscribeInteractionsRequest) (InteractionServiceSubscribeInteractionsClientStream, error) {
+	stream, err := c.client.CallServerStream(ctx, interactionServiceSubscribeInteractionsSpec(), req)
+	if err != nil {
+		return InteractionServiceSubscribeInteractionsClientStream{}, err
+	}
+	return InteractionServiceSubscribeInteractionsClientStream{stream: stream}, nil
+}
+
+type interactionServiceHandler struct{ svc InteractionServiceHandler }
+
+func (h interactionServiceHandler) listInteractions(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListInteractionsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListInteractions(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h interactionServiceHandler) respondToInteraction(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.RespondToInteractionRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.RespondToInteraction(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h interactionServiceHandler) respondToInteractionByToken(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.RespondToInteractionByTokenRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.RespondToInteractionByToken(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h interactionServiceHandler) expireInteraction(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ExpireInteractionRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ExpireInteraction(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h interactionServiceHandler) sendMessage(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.SendMessageRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.SendMessage(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h interactionServiceHandler) subscribeInteractions(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.SubscribeInteractionsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	return h.svc.SubscribeInteractions(ctx, &req, InteractionServiceSubscribeInteractionsServerStream{stream: stream})
 }

@@ -18,7 +18,7 @@ plugins:
     out: ./gen/go
     opt: paths=source_relative
   # Connect Go
-  - remote: buf.build/connectrpc/go
+  - remote: buf.build/connectrpc/go:v2.0.0
     out: ./gen/go
     opt: paths=source_relative
   # TypeScript (ES modules)
