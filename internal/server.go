@@ -140,7 +140,14 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 	return s.server.Serve(ln)
 }
 
+// Shutdown gracefully stops the server. It is a no-op when the server was
+// never started: ListenAndServe returns before assigning s.server if the
+// listener cannot bind, and callers shut down unconditionally on that error.
 func (s *Server) Shutdown(ctx context.Context) error {
+	if s.server == nil {
+		return nil
+	}
+
 	return s.server.Shutdown(ctx)
 }
 
