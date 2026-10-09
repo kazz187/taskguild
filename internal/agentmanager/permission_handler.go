@@ -20,7 +20,7 @@ import (
 func (s *Server) ListSingleCommandPermissions(ctx context.Context, req *taskguildv1.ListSingleCommandPermissionsAgentRequest) (*taskguildv1.ListSingleCommandPermissionsAgentResponse, error) {
 	projectName := req.GetProjectName()
 	if projectName == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil)
 	}
 
 	// Resolve project name to ID.
@@ -57,7 +57,7 @@ func (s *Server) ListSingleCommandPermissions(ctx context.Context, req *taskguil
 func (s *Server) AddSingleCommandPermission(ctx context.Context, req *taskguildv1.AddSingleCommandPermissionRequest) (*taskguildv1.AddSingleCommandPermissionResponse, error) {
 	projectName := req.GetProjectName()
 	if projectName == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil)
 	}
 
 	// Resolve project name to ID.

@@ -21,18 +21,18 @@ import (
 // so they compare local agents with server versions.
 func (s *Server) RequestAgentComparison(ctx context.Context, req *taskguildv1.RequestAgentComparisonRequest) (*taskguildv1.RequestAgentComparisonResponse, error) {
 	if req.GetProjectId() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil)
 	}
 
 	proj, err := s.projectRepo.Get(ctx, req.GetProjectId())
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	// Fetch all agents for this project so the agent can compare.
 	agents, _, err := s.agentRepo.List(ctx, proj.ID, 1000, 0)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	protos := make([]*taskguildv1.AgentDefinition, len(agents))
@@ -67,12 +67,12 @@ func (s *Server) RequestAgentComparison(ctx context.Context, req *taskguildv1.Re
 func (s *Server) ReportAgentComparison(ctx context.Context, req *taskguildv1.ReportAgentComparisonRequest) (*taskguildv1.ReportAgentComparisonResponse, error) {
 	projectName := req.GetProjectName()
 	if projectName == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil)
 	}
 
 	proj, err := s.projectRepo.FindByName(ctx, projectName)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	// Cache the diffs for this project.
@@ -105,7 +105,7 @@ func (s *Server) ReportAgentComparison(ctx context.Context, req *taskguildv1.Rep
 // GetAgentComparison returns the cached agent diffs for a project.
 func (s *Server) GetAgentComparison(ctx context.Context, req *taskguildv1.GetAgentComparisonRequest) (*taskguildv1.GetAgentComparisonResponse, error) {
 	if req.GetProjectId() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil)
 	}
 
 	s.agentDiffMu.RLock()
@@ -120,12 +120,12 @@ func (s *Server) GetAgentComparison(ctx context.Context, req *taskguildv1.GetAge
 // ResolveAgentConflict resolves a single agent conflict between server and agent versions.
 func (s *Server) ResolveAgentConflict(ctx context.Context, req *taskguildv1.ResolveAgentConflictRequest) (*taskguildv1.ResolveAgentConflictResponse, error) {
 	if req.GetProjectId() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil)
 	}
 
 	proj, err := s.projectRepo.Get(ctx, req.GetProjectId())
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	var resultAgent *agent.Agent
@@ -138,7 +138,7 @@ func (s *Server) ResolveAgentConflict(ctx context.Context, req *taskguildv1.Reso
 			if req.GetAgentId() != "" {
 				resultAgent, err = s.agentRepo.Get(ctx, req.GetAgentId())
 				if err != nil {
-					return nil, cerr.ExtractConnectError(ctx, err)
+					return nil, err
 				}
 			}
 
@@ -158,7 +158,7 @@ func (s *Server) ResolveAgentConflict(ctx context.Context, req *taskguildv1.Reso
 			// Update existing agent.
 			resultAgent, err = s.agentRepo.Get(ctx, req.GetAgentId())
 			if err != nil {
-				return nil, cerr.ExtractConnectError(ctx, err)
+				return nil, err
 			}
 			// Parse the agent content to extract fields.
 			parsed := claudemd.ParseAgent(req.GetAgentContent())
@@ -177,7 +177,7 @@ func (s *Server) ResolveAgentConflict(ctx context.Context, req *taskguildv1.Reso
 
 			err := s.agentRepo.Update(ctx, resultAgent)
 			if err != nil {
-				return nil, cerr.ExtractConnectError(ctx, err)
+				return nil, err
 			}
 		} else {
 			// Agent-only agent — create new in DB.
@@ -204,12 +204,12 @@ func (s *Server) ResolveAgentConflict(ctx context.Context, req *taskguildv1.Reso
 
 			err := s.agentRepo.Create(ctx, resultAgent)
 			if err != nil {
-				return nil, cerr.ExtractConnectError(ctx, err)
+				return nil, err
 			}
 		}
 
 	default:
-		return nil, cerr.NewError(cerr.InvalidArgument, "invalid resolution choice", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "invalid resolution choice", nil)
 	}
 
 	// Remove the resolved diff from cache.

@@ -55,13 +55,13 @@ func NewServer(repo Repository, workflowRepo workflow.Repository, sched Schedule
 func validateCronExpression(expr string) (cron.Schedule, error) {
 	expr = strings.TrimSpace(expr)
 	if expr == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "cron_expression is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "cron_expression is required", nil)
 	}
 
 	parsed, err := cron.ParseStandard(expr)
 	if err != nil {
 		return nil, cerr.NewError(cerr.InvalidArgument,
-			fmt.Sprintf("invalid cron expression %q: %v", expr, err), nil).ConnectError()
+			fmt.Sprintf("invalid cron expression %q: %v", expr, err), nil)
 	}
 
 	return parsed, nil
@@ -72,7 +72,7 @@ func validateCronExpression(expr string) (cron.Schedule, error) {
 // status name.
 func (s *Server) validateWorkflowAndStatus(ctx context.Context, workflowID, statusID string) (string, error) {
 	if workflowID == "" {
-		return "", cerr.NewError(cerr.InvalidArgument, "workflow_id is required", nil).ConnectError()
+		return "", cerr.NewError(cerr.InvalidArgument, "workflow_id is required", nil)
 	}
 
 	wf, err := s.workflowRepo.Get(ctx, workflowID)
@@ -88,7 +88,7 @@ func (s *Server) validateWorkflowAndStatus(ctx context.Context, workflowID, stat
 		}
 
 		return "", cerr.NewError(cerr.InvalidArgument,
-			fmt.Sprintf("status %q not found in workflow", statusID), nil).ConnectError()
+			fmt.Sprintf("status %q not found in workflow", statusID), nil)
 	}
 
 	for _, st := range wf.Statuses {
@@ -97,20 +97,20 @@ func (s *Server) validateWorkflowAndStatus(ctx context.Context, workflowID, stat
 		}
 	}
 
-	return "", cerr.NewError(cerr.FailedPrecondition, "workflow has no initial status", nil).ConnectError()
+	return "", cerr.NewError(cerr.FailedPrecondition, "workflow has no initial status", nil)
 }
 
 func (s *Server) CreateSchedule(ctx context.Context, req *taskguildv1.CreateScheduleRequest) (*taskguildv1.CreateScheduleResponse, error) {
 	if req.GetProjectId() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil)
 	}
 
 	if strings.TrimSpace(req.GetName()) == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "name is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "name is required", nil)
 	}
 
 	if strings.TrimSpace(req.GetTaskTitle()) == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "task_title is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "task_title is required", nil)
 	}
 
 	parsedCron, err := validateCronExpression(req.GetCronExpression())
@@ -153,7 +153,7 @@ func (s *Server) CreateSchedule(ctx context.Context, req *taskguildv1.CreateSche
 	if sched.Enabled {
 		if err := s.scheduler.Add(sched); err != nil {
 			// scheduler failure should not orphan the persisted record; surface as Internal
-			return nil, cerr.NewError(cerr.Internal, "failed to register schedule with scheduler", err).ConnectError()
+			return nil, cerr.NewError(cerr.Internal, "failed to register schedule with scheduler", err)
 		}
 	}
 
@@ -211,11 +211,11 @@ func (s *Server) UpdateSchedule(ctx context.Context, req *taskguildv1.UpdateSche
 	}
 
 	if strings.TrimSpace(req.GetName()) == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "name is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "name is required", nil)
 	}
 
 	if strings.TrimSpace(req.GetTaskTitle()) == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "task_title is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "task_title is required", nil)
 	}
 
 	parsedCron, err := validateCronExpression(req.GetCronExpression())
@@ -261,7 +261,7 @@ func (s *Server) UpdateSchedule(ctx context.Context, req *taskguildv1.UpdateSche
 
 	if sched.Enabled {
 		if err := s.scheduler.Update(sched); err != nil {
-			return nil, cerr.NewError(cerr.Internal, "failed to update schedule in scheduler", err).ConnectError()
+			return nil, cerr.NewError(cerr.Internal, "failed to update schedule in scheduler", err)
 		}
 	} else {
 		s.scheduler.Remove(sched.ID)
@@ -303,7 +303,7 @@ func (s *Server) SetScheduleEnabled(ctx context.Context, req *taskguildv1.SetSch
 
 	if sched.Enabled {
 		if err := s.scheduler.Add(sched); err != nil {
-			return nil, cerr.NewError(cerr.Internal, "failed to register schedule with scheduler", err).ConnectError()
+			return nil, cerr.NewError(cerr.Internal, "failed to register schedule with scheduler", err)
 		}
 	} else {
 		s.scheduler.Remove(sched.ID)

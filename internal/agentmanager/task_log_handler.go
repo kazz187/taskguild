@@ -14,7 +14,7 @@ import (
 
 func (s *Server) ReportTaskLog(ctx context.Context, req *taskguildv1.ReportTaskLogRequest) (*taskguildv1.ReportTaskLogResponse, error) {
 	if req.GetTaskId() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "task_id is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "task_id is required", nil)
 	}
 
 	// Look up the task to get ProjectID for storage path construction.

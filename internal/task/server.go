@@ -116,7 +116,7 @@ func (s *Server) CreateTaskInternal(ctx context.Context, in CreateTaskInput) (*T
 
 		if !found {
 			return nil, cerr.NewError(cerr.InvalidArgument,
-				fmt.Sprintf("specified status %q not found in workflow", in.StatusID), nil).ConnectError()
+				fmt.Sprintf("specified status %q not found in workflow", in.StatusID), nil)
 		}
 
 		statusID = in.StatusID
@@ -129,7 +129,7 @@ func (s *Server) CreateTaskInternal(ctx context.Context, in CreateTaskInput) (*T
 		}
 
 		if statusID == "" {
-			return nil, cerr.NewError(cerr.FailedPrecondition, "workflow has no initial status", nil).ConnectError()
+			return nil, cerr.NewError(cerr.FailedPrecondition, "workflow has no initial status", nil)
 		}
 	}
 
@@ -328,7 +328,7 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *taskguildv1.UpdateTa
 				cerr.FailedPrecondition,
 				fmt.Sprintf("cannot force-move a task while an agent is running (status: %s)", t.AssignmentStatus),
 				nil,
-			).ConnectError()
+			)
 		}
 	}
 
@@ -348,7 +348,7 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *taskguildv1.UpdateTa
 	}
 
 	if currentStatus == nil {
-		return nil, cerr.NewError(cerr.Internal, "current status not found in workflow", nil).ConnectError()
+		return nil, cerr.NewError(cerr.Internal, "current status not found in workflow", nil)
 	}
 
 	// Validate target status exists in the workflow.
@@ -366,7 +366,7 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *taskguildv1.UpdateTa
 			cerr.InvalidArgument,
 			fmt.Sprintf("target status %q not found in workflow", req.GetStatusId()),
 			nil,
-		).ConnectError()
+		)
 	}
 
 	// Reject self-transitions (same status → same status) unconditionally.
@@ -377,7 +377,7 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *taskguildv1.UpdateTa
 			cerr.FailedPrecondition,
 			fmt.Sprintf("self-transition from %q to %q is not allowed", currentStatus.Name, req.GetStatusId()),
 			nil,
-		).ConnectError()
+		)
 	}
 
 	// When force is false, enforce workflow transition rules.
@@ -388,7 +388,7 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *taskguildv1.UpdateTa
 				cerr.FailedPrecondition,
 				fmt.Sprintf("transition from %q to %q is not allowed", currentStatus.Name, req.GetStatusId()),
 				nil,
-			).ConnectError()
+			)
 		}
 	}
 
@@ -437,7 +437,7 @@ func (s *Server) StopTask(ctx context.Context, req *taskguildv1.StopTaskRequest)
 			cerr.FailedPrecondition,
 			"task is not currently running (not assigned to an agent)",
 			nil,
-		).ConnectError()
+		)
 	}
 
 	// Mark the task so ReportTaskResult skips auto-retry.
@@ -495,7 +495,7 @@ func (s *Server) ResumeTask(ctx context.Context, req *taskguildv1.ResumeTaskRequ
 			cerr.FailedPrecondition,
 			fmt.Sprintf("task cannot be resumed (assignment status: %s)", t.AssignmentStatus),
 			nil,
-		).ConnectError()
+		)
 	}
 
 	// Verify the current status has an agent configured.
@@ -509,7 +509,7 @@ func (s *Server) ResumeTask(ctx context.Context, req *taskguildv1.ResumeTaskRequ
 			cerr.FailedPrecondition,
 			"current status has no agent configured; cannot resume",
 			nil,
-		).ConnectError()
+		)
 	}
 
 	// Clear stop/retry metadata for a fresh start.
@@ -520,7 +520,7 @@ func (s *Server) ResumeTask(ctx context.Context, req *taskguildv1.ResumeTaskRequ
 	}
 
 	if err := s.resumer.RequestTaskResume(ctx, t); err != nil {
-		return nil, cerr.NewError(cerr.Internal, fmt.Sprintf("failed to resume task: %v", err), nil).ConnectError()
+		return nil, cerr.NewError(cerr.Internal, fmt.Sprintf("failed to resume task: %v", err), nil)
 	}
 
 	// Re-read the task after resume (it updates assignment status).

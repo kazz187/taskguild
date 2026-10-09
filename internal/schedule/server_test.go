@@ -7,10 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"connectrpc.com/connect/v2"
-
 	"github.com/kazz187/taskguild/internal/schedule"
 	"github.com/kazz187/taskguild/internal/workflow"
+	"github.com/kazz187/taskguild/pkg/cerr"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 )
 
@@ -208,13 +207,8 @@ func TestCreateScheduleInvalidCron(t *testing.T) {
 		t.Fatal("expected error for invalid cron expression")
 	}
 
-	var ce *connect.Error
-	if !errors.As(err, &ce) {
-		t.Fatalf("expected connect.Error, got %T: %v", err, err)
-	}
-
-	if ce.Code() != connect.CodeInvalidArgument {
-		t.Errorf("expected CodeInvalidArgument, got %v", ce.Code())
+	if !cerr.IsCode(err, cerr.InvalidArgument) {
+		t.Errorf("expected InvalidArgument, got %T: %v", err, err)
 	}
 }
 

@@ -31,7 +31,7 @@ func NewServer(vapidEnv *config.VAPIDEnv, repo pushsubscription.Repository, send
 
 func (s *Server) GetVapidPublicKey(_ context.Context, _ *taskguildv1.GetVapidPublicKeyRequest) (*taskguildv1.GetVapidPublicKeyResponse, error) {
 	if s.vapidEnv.VAPIDPublicKey == "" {
-		return nil, cerr.NewError(cerr.FailedPrecondition, "VAPID keys not configured", nil).ConnectError()
+		return nil, cerr.NewError(cerr.FailedPrecondition, "VAPID keys not configured", nil)
 	}
 
 	return &taskguildv1.GetVapidPublicKeyResponse{
@@ -41,15 +41,15 @@ func (s *Server) GetVapidPublicKey(_ context.Context, _ *taskguildv1.GetVapidPub
 
 func (s *Server) RegisterPushSubscription(ctx context.Context, req *taskguildv1.RegisterPushSubscriptionRequest) (*taskguildv1.RegisterPushSubscriptionResponse, error) {
 	if req.GetEndpoint() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "endpoint is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "endpoint is required", nil)
 	}
 
 	if req.GetP256DhKey() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "p256dh_key is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "p256dh_key is required", nil)
 	}
 
 	if req.GetAuthKey() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "auth_key is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "auth_key is required", nil)
 	}
 
 	// Idempotent: if endpoint already exists, update it.
@@ -88,7 +88,7 @@ func (s *Server) RegisterPushSubscription(ctx context.Context, req *taskguildv1.
 
 func (s *Server) UnregisterPushSubscription(ctx context.Context, req *taskguildv1.UnregisterPushSubscriptionRequest) (*taskguildv1.UnregisterPushSubscriptionResponse, error) {
 	if req.GetEndpoint() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "endpoint is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "endpoint is required", nil)
 	}
 
 	err := s.repo.DeleteByEndpoint(ctx, req.GetEndpoint())
