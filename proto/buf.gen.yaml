@@ -11,10 +11,11 @@ managed:
       value: github.com/kazz187/taskguild/proto/gen/go
 inputs:
   - directory: .
-  - module: buf.build/bufbuild/protovalidate
+  # Pinned to the protovalidate commit in buf.lock; keep the two in sync.
+  - module: buf.build/bufbuild/protovalidate:80ab13bee0bf4272b6161a72bf7034e0
 plugins:
-  # Go protobuf
-  - remote: buf.build/protocolbuffers/go
+  # Go protobuf (keep in step with google.golang.org/protobuf in go.mod)
+  - remote: buf.build/protocolbuffers/go:v1.36.11
     out: ./gen/go
     opt: paths=source_relative
   # Connect Go
