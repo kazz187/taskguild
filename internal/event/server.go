@@ -57,7 +57,7 @@ func (s *Server) SubscribeEvents(ctx context.Context, req *connect.Request[taskg
 			}
 			// Filter by project_id if specified.
 			if projectID != "" {
-				if eventProjectID, ok := event.GetMetadata()["project_id"]; ok && eventProjectID != projectID {
+				if eventProjectID, ok := event.GetMetadata()[eventbus.MetaProjectID]; ok && eventProjectID != projectID {
 					continue
 				}
 			}

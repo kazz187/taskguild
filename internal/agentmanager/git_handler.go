@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
 
+	"github.com/kazz187/taskguild/internal/eventbus"
 	"github.com/kazz187/taskguild/pkg/cerr"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 )
@@ -63,11 +64,11 @@ func (s *Server) ReportGitPullMainResult(ctx context.Context, req *connect.Reque
 		req.Msg.GetRequestId(),
 		"",
 		map[string]string{
-			"project_id":    proj.ID,
-			"request_id":    req.Msg.GetRequestId(),
-			"success":       strconv.FormatBool(req.Msg.GetSuccess()),
-			"output":        req.Msg.GetOutput(),
-			"error_message": req.Msg.GetErrorMessage(),
+			eventbus.MetaProjectID:    proj.ID,
+			eventbus.MetaRequestID:    req.Msg.GetRequestId(),
+			eventbus.MetaSuccess:      strconv.FormatBool(req.Msg.GetSuccess()),
+			eventbus.MetaOutput:       req.Msg.GetOutput(),
+			eventbus.MetaErrorMessage: req.Msg.GetErrorMessage(),
 		},
 	)
 

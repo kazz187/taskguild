@@ -72,7 +72,7 @@ func readLocalPermissions(path string) (allow, ask, deny []string, raw map[strin
 		return nil, nil, nil, raw
 	}
 
-	permsRaw, ok := raw["permissions"]
+	permsRaw, ok := raw[settingsKeyPermissions]
 	if !ok {
 		return nil, nil, nil, raw
 	}
@@ -82,9 +82,9 @@ func readLocalPermissions(path string) (allow, ask, deny []string, raw map[strin
 		return nil, nil, nil, raw
 	}
 
-	allow = toStringSlice(permsMap["allow"])
-	ask = toStringSlice(permsMap["ask"])
-	deny = toStringSlice(permsMap["deny"])
+	allow = toStringSlice(permsMap[settingsKeyAllow])
+	ask = toStringSlice(permsMap[settingsKeyAsk])
+	deny = toStringSlice(permsMap[settingsKeyDeny])
 
 	return allow, ask, deny, raw
 }
@@ -121,10 +121,10 @@ func writeLocalPermissions(path string, raw map[string]any, merged *v1.Permissio
 	}
 
 	// Update only the permissions section.
-	raw["permissions"] = map[string]any{
-		"allow": allowList,
-		"ask":   askList,
-		"deny":  denyList,
+	raw[settingsKeyPermissions] = map[string]any{
+		settingsKeyAllow: allowList,
+		settingsKeyAsk:   askList,
+		settingsKeyDeny:  denyList,
 	}
 
 	data, err := json.MarshalIndent(raw, "", "    ")

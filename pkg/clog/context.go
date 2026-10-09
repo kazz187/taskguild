@@ -84,6 +84,17 @@ func mergeMaps(dst, src map[string]any) {
 const (
 	ErrorAttributeKey = "error.message"
 	StackAttributeKey = "error.stack"
+
+	MethodAttributeKey           = "method"
+	ProcedureAttributeKey        = "procedure"
+	ProtoAttributeKey            = "proto"
+	PathAttributeKey             = "path"
+	StatusAttributeKey           = "status"
+	CodeAttributeKey             = "code"
+	DurationAttributeKey         = "duration"
+	StreamTypeAttributeKey       = "stream_type"
+	IdempotencyLevelAttributeKey = "idempotency_level"
+	BytesWrittenAttributeKey     = "bytes_written"
 )
 
 func AddError(ctx context.Context, err error) {

@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
 
+	"github.com/kazz187/taskguild/internal/eventbus"
 	"github.com/kazz187/taskguild/pkg/cerr"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 )
@@ -68,8 +69,8 @@ func (s *Server) ReportWorktreeList(ctx context.Context, req *connect.Request[ta
 		req.Msg.GetRequestId(),
 		"",
 		map[string]string{
-			"project_id": proj.ID,
-			"request_id": req.Msg.GetRequestId(),
+			eventbus.MetaProjectID: proj.ID,
+			eventbus.MetaRequestID: req.Msg.GetRequestId(),
 		},
 	)
 
@@ -170,11 +171,11 @@ func (s *Server) ReportWorktreeDeleteResult(ctx context.Context, req *connect.Re
 		req.Msg.GetRequestId(),
 		"",
 		map[string]string{
-			"project_id":    proj.ID,
-			"request_id":    req.Msg.GetRequestId(),
-			"worktree_name": req.Msg.GetWorktreeName(),
-			"success":       strconv.FormatBool(req.Msg.GetSuccess()),
-			"error_message": req.Msg.GetErrorMessage(),
+			eventbus.MetaProjectID:    proj.ID,
+			eventbus.MetaRequestID:    req.Msg.GetRequestId(),
+			eventbus.MetaWorktreeName: req.Msg.GetWorktreeName(),
+			eventbus.MetaSuccess:      strconv.FormatBool(req.Msg.GetSuccess()),
+			eventbus.MetaErrorMessage: req.Msg.GetErrorMessage(),
 		},
 	)
 

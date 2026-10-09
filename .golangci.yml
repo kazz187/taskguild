@@ -30,6 +30,15 @@ linters:
     gocognit:
       min-complexity: 25
 
+    goconst:
+      # goconst 1.11 はパッケージ単位でカウントするため、テストの fixture 文字列が
+      # 大量に発砲する。テストのリテラル重複は可読性上むしろ望ましいので除外する。
+      # なお exclusions.rules では代替できない（カウントがパッケージ横断のため）。
+      ignore-tests: true
+      # boolean を文字列で持つ metadata (map[string]string) の比較値。定数化する価値がない。
+      ignore-string-values:
+        - '^(?:true|false)$'
+
     dupl:
       threshold: 100
 

@@ -40,9 +40,9 @@ func SlogChiMiddleware(opts ...ChiOption) func(http.Handler) http.Handler {
 			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 			ctx := ContextWithSlog(r.Context())
 			AddAttributes(ctx, map[string]any{
-				"method":    r.Method,
-				"procedure": r.URL.Path,
-				"proto":     r.Proto,
+				MethodAttributeKey:    r.Method,
+				ProcedureAttributeKey: r.URL.Path,
+				ProtoAttributeKey:     r.Proto,
 			})
 			next.ServeHTTP(ww, r.WithContext(ctx))
 
@@ -51,9 +51,9 @@ func SlogChiMiddleware(opts ...ChiOption) func(http.Handler) http.Handler {
 			}
 
 			AddAttributes(ctx, map[string]any{
-				"status":        ww.Status(),
-				"bytes_written": ww.BytesWritten(),
-				"duration":      time.Since(startTime),
+				StatusAttributeKey:       ww.Status(),
+				BytesWrittenAttributeKey: ww.BytesWritten(),
+				DurationAttributeKey:     time.Since(startTime),
 			})
 
 			msg := http.StatusText(ww.Status())

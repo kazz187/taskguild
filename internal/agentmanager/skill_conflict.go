@@ -2,15 +2,15 @@ package agentmanager
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"strconv"
-	"strings"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
 
+	"github.com/kazz187/taskguild/internal/claudemd"
+	"github.com/kazz187/taskguild/internal/eventbus"
 	"github.com/kazz187/taskguild/internal/skill"
 	"github.com/kazz187/taskguild/pkg/cerr"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
@@ -87,9 +87,9 @@ func (s *Server) ReportSkillComparison(ctx context.Context, req *connect.Request
 		req.Msg.GetRequestId(),
 		"",
 		map[string]string{
-			"project_id": proj.ID,
-			"request_id": req.Msg.GetRequestId(),
-			"diff_count": strconv.Itoa(len(req.Msg.GetDiffs())),
+			eventbus.MetaProjectID: proj.ID,
+			eventbus.MetaRequestID: req.Msg.GetRequestId(),
+			eventbus.MetaDiffCount: strconv.Itoa(len(req.Msg.GetDiffs())),
 		},
 	)
 
@@ -152,10 +152,7 @@ func (s *Server) ResolveSkillConflict(ctx context.Context, req *connect.Request[
 
 	case taskguildv1.SkillResolutionChoice_SKILL_RESOLUTION_CHOICE_AGENT:
 		// Agent version wins. Update the DB with agent's content.
-		parsed, parseErr := parseSkillMDContent(req.Msg.GetAgentContent())
-		if parseErr != nil {
-			return nil, cerr.NewError(cerr.InvalidArgument, fmt.Sprintf("failed to parse skill content: %v", parseErr), nil).ConnectError()
-		}
+		parsed := claudemd.ParseSkill(req.Msg.GetAgentContent())
 
 		if req.Msg.GetSkillId() != "" {
 			// Update existing skill.
@@ -258,114 +255,4 @@ func (s *Server) removeSkillDiff(projectID, skillID, filename string) {
 	}
 
 	s.skillDiffCache[projectID] = filtered
-}
-
-// parseSkillMDContent parses a SKILL.md content string (YAML frontmatter + body)
-// and returns the extracted fields. Used when resolving conflicts with AGENT choice.
-func parseSkillMDContent(content string) (*parsedSkillMD, error) {
-	result := &parsedSkillMD{
-		UserInvocable: true, // Default per skill spec.
-	}
-
-	lines := strings.Split(content, "\n")
-	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
-		// No frontmatter, treat entire content as body.
-		result.Content = content
-		return result, nil
-	}
-
-	// Find closing ---.
-	closingIdx := -1
-
-	for i := 1; i < len(lines); i++ {
-		if strings.TrimSpace(lines[i]) == "---" {
-			closingIdx = i
-			break
-		}
-	}
-
-	if closingIdx == -1 {
-		result.Content = content
-		return result, nil
-	}
-
-	// Parse YAML frontmatter.
-	var currentListKey string
-
-	for i := 1; i < closingIdx; i++ {
-		line := lines[i]
-		trimmed := strings.TrimSpace(line)
-
-		// Check for YAML list item.
-		if strings.HasPrefix(trimmed, "- ") && currentListKey != "" {
-			item := strings.TrimSpace(strings.TrimPrefix(trimmed, "- "))
-			if item != "" {
-				switch currentListKey {
-				case "allowed-tools":
-					result.AllowedTools = append(result.AllowedTools, item)
-				}
-			}
-
-			continue
-		}
-
-		if idx := strings.Index(line, ":"); idx > 0 {
-			key := strings.TrimSpace(line[:idx])
-			value := strings.TrimSpace(line[idx+1:])
-			currentListKey = ""
-
-			switch key {
-			case "name":
-				result.Name = value
-			case "description":
-				result.Description = value
-			case "disable-model-invocation":
-				result.DisableModelInvocation = strings.EqualFold(value, "true")
-			case "user-invocable":
-				result.UserInvocable = strings.EqualFold(value, "true")
-			case "allowed-tools":
-				if value == "" {
-					currentListKey = "allowed-tools"
-				} else {
-					for p := range strings.SplitSeq(value, ",") {
-						p = strings.TrimSpace(p)
-						if p != "" {
-							result.AllowedTools = append(result.AllowedTools, p)
-						}
-					}
-				}
-			case "model":
-				result.Model = value
-			case "context":
-				result.Context = value
-			case "agent":
-				result.Agent = value
-			case "argument-hint":
-				result.ArgumentHint = value
-			}
-		}
-	}
-
-	// Extract body (everything after closing ---).
-	if closingIdx+1 < len(lines) {
-		bodyLines := lines[closingIdx+1:]
-		body := strings.Join(bodyLines, "\n")
-		result.Content = strings.TrimSpace(body)
-	}
-
-	return result, nil
-}
-
-// parsedSkillMD holds data extracted from a SKILL.md content string.
-type parsedSkillMD struct {
-	Name                   string
-	Description            string
-	Content                string
-	DisableModelInvocation bool
-	UserInvocable          bool
-	AllowedTools           []string
-	Model                  string
-	Context                string
-	Agent                  string
-	ArgumentHint           string
 }

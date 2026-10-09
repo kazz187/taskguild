@@ -137,15 +137,15 @@ func (r *YAMLRepository) Delete(ctx context.Context, id string) error {
 // configName extracts the entity name stored inside a template's config.
 func configName(t *template.Template) string {
 	switch t.EntityType {
-	case "agent":
+	case template.EntityTypeAgent:
 		if t.AgentConfig != nil {
 			return t.AgentConfig.Name
 		}
-	case "skill":
+	case template.EntityTypeSkill:
 		if t.SkillConfig != nil {
 			return t.SkillConfig.Name
 		}
-	case "script":
+	case template.EntityTypeScript:
 		if t.ScriptConfig != nil {
 			return t.ScriptConfig.Name
 		}

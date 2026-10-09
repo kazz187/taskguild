@@ -1,3 +1,5 @@
+// Package eventbus provides an in-process publish/subscribe bus for taskguild
+// domain events delivered to streaming API subscribers.
 package eventbus
 
 import (

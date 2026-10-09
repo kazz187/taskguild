@@ -50,7 +50,7 @@ func (a *DescriptionLoggerAdapter) LogDescriptionChange(ctx context.Context, pro
 		taskguildv1.EventType_EVENT_TYPE_TASK_LOG,
 		l.ID,
 		"",
-		map[string]string{"task_id": taskID, "project_id": projectID},
+		map[string]string{eventbus.MetaTaskID: taskID, eventbus.MetaProjectID: projectID},
 	)
 
 	return nil

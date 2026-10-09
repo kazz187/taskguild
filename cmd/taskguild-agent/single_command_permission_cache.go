@@ -10,6 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	scp "github.com/kazz187/taskguild/internal/singlecommandpermission"
 	"github.com/kazz187/taskguild/pkg/shellparse"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
@@ -133,7 +134,7 @@ func (c *singleCommandPermissionCache) CheckCommand(command string) (matched boo
 	defer c.mu.RUnlock()
 
 	for _, p := range c.patterns {
-		if p.ptype != "command" {
+		if p.ptype != scp.TypeCommand {
 			continue
 		}
 
@@ -151,7 +152,7 @@ func (c *singleCommandPermissionCache) CheckRedirect(path string) (matched bool,
 	defer c.mu.RUnlock()
 
 	for _, p := range c.patterns {
-		if p.ptype != "redirect" {
+		if p.ptype != scp.TypeRedirect {
 			continue
 		}
 

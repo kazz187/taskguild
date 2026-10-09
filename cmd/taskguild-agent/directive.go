@@ -265,15 +265,16 @@ func stripNextStatus(resultText string) string {
 	return strings.TrimSpace(strings.Join(filtered, "\n"))
 }
 
+// TASK_DESCRIPTION block markers emitted by the agent in its result text.
+const (
+	startMarker = "TASK_DESCRIPTION_START"
+	endMarker   = "TASK_DESCRIPTION_END"
+)
+
 // parseTaskDescription extracts a task description update from the result text.
 // The description is enclosed between TASK_DESCRIPTION_START and TASK_DESCRIPTION_END markers.
 // Returns the extracted description (trimmed) or empty string if no markers found.
 func parseTaskDescription(resultText string) string {
-	const (
-		startMarker = "TASK_DESCRIPTION_START"
-		endMarker   = "TASK_DESCRIPTION_END"
-	)
-
 	startIdx := strings.Index(resultText, startMarker)
 	if startIdx == -1 {
 		return ""
@@ -292,11 +293,6 @@ func parseTaskDescription(resultText string) string {
 // stripTaskDescription removes the TASK_DESCRIPTION block from the result text
 // so it doesn't clutter the reported summary.
 func stripTaskDescription(resultText string) string {
-	const (
-		startMarker = "TASK_DESCRIPTION_START"
-		endMarker   = "TASK_DESCRIPTION_END"
-	)
-
 	startIdx := strings.Index(resultText, startMarker)
 	if startIdx == -1 {
 		return resultText
@@ -527,7 +523,7 @@ func saveClaudeMode(ctx context.Context, taskClient taskguildv1connect.TaskServi
 
 	_, err := taskClient.UpdateTask(ctx, connect.NewRequest(&v1.UpdateTaskRequest{
 		Id:       taskID,
-		Metadata: map[string]string{"claude_mode": mode},
+		Metadata: map[string]string{metaClaudeMode: mode},
 	}))
 	if err != nil {
 		logger.Error("failed to save claude_mode", "error", err)
@@ -560,8 +556,8 @@ func savePlanResult(ctx context.Context, taskID, content string, tl *taskLogger)
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_RESULT, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 			preview,
 			map[string]string{
-				"full_text":   content,
-				"result_type": "plan",
+				metaFullText:   content,
+				metaResultType: "plan",
 			})
 		logger.Info("plan_result saved as log", "content_length", len(content))
 	}

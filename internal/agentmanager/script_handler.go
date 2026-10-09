@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/kazz187/taskguild/internal/eventbus"
 	"github.com/kazz187/taskguild/internal/script"
 	"github.com/kazz187/taskguild/pkg/cerr"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
@@ -74,12 +75,12 @@ func (s *Server) ReportScriptExecutionResult(ctx context.Context, req *connect.R
 		req.Msg.GetRequestId(),
 		"",
 		map[string]string{
-			"project_id":    proj.ID,
-			"request_id":    req.Msg.GetRequestId(),
-			"script_id":     req.Msg.GetScriptId(),
-			"success":       strconv.FormatBool(req.Msg.GetSuccess()),
-			"exit_code":     strconv.Itoa(int(req.Msg.GetExitCode())),
-			"error_message": req.Msg.GetErrorMessage(),
+			eventbus.MetaProjectID:    proj.ID,
+			eventbus.MetaRequestID:    req.Msg.GetRequestId(),
+			eventbus.MetaScriptID:     req.Msg.GetScriptId(),
+			eventbus.MetaSuccess:      strconv.FormatBool(req.Msg.GetSuccess()),
+			eventbus.MetaExitCode:     strconv.Itoa(int(req.Msg.GetExitCode())),
+			eventbus.MetaErrorMessage: req.Msg.GetErrorMessage(),
 		},
 	)
 

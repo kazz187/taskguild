@@ -115,7 +115,7 @@ func (s *Server) RespondToInteraction(ctx context.Context, req *connect.Request[
 		taskguildv1.EventType_EVENT_TYPE_INTERACTION_RESPONDED,
 		inter.ID,
 		MarshalInteractionPayload(interProto),
-		map[string]string{"task_id": inter.TaskID, "agent_id": inter.AgentID},
+		map[string]string{eventbus.MetaTaskID: inter.TaskID, eventbus.MetaAgentID: inter.AgentID},
 	)
 
 	return connect.NewResponse(&taskguildv1.RespondToInteractionResponse{
@@ -157,7 +157,7 @@ func (s *Server) RespondToInteractionByToken(ctx context.Context, req *connect.R
 		taskguildv1.EventType_EVENT_TYPE_INTERACTION_RESPONDED,
 		inter.ID,
 		MarshalInteractionPayload(interProto),
-		map[string]string{"task_id": inter.TaskID, "agent_id": inter.AgentID},
+		map[string]string{eventbus.MetaTaskID: inter.TaskID, eventbus.MetaAgentID: inter.AgentID},
 	)
 
 	return connect.NewResponse(&taskguildv1.RespondToInteractionByTokenResponse{
@@ -188,7 +188,7 @@ func (s *Server) ExpireInteraction(ctx context.Context, req *connect.Request[tas
 		taskguildv1.EventType_EVENT_TYPE_INTERACTION_RESPONDED,
 		inter.ID,
 		MarshalInteractionPayload(interProto),
-		map[string]string{"task_id": inter.TaskID, "agent_id": inter.AgentID},
+		map[string]string{eventbus.MetaTaskID: inter.TaskID, eventbus.MetaAgentID: inter.AgentID},
 	)
 
 	return connect.NewResponse(&taskguildv1.ExpireInteractionResponse{
@@ -231,7 +231,7 @@ func (s *Server) SendMessage(ctx context.Context, req *connect.Request[taskguild
 		taskguildv1.EventType_EVENT_TYPE_INTERACTION_CREATED,
 		inter.ID,
 		MarshalInteractionPayload(interProto),
-		map[string]string{"task_id": inter.TaskID, "project_id": t.ProjectID},
+		map[string]string{eventbus.MetaTaskID: inter.TaskID, eventbus.MetaProjectID: t.ProjectID},
 	)
 
 	return connect.NewResponse(&taskguildv1.SendMessageResponse{
@@ -260,7 +260,7 @@ func (s *Server) SubscribeInteractions(ctx context.Context, req *connect.Request
 			}
 			// Filter by task_id if specified.
 			if taskID != "" {
-				if eventTaskID, ok := event.GetMetadata()["task_id"]; ok && eventTaskID != taskID {
+				if eventTaskID, ok := event.GetMetadata()[eventbus.MetaTaskID]; ok && eventTaskID != taskID {
 					continue
 				}
 			}

@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
 
+	"github.com/kazz187/taskguild/internal/eventbus"
 	"github.com/kazz187/taskguild/internal/script"
 	"github.com/kazz187/taskguild/pkg/cerr"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
@@ -85,9 +86,9 @@ func (s *Server) ReportScriptComparison(ctx context.Context, req *connect.Reques
 		req.Msg.GetRequestId(),
 		"",
 		map[string]string{
-			"project_id": proj.ID,
-			"request_id": req.Msg.GetRequestId(),
-			"diff_count": strconv.Itoa(len(req.Msg.GetDiffs())),
+			eventbus.MetaProjectID: proj.ID,
+			eventbus.MetaRequestID: req.Msg.GetRequestId(),
+			eventbus.MetaDiffCount: strconv.Itoa(len(req.Msg.GetDiffs())),
 		},
 	)
 

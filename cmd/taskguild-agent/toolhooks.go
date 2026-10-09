@@ -47,7 +47,7 @@ func buildToolUseHooks(
 						// fork a new Claude session. This catches AI-side
 						// loops (e.g. codex:rescue calling itself
 						// recursively) and avoids runaway token consumption.
-						if input.ToolName == "Skill" && loopGuard != nil {
+						if input.ToolName == toolSkill && loopGuard != nil {
 							skillName, _ := input.ToolInput["skill"].(string)
 							if skillName != "" {
 								block, reason := loopGuard.CheckAndRegister(input.ToolUseID, skillName, input.ToolInput)
@@ -59,14 +59,14 @@ func buildToolUseHooks(
 										"reason", reason)
 
 									return claudeagent.HookOutput{
-										Decision: "block",
+										Decision: hookDecisionBlock,
 										Reason:   reason,
 									}, nil
 								}
 							}
 						}
 
-						if input.ToolName != "ExitPlanMode" {
+						if input.ToolName != toolExitPlanMode {
 							return claudeagent.HookOutput{}, nil
 						}
 
@@ -82,7 +82,7 @@ func buildToolUseHooks(
 					func(input claudeagent.HookInput, toolUseID string, ctx claudeagent.HookContext) (claudeagent.HookOutput, error) {
 						// Release the skill loop guard slot for this Skill
 						// invocation now that it has finished.
-						if input.ToolName == "Skill" && loopGuard != nil {
+						if input.ToolName == toolSkill && loopGuard != nil {
 							loopGuard.Release(input.ToolUseID)
 						}
 
@@ -94,7 +94,7 @@ func buildToolUseHooks(
 						logToolUse(tl, taskID, input, false)
 
 						// Track plan file writes.
-						if input.ToolName == "Write" || input.ToolName == "Edit" {
+						if input.ToolName == toolWrite || input.ToolName == toolEdit {
 							if fp, ok := input.ToolInput["file_path"].(string); ok {
 								if strings.Contains(fp, ".claude/plans/") {
 									planFilePath = fp
@@ -103,7 +103,7 @@ func buildToolUseHooks(
 						}
 
 						// Save plan result when ExitPlanMode is called.
-						if input.ToolName == "ExitPlanMode" && tl != nil {
+						if input.ToolName == toolExitPlanMode && tl != nil {
 							var planContent string
 
 							if input.ToolResponse != nil {
@@ -152,7 +152,7 @@ func buildToolUseHooks(
 						// invocation. Note: when the guard itself blocked the
 						// invocation in PreToolUse, the slot was never
 						// registered, so this Release is a no-op — safe.
-						if input.ToolName == "Skill" && loopGuard != nil {
+						if input.ToolName == toolSkill && loopGuard != nil {
 							loopGuard.Release(input.ToolUseID)
 						}
 
@@ -223,7 +223,7 @@ func logToolUse(tl *taskLogger, taskID string, input claudeagent.HookInput, isFa
 
 	// Add permission mode if available.
 	if input.PermissionMode != "" {
-		metadata["claude_mode"] = input.PermissionMode
+		metadata[metaClaudeMode] = input.PermissionMode
 	}
 
 	slog.Info("tool_use", "task_id", taskID, "summary", summary, "failed", isFail, "claude_mode", input.PermissionMode)
@@ -234,19 +234,19 @@ func logToolUse(tl *taskLogger, taskID string, input claudeagent.HookInput, isFa
 // formatToolSummary creates a human-readable one-line summary for a tool invocation.
 func formatToolSummary(toolName string, toolInput map[string]any) string {
 	switch toolName {
-	case "Read":
+	case toolRead:
 		if fp, ok := toolInput["file_path"].(string); ok {
 			return "Read: " + fp
 		}
-	case "Write":
+	case toolWrite:
 		if fp, ok := toolInput["file_path"].(string); ok {
 			return "Write: " + fp
 		}
-	case "Edit":
+	case toolEdit:
 		if fp, ok := toolInput["file_path"].(string); ok {
 			return "Edit: " + fp
 		}
-	case "Bash":
+	case toolBash:
 		if cmd, ok := toolInput["command"].(string); ok {
 			// Truncate long commands.
 			if len(cmd) > 80 {
@@ -255,11 +255,11 @@ func formatToolSummary(toolName string, toolInput map[string]any) string {
 
 			return "Bash: " + cmd
 		}
-	case "Glob":
+	case toolGlob:
 		if pattern, ok := toolInput["pattern"].(string); ok {
 			return "Glob: " + pattern
 		}
-	case "Grep":
+	case toolGrep:
 		if pattern, ok := toolInput["pattern"].(string); ok {
 			path := ""
 			if p, ok := toolInput["path"].(string); ok {
@@ -268,29 +268,29 @@ func formatToolSummary(toolName string, toolInput map[string]any) string {
 
 			return fmt.Sprintf("Grep: %q%s", pattern, path)
 		}
-	case "WebSearch":
+	case toolWebSearch:
 		if query, ok := toolInput["query"].(string); ok {
 			return fmt.Sprintf("WebSearch: %q", query)
 		}
-	case "WebFetch":
+	case toolWebFetch:
 		if url, ok := toolInput["url"].(string); ok {
 			return "WebFetch: " + url
 		}
-	case "Agent":
+	case toolAgent:
 		if desc, ok := toolInput["description"].(string); ok {
 			return "Agent: " + desc
 		}
-	case "TodoWrite":
+	case toolTodoWrite:
 		return "TodoWrite"
-	case "NotebookEdit":
+	case toolNotebookEdit:
 		if nbPath, ok := toolInput["notebook_path"].(string); ok {
 			return "NotebookEdit: " + nbPath
 		}
-	case "Skill":
+	case toolSkill:
 		if skill, ok := toolInput["skill"].(string); ok {
 			return "Skill /" + skill
 		}
-	case "AskUserQuestion":
+	case toolAskUserQuestion:
 		return "AskUserQuestion"
 	}
 
@@ -339,8 +339,8 @@ func handleExitPlanModeApproval(
 		Title:       "Plan review",
 		Description: planContent,
 		Options: []*v1.InteractionOption{
-			{Label: "Approve", Value: "approve", Description: "Approve the plan and proceed"},
-			{Label: "Reject", Value: "reject", Description: "Reject the plan with feedback"},
+			{Label: "Approve", Value: optionApprove, Description: "Approve the plan and proceed"},
+			{Label: "Reject", Value: optionReject, Description: "Reject the plan with feedback"},
 		},
 	}))
 	if err != nil {
@@ -358,7 +358,7 @@ func handleExitPlanModeApproval(
 	select {
 	case <-ctx.Done():
 		return claudeagent.HookOutput{
-			Decision: "block",
+			Decision: hookDecisionBlock,
 			Reason:   "context canceled while waiting for plan approval",
 		}, nil
 	case inter := <-ch:
@@ -366,7 +366,7 @@ func handleExitPlanModeApproval(
 			logger.Info("plan approval expired, blocking ExitPlanMode")
 
 			return claudeagent.HookOutput{
-				Decision: "block",
+				Decision: hookDecisionBlock,
 				Reason:   "Plan approval expired. Please revise the plan and try again.",
 			}, nil
 		}
@@ -374,18 +374,18 @@ func handleExitPlanModeApproval(
 		responseStr := inter.GetResponse()
 		logger.Info("plan approval response", "response", responseStr)
 
-		if responseStr == "approve" {
+		if responseStr == optionApprove {
 			return claudeagent.HookOutput{}, nil
 		}
 
 		// Any other response is treated as rejection with feedback.
 		feedback := responseStr
-		if feedback == "reject" {
+		if feedback == optionReject {
 			feedback = "The user rejected the plan. Please ask the user for feedback and revise the plan."
 		}
 
 		return claudeagent.HookOutput{
-			Decision: "block",
+			Decision: hookDecisionBlock,
 			Reason:   "Plan not approved. User feedback: " + feedback,
 		}, nil
 
@@ -400,7 +400,7 @@ func handleExitPlanModeApproval(
 		}
 
 		return claudeagent.HookOutput{
-			Decision: "block",
+			Decision: hookDecisionBlock,
 			Reason:   "Plan not approved. User feedback: " + msg.GetTitle(),
 		}, nil
 	}

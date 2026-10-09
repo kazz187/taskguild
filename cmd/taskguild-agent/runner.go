@@ -248,7 +248,7 @@ func runTask(
 
 		tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_START, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 			fmt.Sprintf("Turn %d started", turn),
-			map[string]string{"turn": strconv.Itoa(turn), "claude_mode": turnMode})
+			map[string]string{metaTurn: strconv.Itoa(turn), metaClaudeMode: turnMode})
 		logger.Info("starting Claude CLI", "turn", turn, "session_id", sessionID, "claude_mode", turnMode)
 		logger.Debug("Claude SDK input", "turn", turn)
 
@@ -301,11 +301,11 @@ func runTask(
 		if err != nil {
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_END, v1.TaskLogLevel_TASK_LOG_LEVEL_ERROR,
 				fmt.Sprintf("Turn %d error: %v", turn, err),
-				map[string]string{"turn": strconv.Itoa(turn), "claude_mode": endMode})
+				map[string]string{metaTurn: strconv.Itoa(turn), metaClaudeMode: endMode})
 		} else {
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_TURN_END, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				fmt.Sprintf("Turn %d completed", turn),
-				map[string]string{"turn": strconv.Itoa(turn), "claude_mode": endMode})
+				map[string]string{metaTurn: strconv.Itoa(turn), metaClaudeMode: endMode})
 		}
 
 		// Save session ID for resume.
@@ -450,8 +450,8 @@ func runTask(
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_DIRECTIVE, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 					"Task description updated",
 					map[string]string{
-						"directive_type": "TASK_DESCRIPTION",
-						"turn":           strconv.Itoa(turn),
+						metaDirectiveType: "TASK_DESCRIPTION",
+						metaTurn:          strconv.Itoa(turn),
 					})
 				// Emit a RESULT log so description updates appear in the chronological results timeline.
 				descPreview := newDesc
@@ -462,8 +462,8 @@ func runTask(
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_RESULT, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 					descPreview,
 					map[string]string{
-						"full_text":   newDesc,
-						"result_type": "description",
+						metaFullText:   newDesc,
+						metaResultType: "description",
 					})
 			}
 		}
@@ -478,9 +478,9 @@ func runTask(
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_DIRECTIVE, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 					"Task created: "+d.Title,
 					map[string]string{
-						"directive_type": "CREATE_TASK",
-						"task_title":     d.Title,
-						"turn":           strconv.Itoa(turn),
+						metaDirectiveType: "CREATE_TASK",
+						"task_title":      d.Title,
+						metaTurn:          strconv.Itoa(turn),
 					})
 			}
 		}
@@ -517,8 +517,8 @@ func runTask(
 				tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_AGENT_OUTPUT, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 					preview,
 					map[string]string{
-						"full_text": fullText,
-						"turn":      strconv.Itoa(turn),
+						metaFullText: fullText,
+						metaTurn:     strconv.Itoa(turn),
 					})
 			}
 		}
@@ -532,9 +532,9 @@ func runTask(
 			tl.Log(v1.TaskLogCategory_TASK_LOG_CATEGORY_DIRECTIVE, v1.TaskLogLevel_TASK_LOG_LEVEL_INFO,
 				"Status transition: "+nextStatusID,
 				map[string]string{
-					"directive_type": "NEXT_STATUS",
-					"next_status":    nextStatusID,
-					"turn":           strconv.Itoa(turn),
+					metaDirectiveType: "NEXT_STATUS",
+					"next_status":     nextStatusID,
+					metaTurn:          strconv.Itoa(turn),
 				})
 
 			// Validate the transition before reporting completion.

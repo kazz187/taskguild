@@ -7,6 +7,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
 
+	"github.com/kazz187/taskguild/internal/eventbus"
 	"github.com/kazz187/taskguild/internal/tasklog"
 	"github.com/kazz187/taskguild/pkg/cerr"
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
@@ -39,7 +40,7 @@ func (s *Server) ReportTaskLog(ctx context.Context, req *connect.Request[taskgui
 		return nil, err
 	}
 
-	eventMeta := map[string]string{"task_id": req.Msg.GetTaskId(), "project_id": t.ProjectID}
+	eventMeta := map[string]string{eventbus.MetaTaskID: req.Msg.GetTaskId(), eventbus.MetaProjectID: t.ProjectID}
 
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_TASK_LOG,
