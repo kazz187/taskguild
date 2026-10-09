@@ -8,7 +8,6 @@ import (
 	"slices"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -164,18 +163,18 @@ func (s *Server) CreateTaskInternal(ctx context.Context, in CreateTaskInput) (*T
 	return t, nil
 }
 
-func (s *Server) CreateTask(ctx context.Context, req *connect.Request[taskguildv1.CreateTaskRequest]) (*connect.Response[taskguildv1.CreateTaskResponse], error) {
+func (s *Server) CreateTask(ctx context.Context, req *taskguildv1.CreateTaskRequest) (*taskguildv1.CreateTaskResponse, error) {
 	in := CreateTaskInput{
-		ProjectID:   req.Msg.GetProjectId(),
-		WorkflowID:  req.Msg.GetWorkflowId(),
-		Title:       req.Msg.GetTitle(),
-		Description: req.Msg.GetDescription(),
-		UseWorktree: req.Msg.GetUseWorktree(),
-		Effort:      req.Msg.GetEffort(),
-		Metadata:    req.Msg.GetMetadata(),
+		ProjectID:   req.GetProjectId(),
+		WorkflowID:  req.GetWorkflowId(),
+		Title:       req.GetTitle(),
+		Description: req.GetDescription(),
+		UseWorktree: req.GetUseWorktree(),
+		Effort:      req.GetEffort(),
+		Metadata:    req.GetMetadata(),
 	}
-	if req.Msg.StatusId != nil {
-		in.StatusID = req.Msg.GetStatusId()
+	if req.StatusId != nil {
+		in.StatusID = req.GetStatusId()
 	}
 
 	t, err := s.CreateTaskInternal(ctx, in)
@@ -183,34 +182,34 @@ func (s *Server) CreateTask(ctx context.Context, req *connect.Request[taskguildv
 		return nil, err
 	}
 
-	return connect.NewResponse(&taskguildv1.CreateTaskResponse{
+	return &taskguildv1.CreateTaskResponse{
 		Task: toProto(t),
-	}), nil
+	}, nil
 }
 
-func (s *Server) GetTask(ctx context.Context, req *connect.Request[taskguildv1.GetTaskRequest]) (*connect.Response[taskguildv1.GetTaskResponse], error) {
-	t, err := s.repo.Get(ctx, req.Msg.GetId())
+func (s *Server) GetTask(ctx context.Context, req *taskguildv1.GetTaskRequest) (*taskguildv1.GetTaskResponse, error) {
+	t, err := s.repo.Get(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	return connect.NewResponse(&taskguildv1.GetTaskResponse{
+	return &taskguildv1.GetTaskResponse{
 		Task: toProto(t),
-	}), nil
+	}, nil
 }
 
-func (s *Server) ListTasks(ctx context.Context, req *connect.Request[taskguildv1.ListTasksRequest]) (*connect.Response[taskguildv1.ListTasksResponse], error) {
+func (s *Server) ListTasks(ctx context.Context, req *taskguildv1.ListTasksRequest) (*taskguildv1.ListTasksResponse, error) {
 	limit, offset := int32(0), int32(0)
 
-	if req.Msg.GetPagination() != nil {
-		if req.Msg.GetPagination().GetLimit() > 0 {
-			limit = req.Msg.GetPagination().GetLimit()
+	if req.GetPagination() != nil {
+		if req.GetPagination().GetLimit() > 0 {
+			limit = req.GetPagination().GetLimit()
 		}
 
-		offset = req.Msg.GetPagination().GetOffset()
+		offset = req.GetPagination().GetOffset()
 	}
 
-	tasks, total, err := s.repo.List(ctx, req.Msg.GetProjectId(), req.Msg.GetWorkflowId(), req.Msg.GetStatusId(), int(limit), int(offset))
+	tasks, total, err := s.repo.List(ctx, req.GetProjectId(), req.GetWorkflowId(), req.GetStatusId(), int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}
@@ -220,27 +219,27 @@ func (s *Server) ListTasks(ctx context.Context, req *connect.Request[taskguildv1
 		protos[i] = toProto(t)
 	}
 
-	return connect.NewResponse(&taskguildv1.ListTasksResponse{
+	return &taskguildv1.ListTasksResponse{
 		Tasks: protos,
 		Pagination: &taskguildv1.PaginationResponse{
 			Total:  int32(total),
 			Limit:  limit,
 			Offset: offset,
 		},
-	}), nil
+	}, nil
 }
 
-func (s *Server) UpdateTask(ctx context.Context, req *connect.Request[taskguildv1.UpdateTaskRequest]) (*connect.Response[taskguildv1.UpdateTaskResponse], error) {
-	t, err := s.repo.Get(ctx, req.Msg.GetId())
+func (s *Server) UpdateTask(ctx context.Context, req *taskguildv1.UpdateTaskRequest) (*taskguildv1.UpdateTaskResponse, error) {
+	t, err := s.repo.Get(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	if req.Msg.GetTitle() != "" {
-		t.Title = req.Msg.GetTitle()
+	if req.GetTitle() != "" {
+		t.Title = req.GetTitle()
 	}
 
-	if req.Msg.GetDescription() != "" && req.Msg.GetDescription() != t.Description {
+	if req.GetDescription() != "" && req.GetDescription() != t.Description {
 		if s.descLogger != nil && t.Description != "" {
 			err := s.descLogger.LogDescriptionChange(ctx, t.ProjectID, t.ID, t.Description)
 			if err != nil {
@@ -248,23 +247,23 @@ func (s *Server) UpdateTask(ctx context.Context, req *connect.Request[taskguildv
 			}
 		}
 
-		t.Description = req.Msg.GetDescription()
+		t.Description = req.GetDescription()
 	}
 
-	if req.Msg.Metadata != nil {
+	if req.Metadata != nil {
 		if t.Metadata == nil {
 			t.Metadata = make(map[string]string)
 		}
 
-		maps.Copy(t.Metadata, req.Msg.GetMetadata())
+		maps.Copy(t.Metadata, req.GetMetadata())
 	}
 
-	if req.Msg.UseWorktree != nil {
-		t.UseWorktree = req.Msg.GetUseWorktree()
+	if req.UseWorktree != nil {
+		t.UseWorktree = req.GetUseWorktree()
 	}
 
-	if req.Msg.Effort != nil {
-		t.Effort = req.Msg.GetEffort()
+	if req.Effort != nil {
+		t.Effort = req.GetEffort()
 	}
 
 	t.UpdatedAt = time.Now()
@@ -279,51 +278,51 @@ func (s *Server) UpdateTask(ctx context.Context, req *connect.Request[taskguildv
 		map[string]string{eventbus.MetaProjectID: t.ProjectID, eventbus.MetaWorkflowID: t.WorkflowID},
 	)
 
-	return connect.NewResponse(&taskguildv1.UpdateTaskResponse{
+	return &taskguildv1.UpdateTaskResponse{
 		Task: toProto(t),
-	}), nil
+	}, nil
 }
 
-func (s *Server) DeleteTask(ctx context.Context, req *connect.Request[taskguildv1.DeleteTaskRequest]) (*connect.Response[taskguildv1.DeleteTaskResponse], error) {
+func (s *Server) DeleteTask(ctx context.Context, req *taskguildv1.DeleteTaskRequest) (*taskguildv1.DeleteTaskResponse, error) {
 	// Get task before delete for event metadata.
-	t, err := s.repo.Get(ctx, req.Msg.GetId())
+	t, err := s.repo.Get(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.repo.Delete(ctx, req.Msg.GetId()); err != nil {
+	if err := s.repo.Delete(ctx, req.GetId()); err != nil {
 		return nil, err
 	}
 
 	// Cascade-delete related task logs and interactions so that no
 	// orphaned records remain after the task is removed.
 	for _, d := range s.cascadeDeleters {
-		if n, err := d.DeleteByTaskID(ctx, req.Msg.GetId()); err != nil {
-			slog.Warn("cascade delete failed", "task_id", req.Msg.GetId(), "error", err)
+		if n, err := d.DeleteByTaskID(ctx, req.GetId()); err != nil {
+			slog.Warn("cascade delete failed", "task_id", req.GetId(), "error", err)
 		} else if n > 0 {
-			slog.Info("cascade-deleted records", "task_id", req.Msg.GetId(), "count", n)
+			slog.Info("cascade-deleted records", "task_id", req.GetId(), "count", n)
 		}
 	}
 
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_TASK_DELETED,
-		req.Msg.GetId(),
+		req.GetId(),
 		"",
 		map[string]string{eventbus.MetaProjectID: t.ProjectID, eventbus.MetaWorkflowID: t.WorkflowID},
 	)
 
-	return connect.NewResponse(&taskguildv1.DeleteTaskResponse{}), nil
+	return &taskguildv1.DeleteTaskResponse{}, nil
 }
 
-func (s *Server) UpdateTaskStatus(ctx context.Context, req *connect.Request[taskguildv1.UpdateTaskStatusRequest]) (*connect.Response[taskguildv1.UpdateTaskStatusResponse], error) {
-	t, err := s.repo.Get(ctx, req.Msg.GetId())
+func (s *Server) UpdateTaskStatus(ctx context.Context, req *taskguildv1.UpdateTaskStatusRequest) (*taskguildv1.UpdateTaskStatusResponse, error) {
+	t, err := s.repo.Get(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
 
 	// Block force-move when an agent is actively running on the task.
 	// Pending tasks (agent not yet started) are allowed to be force-moved.
-	if req.Msg.GetForce() {
+	if req.GetForce() {
 		if t.AssignmentStatus == AssignmentStatusAssigned {
 			return nil, cerr.NewError(
 				cerr.FailedPrecondition,
@@ -356,7 +355,7 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *connect.Request[task
 	targetExists := false
 
 	for i := range wf.Statuses {
-		if wf.Statuses[i].Name == req.Msg.GetStatusId() {
+		if wf.Statuses[i].Name == req.GetStatusId() {
 			targetExists = true
 			break
 		}
@@ -365,7 +364,7 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *connect.Request[task
 	if !targetExists {
 		return nil, cerr.NewError(
 			cerr.InvalidArgument,
-			fmt.Sprintf("target status %q not found in workflow", req.Msg.GetStatusId()),
+			fmt.Sprintf("target status %q not found in workflow", req.GetStatusId()),
 			nil,
 		).ConnectError()
 	}
@@ -373,27 +372,27 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *connect.Request[task
 	// Reject self-transitions (same status → same status) unconditionally.
 	// Self-transitions create infinite loops when agents repeatedly output
 	// NEXT_STATUS with the current status.
-	if currentStatus.Name == req.Msg.GetStatusId() {
+	if currentStatus.Name == req.GetStatusId() {
 		return nil, cerr.NewError(
 			cerr.FailedPrecondition,
-			fmt.Sprintf("self-transition from %q to %q is not allowed", currentStatus.Name, req.Msg.GetStatusId()),
+			fmt.Sprintf("self-transition from %q to %q is not allowed", currentStatus.Name, req.GetStatusId()),
 			nil,
 		).ConnectError()
 	}
 
 	// When force is false, enforce workflow transition rules.
-	if !req.Msg.GetForce() {
-		allowed := slices.Contains(currentStatus.TransitionsTo, req.Msg.GetStatusId())
+	if !req.GetForce() {
+		allowed := slices.Contains(currentStatus.TransitionsTo, req.GetStatusId())
 		if !allowed {
 			return nil, cerr.NewError(
 				cerr.FailedPrecondition,
-				fmt.Sprintf("transition from %q to %q is not allowed", currentStatus.Name, req.Msg.GetStatusId()),
+				fmt.Sprintf("transition from %q to %q is not allowed", currentStatus.Name, req.GetStatusId()),
 				nil,
 			).ConnectError()
 		}
 	}
 
-	t.StatusID = req.Msg.GetStatusId()
+	t.StatusID = req.GetStatusId()
 	t.UpdatedAt = time.Now()
 
 	// If the task is pending assignment and the target status has no agent
@@ -401,7 +400,7 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *connect.Request[task
 	// from being stuck in "pending" after moving to a status (e.g. terminal)
 	// where no agent will ever claim them.
 	if t.AssignmentStatus == AssignmentStatusPending {
-		if !statusHasAgent(wf, req.Msg.GetStatusId()) {
+		if !statusHasAgent(wf, req.GetStatusId()) {
 			t.AssignmentStatus = AssignmentStatusUnassigned
 			t.AssignedAgentID = ""
 		}
@@ -418,17 +417,17 @@ func (s *Server) UpdateTaskStatus(ctx context.Context, req *connect.Request[task
 		map[string]string{
 			eventbus.MetaProjectID:   t.ProjectID,
 			eventbus.MetaWorkflowID:  t.WorkflowID,
-			eventbus.MetaNewStatusID: req.Msg.GetStatusId(),
+			eventbus.MetaNewStatusID: req.GetStatusId(),
 		},
 	)
 
-	return connect.NewResponse(&taskguildv1.UpdateTaskStatusResponse{
+	return &taskguildv1.UpdateTaskStatusResponse{
 		Task: toProto(t),
-	}), nil
+	}, nil
 }
 
-func (s *Server) StopTask(ctx context.Context, req *connect.Request[taskguildv1.StopTaskRequest]) (*connect.Response[taskguildv1.StopTaskResponse], error) {
-	t, err := s.repo.Get(ctx, req.Msg.GetId())
+func (s *Server) StopTask(ctx context.Context, req *taskguildv1.StopTaskRequest) (*taskguildv1.StopTaskResponse, error) {
+	t, err := s.repo.Get(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
@@ -480,13 +479,13 @@ func (s *Server) StopTask(ctx context.Context, req *connect.Request[taskguildv1.
 		},
 	)
 
-	return connect.NewResponse(&taskguildv1.StopTaskResponse{
+	return &taskguildv1.StopTaskResponse{
 		Task: toProto(t),
-	}), nil
+	}, nil
 }
 
-func (s *Server) ResumeTask(ctx context.Context, req *connect.Request[taskguildv1.ResumeTaskRequest]) (*connect.Response[taskguildv1.ResumeTaskResponse], error) {
-	t, err := s.repo.Get(ctx, req.Msg.GetId())
+func (s *Server) ResumeTask(ctx context.Context, req *taskguildv1.ResumeTaskRequest) (*taskguildv1.ResumeTaskResponse, error) {
+	t, err := s.repo.Get(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
@@ -525,7 +524,7 @@ func (s *Server) ResumeTask(ctx context.Context, req *connect.Request[taskguildv
 	}
 
 	// Re-read the task after resume (it updates assignment status).
-	t, err = s.repo.Get(ctx, req.Msg.GetId())
+	t, err = s.repo.Get(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
@@ -541,19 +540,19 @@ func (s *Server) ResumeTask(ctx context.Context, req *connect.Request[taskguildv
 		},
 	)
 
-	return connect.NewResponse(&taskguildv1.ResumeTaskResponse{
+	return &taskguildv1.ResumeTaskResponse{
 		Task: toProto(t),
-	}), nil
+	}, nil
 }
 
-func (s *Server) ArchiveTask(ctx context.Context, req *connect.Request[taskguildv1.ArchiveTaskRequest]) (*connect.Response[taskguildv1.ArchiveTaskResponse], error) {
+func (s *Server) ArchiveTask(ctx context.Context, req *taskguildv1.ArchiveTaskRequest) (*taskguildv1.ArchiveTaskResponse, error) {
 	// Get task before archiving for response and event metadata.
-	t, err := s.repo.Get(ctx, req.Msg.GetId())
+	t, err := s.repo.Get(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.repo.Archive(ctx, req.Msg.GetId()); err != nil {
+	if err := s.repo.Archive(ctx, req.GetId()); err != nil {
 		return nil, err
 	}
 
@@ -571,14 +570,14 @@ func (s *Server) ArchiveTask(ctx context.Context, req *connect.Request[taskguild
 		map[string]string{eventbus.MetaProjectID: t.ProjectID, eventbus.MetaWorkflowID: t.WorkflowID},
 	)
 
-	return connect.NewResponse(&taskguildv1.ArchiveTaskResponse{
+	return &taskguildv1.ArchiveTaskResponse{
 		Task: toProto(t),
-	}), nil
+	}, nil
 }
 
-func (s *Server) ArchiveTerminalTasks(ctx context.Context, req *connect.Request[taskguildv1.ArchiveTerminalTasksRequest]) (*connect.Response[taskguildv1.ArchiveTerminalTasksResponse], error) {
+func (s *Server) ArchiveTerminalTasks(ctx context.Context, req *taskguildv1.ArchiveTerminalTasksRequest) (*taskguildv1.ArchiveTerminalTasksResponse, error) {
 	// Fetch workflow to identify terminal statuses.
-	wf, err := s.workflowRepo.Get(ctx, req.Msg.GetWorkflowId())
+	wf, err := s.workflowRepo.Get(ctx, req.GetWorkflowId())
 	if err != nil {
 		return nil, err
 	}
@@ -592,7 +591,7 @@ func (s *Server) ArchiveTerminalTasks(ctx context.Context, req *connect.Request[
 	}
 
 	// List all tasks in this workflow.
-	tasks, _, err := s.repo.List(ctx, req.Msg.GetProjectId(), req.Msg.GetWorkflowId(), "", 0, 0)
+	tasks, _, err := s.repo.List(ctx, req.GetProjectId(), req.GetWorkflowId(), "", 0, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -637,20 +636,20 @@ func (s *Server) ArchiveTerminalTasks(ctx context.Context, req *connect.Request[
 		)
 	}
 
-	return connect.NewResponse(&taskguildv1.ArchiveTerminalTasksResponse{
+	return &taskguildv1.ArchiveTerminalTasksResponse{
 		ArchivedTasks: archived,
 		SkippedTasks:  skipped,
-	}), nil
+	}, nil
 }
 
-func (s *Server) UnarchiveTask(ctx context.Context, req *connect.Request[taskguildv1.UnarchiveTaskRequest]) (*connect.Response[taskguildv1.UnarchiveTaskResponse], error) {
+func (s *Server) UnarchiveTask(ctx context.Context, req *taskguildv1.UnarchiveTaskRequest) (*taskguildv1.UnarchiveTaskResponse, error) {
 	// Get archived task before unarchiving for response and event metadata.
-	t, err := s.repo.GetArchived(ctx, req.Msg.GetId())
+	t, err := s.repo.GetArchived(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.repo.Unarchive(ctx, req.Msg.GetId()); err != nil {
+	if err := s.repo.Unarchive(ctx, req.GetId()); err != nil {
 		return nil, err
 	}
 
@@ -668,23 +667,23 @@ func (s *Server) UnarchiveTask(ctx context.Context, req *connect.Request[taskgui
 		map[string]string{eventbus.MetaProjectID: t.ProjectID, eventbus.MetaWorkflowID: t.WorkflowID},
 	)
 
-	return connect.NewResponse(&taskguildv1.UnarchiveTaskResponse{
+	return &taskguildv1.UnarchiveTaskResponse{
 		Task: toProto(t),
-	}), nil
+	}, nil
 }
 
-func (s *Server) ListArchivedTasks(ctx context.Context, req *connect.Request[taskguildv1.ListArchivedTasksRequest]) (*connect.Response[taskguildv1.ListArchivedTasksResponse], error) {
+func (s *Server) ListArchivedTasks(ctx context.Context, req *taskguildv1.ListArchivedTasksRequest) (*taskguildv1.ListArchivedTasksResponse, error) {
 	limit, offset := int32(0), int32(0)
 
-	if req.Msg.GetPagination() != nil {
-		if req.Msg.GetPagination().GetLimit() > 0 {
-			limit = req.Msg.GetPagination().GetLimit()
+	if req.GetPagination() != nil {
+		if req.GetPagination().GetLimit() > 0 {
+			limit = req.GetPagination().GetLimit()
 		}
 
-		offset = req.Msg.GetPagination().GetOffset()
+		offset = req.GetPagination().GetOffset()
 	}
 
-	tasks, total, err := s.repo.ListArchived(ctx, req.Msg.GetProjectId(), req.Msg.GetWorkflowId(), int(limit), int(offset))
+	tasks, total, err := s.repo.ListArchived(ctx, req.GetProjectId(), req.GetWorkflowId(), int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}
@@ -694,14 +693,14 @@ func (s *Server) ListArchivedTasks(ctx context.Context, req *connect.Request[tas
 		protos[i] = toProto(t)
 	}
 
-	return connect.NewResponse(&taskguildv1.ListArchivedTasksResponse{
+	return &taskguildv1.ListArchivedTasksResponse{
 		Tasks: protos,
 		Pagination: &taskguildv1.PaginationResponse{
 			Total:  int32(total),
 			Limit:  limit,
 			Offset: offset,
 		},
-	}), nil
+	}, nil
 }
 
 func toProto(t *Task) *taskguildv1.Task {

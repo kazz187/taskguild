@@ -5,250 +5,279 @@
 package taskguildv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// ScheduleServiceName is the fully-qualified name of the ScheduleService service.
 	ScheduleServiceName = "taskguild.v1.ScheduleService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// ScheduleServiceCreateScheduleProcedure is the fully-qualified name of the ScheduleService's
+	// ScheduleServiceCreateScheduleProcedure is the procedure name of the ScheduleService's
 	// CreateSchedule RPC.
 	ScheduleServiceCreateScheduleProcedure = "/taskguild.v1.ScheduleService/CreateSchedule"
-	// ScheduleServiceGetScheduleProcedure is the fully-qualified name of the ScheduleService's
-	// GetSchedule RPC.
+	// ScheduleServiceGetScheduleProcedure is the procedure name of the ScheduleService's GetSchedule
+	// RPC.
 	ScheduleServiceGetScheduleProcedure = "/taskguild.v1.ScheduleService/GetSchedule"
-	// ScheduleServiceListSchedulesProcedure is the fully-qualified name of the ScheduleService's
+	// ScheduleServiceListSchedulesProcedure is the procedure name of the ScheduleService's
 	// ListSchedules RPC.
 	ScheduleServiceListSchedulesProcedure = "/taskguild.v1.ScheduleService/ListSchedules"
-	// ScheduleServiceUpdateScheduleProcedure is the fully-qualified name of the ScheduleService's
+	// ScheduleServiceUpdateScheduleProcedure is the procedure name of the ScheduleService's
 	// UpdateSchedule RPC.
 	ScheduleServiceUpdateScheduleProcedure = "/taskguild.v1.ScheduleService/UpdateSchedule"
-	// ScheduleServiceDeleteScheduleProcedure is the fully-qualified name of the ScheduleService's
+	// ScheduleServiceDeleteScheduleProcedure is the procedure name of the ScheduleService's
 	// DeleteSchedule RPC.
 	ScheduleServiceDeleteScheduleProcedure = "/taskguild.v1.ScheduleService/DeleteSchedule"
-	// ScheduleServiceSetScheduleEnabledProcedure is the fully-qualified name of the ScheduleService's
+	// ScheduleServiceSetScheduleEnabledProcedure is the procedure name of the ScheduleService's
 	// SetScheduleEnabled RPC.
 	ScheduleServiceSetScheduleEnabledProcedure = "/taskguild.v1.ScheduleService/SetScheduleEnabled"
 )
 
+var (
+	scheduleServiceCreateScheduleSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_schedule_proto.Services().ByName("ScheduleService").Methods().ByName("CreateSchedule"),
+			Procedure:  ScheduleServiceCreateScheduleProcedure,
+		}
+	})
+	scheduleServiceGetScheduleSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_schedule_proto.Services().ByName("ScheduleService").Methods().ByName("GetSchedule"),
+			Procedure:  ScheduleServiceGetScheduleProcedure,
+		}
+	})
+	scheduleServiceListSchedulesSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_schedule_proto.Services().ByName("ScheduleService").Methods().ByName("ListSchedules"),
+			Procedure:  ScheduleServiceListSchedulesProcedure,
+		}
+	})
+	scheduleServiceUpdateScheduleSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_schedule_proto.Services().ByName("ScheduleService").Methods().ByName("UpdateSchedule"),
+			Procedure:  ScheduleServiceUpdateScheduleProcedure,
+		}
+	})
+	scheduleServiceDeleteScheduleSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_schedule_proto.Services().ByName("ScheduleService").Methods().ByName("DeleteSchedule"),
+			Procedure:  ScheduleServiceDeleteScheduleProcedure,
+		}
+	})
+	scheduleServiceSetScheduleEnabledSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_schedule_proto.Services().ByName("ScheduleService").Methods().ByName("SetScheduleEnabled"),
+			Procedure:  ScheduleServiceSetScheduleEnabledProcedure,
+		}
+	})
+)
+
 // ScheduleServiceClient is a client for the taskguild.v1.ScheduleService service.
 type ScheduleServiceClient interface {
-	CreateSchedule(context.Context, *connect.Request[v1.CreateScheduleRequest]) (*connect.Response[v1.CreateScheduleResponse], error)
-	GetSchedule(context.Context, *connect.Request[v1.GetScheduleRequest]) (*connect.Response[v1.GetScheduleResponse], error)
-	ListSchedules(context.Context, *connect.Request[v1.ListSchedulesRequest]) (*connect.Response[v1.ListSchedulesResponse], error)
-	UpdateSchedule(context.Context, *connect.Request[v1.UpdateScheduleRequest]) (*connect.Response[v1.UpdateScheduleResponse], error)
-	DeleteSchedule(context.Context, *connect.Request[v1.DeleteScheduleRequest]) (*connect.Response[v1.DeleteScheduleResponse], error)
-	SetScheduleEnabled(context.Context, *connect.Request[v1.SetScheduleEnabledRequest]) (*connect.Response[v1.SetScheduleEnabledResponse], error)
+	CreateSchedule(context.Context, *v1.CreateScheduleRequest) (*v1.CreateScheduleResponse, error)
+	GetSchedule(context.Context, *v1.GetScheduleRequest) (*v1.GetScheduleResponse, error)
+	ListSchedules(context.Context, *v1.ListSchedulesRequest) (*v1.ListSchedulesResponse, error)
+	UpdateSchedule(context.Context, *v1.UpdateScheduleRequest) (*v1.UpdateScheduleResponse, error)
+	DeleteSchedule(context.Context, *v1.DeleteScheduleRequest) (*v1.DeleteScheduleResponse, error)
+	SetScheduleEnabled(context.Context, *v1.SetScheduleEnabledRequest) (*v1.SetScheduleEnabledResponse, error)
 }
 
-// NewScheduleServiceClient constructs a client for the taskguild.v1.ScheduleService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewScheduleServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) ScheduleServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	scheduleServiceMethods := v1.File_taskguild_v1_schedule_proto.Services().ByName("ScheduleService").Methods()
-	return &scheduleServiceClient{
-		createSchedule: connect.NewClient[v1.CreateScheduleRequest, v1.CreateScheduleResponse](
-			httpClient,
-			baseURL+ScheduleServiceCreateScheduleProcedure,
-			connect.WithSchema(scheduleServiceMethods.ByName("CreateSchedule")),
-			connect.WithClientOptions(opts...),
-		),
-		getSchedule: connect.NewClient[v1.GetScheduleRequest, v1.GetScheduleResponse](
-			httpClient,
-			baseURL+ScheduleServiceGetScheduleProcedure,
-			connect.WithSchema(scheduleServiceMethods.ByName("GetSchedule")),
-			connect.WithClientOptions(opts...),
-		),
-		listSchedules: connect.NewClient[v1.ListSchedulesRequest, v1.ListSchedulesResponse](
-			httpClient,
-			baseURL+ScheduleServiceListSchedulesProcedure,
-			connect.WithSchema(scheduleServiceMethods.ByName("ListSchedules")),
-			connect.WithClientOptions(opts...),
-		),
-		updateSchedule: connect.NewClient[v1.UpdateScheduleRequest, v1.UpdateScheduleResponse](
-			httpClient,
-			baseURL+ScheduleServiceUpdateScheduleProcedure,
-			connect.WithSchema(scheduleServiceMethods.ByName("UpdateSchedule")),
-			connect.WithClientOptions(opts...),
-		),
-		deleteSchedule: connect.NewClient[v1.DeleteScheduleRequest, v1.DeleteScheduleResponse](
-			httpClient,
-			baseURL+ScheduleServiceDeleteScheduleProcedure,
-			connect.WithSchema(scheduleServiceMethods.ByName("DeleteSchedule")),
-			connect.WithClientOptions(opts...),
-		),
-		setScheduleEnabled: connect.NewClient[v1.SetScheduleEnabledRequest, v1.SetScheduleEnabledResponse](
-			httpClient,
-			baseURL+ScheduleServiceSetScheduleEnabledProcedure,
-			connect.WithSchema(scheduleServiceMethods.ByName("SetScheduleEnabled")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// scheduleServiceClient implements ScheduleServiceClient.
-type scheduleServiceClient struct {
-	createSchedule     *connect.Client[v1.CreateScheduleRequest, v1.CreateScheduleResponse]
-	getSchedule        *connect.Client[v1.GetScheduleRequest, v1.GetScheduleResponse]
-	listSchedules      *connect.Client[v1.ListSchedulesRequest, v1.ListSchedulesResponse]
-	updateSchedule     *connect.Client[v1.UpdateScheduleRequest, v1.UpdateScheduleResponse]
-	deleteSchedule     *connect.Client[v1.DeleteScheduleRequest, v1.DeleteScheduleResponse]
-	setScheduleEnabled *connect.Client[v1.SetScheduleEnabledRequest, v1.SetScheduleEnabledResponse]
-}
-
-// CreateSchedule calls taskguild.v1.ScheduleService.CreateSchedule.
-func (c *scheduleServiceClient) CreateSchedule(ctx context.Context, req *connect.Request[v1.CreateScheduleRequest]) (*connect.Response[v1.CreateScheduleResponse], error) {
-	return c.createSchedule.CallUnary(ctx, req)
-}
-
-// GetSchedule calls taskguild.v1.ScheduleService.GetSchedule.
-func (c *scheduleServiceClient) GetSchedule(ctx context.Context, req *connect.Request[v1.GetScheduleRequest]) (*connect.Response[v1.GetScheduleResponse], error) {
-	return c.getSchedule.CallUnary(ctx, req)
-}
-
-// ListSchedules calls taskguild.v1.ScheduleService.ListSchedules.
-func (c *scheduleServiceClient) ListSchedules(ctx context.Context, req *connect.Request[v1.ListSchedulesRequest]) (*connect.Response[v1.ListSchedulesResponse], error) {
-	return c.listSchedules.CallUnary(ctx, req)
-}
-
-// UpdateSchedule calls taskguild.v1.ScheduleService.UpdateSchedule.
-func (c *scheduleServiceClient) UpdateSchedule(ctx context.Context, req *connect.Request[v1.UpdateScheduleRequest]) (*connect.Response[v1.UpdateScheduleResponse], error) {
-	return c.updateSchedule.CallUnary(ctx, req)
-}
-
-// DeleteSchedule calls taskguild.v1.ScheduleService.DeleteSchedule.
-func (c *scheduleServiceClient) DeleteSchedule(ctx context.Context, req *connect.Request[v1.DeleteScheduleRequest]) (*connect.Response[v1.DeleteScheduleResponse], error) {
-	return c.deleteSchedule.CallUnary(ctx, req)
-}
-
-// SetScheduleEnabled calls taskguild.v1.ScheduleService.SetScheduleEnabled.
-func (c *scheduleServiceClient) SetScheduleEnabled(ctx context.Context, req *connect.Request[v1.SetScheduleEnabledRequest]) (*connect.Response[v1.SetScheduleEnabledResponse], error) {
-	return c.setScheduleEnabled.CallUnary(ctx, req)
+// NewScheduleServiceClient constructs a client for the taskguild.v1.ScheduleService service.
+// Multiple service clients may share a single connect.Client.
+func NewScheduleServiceClient(client *connect.Client) ScheduleServiceClient {
+	return &scheduleServiceClient{client: client}
 }
 
 // ScheduleServiceHandler is an implementation of the taskguild.v1.ScheduleService service.
 type ScheduleServiceHandler interface {
-	CreateSchedule(context.Context, *connect.Request[v1.CreateScheduleRequest]) (*connect.Response[v1.CreateScheduleResponse], error)
-	GetSchedule(context.Context, *connect.Request[v1.GetScheduleRequest]) (*connect.Response[v1.GetScheduleResponse], error)
-	ListSchedules(context.Context, *connect.Request[v1.ListSchedulesRequest]) (*connect.Response[v1.ListSchedulesResponse], error)
-	UpdateSchedule(context.Context, *connect.Request[v1.UpdateScheduleRequest]) (*connect.Response[v1.UpdateScheduleResponse], error)
-	DeleteSchedule(context.Context, *connect.Request[v1.DeleteScheduleRequest]) (*connect.Response[v1.DeleteScheduleResponse], error)
-	SetScheduleEnabled(context.Context, *connect.Request[v1.SetScheduleEnabledRequest]) (*connect.Response[v1.SetScheduleEnabledResponse], error)
+	CreateSchedule(context.Context, *v1.CreateScheduleRequest) (*v1.CreateScheduleResponse, error)
+	GetSchedule(context.Context, *v1.GetScheduleRequest) (*v1.GetScheduleResponse, error)
+	ListSchedules(context.Context, *v1.ListSchedulesRequest) (*v1.ListSchedulesResponse, error)
+	UpdateSchedule(context.Context, *v1.UpdateScheduleRequest) (*v1.UpdateScheduleResponse, error)
+	DeleteSchedule(context.Context, *v1.DeleteScheduleRequest) (*v1.DeleteScheduleResponse, error)
+	SetScheduleEnabled(context.Context, *v1.SetScheduleEnabledRequest) (*v1.SetScheduleEnabledResponse, error)
 }
 
-// NewScheduleServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewScheduleServiceHandler(svc ScheduleServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	scheduleServiceMethods := v1.File_taskguild_v1_schedule_proto.Services().ByName("ScheduleService").Methods()
-	scheduleServiceCreateScheduleHandler := connect.NewUnaryHandler(
-		ScheduleServiceCreateScheduleProcedure,
-		svc.CreateSchedule,
-		connect.WithSchema(scheduleServiceMethods.ByName("CreateSchedule")),
-		connect.WithHandlerOptions(opts...),
+// RegisterScheduleServiceHandler registers svc as the taskguild.v1.ScheduleService implementation
+// on server.
+func RegisterScheduleServiceHandler(server *connect.Server, svc ScheduleServiceHandler) {
+	adapter := scheduleServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: scheduleServiceCreateScheduleSpec(), Handler: adapter.createSchedule},
+		connect.Method{Spec: scheduleServiceGetScheduleSpec(), Handler: adapter.getSchedule},
+		connect.Method{Spec: scheduleServiceListSchedulesSpec(), Handler: adapter.listSchedules},
+		connect.Method{Spec: scheduleServiceUpdateScheduleSpec(), Handler: adapter.updateSchedule},
+		connect.Method{Spec: scheduleServiceDeleteScheduleSpec(), Handler: adapter.deleteSchedule},
+		connect.Method{Spec: scheduleServiceSetScheduleEnabledSpec(), Handler: adapter.setScheduleEnabled},
 	)
-	scheduleServiceGetScheduleHandler := connect.NewUnaryHandler(
-		ScheduleServiceGetScheduleProcedure,
-		svc.GetSchedule,
-		connect.WithSchema(scheduleServiceMethods.ByName("GetSchedule")),
-		connect.WithHandlerOptions(opts...),
-	)
-	scheduleServiceListSchedulesHandler := connect.NewUnaryHandler(
-		ScheduleServiceListSchedulesProcedure,
-		svc.ListSchedules,
-		connect.WithSchema(scheduleServiceMethods.ByName("ListSchedules")),
-		connect.WithHandlerOptions(opts...),
-	)
-	scheduleServiceUpdateScheduleHandler := connect.NewUnaryHandler(
-		ScheduleServiceUpdateScheduleProcedure,
-		svc.UpdateSchedule,
-		connect.WithSchema(scheduleServiceMethods.ByName("UpdateSchedule")),
-		connect.WithHandlerOptions(opts...),
-	)
-	scheduleServiceDeleteScheduleHandler := connect.NewUnaryHandler(
-		ScheduleServiceDeleteScheduleProcedure,
-		svc.DeleteSchedule,
-		connect.WithSchema(scheduleServiceMethods.ByName("DeleteSchedule")),
-		connect.WithHandlerOptions(opts...),
-	)
-	scheduleServiceSetScheduleEnabledHandler := connect.NewUnaryHandler(
-		ScheduleServiceSetScheduleEnabledProcedure,
-		svc.SetScheduleEnabled,
-		connect.WithSchema(scheduleServiceMethods.ByName("SetScheduleEnabled")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/taskguild.v1.ScheduleService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case ScheduleServiceCreateScheduleProcedure:
-			scheduleServiceCreateScheduleHandler.ServeHTTP(w, r)
-		case ScheduleServiceGetScheduleProcedure:
-			scheduleServiceGetScheduleHandler.ServeHTTP(w, r)
-		case ScheduleServiceListSchedulesProcedure:
-			scheduleServiceListSchedulesHandler.ServeHTTP(w, r)
-		case ScheduleServiceUpdateScheduleProcedure:
-			scheduleServiceUpdateScheduleHandler.ServeHTTP(w, r)
-		case ScheduleServiceDeleteScheduleProcedure:
-			scheduleServiceDeleteScheduleHandler.ServeHTTP(w, r)
-		case ScheduleServiceSetScheduleEnabledProcedure:
-			scheduleServiceSetScheduleEnabledHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedScheduleServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedScheduleServiceHandler struct{}
 
-func (UnimplementedScheduleServiceHandler) CreateSchedule(context.Context, *connect.Request[v1.CreateScheduleRequest]) (*connect.Response[v1.CreateScheduleResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScheduleService.CreateSchedule is not implemented"))
+func (UnimplementedScheduleServiceHandler) CreateSchedule(context.Context, *v1.CreateScheduleRequest) (*v1.CreateScheduleResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ScheduleService.CreateSchedule is not implemented")
 }
 
-func (UnimplementedScheduleServiceHandler) GetSchedule(context.Context, *connect.Request[v1.GetScheduleRequest]) (*connect.Response[v1.GetScheduleResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScheduleService.GetSchedule is not implemented"))
+func (UnimplementedScheduleServiceHandler) GetSchedule(context.Context, *v1.GetScheduleRequest) (*v1.GetScheduleResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ScheduleService.GetSchedule is not implemented")
 }
 
-func (UnimplementedScheduleServiceHandler) ListSchedules(context.Context, *connect.Request[v1.ListSchedulesRequest]) (*connect.Response[v1.ListSchedulesResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScheduleService.ListSchedules is not implemented"))
+func (UnimplementedScheduleServiceHandler) ListSchedules(context.Context, *v1.ListSchedulesRequest) (*v1.ListSchedulesResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ScheduleService.ListSchedules is not implemented")
 }
 
-func (UnimplementedScheduleServiceHandler) UpdateSchedule(context.Context, *connect.Request[v1.UpdateScheduleRequest]) (*connect.Response[v1.UpdateScheduleResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScheduleService.UpdateSchedule is not implemented"))
+func (UnimplementedScheduleServiceHandler) UpdateSchedule(context.Context, *v1.UpdateScheduleRequest) (*v1.UpdateScheduleResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ScheduleService.UpdateSchedule is not implemented")
 }
 
-func (UnimplementedScheduleServiceHandler) DeleteSchedule(context.Context, *connect.Request[v1.DeleteScheduleRequest]) (*connect.Response[v1.DeleteScheduleResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScheduleService.DeleteSchedule is not implemented"))
+func (UnimplementedScheduleServiceHandler) DeleteSchedule(context.Context, *v1.DeleteScheduleRequest) (*v1.DeleteScheduleResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ScheduleService.DeleteSchedule is not implemented")
 }
 
-func (UnimplementedScheduleServiceHandler) SetScheduleEnabled(context.Context, *connect.Request[v1.SetScheduleEnabledRequest]) (*connect.Response[v1.SetScheduleEnabledResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ScheduleService.SetScheduleEnabled is not implemented"))
+func (UnimplementedScheduleServiceHandler) SetScheduleEnabled(context.Context, *v1.SetScheduleEnabledRequest) (*v1.SetScheduleEnabledResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ScheduleService.SetScheduleEnabled is not implemented")
+}
+
+type scheduleServiceClient struct {
+	client *connect.Client
+}
+
+func (c *scheduleServiceClient) CreateSchedule(ctx context.Context, req *v1.CreateScheduleRequest) (*v1.CreateScheduleResponse, error) {
+	var res v1.CreateScheduleResponse
+	if err := c.client.CallUnary(ctx, scheduleServiceCreateScheduleSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *scheduleServiceClient) GetSchedule(ctx context.Context, req *v1.GetScheduleRequest) (*v1.GetScheduleResponse, error) {
+	var res v1.GetScheduleResponse
+	if err := c.client.CallUnary(ctx, scheduleServiceGetScheduleSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *scheduleServiceClient) ListSchedules(ctx context.Context, req *v1.ListSchedulesRequest) (*v1.ListSchedulesResponse, error) {
+	var res v1.ListSchedulesResponse
+	if err := c.client.CallUnary(ctx, scheduleServiceListSchedulesSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *scheduleServiceClient) UpdateSchedule(ctx context.Context, req *v1.UpdateScheduleRequest) (*v1.UpdateScheduleResponse, error) {
+	var res v1.UpdateScheduleResponse
+	if err := c.client.CallUnary(ctx, scheduleServiceUpdateScheduleSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *scheduleServiceClient) DeleteSchedule(ctx context.Context, req *v1.DeleteScheduleRequest) (*v1.DeleteScheduleResponse, error) {
+	var res v1.DeleteScheduleResponse
+	if err := c.client.CallUnary(ctx, scheduleServiceDeleteScheduleSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *scheduleServiceClient) SetScheduleEnabled(ctx context.Context, req *v1.SetScheduleEnabledRequest) (*v1.SetScheduleEnabledResponse, error) {
+	var res v1.SetScheduleEnabledResponse
+	if err := c.client.CallUnary(ctx, scheduleServiceSetScheduleEnabledSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type scheduleServiceHandler struct{ svc ScheduleServiceHandler }
+
+func (h scheduleServiceHandler) createSchedule(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.CreateScheduleRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.CreateSchedule(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h scheduleServiceHandler) getSchedule(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetScheduleRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetSchedule(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h scheduleServiceHandler) listSchedules(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListSchedulesRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListSchedules(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h scheduleServiceHandler) updateSchedule(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.UpdateScheduleRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.UpdateSchedule(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h scheduleServiceHandler) deleteSchedule(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.DeleteScheduleRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.DeleteSchedule(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h scheduleServiceHandler) setScheduleEnabled(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.SetScheduleEnabledRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.SetScheduleEnabled(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

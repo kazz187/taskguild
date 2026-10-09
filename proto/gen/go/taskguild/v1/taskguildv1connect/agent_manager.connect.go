@@ -5,1204 +5,1506 @@
 package taskguildv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// AgentManagerServiceName is the fully-qualified name of the AgentManagerService service.
 	AgentManagerServiceName = "taskguild.v1.AgentManagerService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// AgentManagerServiceSubscribeProcedure is the fully-qualified name of the AgentManagerService's
+	// AgentManagerServiceSubscribeProcedure is the procedure name of the AgentManagerService's
 	// Subscribe RPC.
 	AgentManagerServiceSubscribeProcedure = "/taskguild.v1.AgentManagerService/Subscribe"
-	// AgentManagerServiceClaimTaskProcedure is the fully-qualified name of the AgentManagerService's
+	// AgentManagerServiceClaimTaskProcedure is the procedure name of the AgentManagerService's
 	// ClaimTask RPC.
 	AgentManagerServiceClaimTaskProcedure = "/taskguild.v1.AgentManagerService/ClaimTask"
-	// AgentManagerServiceReportTaskResultProcedure is the fully-qualified name of the
-	// AgentManagerService's ReportTaskResult RPC.
+	// AgentManagerServiceReportTaskResultProcedure is the procedure name of the AgentManagerService's
+	// ReportTaskResult RPC.
 	AgentManagerServiceReportTaskResultProcedure = "/taskguild.v1.AgentManagerService/ReportTaskResult"
-	// AgentManagerServiceReportAgentStatusProcedure is the fully-qualified name of the
-	// AgentManagerService's ReportAgentStatus RPC.
+	// AgentManagerServiceReportAgentStatusProcedure is the procedure name of the AgentManagerService's
+	// ReportAgentStatus RPC.
 	AgentManagerServiceReportAgentStatusProcedure = "/taskguild.v1.AgentManagerService/ReportAgentStatus"
-	// AgentManagerServiceHeartbeatProcedure is the fully-qualified name of the AgentManagerService's
+	// AgentManagerServiceHeartbeatProcedure is the procedure name of the AgentManagerService's
 	// Heartbeat RPC.
 	AgentManagerServiceHeartbeatProcedure = "/taskguild.v1.AgentManagerService/Heartbeat"
-	// AgentManagerServiceCreateInteractionProcedure is the fully-qualified name of the
-	// AgentManagerService's CreateInteraction RPC.
+	// AgentManagerServiceCreateInteractionProcedure is the procedure name of the AgentManagerService's
+	// CreateInteraction RPC.
 	AgentManagerServiceCreateInteractionProcedure = "/taskguild.v1.AgentManagerService/CreateInteraction"
-	// AgentManagerServiceGetInteractionResponseProcedure is the fully-qualified name of the
+	// AgentManagerServiceGetInteractionResponseProcedure is the procedure name of the
 	// AgentManagerService's GetInteractionResponse RPC.
 	AgentManagerServiceGetInteractionResponseProcedure = "/taskguild.v1.AgentManagerService/GetInteractionResponse"
-	// AgentManagerServiceSyncAgentsProcedure is the fully-qualified name of the AgentManagerService's
+	// AgentManagerServiceSyncAgentsProcedure is the procedure name of the AgentManagerService's
 	// SyncAgents RPC.
 	AgentManagerServiceSyncAgentsProcedure = "/taskguild.v1.AgentManagerService/SyncAgents"
-	// AgentManagerServiceReportTaskLogProcedure is the fully-qualified name of the
-	// AgentManagerService's ReportTaskLog RPC.
+	// AgentManagerServiceReportTaskLogProcedure is the procedure name of the AgentManagerService's
+	// ReportTaskLog RPC.
 	AgentManagerServiceReportTaskLogProcedure = "/taskguild.v1.AgentManagerService/ReportTaskLog"
-	// AgentManagerServiceSyncPermissionsProcedure is the fully-qualified name of the
-	// AgentManagerService's SyncPermissions RPC.
+	// AgentManagerServiceSyncPermissionsProcedure is the procedure name of the AgentManagerService's
+	// SyncPermissions RPC.
 	AgentManagerServiceSyncPermissionsProcedure = "/taskguild.v1.AgentManagerService/SyncPermissions"
-	// AgentManagerServiceReportWorktreeListProcedure is the fully-qualified name of the
-	// AgentManagerService's ReportWorktreeList RPC.
+	// AgentManagerServiceReportWorktreeListProcedure is the procedure name of the AgentManagerService's
+	// ReportWorktreeList RPC.
 	AgentManagerServiceReportWorktreeListProcedure = "/taskguild.v1.AgentManagerService/ReportWorktreeList"
-	// AgentManagerServiceRequestWorktreeListProcedure is the fully-qualified name of the
+	// AgentManagerServiceRequestWorktreeListProcedure is the procedure name of the
 	// AgentManagerService's RequestWorktreeList RPC.
 	AgentManagerServiceRequestWorktreeListProcedure = "/taskguild.v1.AgentManagerService/RequestWorktreeList"
-	// AgentManagerServiceGetWorktreeListProcedure is the fully-qualified name of the
-	// AgentManagerService's GetWorktreeList RPC.
+	// AgentManagerServiceGetWorktreeListProcedure is the procedure name of the AgentManagerService's
+	// GetWorktreeList RPC.
 	AgentManagerServiceGetWorktreeListProcedure = "/taskguild.v1.AgentManagerService/GetWorktreeList"
-	// AgentManagerServiceRequestWorktreeDeleteProcedure is the fully-qualified name of the
+	// AgentManagerServiceRequestWorktreeDeleteProcedure is the procedure name of the
 	// AgentManagerService's RequestWorktreeDelete RPC.
 	AgentManagerServiceRequestWorktreeDeleteProcedure = "/taskguild.v1.AgentManagerService/RequestWorktreeDelete"
-	// AgentManagerServiceReportWorktreeDeleteResultProcedure is the fully-qualified name of the
+	// AgentManagerServiceReportWorktreeDeleteResultProcedure is the procedure name of the
 	// AgentManagerService's ReportWorktreeDeleteResult RPC.
 	AgentManagerServiceReportWorktreeDeleteResultProcedure = "/taskguild.v1.AgentManagerService/ReportWorktreeDeleteResult"
-	// AgentManagerServiceRequestGitPullMainProcedure is the fully-qualified name of the
-	// AgentManagerService's RequestGitPullMain RPC.
+	// AgentManagerServiceRequestGitPullMainProcedure is the procedure name of the AgentManagerService's
+	// RequestGitPullMain RPC.
 	AgentManagerServiceRequestGitPullMainProcedure = "/taskguild.v1.AgentManagerService/RequestGitPullMain"
-	// AgentManagerServiceReportGitPullMainResultProcedure is the fully-qualified name of the
+	// AgentManagerServiceReportGitPullMainResultProcedure is the procedure name of the
 	// AgentManagerService's ReportGitPullMainResult RPC.
 	AgentManagerServiceReportGitPullMainResultProcedure = "/taskguild.v1.AgentManagerService/ReportGitPullMainResult"
-	// AgentManagerServiceSyncScriptsProcedure is the fully-qualified name of the AgentManagerService's
+	// AgentManagerServiceSyncScriptsProcedure is the procedure name of the AgentManagerService's
 	// SyncScripts RPC.
 	AgentManagerServiceSyncScriptsProcedure = "/taskguild.v1.AgentManagerService/SyncScripts"
-	// AgentManagerServiceReportScriptExecutionResultProcedure is the fully-qualified name of the
+	// AgentManagerServiceReportScriptExecutionResultProcedure is the procedure name of the
 	// AgentManagerService's ReportScriptExecutionResult RPC.
 	AgentManagerServiceReportScriptExecutionResultProcedure = "/taskguild.v1.AgentManagerService/ReportScriptExecutionResult"
-	// AgentManagerServiceReportScriptOutputChunkProcedure is the fully-qualified name of the
+	// AgentManagerServiceReportScriptOutputChunkProcedure is the procedure name of the
 	// AgentManagerService's ReportScriptOutputChunk RPC.
 	AgentManagerServiceReportScriptOutputChunkProcedure = "/taskguild.v1.AgentManagerService/ReportScriptOutputChunk"
-	// AgentManagerServiceRequestScriptComparisonProcedure is the fully-qualified name of the
+	// AgentManagerServiceRequestScriptComparisonProcedure is the procedure name of the
 	// AgentManagerService's RequestScriptComparison RPC.
 	AgentManagerServiceRequestScriptComparisonProcedure = "/taskguild.v1.AgentManagerService/RequestScriptComparison"
-	// AgentManagerServiceReportScriptComparisonProcedure is the fully-qualified name of the
+	// AgentManagerServiceReportScriptComparisonProcedure is the procedure name of the
 	// AgentManagerService's ReportScriptComparison RPC.
 	AgentManagerServiceReportScriptComparisonProcedure = "/taskguild.v1.AgentManagerService/ReportScriptComparison"
-	// AgentManagerServiceGetScriptComparisonProcedure is the fully-qualified name of the
+	// AgentManagerServiceGetScriptComparisonProcedure is the procedure name of the
 	// AgentManagerService's GetScriptComparison RPC.
 	AgentManagerServiceGetScriptComparisonProcedure = "/taskguild.v1.AgentManagerService/GetScriptComparison"
-	// AgentManagerServiceResolveScriptConflictProcedure is the fully-qualified name of the
+	// AgentManagerServiceResolveScriptConflictProcedure is the procedure name of the
 	// AgentManagerService's ResolveScriptConflict RPC.
 	AgentManagerServiceResolveScriptConflictProcedure = "/taskguild.v1.AgentManagerService/ResolveScriptConflict"
-	// AgentManagerServiceRequestAgentComparisonProcedure is the fully-qualified name of the
+	// AgentManagerServiceRequestAgentComparisonProcedure is the procedure name of the
 	// AgentManagerService's RequestAgentComparison RPC.
 	AgentManagerServiceRequestAgentComparisonProcedure = "/taskguild.v1.AgentManagerService/RequestAgentComparison"
-	// AgentManagerServiceReportAgentComparisonProcedure is the fully-qualified name of the
+	// AgentManagerServiceReportAgentComparisonProcedure is the procedure name of the
 	// AgentManagerService's ReportAgentComparison RPC.
 	AgentManagerServiceReportAgentComparisonProcedure = "/taskguild.v1.AgentManagerService/ReportAgentComparison"
-	// AgentManagerServiceGetAgentComparisonProcedure is the fully-qualified name of the
-	// AgentManagerService's GetAgentComparison RPC.
+	// AgentManagerServiceGetAgentComparisonProcedure is the procedure name of the AgentManagerService's
+	// GetAgentComparison RPC.
 	AgentManagerServiceGetAgentComparisonProcedure = "/taskguild.v1.AgentManagerService/GetAgentComparison"
-	// AgentManagerServiceResolveAgentConflictProcedure is the fully-qualified name of the
+	// AgentManagerServiceResolveAgentConflictProcedure is the procedure name of the
 	// AgentManagerService's ResolveAgentConflict RPC.
 	AgentManagerServiceResolveAgentConflictProcedure = "/taskguild.v1.AgentManagerService/ResolveAgentConflict"
-	// AgentManagerServiceListSingleCommandPermissionsProcedure is the fully-qualified name of the
+	// AgentManagerServiceListSingleCommandPermissionsProcedure is the procedure name of the
 	// AgentManagerService's ListSingleCommandPermissions RPC.
 	AgentManagerServiceListSingleCommandPermissionsProcedure = "/taskguild.v1.AgentManagerService/ListSingleCommandPermissions"
-	// AgentManagerServiceAddSingleCommandPermissionProcedure is the fully-qualified name of the
+	// AgentManagerServiceAddSingleCommandPermissionProcedure is the procedure name of the
 	// AgentManagerService's AddSingleCommandPermission RPC.
 	AgentManagerServiceAddSingleCommandPermissionProcedure = "/taskguild.v1.AgentManagerService/AddSingleCommandPermission"
-	// AgentManagerServiceSyncSkillsProcedure is the fully-qualified name of the AgentManagerService's
+	// AgentManagerServiceSyncSkillsProcedure is the procedure name of the AgentManagerService's
 	// SyncSkills RPC.
 	AgentManagerServiceSyncSkillsProcedure = "/taskguild.v1.AgentManagerService/SyncSkills"
-	// AgentManagerServiceRequestSkillComparisonProcedure is the fully-qualified name of the
+	// AgentManagerServiceRequestSkillComparisonProcedure is the procedure name of the
 	// AgentManagerService's RequestSkillComparison RPC.
 	AgentManagerServiceRequestSkillComparisonProcedure = "/taskguild.v1.AgentManagerService/RequestSkillComparison"
-	// AgentManagerServiceReportSkillComparisonProcedure is the fully-qualified name of the
+	// AgentManagerServiceReportSkillComparisonProcedure is the procedure name of the
 	// AgentManagerService's ReportSkillComparison RPC.
 	AgentManagerServiceReportSkillComparisonProcedure = "/taskguild.v1.AgentManagerService/ReportSkillComparison"
-	// AgentManagerServiceGetSkillComparisonProcedure is the fully-qualified name of the
-	// AgentManagerService's GetSkillComparison RPC.
+	// AgentManagerServiceGetSkillComparisonProcedure is the procedure name of the AgentManagerService's
+	// GetSkillComparison RPC.
 	AgentManagerServiceGetSkillComparisonProcedure = "/taskguild.v1.AgentManagerService/GetSkillComparison"
-	// AgentManagerServiceResolveSkillConflictProcedure is the fully-qualified name of the
+	// AgentManagerServiceResolveSkillConflictProcedure is the procedure name of the
 	// AgentManagerService's ResolveSkillConflict RPC.
 	AgentManagerServiceResolveSkillConflictProcedure = "/taskguild.v1.AgentManagerService/ResolveSkillConflict"
-	// AgentManagerServiceSyncClaudeSettingsProcedure is the fully-qualified name of the
-	// AgentManagerService's SyncClaudeSettings RPC.
+	// AgentManagerServiceSyncClaudeSettingsProcedure is the procedure name of the AgentManagerService's
+	// SyncClaudeSettings RPC.
 	AgentManagerServiceSyncClaudeSettingsProcedure = "/taskguild.v1.AgentManagerService/SyncClaudeSettings"
+)
+
+var (
+	agentManagerServiceSubscribeSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeServer,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("Subscribe"),
+			Procedure:  AgentManagerServiceSubscribeProcedure,
+		}
+	})
+	agentManagerServiceClaimTaskSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("ClaimTask"),
+			Procedure:  AgentManagerServiceClaimTaskProcedure,
+		}
+	})
+	agentManagerServiceReportTaskResultSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("ReportTaskResult"),
+			Procedure:  AgentManagerServiceReportTaskResultProcedure,
+		}
+	})
+	agentManagerServiceReportAgentStatusSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("ReportAgentStatus"),
+			Procedure:  AgentManagerServiceReportAgentStatusProcedure,
+		}
+	})
+	agentManagerServiceHeartbeatSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("Heartbeat"),
+			Procedure:  AgentManagerServiceHeartbeatProcedure,
+		}
+	})
+	agentManagerServiceCreateInteractionSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("CreateInteraction"),
+			Procedure:  AgentManagerServiceCreateInteractionProcedure,
+		}
+	})
+	agentManagerServiceGetInteractionResponseSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("GetInteractionResponse"),
+			Procedure:  AgentManagerServiceGetInteractionResponseProcedure,
+		}
+	})
+	agentManagerServiceSyncAgentsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("SyncAgents"),
+			Procedure:  AgentManagerServiceSyncAgentsProcedure,
+		}
+	})
+	agentManagerServiceReportTaskLogSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("ReportTaskLog"),
+			Procedure:  AgentManagerServiceReportTaskLogProcedure,
+		}
+	})
+	agentManagerServiceSyncPermissionsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("SyncPermissions"),
+			Procedure:  AgentManagerServiceSyncPermissionsProcedure,
+		}
+	})
+	agentManagerServiceReportWorktreeListSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("ReportWorktreeList"),
+			Procedure:  AgentManagerServiceReportWorktreeListProcedure,
+		}
+	})
+	agentManagerServiceRequestWorktreeListSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("RequestWorktreeList"),
+			Procedure:  AgentManagerServiceRequestWorktreeListProcedure,
+		}
+	})
+	agentManagerServiceGetWorktreeListSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("GetWorktreeList"),
+			Procedure:  AgentManagerServiceGetWorktreeListProcedure,
+		}
+	})
+	agentManagerServiceRequestWorktreeDeleteSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("RequestWorktreeDelete"),
+			Procedure:  AgentManagerServiceRequestWorktreeDeleteProcedure,
+		}
+	})
+	agentManagerServiceReportWorktreeDeleteResultSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("ReportWorktreeDeleteResult"),
+			Procedure:  AgentManagerServiceReportWorktreeDeleteResultProcedure,
+		}
+	})
+	agentManagerServiceRequestGitPullMainSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("RequestGitPullMain"),
+			Procedure:  AgentManagerServiceRequestGitPullMainProcedure,
+		}
+	})
+	agentManagerServiceReportGitPullMainResultSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("ReportGitPullMainResult"),
+			Procedure:  AgentManagerServiceReportGitPullMainResultProcedure,
+		}
+	})
+	agentManagerServiceSyncScriptsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("SyncScripts"),
+			Procedure:  AgentManagerServiceSyncScriptsProcedure,
+		}
+	})
+	agentManagerServiceReportScriptExecutionResultSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("ReportScriptExecutionResult"),
+			Procedure:  AgentManagerServiceReportScriptExecutionResultProcedure,
+		}
+	})
+	agentManagerServiceReportScriptOutputChunkSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("ReportScriptOutputChunk"),
+			Procedure:  AgentManagerServiceReportScriptOutputChunkProcedure,
+		}
+	})
+	agentManagerServiceRequestScriptComparisonSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("RequestScriptComparison"),
+			Procedure:  AgentManagerServiceRequestScriptComparisonProcedure,
+		}
+	})
+	agentManagerServiceReportScriptComparisonSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("ReportScriptComparison"),
+			Procedure:  AgentManagerServiceReportScriptComparisonProcedure,
+		}
+	})
+	agentManagerServiceGetScriptComparisonSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("GetScriptComparison"),
+			Procedure:  AgentManagerServiceGetScriptComparisonProcedure,
+		}
+	})
+	agentManagerServiceResolveScriptConflictSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("ResolveScriptConflict"),
+			Procedure:  AgentManagerServiceResolveScriptConflictProcedure,
+		}
+	})
+	agentManagerServiceRequestAgentComparisonSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("RequestAgentComparison"),
+			Procedure:  AgentManagerServiceRequestAgentComparisonProcedure,
+		}
+	})
+	agentManagerServiceReportAgentComparisonSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("ReportAgentComparison"),
+			Procedure:  AgentManagerServiceReportAgentComparisonProcedure,
+		}
+	})
+	agentManagerServiceGetAgentComparisonSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("GetAgentComparison"),
+			Procedure:  AgentManagerServiceGetAgentComparisonProcedure,
+		}
+	})
+	agentManagerServiceResolveAgentConflictSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("ResolveAgentConflict"),
+			Procedure:  AgentManagerServiceResolveAgentConflictProcedure,
+		}
+	})
+	agentManagerServiceListSingleCommandPermissionsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("ListSingleCommandPermissions"),
+			Procedure:  AgentManagerServiceListSingleCommandPermissionsProcedure,
+		}
+	})
+	agentManagerServiceAddSingleCommandPermissionSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("AddSingleCommandPermission"),
+			Procedure:  AgentManagerServiceAddSingleCommandPermissionProcedure,
+		}
+	})
+	agentManagerServiceSyncSkillsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("SyncSkills"),
+			Procedure:  AgentManagerServiceSyncSkillsProcedure,
+		}
+	})
+	agentManagerServiceRequestSkillComparisonSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("RequestSkillComparison"),
+			Procedure:  AgentManagerServiceRequestSkillComparisonProcedure,
+		}
+	})
+	agentManagerServiceReportSkillComparisonSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("ReportSkillComparison"),
+			Procedure:  AgentManagerServiceReportSkillComparisonProcedure,
+		}
+	})
+	agentManagerServiceGetSkillComparisonSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("GetSkillComparison"),
+			Procedure:  AgentManagerServiceGetSkillComparisonProcedure,
+		}
+	})
+	agentManagerServiceResolveSkillConflictSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("ResolveSkillConflict"),
+			Procedure:  AgentManagerServiceResolveSkillConflictProcedure,
+		}
+	})
+	agentManagerServiceSyncClaudeSettingsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods().ByName("SyncClaudeSettings"),
+			Procedure:  AgentManagerServiceSyncClaudeSettingsProcedure,
+		}
+	})
 )
 
 // AgentManagerServiceClient is a client for the taskguild.v1.AgentManagerService service.
 type AgentManagerServiceClient interface {
 	// Subscribe opens a server-stream for receiving commands from the backend.
-	Subscribe(context.Context, *connect.Request[v1.AgentManagerSubscribeRequest]) (*connect.ServerStreamForClient[v1.AgentCommand], error)
+	Subscribe(context.Context, *v1.AgentManagerSubscribeRequest) (AgentManagerServiceSubscribeClientStream, error)
 	// ClaimTask allows an agent-manager to claim an available task.
-	ClaimTask(context.Context, *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error)
+	ClaimTask(context.Context, *v1.ClaimTaskRequest) (*v1.ClaimTaskResponse, error)
 	// ReportTaskResult reports the outcome of a task execution.
-	ReportTaskResult(context.Context, *connect.Request[v1.ReportTaskResultRequest]) (*connect.Response[v1.ReportTaskResultResponse], error)
+	ReportTaskResult(context.Context, *v1.ReportTaskResultRequest) (*v1.ReportTaskResultResponse, error)
 	// ReportAgentStatus reports the current status of an agent.
-	ReportAgentStatus(context.Context, *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error)
+	ReportAgentStatus(context.Context, *v1.ReportAgentStatusRequest) (*v1.ReportAgentStatusResponse, error)
 	// Heartbeat sends periodic health signals from the agent-manager.
-	Heartbeat(context.Context, *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error)
+	Heartbeat(context.Context, *v1.HeartbeatRequest) (*v1.HeartbeatResponse, error)
 	// CreateInteraction creates a new interaction request from an agent.
-	CreateInteraction(context.Context, *connect.Request[v1.CreateInteractionRequest]) (*connect.Response[v1.CreateInteractionResponse], error)
+	CreateInteraction(context.Context, *v1.CreateInteractionRequest) (*v1.CreateInteractionResponse, error)
 	// GetInteractionResponse polls for a user's response to an interaction.
-	GetInteractionResponse(context.Context, *connect.Request[v1.GetInteractionResponseRequest]) (*connect.Response[v1.GetInteractionResponseResponse], error)
+	GetInteractionResponse(context.Context, *v1.GetInteractionResponseRequest) (*v1.GetInteractionResponseResponse, error)
 	// SyncAgents returns all agent definitions for a project so the agent can
 	// write them as .claude/agents/*.md files locally.
-	SyncAgents(context.Context, *connect.Request[v1.SyncAgentsRequest]) (*connect.Response[v1.SyncAgentsResponse], error)
+	SyncAgents(context.Context, *v1.SyncAgentsRequest) (*v1.SyncAgentsResponse, error)
 	// ReportTaskLog reports a structured log entry from an agent during task execution.
-	ReportTaskLog(context.Context, *connect.Request[v1.ReportTaskLogRequest]) (*connect.Response[v1.ReportTaskLogResponse], error)
+	ReportTaskLog(context.Context, *v1.ReportTaskLogRequest) (*v1.ReportTaskLogResponse, error)
 	// SyncPermissions merges local .claude/settings.json permissions with the
 	// backend's stored permissions (union strategy) and returns the merged result.
-	SyncPermissions(context.Context, *connect.Request[v1.SyncPermissionsRequest]) (*connect.Response[v1.SyncPermissionsResponse], error)
+	SyncPermissions(context.Context, *v1.SyncPermissionsRequest) (*v1.SyncPermissionsResponse, error)
 	// ReportWorktreeList reports available worktrees from the agent-manager's filesystem.
-	ReportWorktreeList(context.Context, *connect.Request[v1.ReportWorktreeListRequest]) (*connect.Response[v1.ReportWorktreeListResponse], error)
+	ReportWorktreeList(context.Context, *v1.ReportWorktreeListRequest) (*v1.ReportWorktreeListResponse, error)
 	// RequestWorktreeList triggers a worktree scan on connected agent-managers (called by frontend).
-	RequestWorktreeList(context.Context, *connect.Request[v1.RequestWorktreeListRequest]) (*connect.Response[v1.RequestWorktreeListResponse], error)
+	RequestWorktreeList(context.Context, *v1.RequestWorktreeListRequest) (*v1.RequestWorktreeListResponse, error)
 	// GetWorktreeList returns the cached worktree list for a project.
-	GetWorktreeList(context.Context, *connect.Request[v1.GetWorktreeListRequest]) (*connect.Response[v1.GetWorktreeListResponse], error)
+	GetWorktreeList(context.Context, *v1.GetWorktreeListRequest) (*v1.GetWorktreeListResponse, error)
 	// RequestWorktreeDelete initiates deletion of a specific worktree (called by frontend).
-	RequestWorktreeDelete(context.Context, *connect.Request[v1.RequestWorktreeDeleteRequest]) (*connect.Response[v1.RequestWorktreeDeleteResponse], error)
+	RequestWorktreeDelete(context.Context, *v1.RequestWorktreeDeleteRequest) (*v1.RequestWorktreeDeleteResponse, error)
 	// ReportWorktreeDeleteResult reports the outcome of a worktree deletion from the agent.
-	ReportWorktreeDeleteResult(context.Context, *connect.Request[v1.ReportWorktreeDeleteResultRequest]) (*connect.Response[v1.ReportWorktreeDeleteResultResponse], error)
+	ReportWorktreeDeleteResult(context.Context, *v1.ReportWorktreeDeleteResultRequest) (*v1.ReportWorktreeDeleteResultResponse, error)
 	// RequestGitPullMain triggers a `git pull origin main` on connected agent-managers (called by frontend).
-	RequestGitPullMain(context.Context, *connect.Request[v1.RequestGitPullMainRequest]) (*connect.Response[v1.RequestGitPullMainResponse], error)
+	RequestGitPullMain(context.Context, *v1.RequestGitPullMainRequest) (*v1.RequestGitPullMainResponse, error)
 	// ReportGitPullMainResult reports the outcome of a git pull origin main from the agent.
-	ReportGitPullMainResult(context.Context, *connect.Request[v1.ReportGitPullMainResultRequest]) (*connect.Response[v1.ReportGitPullMainResultResponse], error)
+	ReportGitPullMainResult(context.Context, *v1.ReportGitPullMainResultRequest) (*v1.ReportGitPullMainResultResponse, error)
 	// SyncScripts returns all script definitions for a project so the agent can
 	// write them as .taskguild/scripts/* files locally.
-	SyncScripts(context.Context, *connect.Request[v1.SyncScriptsRequest]) (*connect.Response[v1.SyncScriptsResponse], error)
+	SyncScripts(context.Context, *v1.SyncScriptsRequest) (*v1.SyncScriptsResponse, error)
 	// ReportScriptExecutionResult reports the outcome of a script execution from the agent.
-	ReportScriptExecutionResult(context.Context, *connect.Request[v1.ReportScriptExecutionResultRequest]) (*connect.Response[v1.ReportScriptExecutionResultResponse], error)
+	ReportScriptExecutionResult(context.Context, *v1.ReportScriptExecutionResultRequest) (*v1.ReportScriptExecutionResultResponse, error)
 	// ReportScriptOutputChunk reports a chunk of real-time script output from the agent.
-	ReportScriptOutputChunk(context.Context, *connect.Request[v1.ReportScriptOutputChunkRequest]) (*connect.Response[v1.ReportScriptOutputChunkResponse], error)
+	ReportScriptOutputChunk(context.Context, *v1.ReportScriptOutputChunkRequest) (*v1.ReportScriptOutputChunkResponse, error)
 	// RequestScriptComparison triggers a script comparison on connected agent-managers (called by frontend).
-	RequestScriptComparison(context.Context, *connect.Request[v1.RequestScriptComparisonRequest]) (*connect.Response[v1.RequestScriptComparisonResponse], error)
+	RequestScriptComparison(context.Context, *v1.RequestScriptComparisonRequest) (*v1.RequestScriptComparisonResponse, error)
 	// ReportScriptComparison reports script diffs from the agent-manager after comparison.
-	ReportScriptComparison(context.Context, *connect.Request[v1.ReportScriptComparisonRequest]) (*connect.Response[v1.ReportScriptComparisonResponse], error)
+	ReportScriptComparison(context.Context, *v1.ReportScriptComparisonRequest) (*v1.ReportScriptComparisonResponse, error)
 	// GetScriptComparison returns the cached script comparison result for a project.
-	GetScriptComparison(context.Context, *connect.Request[v1.GetScriptComparisonRequest]) (*connect.Response[v1.GetScriptComparisonResponse], error)
+	GetScriptComparison(context.Context, *v1.GetScriptComparisonRequest) (*v1.GetScriptComparisonResponse, error)
 	// ResolveScriptConflict resolves a per-script conflict between server and agent versions.
-	ResolveScriptConflict(context.Context, *connect.Request[v1.ResolveScriptConflictRequest]) (*connect.Response[v1.ResolveScriptConflictResponse], error)
+	ResolveScriptConflict(context.Context, *v1.ResolveScriptConflictRequest) (*v1.ResolveScriptConflictResponse, error)
 	// RequestAgentComparison triggers an agent comparison on connected agent-managers (called by frontend).
-	RequestAgentComparison(context.Context, *connect.Request[v1.RequestAgentComparisonRequest]) (*connect.Response[v1.RequestAgentComparisonResponse], error)
+	RequestAgentComparison(context.Context, *v1.RequestAgentComparisonRequest) (*v1.RequestAgentComparisonResponse, error)
 	// ReportAgentComparison reports agent diffs from the agent-manager after comparison.
-	ReportAgentComparison(context.Context, *connect.Request[v1.ReportAgentComparisonRequest]) (*connect.Response[v1.ReportAgentComparisonResponse], error)
+	ReportAgentComparison(context.Context, *v1.ReportAgentComparisonRequest) (*v1.ReportAgentComparisonResponse, error)
 	// GetAgentComparison returns the cached agent comparison result for a project.
-	GetAgentComparison(context.Context, *connect.Request[v1.GetAgentComparisonRequest]) (*connect.Response[v1.GetAgentComparisonResponse], error)
+	GetAgentComparison(context.Context, *v1.GetAgentComparisonRequest) (*v1.GetAgentComparisonResponse, error)
 	// ResolveAgentConflict resolves a single agent conflict between server and agent versions.
-	ResolveAgentConflict(context.Context, *connect.Request[v1.ResolveAgentConflictRequest]) (*connect.Response[v1.ResolveAgentConflictResponse], error)
+	ResolveAgentConflict(context.Context, *v1.ResolveAgentConflictRequest) (*v1.ResolveAgentConflictResponse, error)
 	// ListSingleCommandPermissions returns all regex-based single-command permission
 	// rules for a project (used by agents to populate their cache).
-	ListSingleCommandPermissions(context.Context, *connect.Request[v1.ListSingleCommandPermissionsAgentRequest]) (*connect.Response[v1.ListSingleCommandPermissionsAgentResponse], error)
+	ListSingleCommandPermissions(context.Context, *v1.ListSingleCommandPermissionsAgentRequest) (*v1.ListSingleCommandPermissionsAgentResponse, error)
 	// AddSingleCommandPermission adds a new regex permission rule from an agent.
-	AddSingleCommandPermission(context.Context, *connect.Request[v1.AddSingleCommandPermissionRequest]) (*connect.Response[v1.AddSingleCommandPermissionResponse], error)
+	AddSingleCommandPermission(context.Context, *v1.AddSingleCommandPermissionRequest) (*v1.AddSingleCommandPermissionResponse, error)
 	// SyncSkills returns all skill definitions for a project so the agent can
 	// write them as .claude/skills/{name}/SKILL.md files locally.
-	SyncSkills(context.Context, *connect.Request[v1.SyncSkillsRequest]) (*connect.Response[v1.SyncSkillsResponse], error)
+	SyncSkills(context.Context, *v1.SyncSkillsRequest) (*v1.SyncSkillsResponse, error)
 	// RequestSkillComparison triggers a skill comparison on connected agent-managers (called by frontend).
-	RequestSkillComparison(context.Context, *connect.Request[v1.RequestSkillComparisonRequest]) (*connect.Response[v1.RequestSkillComparisonResponse], error)
+	RequestSkillComparison(context.Context, *v1.RequestSkillComparisonRequest) (*v1.RequestSkillComparisonResponse, error)
 	// ReportSkillComparison reports skill diffs from the agent-manager after comparison.
-	ReportSkillComparison(context.Context, *connect.Request[v1.ReportSkillComparisonRequest]) (*connect.Response[v1.ReportSkillComparisonResponse], error)
+	ReportSkillComparison(context.Context, *v1.ReportSkillComparisonRequest) (*v1.ReportSkillComparisonResponse, error)
 	// GetSkillComparison returns the cached skill comparison result for a project.
-	GetSkillComparison(context.Context, *connect.Request[v1.GetSkillComparisonRequest]) (*connect.Response[v1.GetSkillComparisonResponse], error)
+	GetSkillComparison(context.Context, *v1.GetSkillComparisonRequest) (*v1.GetSkillComparisonResponse, error)
 	// ResolveSkillConflict resolves a single skill conflict between server and agent versions.
-	ResolveSkillConflict(context.Context, *connect.Request[v1.ResolveSkillConflictRequest]) (*connect.Response[v1.ResolveSkillConflictResponse], error)
+	ResolveSkillConflict(context.Context, *v1.ResolveSkillConflictRequest) (*v1.ResolveSkillConflictResponse, error)
 	// SyncClaudeSettings merges local .claude/settings.json settings (language, etc.)
 	// with the backend's stored settings and returns the merged result.
-	SyncClaudeSettings(context.Context, *connect.Request[v1.SyncClaudeSettingsAgentRequest]) (*connect.Response[v1.SyncClaudeSettingsAgentResponse], error)
+	SyncClaudeSettings(context.Context, *v1.SyncClaudeSettingsAgentRequest) (*v1.SyncClaudeSettingsAgentResponse, error)
 }
 
 // NewAgentManagerServiceClient constructs a client for the taskguild.v1.AgentManagerService
-// service. By default, it uses the Connect protocol with the binary Protobuf Codec, asks for
-// gzipped responses, and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply
-// the connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewAgentManagerServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) AgentManagerServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	agentManagerServiceMethods := v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods()
-	return &agentManagerServiceClient{
-		subscribe: connect.NewClient[v1.AgentManagerSubscribeRequest, v1.AgentCommand](
-			httpClient,
-			baseURL+AgentManagerServiceSubscribeProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("Subscribe")),
-			connect.WithClientOptions(opts...),
-		),
-		claimTask: connect.NewClient[v1.ClaimTaskRequest, v1.ClaimTaskResponse](
-			httpClient,
-			baseURL+AgentManagerServiceClaimTaskProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("ClaimTask")),
-			connect.WithClientOptions(opts...),
-		),
-		reportTaskResult: connect.NewClient[v1.ReportTaskResultRequest, v1.ReportTaskResultResponse](
-			httpClient,
-			baseURL+AgentManagerServiceReportTaskResultProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("ReportTaskResult")),
-			connect.WithClientOptions(opts...),
-		),
-		reportAgentStatus: connect.NewClient[v1.ReportAgentStatusRequest, v1.ReportAgentStatusResponse](
-			httpClient,
-			baseURL+AgentManagerServiceReportAgentStatusProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("ReportAgentStatus")),
-			connect.WithClientOptions(opts...),
-		),
-		heartbeat: connect.NewClient[v1.HeartbeatRequest, v1.HeartbeatResponse](
-			httpClient,
-			baseURL+AgentManagerServiceHeartbeatProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("Heartbeat")),
-			connect.WithClientOptions(opts...),
-		),
-		createInteraction: connect.NewClient[v1.CreateInteractionRequest, v1.CreateInteractionResponse](
-			httpClient,
-			baseURL+AgentManagerServiceCreateInteractionProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("CreateInteraction")),
-			connect.WithClientOptions(opts...),
-		),
-		getInteractionResponse: connect.NewClient[v1.GetInteractionResponseRequest, v1.GetInteractionResponseResponse](
-			httpClient,
-			baseURL+AgentManagerServiceGetInteractionResponseProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("GetInteractionResponse")),
-			connect.WithClientOptions(opts...),
-		),
-		syncAgents: connect.NewClient[v1.SyncAgentsRequest, v1.SyncAgentsResponse](
-			httpClient,
-			baseURL+AgentManagerServiceSyncAgentsProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("SyncAgents")),
-			connect.WithClientOptions(opts...),
-		),
-		reportTaskLog: connect.NewClient[v1.ReportTaskLogRequest, v1.ReportTaskLogResponse](
-			httpClient,
-			baseURL+AgentManagerServiceReportTaskLogProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("ReportTaskLog")),
-			connect.WithClientOptions(opts...),
-		),
-		syncPermissions: connect.NewClient[v1.SyncPermissionsRequest, v1.SyncPermissionsResponse](
-			httpClient,
-			baseURL+AgentManagerServiceSyncPermissionsProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("SyncPermissions")),
-			connect.WithClientOptions(opts...),
-		),
-		reportWorktreeList: connect.NewClient[v1.ReportWorktreeListRequest, v1.ReportWorktreeListResponse](
-			httpClient,
-			baseURL+AgentManagerServiceReportWorktreeListProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("ReportWorktreeList")),
-			connect.WithClientOptions(opts...),
-		),
-		requestWorktreeList: connect.NewClient[v1.RequestWorktreeListRequest, v1.RequestWorktreeListResponse](
-			httpClient,
-			baseURL+AgentManagerServiceRequestWorktreeListProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("RequestWorktreeList")),
-			connect.WithClientOptions(opts...),
-		),
-		getWorktreeList: connect.NewClient[v1.GetWorktreeListRequest, v1.GetWorktreeListResponse](
-			httpClient,
-			baseURL+AgentManagerServiceGetWorktreeListProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("GetWorktreeList")),
-			connect.WithClientOptions(opts...),
-		),
-		requestWorktreeDelete: connect.NewClient[v1.RequestWorktreeDeleteRequest, v1.RequestWorktreeDeleteResponse](
-			httpClient,
-			baseURL+AgentManagerServiceRequestWorktreeDeleteProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("RequestWorktreeDelete")),
-			connect.WithClientOptions(opts...),
-		),
-		reportWorktreeDeleteResult: connect.NewClient[v1.ReportWorktreeDeleteResultRequest, v1.ReportWorktreeDeleteResultResponse](
-			httpClient,
-			baseURL+AgentManagerServiceReportWorktreeDeleteResultProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("ReportWorktreeDeleteResult")),
-			connect.WithClientOptions(opts...),
-		),
-		requestGitPullMain: connect.NewClient[v1.RequestGitPullMainRequest, v1.RequestGitPullMainResponse](
-			httpClient,
-			baseURL+AgentManagerServiceRequestGitPullMainProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("RequestGitPullMain")),
-			connect.WithClientOptions(opts...),
-		),
-		reportGitPullMainResult: connect.NewClient[v1.ReportGitPullMainResultRequest, v1.ReportGitPullMainResultResponse](
-			httpClient,
-			baseURL+AgentManagerServiceReportGitPullMainResultProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("ReportGitPullMainResult")),
-			connect.WithClientOptions(opts...),
-		),
-		syncScripts: connect.NewClient[v1.SyncScriptsRequest, v1.SyncScriptsResponse](
-			httpClient,
-			baseURL+AgentManagerServiceSyncScriptsProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("SyncScripts")),
-			connect.WithClientOptions(opts...),
-		),
-		reportScriptExecutionResult: connect.NewClient[v1.ReportScriptExecutionResultRequest, v1.ReportScriptExecutionResultResponse](
-			httpClient,
-			baseURL+AgentManagerServiceReportScriptExecutionResultProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("ReportScriptExecutionResult")),
-			connect.WithClientOptions(opts...),
-		),
-		reportScriptOutputChunk: connect.NewClient[v1.ReportScriptOutputChunkRequest, v1.ReportScriptOutputChunkResponse](
-			httpClient,
-			baseURL+AgentManagerServiceReportScriptOutputChunkProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("ReportScriptOutputChunk")),
-			connect.WithClientOptions(opts...),
-		),
-		requestScriptComparison: connect.NewClient[v1.RequestScriptComparisonRequest, v1.RequestScriptComparisonResponse](
-			httpClient,
-			baseURL+AgentManagerServiceRequestScriptComparisonProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("RequestScriptComparison")),
-			connect.WithClientOptions(opts...),
-		),
-		reportScriptComparison: connect.NewClient[v1.ReportScriptComparisonRequest, v1.ReportScriptComparisonResponse](
-			httpClient,
-			baseURL+AgentManagerServiceReportScriptComparisonProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("ReportScriptComparison")),
-			connect.WithClientOptions(opts...),
-		),
-		getScriptComparison: connect.NewClient[v1.GetScriptComparisonRequest, v1.GetScriptComparisonResponse](
-			httpClient,
-			baseURL+AgentManagerServiceGetScriptComparisonProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("GetScriptComparison")),
-			connect.WithClientOptions(opts...),
-		),
-		resolveScriptConflict: connect.NewClient[v1.ResolveScriptConflictRequest, v1.ResolveScriptConflictResponse](
-			httpClient,
-			baseURL+AgentManagerServiceResolveScriptConflictProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("ResolveScriptConflict")),
-			connect.WithClientOptions(opts...),
-		),
-		requestAgentComparison: connect.NewClient[v1.RequestAgentComparisonRequest, v1.RequestAgentComparisonResponse](
-			httpClient,
-			baseURL+AgentManagerServiceRequestAgentComparisonProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("RequestAgentComparison")),
-			connect.WithClientOptions(opts...),
-		),
-		reportAgentComparison: connect.NewClient[v1.ReportAgentComparisonRequest, v1.ReportAgentComparisonResponse](
-			httpClient,
-			baseURL+AgentManagerServiceReportAgentComparisonProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("ReportAgentComparison")),
-			connect.WithClientOptions(opts...),
-		),
-		getAgentComparison: connect.NewClient[v1.GetAgentComparisonRequest, v1.GetAgentComparisonResponse](
-			httpClient,
-			baseURL+AgentManagerServiceGetAgentComparisonProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("GetAgentComparison")),
-			connect.WithClientOptions(opts...),
-		),
-		resolveAgentConflict: connect.NewClient[v1.ResolveAgentConflictRequest, v1.ResolveAgentConflictResponse](
-			httpClient,
-			baseURL+AgentManagerServiceResolveAgentConflictProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("ResolveAgentConflict")),
-			connect.WithClientOptions(opts...),
-		),
-		listSingleCommandPermissions: connect.NewClient[v1.ListSingleCommandPermissionsAgentRequest, v1.ListSingleCommandPermissionsAgentResponse](
-			httpClient,
-			baseURL+AgentManagerServiceListSingleCommandPermissionsProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("ListSingleCommandPermissions")),
-			connect.WithClientOptions(opts...),
-		),
-		addSingleCommandPermission: connect.NewClient[v1.AddSingleCommandPermissionRequest, v1.AddSingleCommandPermissionResponse](
-			httpClient,
-			baseURL+AgentManagerServiceAddSingleCommandPermissionProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("AddSingleCommandPermission")),
-			connect.WithClientOptions(opts...),
-		),
-		syncSkills: connect.NewClient[v1.SyncSkillsRequest, v1.SyncSkillsResponse](
-			httpClient,
-			baseURL+AgentManagerServiceSyncSkillsProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("SyncSkills")),
-			connect.WithClientOptions(opts...),
-		),
-		requestSkillComparison: connect.NewClient[v1.RequestSkillComparisonRequest, v1.RequestSkillComparisonResponse](
-			httpClient,
-			baseURL+AgentManagerServiceRequestSkillComparisonProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("RequestSkillComparison")),
-			connect.WithClientOptions(opts...),
-		),
-		reportSkillComparison: connect.NewClient[v1.ReportSkillComparisonRequest, v1.ReportSkillComparisonResponse](
-			httpClient,
-			baseURL+AgentManagerServiceReportSkillComparisonProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("ReportSkillComparison")),
-			connect.WithClientOptions(opts...),
-		),
-		getSkillComparison: connect.NewClient[v1.GetSkillComparisonRequest, v1.GetSkillComparisonResponse](
-			httpClient,
-			baseURL+AgentManagerServiceGetSkillComparisonProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("GetSkillComparison")),
-			connect.WithClientOptions(opts...),
-		),
-		resolveSkillConflict: connect.NewClient[v1.ResolveSkillConflictRequest, v1.ResolveSkillConflictResponse](
-			httpClient,
-			baseURL+AgentManagerServiceResolveSkillConflictProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("ResolveSkillConflict")),
-			connect.WithClientOptions(opts...),
-		),
-		syncClaudeSettings: connect.NewClient[v1.SyncClaudeSettingsAgentRequest, v1.SyncClaudeSettingsAgentResponse](
-			httpClient,
-			baseURL+AgentManagerServiceSyncClaudeSettingsProcedure,
-			connect.WithSchema(agentManagerServiceMethods.ByName("SyncClaudeSettings")),
-			connect.WithClientOptions(opts...),
-		),
+// service. Multiple service clients may share a single connect.Client.
+func NewAgentManagerServiceClient(client *connect.Client) AgentManagerServiceClient {
+	return &agentManagerServiceClient{client: client}
+}
+
+// AgentManagerServiceSubscribeClientStream is the client stream for the AgentManagerService's
+// Subscribe RPC.
+type AgentManagerServiceSubscribeClientStream struct {
+	stream connect.ClientStream
+}
+
+// Receive returns the next response message from the server.
+func (s AgentManagerServiceSubscribeClientStream) Receive() (*v1.AgentCommand, error) {
+	var res v1.AgentCommand
+	if err := s.stream.Receive(&res); err != nil {
+		return nil, err
 	}
+	return &res, nil
 }
 
-// agentManagerServiceClient implements AgentManagerServiceClient.
-type agentManagerServiceClient struct {
-	subscribe                    *connect.Client[v1.AgentManagerSubscribeRequest, v1.AgentCommand]
-	claimTask                    *connect.Client[v1.ClaimTaskRequest, v1.ClaimTaskResponse]
-	reportTaskResult             *connect.Client[v1.ReportTaskResultRequest, v1.ReportTaskResultResponse]
-	reportAgentStatus            *connect.Client[v1.ReportAgentStatusRequest, v1.ReportAgentStatusResponse]
-	heartbeat                    *connect.Client[v1.HeartbeatRequest, v1.HeartbeatResponse]
-	createInteraction            *connect.Client[v1.CreateInteractionRequest, v1.CreateInteractionResponse]
-	getInteractionResponse       *connect.Client[v1.GetInteractionResponseRequest, v1.GetInteractionResponseResponse]
-	syncAgents                   *connect.Client[v1.SyncAgentsRequest, v1.SyncAgentsResponse]
-	reportTaskLog                *connect.Client[v1.ReportTaskLogRequest, v1.ReportTaskLogResponse]
-	syncPermissions              *connect.Client[v1.SyncPermissionsRequest, v1.SyncPermissionsResponse]
-	reportWorktreeList           *connect.Client[v1.ReportWorktreeListRequest, v1.ReportWorktreeListResponse]
-	requestWorktreeList          *connect.Client[v1.RequestWorktreeListRequest, v1.RequestWorktreeListResponse]
-	getWorktreeList              *connect.Client[v1.GetWorktreeListRequest, v1.GetWorktreeListResponse]
-	requestWorktreeDelete        *connect.Client[v1.RequestWorktreeDeleteRequest, v1.RequestWorktreeDeleteResponse]
-	reportWorktreeDeleteResult   *connect.Client[v1.ReportWorktreeDeleteResultRequest, v1.ReportWorktreeDeleteResultResponse]
-	requestGitPullMain           *connect.Client[v1.RequestGitPullMainRequest, v1.RequestGitPullMainResponse]
-	reportGitPullMainResult      *connect.Client[v1.ReportGitPullMainResultRequest, v1.ReportGitPullMainResultResponse]
-	syncScripts                  *connect.Client[v1.SyncScriptsRequest, v1.SyncScriptsResponse]
-	reportScriptExecutionResult  *connect.Client[v1.ReportScriptExecutionResultRequest, v1.ReportScriptExecutionResultResponse]
-	reportScriptOutputChunk      *connect.Client[v1.ReportScriptOutputChunkRequest, v1.ReportScriptOutputChunkResponse]
-	requestScriptComparison      *connect.Client[v1.RequestScriptComparisonRequest, v1.RequestScriptComparisonResponse]
-	reportScriptComparison       *connect.Client[v1.ReportScriptComparisonRequest, v1.ReportScriptComparisonResponse]
-	getScriptComparison          *connect.Client[v1.GetScriptComparisonRequest, v1.GetScriptComparisonResponse]
-	resolveScriptConflict        *connect.Client[v1.ResolveScriptConflictRequest, v1.ResolveScriptConflictResponse]
-	requestAgentComparison       *connect.Client[v1.RequestAgentComparisonRequest, v1.RequestAgentComparisonResponse]
-	reportAgentComparison        *connect.Client[v1.ReportAgentComparisonRequest, v1.ReportAgentComparisonResponse]
-	getAgentComparison           *connect.Client[v1.GetAgentComparisonRequest, v1.GetAgentComparisonResponse]
-	resolveAgentConflict         *connect.Client[v1.ResolveAgentConflictRequest, v1.ResolveAgentConflictResponse]
-	listSingleCommandPermissions *connect.Client[v1.ListSingleCommandPermissionsAgentRequest, v1.ListSingleCommandPermissionsAgentResponse]
-	addSingleCommandPermission   *connect.Client[v1.AddSingleCommandPermissionRequest, v1.AddSingleCommandPermissionResponse]
-	syncSkills                   *connect.Client[v1.SyncSkillsRequest, v1.SyncSkillsResponse]
-	requestSkillComparison       *connect.Client[v1.RequestSkillComparisonRequest, v1.RequestSkillComparisonResponse]
-	reportSkillComparison        *connect.Client[v1.ReportSkillComparisonRequest, v1.ReportSkillComparisonResponse]
-	getSkillComparison           *connect.Client[v1.GetSkillComparisonRequest, v1.GetSkillComparisonResponse]
-	resolveSkillConflict         *connect.Client[v1.ResolveSkillConflictRequest, v1.ResolveSkillConflictResponse]
-	syncClaudeSettings           *connect.Client[v1.SyncClaudeSettingsAgentRequest, v1.SyncClaudeSettingsAgentResponse]
-}
-
-// Subscribe calls taskguild.v1.AgentManagerService.Subscribe.
-func (c *agentManagerServiceClient) Subscribe(ctx context.Context, req *connect.Request[v1.AgentManagerSubscribeRequest]) (*connect.ServerStreamForClient[v1.AgentCommand], error) {
-	return c.subscribe.CallServerStream(ctx, req)
-}
-
-// ClaimTask calls taskguild.v1.AgentManagerService.ClaimTask.
-func (c *agentManagerServiceClient) ClaimTask(ctx context.Context, req *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error) {
-	return c.claimTask.CallUnary(ctx, req)
-}
-
-// ReportTaskResult calls taskguild.v1.AgentManagerService.ReportTaskResult.
-func (c *agentManagerServiceClient) ReportTaskResult(ctx context.Context, req *connect.Request[v1.ReportTaskResultRequest]) (*connect.Response[v1.ReportTaskResultResponse], error) {
-	return c.reportTaskResult.CallUnary(ctx, req)
-}
-
-// ReportAgentStatus calls taskguild.v1.AgentManagerService.ReportAgentStatus.
-func (c *agentManagerServiceClient) ReportAgentStatus(ctx context.Context, req *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error) {
-	return c.reportAgentStatus.CallUnary(ctx, req)
-}
-
-// Heartbeat calls taskguild.v1.AgentManagerService.Heartbeat.
-func (c *agentManagerServiceClient) Heartbeat(ctx context.Context, req *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error) {
-	return c.heartbeat.CallUnary(ctx, req)
-}
-
-// CreateInteraction calls taskguild.v1.AgentManagerService.CreateInteraction.
-func (c *agentManagerServiceClient) CreateInteraction(ctx context.Context, req *connect.Request[v1.CreateInteractionRequest]) (*connect.Response[v1.CreateInteractionResponse], error) {
-	return c.createInteraction.CallUnary(ctx, req)
-}
-
-// GetInteractionResponse calls taskguild.v1.AgentManagerService.GetInteractionResponse.
-func (c *agentManagerServiceClient) GetInteractionResponse(ctx context.Context, req *connect.Request[v1.GetInteractionResponseRequest]) (*connect.Response[v1.GetInteractionResponseResponse], error) {
-	return c.getInteractionResponse.CallUnary(ctx, req)
-}
-
-// SyncAgents calls taskguild.v1.AgentManagerService.SyncAgents.
-func (c *agentManagerServiceClient) SyncAgents(ctx context.Context, req *connect.Request[v1.SyncAgentsRequest]) (*connect.Response[v1.SyncAgentsResponse], error) {
-	return c.syncAgents.CallUnary(ctx, req)
-}
-
-// ReportTaskLog calls taskguild.v1.AgentManagerService.ReportTaskLog.
-func (c *agentManagerServiceClient) ReportTaskLog(ctx context.Context, req *connect.Request[v1.ReportTaskLogRequest]) (*connect.Response[v1.ReportTaskLogResponse], error) {
-	return c.reportTaskLog.CallUnary(ctx, req)
-}
-
-// SyncPermissions calls taskguild.v1.AgentManagerService.SyncPermissions.
-func (c *agentManagerServiceClient) SyncPermissions(ctx context.Context, req *connect.Request[v1.SyncPermissionsRequest]) (*connect.Response[v1.SyncPermissionsResponse], error) {
-	return c.syncPermissions.CallUnary(ctx, req)
-}
-
-// ReportWorktreeList calls taskguild.v1.AgentManagerService.ReportWorktreeList.
-func (c *agentManagerServiceClient) ReportWorktreeList(ctx context.Context, req *connect.Request[v1.ReportWorktreeListRequest]) (*connect.Response[v1.ReportWorktreeListResponse], error) {
-	return c.reportWorktreeList.CallUnary(ctx, req)
-}
-
-// RequestWorktreeList calls taskguild.v1.AgentManagerService.RequestWorktreeList.
-func (c *agentManagerServiceClient) RequestWorktreeList(ctx context.Context, req *connect.Request[v1.RequestWorktreeListRequest]) (*connect.Response[v1.RequestWorktreeListResponse], error) {
-	return c.requestWorktreeList.CallUnary(ctx, req)
-}
-
-// GetWorktreeList calls taskguild.v1.AgentManagerService.GetWorktreeList.
-func (c *agentManagerServiceClient) GetWorktreeList(ctx context.Context, req *connect.Request[v1.GetWorktreeListRequest]) (*connect.Response[v1.GetWorktreeListResponse], error) {
-	return c.getWorktreeList.CallUnary(ctx, req)
-}
-
-// RequestWorktreeDelete calls taskguild.v1.AgentManagerService.RequestWorktreeDelete.
-func (c *agentManagerServiceClient) RequestWorktreeDelete(ctx context.Context, req *connect.Request[v1.RequestWorktreeDeleteRequest]) (*connect.Response[v1.RequestWorktreeDeleteResponse], error) {
-	return c.requestWorktreeDelete.CallUnary(ctx, req)
-}
-
-// ReportWorktreeDeleteResult calls taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult.
-func (c *agentManagerServiceClient) ReportWorktreeDeleteResult(ctx context.Context, req *connect.Request[v1.ReportWorktreeDeleteResultRequest]) (*connect.Response[v1.ReportWorktreeDeleteResultResponse], error) {
-	return c.reportWorktreeDeleteResult.CallUnary(ctx, req)
-}
-
-// RequestGitPullMain calls taskguild.v1.AgentManagerService.RequestGitPullMain.
-func (c *agentManagerServiceClient) RequestGitPullMain(ctx context.Context, req *connect.Request[v1.RequestGitPullMainRequest]) (*connect.Response[v1.RequestGitPullMainResponse], error) {
-	return c.requestGitPullMain.CallUnary(ctx, req)
-}
-
-// ReportGitPullMainResult calls taskguild.v1.AgentManagerService.ReportGitPullMainResult.
-func (c *agentManagerServiceClient) ReportGitPullMainResult(ctx context.Context, req *connect.Request[v1.ReportGitPullMainResultRequest]) (*connect.Response[v1.ReportGitPullMainResultResponse], error) {
-	return c.reportGitPullMainResult.CallUnary(ctx, req)
-}
-
-// SyncScripts calls taskguild.v1.AgentManagerService.SyncScripts.
-func (c *agentManagerServiceClient) SyncScripts(ctx context.Context, req *connect.Request[v1.SyncScriptsRequest]) (*connect.Response[v1.SyncScriptsResponse], error) {
-	return c.syncScripts.CallUnary(ctx, req)
-}
-
-// ReportScriptExecutionResult calls taskguild.v1.AgentManagerService.ReportScriptExecutionResult.
-func (c *agentManagerServiceClient) ReportScriptExecutionResult(ctx context.Context, req *connect.Request[v1.ReportScriptExecutionResultRequest]) (*connect.Response[v1.ReportScriptExecutionResultResponse], error) {
-	return c.reportScriptExecutionResult.CallUnary(ctx, req)
-}
-
-// ReportScriptOutputChunk calls taskguild.v1.AgentManagerService.ReportScriptOutputChunk.
-func (c *agentManagerServiceClient) ReportScriptOutputChunk(ctx context.Context, req *connect.Request[v1.ReportScriptOutputChunkRequest]) (*connect.Response[v1.ReportScriptOutputChunkResponse], error) {
-	return c.reportScriptOutputChunk.CallUnary(ctx, req)
-}
-
-// RequestScriptComparison calls taskguild.v1.AgentManagerService.RequestScriptComparison.
-func (c *agentManagerServiceClient) RequestScriptComparison(ctx context.Context, req *connect.Request[v1.RequestScriptComparisonRequest]) (*connect.Response[v1.RequestScriptComparisonResponse], error) {
-	return c.requestScriptComparison.CallUnary(ctx, req)
-}
-
-// ReportScriptComparison calls taskguild.v1.AgentManagerService.ReportScriptComparison.
-func (c *agentManagerServiceClient) ReportScriptComparison(ctx context.Context, req *connect.Request[v1.ReportScriptComparisonRequest]) (*connect.Response[v1.ReportScriptComparisonResponse], error) {
-	return c.reportScriptComparison.CallUnary(ctx, req)
-}
-
-// GetScriptComparison calls taskguild.v1.AgentManagerService.GetScriptComparison.
-func (c *agentManagerServiceClient) GetScriptComparison(ctx context.Context, req *connect.Request[v1.GetScriptComparisonRequest]) (*connect.Response[v1.GetScriptComparisonResponse], error) {
-	return c.getScriptComparison.CallUnary(ctx, req)
-}
-
-// ResolveScriptConflict calls taskguild.v1.AgentManagerService.ResolveScriptConflict.
-func (c *agentManagerServiceClient) ResolveScriptConflict(ctx context.Context, req *connect.Request[v1.ResolveScriptConflictRequest]) (*connect.Response[v1.ResolveScriptConflictResponse], error) {
-	return c.resolveScriptConflict.CallUnary(ctx, req)
-}
-
-// RequestAgentComparison calls taskguild.v1.AgentManagerService.RequestAgentComparison.
-func (c *agentManagerServiceClient) RequestAgentComparison(ctx context.Context, req *connect.Request[v1.RequestAgentComparisonRequest]) (*connect.Response[v1.RequestAgentComparisonResponse], error) {
-	return c.requestAgentComparison.CallUnary(ctx, req)
-}
-
-// ReportAgentComparison calls taskguild.v1.AgentManagerService.ReportAgentComparison.
-func (c *agentManagerServiceClient) ReportAgentComparison(ctx context.Context, req *connect.Request[v1.ReportAgentComparisonRequest]) (*connect.Response[v1.ReportAgentComparisonResponse], error) {
-	return c.reportAgentComparison.CallUnary(ctx, req)
-}
-
-// GetAgentComparison calls taskguild.v1.AgentManagerService.GetAgentComparison.
-func (c *agentManagerServiceClient) GetAgentComparison(ctx context.Context, req *connect.Request[v1.GetAgentComparisonRequest]) (*connect.Response[v1.GetAgentComparisonResponse], error) {
-	return c.getAgentComparison.CallUnary(ctx, req)
-}
-
-// ResolveAgentConflict calls taskguild.v1.AgentManagerService.ResolveAgentConflict.
-func (c *agentManagerServiceClient) ResolveAgentConflict(ctx context.Context, req *connect.Request[v1.ResolveAgentConflictRequest]) (*connect.Response[v1.ResolveAgentConflictResponse], error) {
-	return c.resolveAgentConflict.CallUnary(ctx, req)
-}
-
-// ListSingleCommandPermissions calls taskguild.v1.AgentManagerService.ListSingleCommandPermissions.
-func (c *agentManagerServiceClient) ListSingleCommandPermissions(ctx context.Context, req *connect.Request[v1.ListSingleCommandPermissionsAgentRequest]) (*connect.Response[v1.ListSingleCommandPermissionsAgentResponse], error) {
-	return c.listSingleCommandPermissions.CallUnary(ctx, req)
-}
-
-// AddSingleCommandPermission calls taskguild.v1.AgentManagerService.AddSingleCommandPermission.
-func (c *agentManagerServiceClient) AddSingleCommandPermission(ctx context.Context, req *connect.Request[v1.AddSingleCommandPermissionRequest]) (*connect.Response[v1.AddSingleCommandPermissionResponse], error) {
-	return c.addSingleCommandPermission.CallUnary(ctx, req)
-}
-
-// SyncSkills calls taskguild.v1.AgentManagerService.SyncSkills.
-func (c *agentManagerServiceClient) SyncSkills(ctx context.Context, req *connect.Request[v1.SyncSkillsRequest]) (*connect.Response[v1.SyncSkillsResponse], error) {
-	return c.syncSkills.CallUnary(ctx, req)
-}
-
-// RequestSkillComparison calls taskguild.v1.AgentManagerService.RequestSkillComparison.
-func (c *agentManagerServiceClient) RequestSkillComparison(ctx context.Context, req *connect.Request[v1.RequestSkillComparisonRequest]) (*connect.Response[v1.RequestSkillComparisonResponse], error) {
-	return c.requestSkillComparison.CallUnary(ctx, req)
-}
-
-// ReportSkillComparison calls taskguild.v1.AgentManagerService.ReportSkillComparison.
-func (c *agentManagerServiceClient) ReportSkillComparison(ctx context.Context, req *connect.Request[v1.ReportSkillComparisonRequest]) (*connect.Response[v1.ReportSkillComparisonResponse], error) {
-	return c.reportSkillComparison.CallUnary(ctx, req)
-}
-
-// GetSkillComparison calls taskguild.v1.AgentManagerService.GetSkillComparison.
-func (c *agentManagerServiceClient) GetSkillComparison(ctx context.Context, req *connect.Request[v1.GetSkillComparisonRequest]) (*connect.Response[v1.GetSkillComparisonResponse], error) {
-	return c.getSkillComparison.CallUnary(ctx, req)
-}
-
-// ResolveSkillConflict calls taskguild.v1.AgentManagerService.ResolveSkillConflict.
-func (c *agentManagerServiceClient) ResolveSkillConflict(ctx context.Context, req *connect.Request[v1.ResolveSkillConflictRequest]) (*connect.Response[v1.ResolveSkillConflictResponse], error) {
-	return c.resolveSkillConflict.CallUnary(ctx, req)
-}
-
-// SyncClaudeSettings calls taskguild.v1.AgentManagerService.SyncClaudeSettings.
-func (c *agentManagerServiceClient) SyncClaudeSettings(ctx context.Context, req *connect.Request[v1.SyncClaudeSettingsAgentRequest]) (*connect.Response[v1.SyncClaudeSettingsAgentResponse], error) {
-	return c.syncClaudeSettings.CallUnary(ctx, req)
+// Close releases the stream's resources. It is idempotent and is typically deferred to clean up a
+// stream abandoned before io.EOF.
+func (s AgentManagerServiceSubscribeClientStream) Close() error {
+	return s.stream.Close()
 }
 
 // AgentManagerServiceHandler is an implementation of the taskguild.v1.AgentManagerService service.
 type AgentManagerServiceHandler interface {
 	// Subscribe opens a server-stream for receiving commands from the backend.
-	Subscribe(context.Context, *connect.Request[v1.AgentManagerSubscribeRequest], *connect.ServerStream[v1.AgentCommand]) error
+	Subscribe(context.Context, *v1.AgentManagerSubscribeRequest, AgentManagerServiceSubscribeServerStream) error
 	// ClaimTask allows an agent-manager to claim an available task.
-	ClaimTask(context.Context, *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error)
+	ClaimTask(context.Context, *v1.ClaimTaskRequest) (*v1.ClaimTaskResponse, error)
 	// ReportTaskResult reports the outcome of a task execution.
-	ReportTaskResult(context.Context, *connect.Request[v1.ReportTaskResultRequest]) (*connect.Response[v1.ReportTaskResultResponse], error)
+	ReportTaskResult(context.Context, *v1.ReportTaskResultRequest) (*v1.ReportTaskResultResponse, error)
 	// ReportAgentStatus reports the current status of an agent.
-	ReportAgentStatus(context.Context, *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error)
+	ReportAgentStatus(context.Context, *v1.ReportAgentStatusRequest) (*v1.ReportAgentStatusResponse, error)
 	// Heartbeat sends periodic health signals from the agent-manager.
-	Heartbeat(context.Context, *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error)
+	Heartbeat(context.Context, *v1.HeartbeatRequest) (*v1.HeartbeatResponse, error)
 	// CreateInteraction creates a new interaction request from an agent.
-	CreateInteraction(context.Context, *connect.Request[v1.CreateInteractionRequest]) (*connect.Response[v1.CreateInteractionResponse], error)
+	CreateInteraction(context.Context, *v1.CreateInteractionRequest) (*v1.CreateInteractionResponse, error)
 	// GetInteractionResponse polls for a user's response to an interaction.
-	GetInteractionResponse(context.Context, *connect.Request[v1.GetInteractionResponseRequest]) (*connect.Response[v1.GetInteractionResponseResponse], error)
+	GetInteractionResponse(context.Context, *v1.GetInteractionResponseRequest) (*v1.GetInteractionResponseResponse, error)
 	// SyncAgents returns all agent definitions for a project so the agent can
 	// write them as .claude/agents/*.md files locally.
-	SyncAgents(context.Context, *connect.Request[v1.SyncAgentsRequest]) (*connect.Response[v1.SyncAgentsResponse], error)
+	SyncAgents(context.Context, *v1.SyncAgentsRequest) (*v1.SyncAgentsResponse, error)
 	// ReportTaskLog reports a structured log entry from an agent during task execution.
-	ReportTaskLog(context.Context, *connect.Request[v1.ReportTaskLogRequest]) (*connect.Response[v1.ReportTaskLogResponse], error)
+	ReportTaskLog(context.Context, *v1.ReportTaskLogRequest) (*v1.ReportTaskLogResponse, error)
 	// SyncPermissions merges local .claude/settings.json permissions with the
 	// backend's stored permissions (union strategy) and returns the merged result.
-	SyncPermissions(context.Context, *connect.Request[v1.SyncPermissionsRequest]) (*connect.Response[v1.SyncPermissionsResponse], error)
+	SyncPermissions(context.Context, *v1.SyncPermissionsRequest) (*v1.SyncPermissionsResponse, error)
 	// ReportWorktreeList reports available worktrees from the agent-manager's filesystem.
-	ReportWorktreeList(context.Context, *connect.Request[v1.ReportWorktreeListRequest]) (*connect.Response[v1.ReportWorktreeListResponse], error)
+	ReportWorktreeList(context.Context, *v1.ReportWorktreeListRequest) (*v1.ReportWorktreeListResponse, error)
 	// RequestWorktreeList triggers a worktree scan on connected agent-managers (called by frontend).
-	RequestWorktreeList(context.Context, *connect.Request[v1.RequestWorktreeListRequest]) (*connect.Response[v1.RequestWorktreeListResponse], error)
+	RequestWorktreeList(context.Context, *v1.RequestWorktreeListRequest) (*v1.RequestWorktreeListResponse, error)
 	// GetWorktreeList returns the cached worktree list for a project.
-	GetWorktreeList(context.Context, *connect.Request[v1.GetWorktreeListRequest]) (*connect.Response[v1.GetWorktreeListResponse], error)
+	GetWorktreeList(context.Context, *v1.GetWorktreeListRequest) (*v1.GetWorktreeListResponse, error)
 	// RequestWorktreeDelete initiates deletion of a specific worktree (called by frontend).
-	RequestWorktreeDelete(context.Context, *connect.Request[v1.RequestWorktreeDeleteRequest]) (*connect.Response[v1.RequestWorktreeDeleteResponse], error)
+	RequestWorktreeDelete(context.Context, *v1.RequestWorktreeDeleteRequest) (*v1.RequestWorktreeDeleteResponse, error)
 	// ReportWorktreeDeleteResult reports the outcome of a worktree deletion from the agent.
-	ReportWorktreeDeleteResult(context.Context, *connect.Request[v1.ReportWorktreeDeleteResultRequest]) (*connect.Response[v1.ReportWorktreeDeleteResultResponse], error)
+	ReportWorktreeDeleteResult(context.Context, *v1.ReportWorktreeDeleteResultRequest) (*v1.ReportWorktreeDeleteResultResponse, error)
 	// RequestGitPullMain triggers a `git pull origin main` on connected agent-managers (called by frontend).
-	RequestGitPullMain(context.Context, *connect.Request[v1.RequestGitPullMainRequest]) (*connect.Response[v1.RequestGitPullMainResponse], error)
+	RequestGitPullMain(context.Context, *v1.RequestGitPullMainRequest) (*v1.RequestGitPullMainResponse, error)
 	// ReportGitPullMainResult reports the outcome of a git pull origin main from the agent.
-	ReportGitPullMainResult(context.Context, *connect.Request[v1.ReportGitPullMainResultRequest]) (*connect.Response[v1.ReportGitPullMainResultResponse], error)
+	ReportGitPullMainResult(context.Context, *v1.ReportGitPullMainResultRequest) (*v1.ReportGitPullMainResultResponse, error)
 	// SyncScripts returns all script definitions for a project so the agent can
 	// write them as .taskguild/scripts/* files locally.
-	SyncScripts(context.Context, *connect.Request[v1.SyncScriptsRequest]) (*connect.Response[v1.SyncScriptsResponse], error)
+	SyncScripts(context.Context, *v1.SyncScriptsRequest) (*v1.SyncScriptsResponse, error)
 	// ReportScriptExecutionResult reports the outcome of a script execution from the agent.
-	ReportScriptExecutionResult(context.Context, *connect.Request[v1.ReportScriptExecutionResultRequest]) (*connect.Response[v1.ReportScriptExecutionResultResponse], error)
+	ReportScriptExecutionResult(context.Context, *v1.ReportScriptExecutionResultRequest) (*v1.ReportScriptExecutionResultResponse, error)
 	// ReportScriptOutputChunk reports a chunk of real-time script output from the agent.
-	ReportScriptOutputChunk(context.Context, *connect.Request[v1.ReportScriptOutputChunkRequest]) (*connect.Response[v1.ReportScriptOutputChunkResponse], error)
+	ReportScriptOutputChunk(context.Context, *v1.ReportScriptOutputChunkRequest) (*v1.ReportScriptOutputChunkResponse, error)
 	// RequestScriptComparison triggers a script comparison on connected agent-managers (called by frontend).
-	RequestScriptComparison(context.Context, *connect.Request[v1.RequestScriptComparisonRequest]) (*connect.Response[v1.RequestScriptComparisonResponse], error)
+	RequestScriptComparison(context.Context, *v1.RequestScriptComparisonRequest) (*v1.RequestScriptComparisonResponse, error)
 	// ReportScriptComparison reports script diffs from the agent-manager after comparison.
-	ReportScriptComparison(context.Context, *connect.Request[v1.ReportScriptComparisonRequest]) (*connect.Response[v1.ReportScriptComparisonResponse], error)
+	ReportScriptComparison(context.Context, *v1.ReportScriptComparisonRequest) (*v1.ReportScriptComparisonResponse, error)
 	// GetScriptComparison returns the cached script comparison result for a project.
-	GetScriptComparison(context.Context, *connect.Request[v1.GetScriptComparisonRequest]) (*connect.Response[v1.GetScriptComparisonResponse], error)
+	GetScriptComparison(context.Context, *v1.GetScriptComparisonRequest) (*v1.GetScriptComparisonResponse, error)
 	// ResolveScriptConflict resolves a per-script conflict between server and agent versions.
-	ResolveScriptConflict(context.Context, *connect.Request[v1.ResolveScriptConflictRequest]) (*connect.Response[v1.ResolveScriptConflictResponse], error)
+	ResolveScriptConflict(context.Context, *v1.ResolveScriptConflictRequest) (*v1.ResolveScriptConflictResponse, error)
 	// RequestAgentComparison triggers an agent comparison on connected agent-managers (called by frontend).
-	RequestAgentComparison(context.Context, *connect.Request[v1.RequestAgentComparisonRequest]) (*connect.Response[v1.RequestAgentComparisonResponse], error)
+	RequestAgentComparison(context.Context, *v1.RequestAgentComparisonRequest) (*v1.RequestAgentComparisonResponse, error)
 	// ReportAgentComparison reports agent diffs from the agent-manager after comparison.
-	ReportAgentComparison(context.Context, *connect.Request[v1.ReportAgentComparisonRequest]) (*connect.Response[v1.ReportAgentComparisonResponse], error)
+	ReportAgentComparison(context.Context, *v1.ReportAgentComparisonRequest) (*v1.ReportAgentComparisonResponse, error)
 	// GetAgentComparison returns the cached agent comparison result for a project.
-	GetAgentComparison(context.Context, *connect.Request[v1.GetAgentComparisonRequest]) (*connect.Response[v1.GetAgentComparisonResponse], error)
+	GetAgentComparison(context.Context, *v1.GetAgentComparisonRequest) (*v1.GetAgentComparisonResponse, error)
 	// ResolveAgentConflict resolves a single agent conflict between server and agent versions.
-	ResolveAgentConflict(context.Context, *connect.Request[v1.ResolveAgentConflictRequest]) (*connect.Response[v1.ResolveAgentConflictResponse], error)
+	ResolveAgentConflict(context.Context, *v1.ResolveAgentConflictRequest) (*v1.ResolveAgentConflictResponse, error)
 	// ListSingleCommandPermissions returns all regex-based single-command permission
 	// rules for a project (used by agents to populate their cache).
-	ListSingleCommandPermissions(context.Context, *connect.Request[v1.ListSingleCommandPermissionsAgentRequest]) (*connect.Response[v1.ListSingleCommandPermissionsAgentResponse], error)
+	ListSingleCommandPermissions(context.Context, *v1.ListSingleCommandPermissionsAgentRequest) (*v1.ListSingleCommandPermissionsAgentResponse, error)
 	// AddSingleCommandPermission adds a new regex permission rule from an agent.
-	AddSingleCommandPermission(context.Context, *connect.Request[v1.AddSingleCommandPermissionRequest]) (*connect.Response[v1.AddSingleCommandPermissionResponse], error)
+	AddSingleCommandPermission(context.Context, *v1.AddSingleCommandPermissionRequest) (*v1.AddSingleCommandPermissionResponse, error)
 	// SyncSkills returns all skill definitions for a project so the agent can
 	// write them as .claude/skills/{name}/SKILL.md files locally.
-	SyncSkills(context.Context, *connect.Request[v1.SyncSkillsRequest]) (*connect.Response[v1.SyncSkillsResponse], error)
+	SyncSkills(context.Context, *v1.SyncSkillsRequest) (*v1.SyncSkillsResponse, error)
 	// RequestSkillComparison triggers a skill comparison on connected agent-managers (called by frontend).
-	RequestSkillComparison(context.Context, *connect.Request[v1.RequestSkillComparisonRequest]) (*connect.Response[v1.RequestSkillComparisonResponse], error)
+	RequestSkillComparison(context.Context, *v1.RequestSkillComparisonRequest) (*v1.RequestSkillComparisonResponse, error)
 	// ReportSkillComparison reports skill diffs from the agent-manager after comparison.
-	ReportSkillComparison(context.Context, *connect.Request[v1.ReportSkillComparisonRequest]) (*connect.Response[v1.ReportSkillComparisonResponse], error)
+	ReportSkillComparison(context.Context, *v1.ReportSkillComparisonRequest) (*v1.ReportSkillComparisonResponse, error)
 	// GetSkillComparison returns the cached skill comparison result for a project.
-	GetSkillComparison(context.Context, *connect.Request[v1.GetSkillComparisonRequest]) (*connect.Response[v1.GetSkillComparisonResponse], error)
+	GetSkillComparison(context.Context, *v1.GetSkillComparisonRequest) (*v1.GetSkillComparisonResponse, error)
 	// ResolveSkillConflict resolves a single skill conflict between server and agent versions.
-	ResolveSkillConflict(context.Context, *connect.Request[v1.ResolveSkillConflictRequest]) (*connect.Response[v1.ResolveSkillConflictResponse], error)
+	ResolveSkillConflict(context.Context, *v1.ResolveSkillConflictRequest) (*v1.ResolveSkillConflictResponse, error)
 	// SyncClaudeSettings merges local .claude/settings.json settings (language, etc.)
 	// with the backend's stored settings and returns the merged result.
-	SyncClaudeSettings(context.Context, *connect.Request[v1.SyncClaudeSettingsAgentRequest]) (*connect.Response[v1.SyncClaudeSettingsAgentResponse], error)
+	SyncClaudeSettings(context.Context, *v1.SyncClaudeSettingsAgentRequest) (*v1.SyncClaudeSettingsAgentResponse, error)
 }
 
-// NewAgentManagerServiceHandler builds an HTTP handler from the service implementation. It returns
-// the path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewAgentManagerServiceHandler(svc AgentManagerServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	agentManagerServiceMethods := v1.File_taskguild_v1_agent_manager_proto.Services().ByName("AgentManagerService").Methods()
-	agentManagerServiceSubscribeHandler := connect.NewServerStreamHandler(
-		AgentManagerServiceSubscribeProcedure,
-		svc.Subscribe,
-		connect.WithSchema(agentManagerServiceMethods.ByName("Subscribe")),
-		connect.WithHandlerOptions(opts...),
+// RegisterAgentManagerServiceHandler registers svc as the taskguild.v1.AgentManagerService
+// implementation on server.
+func RegisterAgentManagerServiceHandler(server *connect.Server, svc AgentManagerServiceHandler) {
+	adapter := agentManagerServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: agentManagerServiceSubscribeSpec(), Handler: adapter.subscribe},
+		connect.Method{Spec: agentManagerServiceClaimTaskSpec(), Handler: adapter.claimTask},
+		connect.Method{Spec: agentManagerServiceReportTaskResultSpec(), Handler: adapter.reportTaskResult},
+		connect.Method{Spec: agentManagerServiceReportAgentStatusSpec(), Handler: adapter.reportAgentStatus},
+		connect.Method{Spec: agentManagerServiceHeartbeatSpec(), Handler: adapter.heartbeat},
+		connect.Method{Spec: agentManagerServiceCreateInteractionSpec(), Handler: adapter.createInteraction},
+		connect.Method{Spec: agentManagerServiceGetInteractionResponseSpec(), Handler: adapter.getInteractionResponse},
+		connect.Method{Spec: agentManagerServiceSyncAgentsSpec(), Handler: adapter.syncAgents},
+		connect.Method{Spec: agentManagerServiceReportTaskLogSpec(), Handler: adapter.reportTaskLog},
+		connect.Method{Spec: agentManagerServiceSyncPermissionsSpec(), Handler: adapter.syncPermissions},
+		connect.Method{Spec: agentManagerServiceReportWorktreeListSpec(), Handler: adapter.reportWorktreeList},
+		connect.Method{Spec: agentManagerServiceRequestWorktreeListSpec(), Handler: adapter.requestWorktreeList},
+		connect.Method{Spec: agentManagerServiceGetWorktreeListSpec(), Handler: adapter.getWorktreeList},
+		connect.Method{Spec: agentManagerServiceRequestWorktreeDeleteSpec(), Handler: adapter.requestWorktreeDelete},
+		connect.Method{Spec: agentManagerServiceReportWorktreeDeleteResultSpec(), Handler: adapter.reportWorktreeDeleteResult},
+		connect.Method{Spec: agentManagerServiceRequestGitPullMainSpec(), Handler: adapter.requestGitPullMain},
+		connect.Method{Spec: agentManagerServiceReportGitPullMainResultSpec(), Handler: adapter.reportGitPullMainResult},
+		connect.Method{Spec: agentManagerServiceSyncScriptsSpec(), Handler: adapter.syncScripts},
+		connect.Method{Spec: agentManagerServiceReportScriptExecutionResultSpec(), Handler: adapter.reportScriptExecutionResult},
+		connect.Method{Spec: agentManagerServiceReportScriptOutputChunkSpec(), Handler: adapter.reportScriptOutputChunk},
+		connect.Method{Spec: agentManagerServiceRequestScriptComparisonSpec(), Handler: adapter.requestScriptComparison},
+		connect.Method{Spec: agentManagerServiceReportScriptComparisonSpec(), Handler: adapter.reportScriptComparison},
+		connect.Method{Spec: agentManagerServiceGetScriptComparisonSpec(), Handler: adapter.getScriptComparison},
+		connect.Method{Spec: agentManagerServiceResolveScriptConflictSpec(), Handler: adapter.resolveScriptConflict},
+		connect.Method{Spec: agentManagerServiceRequestAgentComparisonSpec(), Handler: adapter.requestAgentComparison},
+		connect.Method{Spec: agentManagerServiceReportAgentComparisonSpec(), Handler: adapter.reportAgentComparison},
+		connect.Method{Spec: agentManagerServiceGetAgentComparisonSpec(), Handler: adapter.getAgentComparison},
+		connect.Method{Spec: agentManagerServiceResolveAgentConflictSpec(), Handler: adapter.resolveAgentConflict},
+		connect.Method{Spec: agentManagerServiceListSingleCommandPermissionsSpec(), Handler: adapter.listSingleCommandPermissions},
+		connect.Method{Spec: agentManagerServiceAddSingleCommandPermissionSpec(), Handler: adapter.addSingleCommandPermission},
+		connect.Method{Spec: agentManagerServiceSyncSkillsSpec(), Handler: adapter.syncSkills},
+		connect.Method{Spec: agentManagerServiceRequestSkillComparisonSpec(), Handler: adapter.requestSkillComparison},
+		connect.Method{Spec: agentManagerServiceReportSkillComparisonSpec(), Handler: adapter.reportSkillComparison},
+		connect.Method{Spec: agentManagerServiceGetSkillComparisonSpec(), Handler: adapter.getSkillComparison},
+		connect.Method{Spec: agentManagerServiceResolveSkillConflictSpec(), Handler: adapter.resolveSkillConflict},
+		connect.Method{Spec: agentManagerServiceSyncClaudeSettingsSpec(), Handler: adapter.syncClaudeSettings},
 	)
-	agentManagerServiceClaimTaskHandler := connect.NewUnaryHandler(
-		AgentManagerServiceClaimTaskProcedure,
-		svc.ClaimTask,
-		connect.WithSchema(agentManagerServiceMethods.ByName("ClaimTask")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceReportTaskResultHandler := connect.NewUnaryHandler(
-		AgentManagerServiceReportTaskResultProcedure,
-		svc.ReportTaskResult,
-		connect.WithSchema(agentManagerServiceMethods.ByName("ReportTaskResult")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceReportAgentStatusHandler := connect.NewUnaryHandler(
-		AgentManagerServiceReportAgentStatusProcedure,
-		svc.ReportAgentStatus,
-		connect.WithSchema(agentManagerServiceMethods.ByName("ReportAgentStatus")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceHeartbeatHandler := connect.NewUnaryHandler(
-		AgentManagerServiceHeartbeatProcedure,
-		svc.Heartbeat,
-		connect.WithSchema(agentManagerServiceMethods.ByName("Heartbeat")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceCreateInteractionHandler := connect.NewUnaryHandler(
-		AgentManagerServiceCreateInteractionProcedure,
-		svc.CreateInteraction,
-		connect.WithSchema(agentManagerServiceMethods.ByName("CreateInteraction")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceGetInteractionResponseHandler := connect.NewUnaryHandler(
-		AgentManagerServiceGetInteractionResponseProcedure,
-		svc.GetInteractionResponse,
-		connect.WithSchema(agentManagerServiceMethods.ByName("GetInteractionResponse")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceSyncAgentsHandler := connect.NewUnaryHandler(
-		AgentManagerServiceSyncAgentsProcedure,
-		svc.SyncAgents,
-		connect.WithSchema(agentManagerServiceMethods.ByName("SyncAgents")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceReportTaskLogHandler := connect.NewUnaryHandler(
-		AgentManagerServiceReportTaskLogProcedure,
-		svc.ReportTaskLog,
-		connect.WithSchema(agentManagerServiceMethods.ByName("ReportTaskLog")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceSyncPermissionsHandler := connect.NewUnaryHandler(
-		AgentManagerServiceSyncPermissionsProcedure,
-		svc.SyncPermissions,
-		connect.WithSchema(agentManagerServiceMethods.ByName("SyncPermissions")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceReportWorktreeListHandler := connect.NewUnaryHandler(
-		AgentManagerServiceReportWorktreeListProcedure,
-		svc.ReportWorktreeList,
-		connect.WithSchema(agentManagerServiceMethods.ByName("ReportWorktreeList")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceRequestWorktreeListHandler := connect.NewUnaryHandler(
-		AgentManagerServiceRequestWorktreeListProcedure,
-		svc.RequestWorktreeList,
-		connect.WithSchema(agentManagerServiceMethods.ByName("RequestWorktreeList")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceGetWorktreeListHandler := connect.NewUnaryHandler(
-		AgentManagerServiceGetWorktreeListProcedure,
-		svc.GetWorktreeList,
-		connect.WithSchema(agentManagerServiceMethods.ByName("GetWorktreeList")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceRequestWorktreeDeleteHandler := connect.NewUnaryHandler(
-		AgentManagerServiceRequestWorktreeDeleteProcedure,
-		svc.RequestWorktreeDelete,
-		connect.WithSchema(agentManagerServiceMethods.ByName("RequestWorktreeDelete")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceReportWorktreeDeleteResultHandler := connect.NewUnaryHandler(
-		AgentManagerServiceReportWorktreeDeleteResultProcedure,
-		svc.ReportWorktreeDeleteResult,
-		connect.WithSchema(agentManagerServiceMethods.ByName("ReportWorktreeDeleteResult")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceRequestGitPullMainHandler := connect.NewUnaryHandler(
-		AgentManagerServiceRequestGitPullMainProcedure,
-		svc.RequestGitPullMain,
-		connect.WithSchema(agentManagerServiceMethods.ByName("RequestGitPullMain")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceReportGitPullMainResultHandler := connect.NewUnaryHandler(
-		AgentManagerServiceReportGitPullMainResultProcedure,
-		svc.ReportGitPullMainResult,
-		connect.WithSchema(agentManagerServiceMethods.ByName("ReportGitPullMainResult")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceSyncScriptsHandler := connect.NewUnaryHandler(
-		AgentManagerServiceSyncScriptsProcedure,
-		svc.SyncScripts,
-		connect.WithSchema(agentManagerServiceMethods.ByName("SyncScripts")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceReportScriptExecutionResultHandler := connect.NewUnaryHandler(
-		AgentManagerServiceReportScriptExecutionResultProcedure,
-		svc.ReportScriptExecutionResult,
-		connect.WithSchema(agentManagerServiceMethods.ByName("ReportScriptExecutionResult")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceReportScriptOutputChunkHandler := connect.NewUnaryHandler(
-		AgentManagerServiceReportScriptOutputChunkProcedure,
-		svc.ReportScriptOutputChunk,
-		connect.WithSchema(agentManagerServiceMethods.ByName("ReportScriptOutputChunk")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceRequestScriptComparisonHandler := connect.NewUnaryHandler(
-		AgentManagerServiceRequestScriptComparisonProcedure,
-		svc.RequestScriptComparison,
-		connect.WithSchema(agentManagerServiceMethods.ByName("RequestScriptComparison")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceReportScriptComparisonHandler := connect.NewUnaryHandler(
-		AgentManagerServiceReportScriptComparisonProcedure,
-		svc.ReportScriptComparison,
-		connect.WithSchema(agentManagerServiceMethods.ByName("ReportScriptComparison")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceGetScriptComparisonHandler := connect.NewUnaryHandler(
-		AgentManagerServiceGetScriptComparisonProcedure,
-		svc.GetScriptComparison,
-		connect.WithSchema(agentManagerServiceMethods.ByName("GetScriptComparison")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceResolveScriptConflictHandler := connect.NewUnaryHandler(
-		AgentManagerServiceResolveScriptConflictProcedure,
-		svc.ResolveScriptConflict,
-		connect.WithSchema(agentManagerServiceMethods.ByName("ResolveScriptConflict")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceRequestAgentComparisonHandler := connect.NewUnaryHandler(
-		AgentManagerServiceRequestAgentComparisonProcedure,
-		svc.RequestAgentComparison,
-		connect.WithSchema(agentManagerServiceMethods.ByName("RequestAgentComparison")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceReportAgentComparisonHandler := connect.NewUnaryHandler(
-		AgentManagerServiceReportAgentComparisonProcedure,
-		svc.ReportAgentComparison,
-		connect.WithSchema(agentManagerServiceMethods.ByName("ReportAgentComparison")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceGetAgentComparisonHandler := connect.NewUnaryHandler(
-		AgentManagerServiceGetAgentComparisonProcedure,
-		svc.GetAgentComparison,
-		connect.WithSchema(agentManagerServiceMethods.ByName("GetAgentComparison")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceResolveAgentConflictHandler := connect.NewUnaryHandler(
-		AgentManagerServiceResolveAgentConflictProcedure,
-		svc.ResolveAgentConflict,
-		connect.WithSchema(agentManagerServiceMethods.ByName("ResolveAgentConflict")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceListSingleCommandPermissionsHandler := connect.NewUnaryHandler(
-		AgentManagerServiceListSingleCommandPermissionsProcedure,
-		svc.ListSingleCommandPermissions,
-		connect.WithSchema(agentManagerServiceMethods.ByName("ListSingleCommandPermissions")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceAddSingleCommandPermissionHandler := connect.NewUnaryHandler(
-		AgentManagerServiceAddSingleCommandPermissionProcedure,
-		svc.AddSingleCommandPermission,
-		connect.WithSchema(agentManagerServiceMethods.ByName("AddSingleCommandPermission")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceSyncSkillsHandler := connect.NewUnaryHandler(
-		AgentManagerServiceSyncSkillsProcedure,
-		svc.SyncSkills,
-		connect.WithSchema(agentManagerServiceMethods.ByName("SyncSkills")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceRequestSkillComparisonHandler := connect.NewUnaryHandler(
-		AgentManagerServiceRequestSkillComparisonProcedure,
-		svc.RequestSkillComparison,
-		connect.WithSchema(agentManagerServiceMethods.ByName("RequestSkillComparison")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceReportSkillComparisonHandler := connect.NewUnaryHandler(
-		AgentManagerServiceReportSkillComparisonProcedure,
-		svc.ReportSkillComparison,
-		connect.WithSchema(agentManagerServiceMethods.ByName("ReportSkillComparison")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceGetSkillComparisonHandler := connect.NewUnaryHandler(
-		AgentManagerServiceGetSkillComparisonProcedure,
-		svc.GetSkillComparison,
-		connect.WithSchema(agentManagerServiceMethods.ByName("GetSkillComparison")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceResolveSkillConflictHandler := connect.NewUnaryHandler(
-		AgentManagerServiceResolveSkillConflictProcedure,
-		svc.ResolveSkillConflict,
-		connect.WithSchema(agentManagerServiceMethods.ByName("ResolveSkillConflict")),
-		connect.WithHandlerOptions(opts...),
-	)
-	agentManagerServiceSyncClaudeSettingsHandler := connect.NewUnaryHandler(
-		AgentManagerServiceSyncClaudeSettingsProcedure,
-		svc.SyncClaudeSettings,
-		connect.WithSchema(agentManagerServiceMethods.ByName("SyncClaudeSettings")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/taskguild.v1.AgentManagerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case AgentManagerServiceSubscribeProcedure:
-			agentManagerServiceSubscribeHandler.ServeHTTP(w, r)
-		case AgentManagerServiceClaimTaskProcedure:
-			agentManagerServiceClaimTaskHandler.ServeHTTP(w, r)
-		case AgentManagerServiceReportTaskResultProcedure:
-			agentManagerServiceReportTaskResultHandler.ServeHTTP(w, r)
-		case AgentManagerServiceReportAgentStatusProcedure:
-			agentManagerServiceReportAgentStatusHandler.ServeHTTP(w, r)
-		case AgentManagerServiceHeartbeatProcedure:
-			agentManagerServiceHeartbeatHandler.ServeHTTP(w, r)
-		case AgentManagerServiceCreateInteractionProcedure:
-			agentManagerServiceCreateInteractionHandler.ServeHTTP(w, r)
-		case AgentManagerServiceGetInteractionResponseProcedure:
-			agentManagerServiceGetInteractionResponseHandler.ServeHTTP(w, r)
-		case AgentManagerServiceSyncAgentsProcedure:
-			agentManagerServiceSyncAgentsHandler.ServeHTTP(w, r)
-		case AgentManagerServiceReportTaskLogProcedure:
-			agentManagerServiceReportTaskLogHandler.ServeHTTP(w, r)
-		case AgentManagerServiceSyncPermissionsProcedure:
-			agentManagerServiceSyncPermissionsHandler.ServeHTTP(w, r)
-		case AgentManagerServiceReportWorktreeListProcedure:
-			agentManagerServiceReportWorktreeListHandler.ServeHTTP(w, r)
-		case AgentManagerServiceRequestWorktreeListProcedure:
-			agentManagerServiceRequestWorktreeListHandler.ServeHTTP(w, r)
-		case AgentManagerServiceGetWorktreeListProcedure:
-			agentManagerServiceGetWorktreeListHandler.ServeHTTP(w, r)
-		case AgentManagerServiceRequestWorktreeDeleteProcedure:
-			agentManagerServiceRequestWorktreeDeleteHandler.ServeHTTP(w, r)
-		case AgentManagerServiceReportWorktreeDeleteResultProcedure:
-			agentManagerServiceReportWorktreeDeleteResultHandler.ServeHTTP(w, r)
-		case AgentManagerServiceRequestGitPullMainProcedure:
-			agentManagerServiceRequestGitPullMainHandler.ServeHTTP(w, r)
-		case AgentManagerServiceReportGitPullMainResultProcedure:
-			agentManagerServiceReportGitPullMainResultHandler.ServeHTTP(w, r)
-		case AgentManagerServiceSyncScriptsProcedure:
-			agentManagerServiceSyncScriptsHandler.ServeHTTP(w, r)
-		case AgentManagerServiceReportScriptExecutionResultProcedure:
-			agentManagerServiceReportScriptExecutionResultHandler.ServeHTTP(w, r)
-		case AgentManagerServiceReportScriptOutputChunkProcedure:
-			agentManagerServiceReportScriptOutputChunkHandler.ServeHTTP(w, r)
-		case AgentManagerServiceRequestScriptComparisonProcedure:
-			agentManagerServiceRequestScriptComparisonHandler.ServeHTTP(w, r)
-		case AgentManagerServiceReportScriptComparisonProcedure:
-			agentManagerServiceReportScriptComparisonHandler.ServeHTTP(w, r)
-		case AgentManagerServiceGetScriptComparisonProcedure:
-			agentManagerServiceGetScriptComparisonHandler.ServeHTTP(w, r)
-		case AgentManagerServiceResolveScriptConflictProcedure:
-			agentManagerServiceResolveScriptConflictHandler.ServeHTTP(w, r)
-		case AgentManagerServiceRequestAgentComparisonProcedure:
-			agentManagerServiceRequestAgentComparisonHandler.ServeHTTP(w, r)
-		case AgentManagerServiceReportAgentComparisonProcedure:
-			agentManagerServiceReportAgentComparisonHandler.ServeHTTP(w, r)
-		case AgentManagerServiceGetAgentComparisonProcedure:
-			agentManagerServiceGetAgentComparisonHandler.ServeHTTP(w, r)
-		case AgentManagerServiceResolveAgentConflictProcedure:
-			agentManagerServiceResolveAgentConflictHandler.ServeHTTP(w, r)
-		case AgentManagerServiceListSingleCommandPermissionsProcedure:
-			agentManagerServiceListSingleCommandPermissionsHandler.ServeHTTP(w, r)
-		case AgentManagerServiceAddSingleCommandPermissionProcedure:
-			agentManagerServiceAddSingleCommandPermissionHandler.ServeHTTP(w, r)
-		case AgentManagerServiceSyncSkillsProcedure:
-			agentManagerServiceSyncSkillsHandler.ServeHTTP(w, r)
-		case AgentManagerServiceRequestSkillComparisonProcedure:
-			agentManagerServiceRequestSkillComparisonHandler.ServeHTTP(w, r)
-		case AgentManagerServiceReportSkillComparisonProcedure:
-			agentManagerServiceReportSkillComparisonHandler.ServeHTTP(w, r)
-		case AgentManagerServiceGetSkillComparisonProcedure:
-			agentManagerServiceGetSkillComparisonHandler.ServeHTTP(w, r)
-		case AgentManagerServiceResolveSkillConflictProcedure:
-			agentManagerServiceResolveSkillConflictHandler.ServeHTTP(w, r)
-		case AgentManagerServiceSyncClaudeSettingsProcedure:
-			agentManagerServiceSyncClaudeSettingsHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
+}
+
+// AgentManagerServiceSubscribeServerStream is the server stream for the AgentManagerService's
+// Subscribe RPC.
+type AgentManagerServiceSubscribeServerStream struct {
+	stream connect.ServerStream
+}
+
+// SendHeaders flushes the response headers without a message. The first Send does this implicitly.
+func (s AgentManagerServiceSubscribeServerStream) SendHeaders() error {
+	return s.stream.SendHeaders()
+}
+
+// Send sends a response message to the client.
+func (s AgentManagerServiceSubscribeServerStream) Send(res *v1.AgentCommand) error {
+	return s.stream.Send(res)
 }
 
 // UnimplementedAgentManagerServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedAgentManagerServiceHandler struct{}
 
-func (UnimplementedAgentManagerServiceHandler) Subscribe(context.Context, *connect.Request[v1.AgentManagerSubscribeRequest], *connect.ServerStream[v1.AgentCommand]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.Subscribe is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) Subscribe(context.Context, *v1.AgentManagerSubscribeRequest, AgentManagerServiceSubscribeServerStream) error {
+	return connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.Subscribe is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) ClaimTask(context.Context, *connect.Request[v1.ClaimTaskRequest]) (*connect.Response[v1.ClaimTaskResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ClaimTask is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) ClaimTask(context.Context, *v1.ClaimTaskRequest) (*v1.ClaimTaskResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.ClaimTask is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) ReportTaskResult(context.Context, *connect.Request[v1.ReportTaskResultRequest]) (*connect.Response[v1.ReportTaskResultResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportTaskResult is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) ReportTaskResult(context.Context, *v1.ReportTaskResultRequest) (*v1.ReportTaskResultResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.ReportTaskResult is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) ReportAgentStatus(context.Context, *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportAgentStatus is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) ReportAgentStatus(context.Context, *v1.ReportAgentStatusRequest) (*v1.ReportAgentStatusResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.ReportAgentStatus is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) Heartbeat(context.Context, *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.Heartbeat is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) Heartbeat(context.Context, *v1.HeartbeatRequest) (*v1.HeartbeatResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.Heartbeat is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) CreateInteraction(context.Context, *connect.Request[v1.CreateInteractionRequest]) (*connect.Response[v1.CreateInteractionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.CreateInteraction is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) CreateInteraction(context.Context, *v1.CreateInteractionRequest) (*v1.CreateInteractionResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.CreateInteraction is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) GetInteractionResponse(context.Context, *connect.Request[v1.GetInteractionResponseRequest]) (*connect.Response[v1.GetInteractionResponseResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.GetInteractionResponse is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) GetInteractionResponse(context.Context, *v1.GetInteractionResponseRequest) (*v1.GetInteractionResponseResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.GetInteractionResponse is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) SyncAgents(context.Context, *connect.Request[v1.SyncAgentsRequest]) (*connect.Response[v1.SyncAgentsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.SyncAgents is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) SyncAgents(context.Context, *v1.SyncAgentsRequest) (*v1.SyncAgentsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.SyncAgents is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) ReportTaskLog(context.Context, *connect.Request[v1.ReportTaskLogRequest]) (*connect.Response[v1.ReportTaskLogResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportTaskLog is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) ReportTaskLog(context.Context, *v1.ReportTaskLogRequest) (*v1.ReportTaskLogResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.ReportTaskLog is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) SyncPermissions(context.Context, *connect.Request[v1.SyncPermissionsRequest]) (*connect.Response[v1.SyncPermissionsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.SyncPermissions is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) SyncPermissions(context.Context, *v1.SyncPermissionsRequest) (*v1.SyncPermissionsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.SyncPermissions is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) ReportWorktreeList(context.Context, *connect.Request[v1.ReportWorktreeListRequest]) (*connect.Response[v1.ReportWorktreeListResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportWorktreeList is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) ReportWorktreeList(context.Context, *v1.ReportWorktreeListRequest) (*v1.ReportWorktreeListResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.ReportWorktreeList is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) RequestWorktreeList(context.Context, *connect.Request[v1.RequestWorktreeListRequest]) (*connect.Response[v1.RequestWorktreeListResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.RequestWorktreeList is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) RequestWorktreeList(context.Context, *v1.RequestWorktreeListRequest) (*v1.RequestWorktreeListResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.RequestWorktreeList is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) GetWorktreeList(context.Context, *connect.Request[v1.GetWorktreeListRequest]) (*connect.Response[v1.GetWorktreeListResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.GetWorktreeList is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) GetWorktreeList(context.Context, *v1.GetWorktreeListRequest) (*v1.GetWorktreeListResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.GetWorktreeList is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) RequestWorktreeDelete(context.Context, *connect.Request[v1.RequestWorktreeDeleteRequest]) (*connect.Response[v1.RequestWorktreeDeleteResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.RequestWorktreeDelete is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) RequestWorktreeDelete(context.Context, *v1.RequestWorktreeDeleteRequest) (*v1.RequestWorktreeDeleteResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.RequestWorktreeDelete is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) ReportWorktreeDeleteResult(context.Context, *connect.Request[v1.ReportWorktreeDeleteResultRequest]) (*connect.Response[v1.ReportWorktreeDeleteResultResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) ReportWorktreeDeleteResult(context.Context, *v1.ReportWorktreeDeleteResultRequest) (*v1.ReportWorktreeDeleteResultResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.ReportWorktreeDeleteResult is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) RequestGitPullMain(context.Context, *connect.Request[v1.RequestGitPullMainRequest]) (*connect.Response[v1.RequestGitPullMainResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.RequestGitPullMain is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) RequestGitPullMain(context.Context, *v1.RequestGitPullMainRequest) (*v1.RequestGitPullMainResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.RequestGitPullMain is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) ReportGitPullMainResult(context.Context, *connect.Request[v1.ReportGitPullMainResultRequest]) (*connect.Response[v1.ReportGitPullMainResultResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportGitPullMainResult is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) ReportGitPullMainResult(context.Context, *v1.ReportGitPullMainResultRequest) (*v1.ReportGitPullMainResultResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.ReportGitPullMainResult is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) SyncScripts(context.Context, *connect.Request[v1.SyncScriptsRequest]) (*connect.Response[v1.SyncScriptsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.SyncScripts is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) SyncScripts(context.Context, *v1.SyncScriptsRequest) (*v1.SyncScriptsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.SyncScripts is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) ReportScriptExecutionResult(context.Context, *connect.Request[v1.ReportScriptExecutionResultRequest]) (*connect.Response[v1.ReportScriptExecutionResultResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportScriptExecutionResult is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) ReportScriptExecutionResult(context.Context, *v1.ReportScriptExecutionResultRequest) (*v1.ReportScriptExecutionResultResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.ReportScriptExecutionResult is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) ReportScriptOutputChunk(context.Context, *connect.Request[v1.ReportScriptOutputChunkRequest]) (*connect.Response[v1.ReportScriptOutputChunkResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportScriptOutputChunk is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) ReportScriptOutputChunk(context.Context, *v1.ReportScriptOutputChunkRequest) (*v1.ReportScriptOutputChunkResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.ReportScriptOutputChunk is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) RequestScriptComparison(context.Context, *connect.Request[v1.RequestScriptComparisonRequest]) (*connect.Response[v1.RequestScriptComparisonResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.RequestScriptComparison is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) RequestScriptComparison(context.Context, *v1.RequestScriptComparisonRequest) (*v1.RequestScriptComparisonResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.RequestScriptComparison is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) ReportScriptComparison(context.Context, *connect.Request[v1.ReportScriptComparisonRequest]) (*connect.Response[v1.ReportScriptComparisonResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportScriptComparison is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) ReportScriptComparison(context.Context, *v1.ReportScriptComparisonRequest) (*v1.ReportScriptComparisonResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.ReportScriptComparison is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) GetScriptComparison(context.Context, *connect.Request[v1.GetScriptComparisonRequest]) (*connect.Response[v1.GetScriptComparisonResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.GetScriptComparison is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) GetScriptComparison(context.Context, *v1.GetScriptComparisonRequest) (*v1.GetScriptComparisonResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.GetScriptComparison is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) ResolveScriptConflict(context.Context, *connect.Request[v1.ResolveScriptConflictRequest]) (*connect.Response[v1.ResolveScriptConflictResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ResolveScriptConflict is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) ResolveScriptConflict(context.Context, *v1.ResolveScriptConflictRequest) (*v1.ResolveScriptConflictResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.ResolveScriptConflict is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) RequestAgentComparison(context.Context, *connect.Request[v1.RequestAgentComparisonRequest]) (*connect.Response[v1.RequestAgentComparisonResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.RequestAgentComparison is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) RequestAgentComparison(context.Context, *v1.RequestAgentComparisonRequest) (*v1.RequestAgentComparisonResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.RequestAgentComparison is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) ReportAgentComparison(context.Context, *connect.Request[v1.ReportAgentComparisonRequest]) (*connect.Response[v1.ReportAgentComparisonResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportAgentComparison is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) ReportAgentComparison(context.Context, *v1.ReportAgentComparisonRequest) (*v1.ReportAgentComparisonResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.ReportAgentComparison is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) GetAgentComparison(context.Context, *connect.Request[v1.GetAgentComparisonRequest]) (*connect.Response[v1.GetAgentComparisonResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.GetAgentComparison is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) GetAgentComparison(context.Context, *v1.GetAgentComparisonRequest) (*v1.GetAgentComparisonResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.GetAgentComparison is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) ResolveAgentConflict(context.Context, *connect.Request[v1.ResolveAgentConflictRequest]) (*connect.Response[v1.ResolveAgentConflictResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ResolveAgentConflict is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) ResolveAgentConflict(context.Context, *v1.ResolveAgentConflictRequest) (*v1.ResolveAgentConflictResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.ResolveAgentConflict is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) ListSingleCommandPermissions(context.Context, *connect.Request[v1.ListSingleCommandPermissionsAgentRequest]) (*connect.Response[v1.ListSingleCommandPermissionsAgentResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ListSingleCommandPermissions is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) ListSingleCommandPermissions(context.Context, *v1.ListSingleCommandPermissionsAgentRequest) (*v1.ListSingleCommandPermissionsAgentResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.ListSingleCommandPermissions is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) AddSingleCommandPermission(context.Context, *connect.Request[v1.AddSingleCommandPermissionRequest]) (*connect.Response[v1.AddSingleCommandPermissionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.AddSingleCommandPermission is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) AddSingleCommandPermission(context.Context, *v1.AddSingleCommandPermissionRequest) (*v1.AddSingleCommandPermissionResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.AddSingleCommandPermission is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) SyncSkills(context.Context, *connect.Request[v1.SyncSkillsRequest]) (*connect.Response[v1.SyncSkillsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.SyncSkills is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) SyncSkills(context.Context, *v1.SyncSkillsRequest) (*v1.SyncSkillsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.SyncSkills is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) RequestSkillComparison(context.Context, *connect.Request[v1.RequestSkillComparisonRequest]) (*connect.Response[v1.RequestSkillComparisonResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.RequestSkillComparison is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) RequestSkillComparison(context.Context, *v1.RequestSkillComparisonRequest) (*v1.RequestSkillComparisonResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.RequestSkillComparison is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) ReportSkillComparison(context.Context, *connect.Request[v1.ReportSkillComparisonRequest]) (*connect.Response[v1.ReportSkillComparisonResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ReportSkillComparison is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) ReportSkillComparison(context.Context, *v1.ReportSkillComparisonRequest) (*v1.ReportSkillComparisonResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.ReportSkillComparison is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) GetSkillComparison(context.Context, *connect.Request[v1.GetSkillComparisonRequest]) (*connect.Response[v1.GetSkillComparisonResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.GetSkillComparison is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) GetSkillComparison(context.Context, *v1.GetSkillComparisonRequest) (*v1.GetSkillComparisonResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.GetSkillComparison is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) ResolveSkillConflict(context.Context, *connect.Request[v1.ResolveSkillConflictRequest]) (*connect.Response[v1.ResolveSkillConflictResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.ResolveSkillConflict is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) ResolveSkillConflict(context.Context, *v1.ResolveSkillConflictRequest) (*v1.ResolveSkillConflictResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.ResolveSkillConflict is not implemented")
 }
 
-func (UnimplementedAgentManagerServiceHandler) SyncClaudeSettings(context.Context, *connect.Request[v1.SyncClaudeSettingsAgentRequest]) (*connect.Response[v1.SyncClaudeSettingsAgentResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.AgentManagerService.SyncClaudeSettings is not implemented"))
+func (UnimplementedAgentManagerServiceHandler) SyncClaudeSettings(context.Context, *v1.SyncClaudeSettingsAgentRequest) (*v1.SyncClaudeSettingsAgentResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.AgentManagerService.SyncClaudeSettings is not implemented")
+}
+
+type agentManagerServiceClient struct {
+	client *connect.Client
+}
+
+func (c *agentManagerServiceClient) Subscribe(ctx context.Context, req *v1.AgentManagerSubscribeRequest) (AgentManagerServiceSubscribeClientStream, error) {
+	stream, err := c.client.CallServerStream(ctx, agentManagerServiceSubscribeSpec(), req)
+	if err != nil {
+		return AgentManagerServiceSubscribeClientStream{}, err
+	}
+	return AgentManagerServiceSubscribeClientStream{stream: stream}, nil
+}
+
+func (c *agentManagerServiceClient) ClaimTask(ctx context.Context, req *v1.ClaimTaskRequest) (*v1.ClaimTaskResponse, error) {
+	var res v1.ClaimTaskResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceClaimTaskSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) ReportTaskResult(ctx context.Context, req *v1.ReportTaskResultRequest) (*v1.ReportTaskResultResponse, error) {
+	var res v1.ReportTaskResultResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceReportTaskResultSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) ReportAgentStatus(ctx context.Context, req *v1.ReportAgentStatusRequest) (*v1.ReportAgentStatusResponse, error) {
+	var res v1.ReportAgentStatusResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceReportAgentStatusSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) Heartbeat(ctx context.Context, req *v1.HeartbeatRequest) (*v1.HeartbeatResponse, error) {
+	var res v1.HeartbeatResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceHeartbeatSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) CreateInteraction(ctx context.Context, req *v1.CreateInteractionRequest) (*v1.CreateInteractionResponse, error) {
+	var res v1.CreateInteractionResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceCreateInteractionSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) GetInteractionResponse(ctx context.Context, req *v1.GetInteractionResponseRequest) (*v1.GetInteractionResponseResponse, error) {
+	var res v1.GetInteractionResponseResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceGetInteractionResponseSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) SyncAgents(ctx context.Context, req *v1.SyncAgentsRequest) (*v1.SyncAgentsResponse, error) {
+	var res v1.SyncAgentsResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceSyncAgentsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) ReportTaskLog(ctx context.Context, req *v1.ReportTaskLogRequest) (*v1.ReportTaskLogResponse, error) {
+	var res v1.ReportTaskLogResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceReportTaskLogSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) SyncPermissions(ctx context.Context, req *v1.SyncPermissionsRequest) (*v1.SyncPermissionsResponse, error) {
+	var res v1.SyncPermissionsResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceSyncPermissionsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) ReportWorktreeList(ctx context.Context, req *v1.ReportWorktreeListRequest) (*v1.ReportWorktreeListResponse, error) {
+	var res v1.ReportWorktreeListResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceReportWorktreeListSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) RequestWorktreeList(ctx context.Context, req *v1.RequestWorktreeListRequest) (*v1.RequestWorktreeListResponse, error) {
+	var res v1.RequestWorktreeListResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceRequestWorktreeListSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) GetWorktreeList(ctx context.Context, req *v1.GetWorktreeListRequest) (*v1.GetWorktreeListResponse, error) {
+	var res v1.GetWorktreeListResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceGetWorktreeListSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) RequestWorktreeDelete(ctx context.Context, req *v1.RequestWorktreeDeleteRequest) (*v1.RequestWorktreeDeleteResponse, error) {
+	var res v1.RequestWorktreeDeleteResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceRequestWorktreeDeleteSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) ReportWorktreeDeleteResult(ctx context.Context, req *v1.ReportWorktreeDeleteResultRequest) (*v1.ReportWorktreeDeleteResultResponse, error) {
+	var res v1.ReportWorktreeDeleteResultResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceReportWorktreeDeleteResultSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) RequestGitPullMain(ctx context.Context, req *v1.RequestGitPullMainRequest) (*v1.RequestGitPullMainResponse, error) {
+	var res v1.RequestGitPullMainResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceRequestGitPullMainSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) ReportGitPullMainResult(ctx context.Context, req *v1.ReportGitPullMainResultRequest) (*v1.ReportGitPullMainResultResponse, error) {
+	var res v1.ReportGitPullMainResultResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceReportGitPullMainResultSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) SyncScripts(ctx context.Context, req *v1.SyncScriptsRequest) (*v1.SyncScriptsResponse, error) {
+	var res v1.SyncScriptsResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceSyncScriptsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) ReportScriptExecutionResult(ctx context.Context, req *v1.ReportScriptExecutionResultRequest) (*v1.ReportScriptExecutionResultResponse, error) {
+	var res v1.ReportScriptExecutionResultResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceReportScriptExecutionResultSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) ReportScriptOutputChunk(ctx context.Context, req *v1.ReportScriptOutputChunkRequest) (*v1.ReportScriptOutputChunkResponse, error) {
+	var res v1.ReportScriptOutputChunkResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceReportScriptOutputChunkSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) RequestScriptComparison(ctx context.Context, req *v1.RequestScriptComparisonRequest) (*v1.RequestScriptComparisonResponse, error) {
+	var res v1.RequestScriptComparisonResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceRequestScriptComparisonSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) ReportScriptComparison(ctx context.Context, req *v1.ReportScriptComparisonRequest) (*v1.ReportScriptComparisonResponse, error) {
+	var res v1.ReportScriptComparisonResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceReportScriptComparisonSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) GetScriptComparison(ctx context.Context, req *v1.GetScriptComparisonRequest) (*v1.GetScriptComparisonResponse, error) {
+	var res v1.GetScriptComparisonResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceGetScriptComparisonSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) ResolveScriptConflict(ctx context.Context, req *v1.ResolveScriptConflictRequest) (*v1.ResolveScriptConflictResponse, error) {
+	var res v1.ResolveScriptConflictResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceResolveScriptConflictSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) RequestAgentComparison(ctx context.Context, req *v1.RequestAgentComparisonRequest) (*v1.RequestAgentComparisonResponse, error) {
+	var res v1.RequestAgentComparisonResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceRequestAgentComparisonSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) ReportAgentComparison(ctx context.Context, req *v1.ReportAgentComparisonRequest) (*v1.ReportAgentComparisonResponse, error) {
+	var res v1.ReportAgentComparisonResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceReportAgentComparisonSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) GetAgentComparison(ctx context.Context, req *v1.GetAgentComparisonRequest) (*v1.GetAgentComparisonResponse, error) {
+	var res v1.GetAgentComparisonResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceGetAgentComparisonSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) ResolveAgentConflict(ctx context.Context, req *v1.ResolveAgentConflictRequest) (*v1.ResolveAgentConflictResponse, error) {
+	var res v1.ResolveAgentConflictResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceResolveAgentConflictSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) ListSingleCommandPermissions(ctx context.Context, req *v1.ListSingleCommandPermissionsAgentRequest) (*v1.ListSingleCommandPermissionsAgentResponse, error) {
+	var res v1.ListSingleCommandPermissionsAgentResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceListSingleCommandPermissionsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) AddSingleCommandPermission(ctx context.Context, req *v1.AddSingleCommandPermissionRequest) (*v1.AddSingleCommandPermissionResponse, error) {
+	var res v1.AddSingleCommandPermissionResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceAddSingleCommandPermissionSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) SyncSkills(ctx context.Context, req *v1.SyncSkillsRequest) (*v1.SyncSkillsResponse, error) {
+	var res v1.SyncSkillsResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceSyncSkillsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) RequestSkillComparison(ctx context.Context, req *v1.RequestSkillComparisonRequest) (*v1.RequestSkillComparisonResponse, error) {
+	var res v1.RequestSkillComparisonResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceRequestSkillComparisonSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) ReportSkillComparison(ctx context.Context, req *v1.ReportSkillComparisonRequest) (*v1.ReportSkillComparisonResponse, error) {
+	var res v1.ReportSkillComparisonResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceReportSkillComparisonSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) GetSkillComparison(ctx context.Context, req *v1.GetSkillComparisonRequest) (*v1.GetSkillComparisonResponse, error) {
+	var res v1.GetSkillComparisonResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceGetSkillComparisonSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) ResolveSkillConflict(ctx context.Context, req *v1.ResolveSkillConflictRequest) (*v1.ResolveSkillConflictResponse, error) {
+	var res v1.ResolveSkillConflictResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceResolveSkillConflictSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *agentManagerServiceClient) SyncClaudeSettings(ctx context.Context, req *v1.SyncClaudeSettingsAgentRequest) (*v1.SyncClaudeSettingsAgentResponse, error) {
+	var res v1.SyncClaudeSettingsAgentResponse
+	if err := c.client.CallUnary(ctx, agentManagerServiceSyncClaudeSettingsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type agentManagerServiceHandler struct{ svc AgentManagerServiceHandler }
+
+func (h agentManagerServiceHandler) subscribe(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.AgentManagerSubscribeRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	return h.svc.Subscribe(ctx, &req, AgentManagerServiceSubscribeServerStream{stream: stream})
+}
+
+func (h agentManagerServiceHandler) claimTask(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ClaimTaskRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ClaimTask(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) reportTaskResult(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ReportTaskResultRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ReportTaskResult(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) reportAgentStatus(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ReportAgentStatusRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ReportAgentStatus(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) heartbeat(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.HeartbeatRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.Heartbeat(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) createInteraction(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.CreateInteractionRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.CreateInteraction(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) getInteractionResponse(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetInteractionResponseRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetInteractionResponse(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) syncAgents(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.SyncAgentsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.SyncAgents(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) reportTaskLog(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ReportTaskLogRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ReportTaskLog(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) syncPermissions(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.SyncPermissionsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.SyncPermissions(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) reportWorktreeList(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ReportWorktreeListRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ReportWorktreeList(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) requestWorktreeList(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.RequestWorktreeListRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.RequestWorktreeList(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) getWorktreeList(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetWorktreeListRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetWorktreeList(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) requestWorktreeDelete(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.RequestWorktreeDeleteRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.RequestWorktreeDelete(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) reportWorktreeDeleteResult(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ReportWorktreeDeleteResultRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ReportWorktreeDeleteResult(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) requestGitPullMain(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.RequestGitPullMainRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.RequestGitPullMain(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) reportGitPullMainResult(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ReportGitPullMainResultRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ReportGitPullMainResult(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) syncScripts(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.SyncScriptsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.SyncScripts(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) reportScriptExecutionResult(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ReportScriptExecutionResultRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ReportScriptExecutionResult(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) reportScriptOutputChunk(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ReportScriptOutputChunkRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ReportScriptOutputChunk(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) requestScriptComparison(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.RequestScriptComparisonRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.RequestScriptComparison(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) reportScriptComparison(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ReportScriptComparisonRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ReportScriptComparison(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) getScriptComparison(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetScriptComparisonRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetScriptComparison(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) resolveScriptConflict(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ResolveScriptConflictRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ResolveScriptConflict(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) requestAgentComparison(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.RequestAgentComparisonRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.RequestAgentComparison(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) reportAgentComparison(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ReportAgentComparisonRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ReportAgentComparison(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) getAgentComparison(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetAgentComparisonRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetAgentComparison(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) resolveAgentConflict(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ResolveAgentConflictRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ResolveAgentConflict(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) listSingleCommandPermissions(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListSingleCommandPermissionsAgentRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListSingleCommandPermissions(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) addSingleCommandPermission(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.AddSingleCommandPermissionRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.AddSingleCommandPermission(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) syncSkills(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.SyncSkillsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.SyncSkills(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) requestSkillComparison(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.RequestSkillComparisonRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.RequestSkillComparison(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) reportSkillComparison(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ReportSkillComparisonRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ReportSkillComparison(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) getSkillComparison(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetSkillComparisonRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetSkillComparison(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) resolveSkillConflict(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ResolveSkillConflictRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ResolveSkillConflict(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h agentManagerServiceHandler) syncClaudeSettings(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.SyncClaudeSettingsAgentRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.SyncClaudeSettings(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"connectrpc.com/connect"
-
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -25,15 +23,15 @@ func syncAgents(ctx context.Context, client taskguildv1connect.AgentManagerServi
 		return
 	}
 
-	resp, err := client.SyncAgents(ctx, connect.NewRequest(&v1.SyncAgentsRequest{
+	resp, err := client.SyncAgents(ctx, &v1.SyncAgentsRequest{
 		ProjectName: cfg.ProjectName,
-	}))
+	})
 	if err != nil {
 		slog.Error("agent sync failed", "error", err)
 		return
 	}
 
-	agents := resp.Msg.GetAgents()
+	agents := resp.GetAgents()
 	slog.Info("syncing agents from server", "count", len(agents))
 
 	agentsDir := filepath.Join(cfg.WorkDir, ".claude", "agents")

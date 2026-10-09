@@ -5,109 +5,76 @@
 package taskguildv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// ClaudeSettingsServiceName is the fully-qualified name of the ClaudeSettingsService service.
 	ClaudeSettingsServiceName = "taskguild.v1.ClaudeSettingsService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// ClaudeSettingsServiceGetClaudeSettingsProcedure is the fully-qualified name of the
+	// ClaudeSettingsServiceGetClaudeSettingsProcedure is the procedure name of the
 	// ClaudeSettingsService's GetClaudeSettings RPC.
 	ClaudeSettingsServiceGetClaudeSettingsProcedure = "/taskguild.v1.ClaudeSettingsService/GetClaudeSettings"
-	// ClaudeSettingsServiceUpdateClaudeSettingsProcedure is the fully-qualified name of the
+	// ClaudeSettingsServiceUpdateClaudeSettingsProcedure is the procedure name of the
 	// ClaudeSettingsService's UpdateClaudeSettings RPC.
 	ClaudeSettingsServiceUpdateClaudeSettingsProcedure = "/taskguild.v1.ClaudeSettingsService/UpdateClaudeSettings"
-	// ClaudeSettingsServiceSyncClaudeSettingsFromDirProcedure is the fully-qualified name of the
+	// ClaudeSettingsServiceSyncClaudeSettingsFromDirProcedure is the procedure name of the
 	// ClaudeSettingsService's SyncClaudeSettingsFromDir RPC.
 	ClaudeSettingsServiceSyncClaudeSettingsFromDirProcedure = "/taskguild.v1.ClaudeSettingsService/SyncClaudeSettingsFromDir"
+)
+
+var (
+	claudeSettingsServiceGetClaudeSettingsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_claude_settings_proto.Services().ByName("ClaudeSettingsService").Methods().ByName("GetClaudeSettings"),
+			Procedure:  ClaudeSettingsServiceGetClaudeSettingsProcedure,
+		}
+	})
+	claudeSettingsServiceUpdateClaudeSettingsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_claude_settings_proto.Services().ByName("ClaudeSettingsService").Methods().ByName("UpdateClaudeSettings"),
+			Procedure:  ClaudeSettingsServiceUpdateClaudeSettingsProcedure,
+		}
+	})
+	claudeSettingsServiceSyncClaudeSettingsFromDirSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_claude_settings_proto.Services().ByName("ClaudeSettingsService").Methods().ByName("SyncClaudeSettingsFromDir"),
+			Procedure:  ClaudeSettingsServiceSyncClaudeSettingsFromDirProcedure,
+		}
+	})
 )
 
 // ClaudeSettingsServiceClient is a client for the taskguild.v1.ClaudeSettingsService service.
 type ClaudeSettingsServiceClient interface {
 	// GetClaudeSettings returns the settings for a project.
 	// Returns empty/default values if none exist yet.
-	GetClaudeSettings(context.Context, *connect.Request[v1.GetClaudeSettingsRequest]) (*connect.Response[v1.GetClaudeSettingsResponse], error)
+	GetClaudeSettings(context.Context, *v1.GetClaudeSettingsRequest) (*v1.GetClaudeSettingsResponse, error)
 	// UpdateClaudeSettings replaces the settings for a project.
-	UpdateClaudeSettings(context.Context, *connect.Request[v1.UpdateClaudeSettingsRequest]) (*connect.Response[v1.UpdateClaudeSettingsResponse], error)
+	UpdateClaudeSettings(context.Context, *v1.UpdateClaudeSettingsRequest) (*v1.UpdateClaudeSettingsResponse, error)
 	// SyncClaudeSettingsFromDir reads .claude/settings.json from the given
 	// directory and merges its settings into the stored set.
-	SyncClaudeSettingsFromDir(context.Context, *connect.Request[v1.SyncClaudeSettingsFromDirRequest]) (*connect.Response[v1.SyncClaudeSettingsFromDirResponse], error)
+	SyncClaudeSettingsFromDir(context.Context, *v1.SyncClaudeSettingsFromDirRequest) (*v1.SyncClaudeSettingsFromDirResponse, error)
 }
 
 // NewClaudeSettingsServiceClient constructs a client for the taskguild.v1.ClaudeSettingsService
-// service. By default, it uses the Connect protocol with the binary Protobuf Codec, asks for
-// gzipped responses, and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply
-// the connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewClaudeSettingsServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) ClaudeSettingsServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	claudeSettingsServiceMethods := v1.File_taskguild_v1_claude_settings_proto.Services().ByName("ClaudeSettingsService").Methods()
-	return &claudeSettingsServiceClient{
-		getClaudeSettings: connect.NewClient[v1.GetClaudeSettingsRequest, v1.GetClaudeSettingsResponse](
-			httpClient,
-			baseURL+ClaudeSettingsServiceGetClaudeSettingsProcedure,
-			connect.WithSchema(claudeSettingsServiceMethods.ByName("GetClaudeSettings")),
-			connect.WithClientOptions(opts...),
-		),
-		updateClaudeSettings: connect.NewClient[v1.UpdateClaudeSettingsRequest, v1.UpdateClaudeSettingsResponse](
-			httpClient,
-			baseURL+ClaudeSettingsServiceUpdateClaudeSettingsProcedure,
-			connect.WithSchema(claudeSettingsServiceMethods.ByName("UpdateClaudeSettings")),
-			connect.WithClientOptions(opts...),
-		),
-		syncClaudeSettingsFromDir: connect.NewClient[v1.SyncClaudeSettingsFromDirRequest, v1.SyncClaudeSettingsFromDirResponse](
-			httpClient,
-			baseURL+ClaudeSettingsServiceSyncClaudeSettingsFromDirProcedure,
-			connect.WithSchema(claudeSettingsServiceMethods.ByName("SyncClaudeSettingsFromDir")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// claudeSettingsServiceClient implements ClaudeSettingsServiceClient.
-type claudeSettingsServiceClient struct {
-	getClaudeSettings         *connect.Client[v1.GetClaudeSettingsRequest, v1.GetClaudeSettingsResponse]
-	updateClaudeSettings      *connect.Client[v1.UpdateClaudeSettingsRequest, v1.UpdateClaudeSettingsResponse]
-	syncClaudeSettingsFromDir *connect.Client[v1.SyncClaudeSettingsFromDirRequest, v1.SyncClaudeSettingsFromDirResponse]
-}
-
-// GetClaudeSettings calls taskguild.v1.ClaudeSettingsService.GetClaudeSettings.
-func (c *claudeSettingsServiceClient) GetClaudeSettings(ctx context.Context, req *connect.Request[v1.GetClaudeSettingsRequest]) (*connect.Response[v1.GetClaudeSettingsResponse], error) {
-	return c.getClaudeSettings.CallUnary(ctx, req)
-}
-
-// UpdateClaudeSettings calls taskguild.v1.ClaudeSettingsService.UpdateClaudeSettings.
-func (c *claudeSettingsServiceClient) UpdateClaudeSettings(ctx context.Context, req *connect.Request[v1.UpdateClaudeSettingsRequest]) (*connect.Response[v1.UpdateClaudeSettingsResponse], error) {
-	return c.updateClaudeSettings.CallUnary(ctx, req)
-}
-
-// SyncClaudeSettingsFromDir calls taskguild.v1.ClaudeSettingsService.SyncClaudeSettingsFromDir.
-func (c *claudeSettingsServiceClient) SyncClaudeSettingsFromDir(ctx context.Context, req *connect.Request[v1.SyncClaudeSettingsFromDirRequest]) (*connect.Response[v1.SyncClaudeSettingsFromDirResponse], error) {
-	return c.syncClaudeSettingsFromDir.CallUnary(ctx, req)
+// service. Multiple service clients may share a single connect.Client.
+func NewClaudeSettingsServiceClient(client *connect.Client) ClaudeSettingsServiceClient {
+	return &claudeSettingsServiceClient{client: client}
 }
 
 // ClaudeSettingsServiceHandler is an implementation of the taskguild.v1.ClaudeSettingsService
@@ -115,64 +82,102 @@ func (c *claudeSettingsServiceClient) SyncClaudeSettingsFromDir(ctx context.Cont
 type ClaudeSettingsServiceHandler interface {
 	// GetClaudeSettings returns the settings for a project.
 	// Returns empty/default values if none exist yet.
-	GetClaudeSettings(context.Context, *connect.Request[v1.GetClaudeSettingsRequest]) (*connect.Response[v1.GetClaudeSettingsResponse], error)
+	GetClaudeSettings(context.Context, *v1.GetClaudeSettingsRequest) (*v1.GetClaudeSettingsResponse, error)
 	// UpdateClaudeSettings replaces the settings for a project.
-	UpdateClaudeSettings(context.Context, *connect.Request[v1.UpdateClaudeSettingsRequest]) (*connect.Response[v1.UpdateClaudeSettingsResponse], error)
+	UpdateClaudeSettings(context.Context, *v1.UpdateClaudeSettingsRequest) (*v1.UpdateClaudeSettingsResponse, error)
 	// SyncClaudeSettingsFromDir reads .claude/settings.json from the given
 	// directory and merges its settings into the stored set.
-	SyncClaudeSettingsFromDir(context.Context, *connect.Request[v1.SyncClaudeSettingsFromDirRequest]) (*connect.Response[v1.SyncClaudeSettingsFromDirResponse], error)
+	SyncClaudeSettingsFromDir(context.Context, *v1.SyncClaudeSettingsFromDirRequest) (*v1.SyncClaudeSettingsFromDirResponse, error)
 }
 
-// NewClaudeSettingsServiceHandler builds an HTTP handler from the service implementation. It
-// returns the path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewClaudeSettingsServiceHandler(svc ClaudeSettingsServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	claudeSettingsServiceMethods := v1.File_taskguild_v1_claude_settings_proto.Services().ByName("ClaudeSettingsService").Methods()
-	claudeSettingsServiceGetClaudeSettingsHandler := connect.NewUnaryHandler(
-		ClaudeSettingsServiceGetClaudeSettingsProcedure,
-		svc.GetClaudeSettings,
-		connect.WithSchema(claudeSettingsServiceMethods.ByName("GetClaudeSettings")),
-		connect.WithHandlerOptions(opts...),
+// RegisterClaudeSettingsServiceHandler registers svc as the taskguild.v1.ClaudeSettingsService
+// implementation on server.
+func RegisterClaudeSettingsServiceHandler(server *connect.Server, svc ClaudeSettingsServiceHandler) {
+	adapter := claudeSettingsServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: claudeSettingsServiceGetClaudeSettingsSpec(), Handler: adapter.getClaudeSettings},
+		connect.Method{Spec: claudeSettingsServiceUpdateClaudeSettingsSpec(), Handler: adapter.updateClaudeSettings},
+		connect.Method{Spec: claudeSettingsServiceSyncClaudeSettingsFromDirSpec(), Handler: adapter.syncClaudeSettingsFromDir},
 	)
-	claudeSettingsServiceUpdateClaudeSettingsHandler := connect.NewUnaryHandler(
-		ClaudeSettingsServiceUpdateClaudeSettingsProcedure,
-		svc.UpdateClaudeSettings,
-		connect.WithSchema(claudeSettingsServiceMethods.ByName("UpdateClaudeSettings")),
-		connect.WithHandlerOptions(opts...),
-	)
-	claudeSettingsServiceSyncClaudeSettingsFromDirHandler := connect.NewUnaryHandler(
-		ClaudeSettingsServiceSyncClaudeSettingsFromDirProcedure,
-		svc.SyncClaudeSettingsFromDir,
-		connect.WithSchema(claudeSettingsServiceMethods.ByName("SyncClaudeSettingsFromDir")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/taskguild.v1.ClaudeSettingsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case ClaudeSettingsServiceGetClaudeSettingsProcedure:
-			claudeSettingsServiceGetClaudeSettingsHandler.ServeHTTP(w, r)
-		case ClaudeSettingsServiceUpdateClaudeSettingsProcedure:
-			claudeSettingsServiceUpdateClaudeSettingsHandler.ServeHTTP(w, r)
-		case ClaudeSettingsServiceSyncClaudeSettingsFromDirProcedure:
-			claudeSettingsServiceSyncClaudeSettingsFromDirHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedClaudeSettingsServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedClaudeSettingsServiceHandler struct{}
 
-func (UnimplementedClaudeSettingsServiceHandler) GetClaudeSettings(context.Context, *connect.Request[v1.GetClaudeSettingsRequest]) (*connect.Response[v1.GetClaudeSettingsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ClaudeSettingsService.GetClaudeSettings is not implemented"))
+func (UnimplementedClaudeSettingsServiceHandler) GetClaudeSettings(context.Context, *v1.GetClaudeSettingsRequest) (*v1.GetClaudeSettingsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ClaudeSettingsService.GetClaudeSettings is not implemented")
 }
 
-func (UnimplementedClaudeSettingsServiceHandler) UpdateClaudeSettings(context.Context, *connect.Request[v1.UpdateClaudeSettingsRequest]) (*connect.Response[v1.UpdateClaudeSettingsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ClaudeSettingsService.UpdateClaudeSettings is not implemented"))
+func (UnimplementedClaudeSettingsServiceHandler) UpdateClaudeSettings(context.Context, *v1.UpdateClaudeSettingsRequest) (*v1.UpdateClaudeSettingsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ClaudeSettingsService.UpdateClaudeSettings is not implemented")
 }
 
-func (UnimplementedClaudeSettingsServiceHandler) SyncClaudeSettingsFromDir(context.Context, *connect.Request[v1.SyncClaudeSettingsFromDirRequest]) (*connect.Response[v1.SyncClaudeSettingsFromDirResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.ClaudeSettingsService.SyncClaudeSettingsFromDir is not implemented"))
+func (UnimplementedClaudeSettingsServiceHandler) SyncClaudeSettingsFromDir(context.Context, *v1.SyncClaudeSettingsFromDirRequest) (*v1.SyncClaudeSettingsFromDirResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.ClaudeSettingsService.SyncClaudeSettingsFromDir is not implemented")
+}
+
+type claudeSettingsServiceClient struct {
+	client *connect.Client
+}
+
+func (c *claudeSettingsServiceClient) GetClaudeSettings(ctx context.Context, req *v1.GetClaudeSettingsRequest) (*v1.GetClaudeSettingsResponse, error) {
+	var res v1.GetClaudeSettingsResponse
+	if err := c.client.CallUnary(ctx, claudeSettingsServiceGetClaudeSettingsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *claudeSettingsServiceClient) UpdateClaudeSettings(ctx context.Context, req *v1.UpdateClaudeSettingsRequest) (*v1.UpdateClaudeSettingsResponse, error) {
+	var res v1.UpdateClaudeSettingsResponse
+	if err := c.client.CallUnary(ctx, claudeSettingsServiceUpdateClaudeSettingsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *claudeSettingsServiceClient) SyncClaudeSettingsFromDir(ctx context.Context, req *v1.SyncClaudeSettingsFromDirRequest) (*v1.SyncClaudeSettingsFromDirResponse, error) {
+	var res v1.SyncClaudeSettingsFromDirResponse
+	if err := c.client.CallUnary(ctx, claudeSettingsServiceSyncClaudeSettingsFromDirSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type claudeSettingsServiceHandler struct{ svc ClaudeSettingsServiceHandler }
+
+func (h claudeSettingsServiceHandler) getClaudeSettings(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetClaudeSettingsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetClaudeSettings(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h claudeSettingsServiceHandler) updateClaudeSettings(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.UpdateClaudeSettingsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.UpdateClaudeSettings(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h claudeSettingsServiceHandler) syncClaudeSettingsFromDir(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.SyncClaudeSettingsFromDirRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.SyncClaudeSettingsFromDir(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

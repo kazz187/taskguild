@@ -5,289 +5,326 @@
 package taskguildv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// TemplateServiceName is the fully-qualified name of the TemplateService service.
 	TemplateServiceName = "taskguild.v1.TemplateService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// TemplateServiceCreateTemplateProcedure is the fully-qualified name of the TemplateService's
+	// TemplateServiceCreateTemplateProcedure is the procedure name of the TemplateService's
 	// CreateTemplate RPC.
 	TemplateServiceCreateTemplateProcedure = "/taskguild.v1.TemplateService/CreateTemplate"
-	// TemplateServiceGetTemplateProcedure is the fully-qualified name of the TemplateService's
-	// GetTemplate RPC.
+	// TemplateServiceGetTemplateProcedure is the procedure name of the TemplateService's GetTemplate
+	// RPC.
 	TemplateServiceGetTemplateProcedure = "/taskguild.v1.TemplateService/GetTemplate"
-	// TemplateServiceListTemplatesProcedure is the fully-qualified name of the TemplateService's
+	// TemplateServiceListTemplatesProcedure is the procedure name of the TemplateService's
 	// ListTemplates RPC.
 	TemplateServiceListTemplatesProcedure = "/taskguild.v1.TemplateService/ListTemplates"
-	// TemplateServiceUpdateTemplateProcedure is the fully-qualified name of the TemplateService's
+	// TemplateServiceUpdateTemplateProcedure is the procedure name of the TemplateService's
 	// UpdateTemplate RPC.
 	TemplateServiceUpdateTemplateProcedure = "/taskguild.v1.TemplateService/UpdateTemplate"
-	// TemplateServiceDeleteTemplateProcedure is the fully-qualified name of the TemplateService's
+	// TemplateServiceDeleteTemplateProcedure is the procedure name of the TemplateService's
 	// DeleteTemplate RPC.
 	TemplateServiceDeleteTemplateProcedure = "/taskguild.v1.TemplateService/DeleteTemplate"
-	// TemplateServiceSaveAsTemplateProcedure is the fully-qualified name of the TemplateService's
+	// TemplateServiceSaveAsTemplateProcedure is the procedure name of the TemplateService's
 	// SaveAsTemplate RPC.
 	TemplateServiceSaveAsTemplateProcedure = "/taskguild.v1.TemplateService/SaveAsTemplate"
-	// TemplateServiceCreateFromTemplateProcedure is the fully-qualified name of the TemplateService's
+	// TemplateServiceCreateFromTemplateProcedure is the procedure name of the TemplateService's
 	// CreateFromTemplate RPC.
 	TemplateServiceCreateFromTemplateProcedure = "/taskguild.v1.TemplateService/CreateFromTemplate"
+)
+
+var (
+	templateServiceCreateTemplateSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_template_proto.Services().ByName("TemplateService").Methods().ByName("CreateTemplate"),
+			Procedure:  TemplateServiceCreateTemplateProcedure,
+		}
+	})
+	templateServiceGetTemplateSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_template_proto.Services().ByName("TemplateService").Methods().ByName("GetTemplate"),
+			Procedure:  TemplateServiceGetTemplateProcedure,
+		}
+	})
+	templateServiceListTemplatesSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_template_proto.Services().ByName("TemplateService").Methods().ByName("ListTemplates"),
+			Procedure:  TemplateServiceListTemplatesProcedure,
+		}
+	})
+	templateServiceUpdateTemplateSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_template_proto.Services().ByName("TemplateService").Methods().ByName("UpdateTemplate"),
+			Procedure:  TemplateServiceUpdateTemplateProcedure,
+		}
+	})
+	templateServiceDeleteTemplateSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_template_proto.Services().ByName("TemplateService").Methods().ByName("DeleteTemplate"),
+			Procedure:  TemplateServiceDeleteTemplateProcedure,
+		}
+	})
+	templateServiceSaveAsTemplateSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_template_proto.Services().ByName("TemplateService").Methods().ByName("SaveAsTemplate"),
+			Procedure:  TemplateServiceSaveAsTemplateProcedure,
+		}
+	})
+	templateServiceCreateFromTemplateSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_template_proto.Services().ByName("TemplateService").Methods().ByName("CreateFromTemplate"),
+			Procedure:  TemplateServiceCreateFromTemplateProcedure,
+		}
+	})
 )
 
 // TemplateServiceClient is a client for the taskguild.v1.TemplateService service.
 type TemplateServiceClient interface {
 	// Standard CRUD for templates
-	CreateTemplate(context.Context, *connect.Request[v1.CreateTemplateRequest]) (*connect.Response[v1.CreateTemplateResponse], error)
-	GetTemplate(context.Context, *connect.Request[v1.GetTemplateRequest]) (*connect.Response[v1.GetTemplateResponse], error)
-	ListTemplates(context.Context, *connect.Request[v1.ListTemplatesRequest]) (*connect.Response[v1.ListTemplatesResponse], error)
-	UpdateTemplate(context.Context, *connect.Request[v1.UpdateTemplateRequest]) (*connect.Response[v1.UpdateTemplateResponse], error)
-	DeleteTemplate(context.Context, *connect.Request[v1.DeleteTemplateRequest]) (*connect.Response[v1.DeleteTemplateResponse], error)
+	CreateTemplate(context.Context, *v1.CreateTemplateRequest) (*v1.CreateTemplateResponse, error)
+	GetTemplate(context.Context, *v1.GetTemplateRequest) (*v1.GetTemplateResponse, error)
+	ListTemplates(context.Context, *v1.ListTemplatesRequest) (*v1.ListTemplatesResponse, error)
+	UpdateTemplate(context.Context, *v1.UpdateTemplateRequest) (*v1.UpdateTemplateResponse, error)
+	DeleteTemplate(context.Context, *v1.DeleteTemplateRequest) (*v1.DeleteTemplateResponse, error)
 	// SaveAsTemplate saves an existing Agent/Skill/Script as a reusable template.
 	// For agents, optionally includes referenced skills as dependent templates.
-	SaveAsTemplate(context.Context, *connect.Request[v1.SaveAsTemplateRequest]) (*connect.Response[v1.SaveAsTemplateResponse], error)
+	SaveAsTemplate(context.Context, *v1.SaveAsTemplateRequest) (*v1.SaveAsTemplateResponse, error)
 	// CreateFromTemplate instantiates a new entity in a target project from a template.
 	// For agent templates, optionally creates dependent skills from their templates.
-	CreateFromTemplate(context.Context, *connect.Request[v1.CreateFromTemplateRequest]) (*connect.Response[v1.CreateFromTemplateResponse], error)
+	CreateFromTemplate(context.Context, *v1.CreateFromTemplateRequest) (*v1.CreateFromTemplateResponse, error)
 }
 
-// NewTemplateServiceClient constructs a client for the taskguild.v1.TemplateService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewTemplateServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) TemplateServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	templateServiceMethods := v1.File_taskguild_v1_template_proto.Services().ByName("TemplateService").Methods()
-	return &templateServiceClient{
-		createTemplate: connect.NewClient[v1.CreateTemplateRequest, v1.CreateTemplateResponse](
-			httpClient,
-			baseURL+TemplateServiceCreateTemplateProcedure,
-			connect.WithSchema(templateServiceMethods.ByName("CreateTemplate")),
-			connect.WithClientOptions(opts...),
-		),
-		getTemplate: connect.NewClient[v1.GetTemplateRequest, v1.GetTemplateResponse](
-			httpClient,
-			baseURL+TemplateServiceGetTemplateProcedure,
-			connect.WithSchema(templateServiceMethods.ByName("GetTemplate")),
-			connect.WithClientOptions(opts...),
-		),
-		listTemplates: connect.NewClient[v1.ListTemplatesRequest, v1.ListTemplatesResponse](
-			httpClient,
-			baseURL+TemplateServiceListTemplatesProcedure,
-			connect.WithSchema(templateServiceMethods.ByName("ListTemplates")),
-			connect.WithClientOptions(opts...),
-		),
-		updateTemplate: connect.NewClient[v1.UpdateTemplateRequest, v1.UpdateTemplateResponse](
-			httpClient,
-			baseURL+TemplateServiceUpdateTemplateProcedure,
-			connect.WithSchema(templateServiceMethods.ByName("UpdateTemplate")),
-			connect.WithClientOptions(opts...),
-		),
-		deleteTemplate: connect.NewClient[v1.DeleteTemplateRequest, v1.DeleteTemplateResponse](
-			httpClient,
-			baseURL+TemplateServiceDeleteTemplateProcedure,
-			connect.WithSchema(templateServiceMethods.ByName("DeleteTemplate")),
-			connect.WithClientOptions(opts...),
-		),
-		saveAsTemplate: connect.NewClient[v1.SaveAsTemplateRequest, v1.SaveAsTemplateResponse](
-			httpClient,
-			baseURL+TemplateServiceSaveAsTemplateProcedure,
-			connect.WithSchema(templateServiceMethods.ByName("SaveAsTemplate")),
-			connect.WithClientOptions(opts...),
-		),
-		createFromTemplate: connect.NewClient[v1.CreateFromTemplateRequest, v1.CreateFromTemplateResponse](
-			httpClient,
-			baseURL+TemplateServiceCreateFromTemplateProcedure,
-			connect.WithSchema(templateServiceMethods.ByName("CreateFromTemplate")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// templateServiceClient implements TemplateServiceClient.
-type templateServiceClient struct {
-	createTemplate     *connect.Client[v1.CreateTemplateRequest, v1.CreateTemplateResponse]
-	getTemplate        *connect.Client[v1.GetTemplateRequest, v1.GetTemplateResponse]
-	listTemplates      *connect.Client[v1.ListTemplatesRequest, v1.ListTemplatesResponse]
-	updateTemplate     *connect.Client[v1.UpdateTemplateRequest, v1.UpdateTemplateResponse]
-	deleteTemplate     *connect.Client[v1.DeleteTemplateRequest, v1.DeleteTemplateResponse]
-	saveAsTemplate     *connect.Client[v1.SaveAsTemplateRequest, v1.SaveAsTemplateResponse]
-	createFromTemplate *connect.Client[v1.CreateFromTemplateRequest, v1.CreateFromTemplateResponse]
-}
-
-// CreateTemplate calls taskguild.v1.TemplateService.CreateTemplate.
-func (c *templateServiceClient) CreateTemplate(ctx context.Context, req *connect.Request[v1.CreateTemplateRequest]) (*connect.Response[v1.CreateTemplateResponse], error) {
-	return c.createTemplate.CallUnary(ctx, req)
-}
-
-// GetTemplate calls taskguild.v1.TemplateService.GetTemplate.
-func (c *templateServiceClient) GetTemplate(ctx context.Context, req *connect.Request[v1.GetTemplateRequest]) (*connect.Response[v1.GetTemplateResponse], error) {
-	return c.getTemplate.CallUnary(ctx, req)
-}
-
-// ListTemplates calls taskguild.v1.TemplateService.ListTemplates.
-func (c *templateServiceClient) ListTemplates(ctx context.Context, req *connect.Request[v1.ListTemplatesRequest]) (*connect.Response[v1.ListTemplatesResponse], error) {
-	return c.listTemplates.CallUnary(ctx, req)
-}
-
-// UpdateTemplate calls taskguild.v1.TemplateService.UpdateTemplate.
-func (c *templateServiceClient) UpdateTemplate(ctx context.Context, req *connect.Request[v1.UpdateTemplateRequest]) (*connect.Response[v1.UpdateTemplateResponse], error) {
-	return c.updateTemplate.CallUnary(ctx, req)
-}
-
-// DeleteTemplate calls taskguild.v1.TemplateService.DeleteTemplate.
-func (c *templateServiceClient) DeleteTemplate(ctx context.Context, req *connect.Request[v1.DeleteTemplateRequest]) (*connect.Response[v1.DeleteTemplateResponse], error) {
-	return c.deleteTemplate.CallUnary(ctx, req)
-}
-
-// SaveAsTemplate calls taskguild.v1.TemplateService.SaveAsTemplate.
-func (c *templateServiceClient) SaveAsTemplate(ctx context.Context, req *connect.Request[v1.SaveAsTemplateRequest]) (*connect.Response[v1.SaveAsTemplateResponse], error) {
-	return c.saveAsTemplate.CallUnary(ctx, req)
-}
-
-// CreateFromTemplate calls taskguild.v1.TemplateService.CreateFromTemplate.
-func (c *templateServiceClient) CreateFromTemplate(ctx context.Context, req *connect.Request[v1.CreateFromTemplateRequest]) (*connect.Response[v1.CreateFromTemplateResponse], error) {
-	return c.createFromTemplate.CallUnary(ctx, req)
+// NewTemplateServiceClient constructs a client for the taskguild.v1.TemplateService service.
+// Multiple service clients may share a single connect.Client.
+func NewTemplateServiceClient(client *connect.Client) TemplateServiceClient {
+	return &templateServiceClient{client: client}
 }
 
 // TemplateServiceHandler is an implementation of the taskguild.v1.TemplateService service.
 type TemplateServiceHandler interface {
 	// Standard CRUD for templates
-	CreateTemplate(context.Context, *connect.Request[v1.CreateTemplateRequest]) (*connect.Response[v1.CreateTemplateResponse], error)
-	GetTemplate(context.Context, *connect.Request[v1.GetTemplateRequest]) (*connect.Response[v1.GetTemplateResponse], error)
-	ListTemplates(context.Context, *connect.Request[v1.ListTemplatesRequest]) (*connect.Response[v1.ListTemplatesResponse], error)
-	UpdateTemplate(context.Context, *connect.Request[v1.UpdateTemplateRequest]) (*connect.Response[v1.UpdateTemplateResponse], error)
-	DeleteTemplate(context.Context, *connect.Request[v1.DeleteTemplateRequest]) (*connect.Response[v1.DeleteTemplateResponse], error)
+	CreateTemplate(context.Context, *v1.CreateTemplateRequest) (*v1.CreateTemplateResponse, error)
+	GetTemplate(context.Context, *v1.GetTemplateRequest) (*v1.GetTemplateResponse, error)
+	ListTemplates(context.Context, *v1.ListTemplatesRequest) (*v1.ListTemplatesResponse, error)
+	UpdateTemplate(context.Context, *v1.UpdateTemplateRequest) (*v1.UpdateTemplateResponse, error)
+	DeleteTemplate(context.Context, *v1.DeleteTemplateRequest) (*v1.DeleteTemplateResponse, error)
 	// SaveAsTemplate saves an existing Agent/Skill/Script as a reusable template.
 	// For agents, optionally includes referenced skills as dependent templates.
-	SaveAsTemplate(context.Context, *connect.Request[v1.SaveAsTemplateRequest]) (*connect.Response[v1.SaveAsTemplateResponse], error)
+	SaveAsTemplate(context.Context, *v1.SaveAsTemplateRequest) (*v1.SaveAsTemplateResponse, error)
 	// CreateFromTemplate instantiates a new entity in a target project from a template.
 	// For agent templates, optionally creates dependent skills from their templates.
-	CreateFromTemplate(context.Context, *connect.Request[v1.CreateFromTemplateRequest]) (*connect.Response[v1.CreateFromTemplateResponse], error)
+	CreateFromTemplate(context.Context, *v1.CreateFromTemplateRequest) (*v1.CreateFromTemplateResponse, error)
 }
 
-// NewTemplateServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewTemplateServiceHandler(svc TemplateServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	templateServiceMethods := v1.File_taskguild_v1_template_proto.Services().ByName("TemplateService").Methods()
-	templateServiceCreateTemplateHandler := connect.NewUnaryHandler(
-		TemplateServiceCreateTemplateProcedure,
-		svc.CreateTemplate,
-		connect.WithSchema(templateServiceMethods.ByName("CreateTemplate")),
-		connect.WithHandlerOptions(opts...),
+// RegisterTemplateServiceHandler registers svc as the taskguild.v1.TemplateService implementation
+// on server.
+func RegisterTemplateServiceHandler(server *connect.Server, svc TemplateServiceHandler) {
+	adapter := templateServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: templateServiceCreateTemplateSpec(), Handler: adapter.createTemplate},
+		connect.Method{Spec: templateServiceGetTemplateSpec(), Handler: adapter.getTemplate},
+		connect.Method{Spec: templateServiceListTemplatesSpec(), Handler: adapter.listTemplates},
+		connect.Method{Spec: templateServiceUpdateTemplateSpec(), Handler: adapter.updateTemplate},
+		connect.Method{Spec: templateServiceDeleteTemplateSpec(), Handler: adapter.deleteTemplate},
+		connect.Method{Spec: templateServiceSaveAsTemplateSpec(), Handler: adapter.saveAsTemplate},
+		connect.Method{Spec: templateServiceCreateFromTemplateSpec(), Handler: adapter.createFromTemplate},
 	)
-	templateServiceGetTemplateHandler := connect.NewUnaryHandler(
-		TemplateServiceGetTemplateProcedure,
-		svc.GetTemplate,
-		connect.WithSchema(templateServiceMethods.ByName("GetTemplate")),
-		connect.WithHandlerOptions(opts...),
-	)
-	templateServiceListTemplatesHandler := connect.NewUnaryHandler(
-		TemplateServiceListTemplatesProcedure,
-		svc.ListTemplates,
-		connect.WithSchema(templateServiceMethods.ByName("ListTemplates")),
-		connect.WithHandlerOptions(opts...),
-	)
-	templateServiceUpdateTemplateHandler := connect.NewUnaryHandler(
-		TemplateServiceUpdateTemplateProcedure,
-		svc.UpdateTemplate,
-		connect.WithSchema(templateServiceMethods.ByName("UpdateTemplate")),
-		connect.WithHandlerOptions(opts...),
-	)
-	templateServiceDeleteTemplateHandler := connect.NewUnaryHandler(
-		TemplateServiceDeleteTemplateProcedure,
-		svc.DeleteTemplate,
-		connect.WithSchema(templateServiceMethods.ByName("DeleteTemplate")),
-		connect.WithHandlerOptions(opts...),
-	)
-	templateServiceSaveAsTemplateHandler := connect.NewUnaryHandler(
-		TemplateServiceSaveAsTemplateProcedure,
-		svc.SaveAsTemplate,
-		connect.WithSchema(templateServiceMethods.ByName("SaveAsTemplate")),
-		connect.WithHandlerOptions(opts...),
-	)
-	templateServiceCreateFromTemplateHandler := connect.NewUnaryHandler(
-		TemplateServiceCreateFromTemplateProcedure,
-		svc.CreateFromTemplate,
-		connect.WithSchema(templateServiceMethods.ByName("CreateFromTemplate")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/taskguild.v1.TemplateService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case TemplateServiceCreateTemplateProcedure:
-			templateServiceCreateTemplateHandler.ServeHTTP(w, r)
-		case TemplateServiceGetTemplateProcedure:
-			templateServiceGetTemplateHandler.ServeHTTP(w, r)
-		case TemplateServiceListTemplatesProcedure:
-			templateServiceListTemplatesHandler.ServeHTTP(w, r)
-		case TemplateServiceUpdateTemplateProcedure:
-			templateServiceUpdateTemplateHandler.ServeHTTP(w, r)
-		case TemplateServiceDeleteTemplateProcedure:
-			templateServiceDeleteTemplateHandler.ServeHTTP(w, r)
-		case TemplateServiceSaveAsTemplateProcedure:
-			templateServiceSaveAsTemplateHandler.ServeHTTP(w, r)
-		case TemplateServiceCreateFromTemplateProcedure:
-			templateServiceCreateFromTemplateHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedTemplateServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedTemplateServiceHandler struct{}
 
-func (UnimplementedTemplateServiceHandler) CreateTemplate(context.Context, *connect.Request[v1.CreateTemplateRequest]) (*connect.Response[v1.CreateTemplateResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TemplateService.CreateTemplate is not implemented"))
+func (UnimplementedTemplateServiceHandler) CreateTemplate(context.Context, *v1.CreateTemplateRequest) (*v1.CreateTemplateResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.TemplateService.CreateTemplate is not implemented")
 }
 
-func (UnimplementedTemplateServiceHandler) GetTemplate(context.Context, *connect.Request[v1.GetTemplateRequest]) (*connect.Response[v1.GetTemplateResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TemplateService.GetTemplate is not implemented"))
+func (UnimplementedTemplateServiceHandler) GetTemplate(context.Context, *v1.GetTemplateRequest) (*v1.GetTemplateResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.TemplateService.GetTemplate is not implemented")
 }
 
-func (UnimplementedTemplateServiceHandler) ListTemplates(context.Context, *connect.Request[v1.ListTemplatesRequest]) (*connect.Response[v1.ListTemplatesResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TemplateService.ListTemplates is not implemented"))
+func (UnimplementedTemplateServiceHandler) ListTemplates(context.Context, *v1.ListTemplatesRequest) (*v1.ListTemplatesResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.TemplateService.ListTemplates is not implemented")
 }
 
-func (UnimplementedTemplateServiceHandler) UpdateTemplate(context.Context, *connect.Request[v1.UpdateTemplateRequest]) (*connect.Response[v1.UpdateTemplateResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TemplateService.UpdateTemplate is not implemented"))
+func (UnimplementedTemplateServiceHandler) UpdateTemplate(context.Context, *v1.UpdateTemplateRequest) (*v1.UpdateTemplateResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.TemplateService.UpdateTemplate is not implemented")
 }
 
-func (UnimplementedTemplateServiceHandler) DeleteTemplate(context.Context, *connect.Request[v1.DeleteTemplateRequest]) (*connect.Response[v1.DeleteTemplateResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TemplateService.DeleteTemplate is not implemented"))
+func (UnimplementedTemplateServiceHandler) DeleteTemplate(context.Context, *v1.DeleteTemplateRequest) (*v1.DeleteTemplateResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.TemplateService.DeleteTemplate is not implemented")
 }
 
-func (UnimplementedTemplateServiceHandler) SaveAsTemplate(context.Context, *connect.Request[v1.SaveAsTemplateRequest]) (*connect.Response[v1.SaveAsTemplateResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TemplateService.SaveAsTemplate is not implemented"))
+func (UnimplementedTemplateServiceHandler) SaveAsTemplate(context.Context, *v1.SaveAsTemplateRequest) (*v1.SaveAsTemplateResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.TemplateService.SaveAsTemplate is not implemented")
 }
 
-func (UnimplementedTemplateServiceHandler) CreateFromTemplate(context.Context, *connect.Request[v1.CreateFromTemplateRequest]) (*connect.Response[v1.CreateFromTemplateResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.TemplateService.CreateFromTemplate is not implemented"))
+func (UnimplementedTemplateServiceHandler) CreateFromTemplate(context.Context, *v1.CreateFromTemplateRequest) (*v1.CreateFromTemplateResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.TemplateService.CreateFromTemplate is not implemented")
+}
+
+type templateServiceClient struct {
+	client *connect.Client
+}
+
+func (c *templateServiceClient) CreateTemplate(ctx context.Context, req *v1.CreateTemplateRequest) (*v1.CreateTemplateResponse, error) {
+	var res v1.CreateTemplateResponse
+	if err := c.client.CallUnary(ctx, templateServiceCreateTemplateSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *templateServiceClient) GetTemplate(ctx context.Context, req *v1.GetTemplateRequest) (*v1.GetTemplateResponse, error) {
+	var res v1.GetTemplateResponse
+	if err := c.client.CallUnary(ctx, templateServiceGetTemplateSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *templateServiceClient) ListTemplates(ctx context.Context, req *v1.ListTemplatesRequest) (*v1.ListTemplatesResponse, error) {
+	var res v1.ListTemplatesResponse
+	if err := c.client.CallUnary(ctx, templateServiceListTemplatesSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *templateServiceClient) UpdateTemplate(ctx context.Context, req *v1.UpdateTemplateRequest) (*v1.UpdateTemplateResponse, error) {
+	var res v1.UpdateTemplateResponse
+	if err := c.client.CallUnary(ctx, templateServiceUpdateTemplateSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *templateServiceClient) DeleteTemplate(ctx context.Context, req *v1.DeleteTemplateRequest) (*v1.DeleteTemplateResponse, error) {
+	var res v1.DeleteTemplateResponse
+	if err := c.client.CallUnary(ctx, templateServiceDeleteTemplateSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *templateServiceClient) SaveAsTemplate(ctx context.Context, req *v1.SaveAsTemplateRequest) (*v1.SaveAsTemplateResponse, error) {
+	var res v1.SaveAsTemplateResponse
+	if err := c.client.CallUnary(ctx, templateServiceSaveAsTemplateSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *templateServiceClient) CreateFromTemplate(ctx context.Context, req *v1.CreateFromTemplateRequest) (*v1.CreateFromTemplateResponse, error) {
+	var res v1.CreateFromTemplateResponse
+	if err := c.client.CallUnary(ctx, templateServiceCreateFromTemplateSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type templateServiceHandler struct{ svc TemplateServiceHandler }
+
+func (h templateServiceHandler) createTemplate(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.CreateTemplateRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.CreateTemplate(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h templateServiceHandler) getTemplate(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.GetTemplateRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetTemplate(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h templateServiceHandler) listTemplates(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListTemplatesRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListTemplates(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h templateServiceHandler) updateTemplate(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.UpdateTemplateRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.UpdateTemplate(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h templateServiceHandler) deleteTemplate(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.DeleteTemplateRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.DeleteTemplate(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h templateServiceHandler) saveAsTemplate(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.SaveAsTemplateRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.SaveAsTemplate(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h templateServiceHandler) createFromTemplate(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.CreateFromTemplateRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.CreateFromTemplate(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

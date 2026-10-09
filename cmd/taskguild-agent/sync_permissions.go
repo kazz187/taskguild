@@ -7,8 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"connectrpc.com/connect"
-
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -29,18 +27,18 @@ func syncPermissions(ctx context.Context, client taskguildv1connect.AgentManager
 	localAllow, localAsk, localDeny, rawSettings := readLocalPermissions(settingsPath)
 
 	// Call SyncPermissions RPC.
-	resp, err := client.SyncPermissions(ctx, connect.NewRequest(&v1.SyncPermissionsRequest{
+	resp, err := client.SyncPermissions(ctx, &v1.SyncPermissionsRequest{
 		ProjectName: cfg.ProjectName,
 		LocalAllow:  localAllow,
 		LocalAsk:    localAsk,
 		LocalDeny:   localDeny,
-	}))
+	})
 	if err != nil {
 		slog.Error("permission sync failed", "error", err)
 		return
 	}
 
-	merged := resp.Msg.GetPermissions()
+	merged := resp.GetPermissions()
 	slog.Info("permission sync complete",
 		"allow", len(merged.GetAllow()),
 		"ask", len(merged.GetAsk()),

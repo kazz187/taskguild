@@ -11,7 +11,8 @@ import (
 	"runtime"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connectproto"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/kazz187/taskguild/pkg/clog"
@@ -83,14 +84,14 @@ func (e *Error) AddDetailMessageWithCode(msg string, code string) error {
 }
 
 func (e *Error) ConnectError() *connect.Error {
-	connectErr := connect.NewError(e.Code.ConnectCode(), errors.New(e.Msg))
+	connectErr := connect.NewError(e.Code.ConnectCode(), e.Msg)
 	for _, detailMsg := range e.Details {
-		detail, err := connect.NewErrorDetail(detailMsg)
+		detail, err := connectproto.NewErrorDetail(detailMsg)
 		if err != nil {
 			continue
 		}
 
-		connectErr.AddDetail(detail)
+		connectErr = connectErr.WithDetail(detail)
 	}
 
 	return connectErr

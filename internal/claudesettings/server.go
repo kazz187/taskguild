@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
@@ -48,23 +48,23 @@ func (s *Server) notifyChange(projectID string) {
 }
 
 // GetClaudeSettings returns the settings for a project.
-func (s *Server) GetClaudeSettings(ctx context.Context, req *connect.Request[taskguildv1.GetClaudeSettingsRequest]) (*connect.Response[taskguildv1.GetClaudeSettingsResponse], error) {
-	cs, err := s.repo.Get(ctx, req.Msg.GetProjectId())
+func (s *Server) GetClaudeSettings(ctx context.Context, req *taskguildv1.GetClaudeSettingsRequest) (*taskguildv1.GetClaudeSettingsResponse, error) {
+	cs, err := s.repo.Get(ctx, req.GetProjectId())
 	if err != nil {
 		return nil, err
 	}
 
-	return connect.NewResponse(&taskguildv1.GetClaudeSettingsResponse{
+	return &taskguildv1.GetClaudeSettingsResponse{
 		Settings: toProto(cs),
-	}), nil
+	}, nil
 }
 
 // UpdateClaudeSettings replaces the settings for a project.
-func (s *Server) UpdateClaudeSettings(ctx context.Context, req *connect.Request[taskguildv1.UpdateClaudeSettingsRequest]) (*connect.Response[taskguildv1.UpdateClaudeSettingsResponse], error) {
+func (s *Server) UpdateClaudeSettings(ctx context.Context, req *taskguildv1.UpdateClaudeSettingsRequest) (*taskguildv1.UpdateClaudeSettingsResponse, error) {
 	cs := &ClaudeSettings{
-		ProjectID:   req.Msg.GetProjectId(),
-		Language:    req.Msg.Language,
-		Attribution: attributionFromProto(req.Msg.GetAttribution()),
+		ProjectID:   req.GetProjectId(),
+		Language:    req.Language,
+		Attribution: attributionFromProto(req.GetAttribution()),
 		UpdatedAt:   time.Now(),
 	}
 
@@ -75,19 +75,19 @@ func (s *Server) UpdateClaudeSettings(ctx context.Context, req *connect.Request[
 
 	s.notifyChange(cs.ProjectID)
 
-	return connect.NewResponse(&taskguildv1.UpdateClaudeSettingsResponse{
+	return &taskguildv1.UpdateClaudeSettingsResponse{
 		Settings: toProto(cs),
-	}), nil
+	}, nil
 }
 
 // SyncClaudeSettingsFromDir reads .claude/settings.json from the given directory
 // and merges its settings into the stored set.
-func (s *Server) SyncClaudeSettingsFromDir(ctx context.Context, req *connect.Request[taskguildv1.SyncClaudeSettingsFromDirRequest]) (*connect.Response[taskguildv1.SyncClaudeSettingsFromDirResponse], error) {
-	dir := req.Msg.GetDirectory()
+func (s *Server) SyncClaudeSettingsFromDir(ctx context.Context, req *taskguildv1.SyncClaudeSettingsFromDirRequest) (*taskguildv1.SyncClaudeSettingsFromDirResponse, error) {
+	dir := req.GetDirectory()
 	if (dir == "" || dir == ".") && s.resolver != nil {
-		resolved, err := s.resolver.ResolveWorkDir(req.Msg.GetProjectId())
+		resolved, err := s.resolver.ResolveWorkDir(req.GetProjectId())
 		if err != nil {
-			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("failed to resolve work directory: %w", err))
+			return nil, connect.Errorf(connect.CodeFailedPrecondition, "failed to resolve work directory: %v", err).WithCause(err)
 		}
 
 		dir = resolved
@@ -104,7 +104,7 @@ func (s *Server) SyncClaudeSettingsFromDir(ctx context.Context, req *connect.Req
 		return nil, fmt.Errorf("failed to read settings.json: %w", err)
 	}
 
-	stored, err := s.repo.Get(ctx, req.Msg.GetProjectId())
+	stored, err := s.repo.Get(ctx, req.GetProjectId())
 	if err != nil {
 		return nil, err
 	}
@@ -144,9 +144,9 @@ func (s *Server) SyncClaudeSettingsFromDir(ctx context.Context, req *connect.Req
 		s.notifyChange(stored.ProjectID)
 	}
 
-	return connect.NewResponse(&taskguildv1.SyncClaudeSettingsFromDirResponse{
+	return &taskguildv1.SyncClaudeSettingsFromDirResponse{
 		Settings: toProto(stored),
-	}), nil
+	}, nil
 }
 
 // readSettingsFromFile reads the "language" and "attribution" fields from a .claude/settings.json file.

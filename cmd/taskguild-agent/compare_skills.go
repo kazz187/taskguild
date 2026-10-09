@@ -6,8 +6,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"connectrpc.com/connect"
-
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -77,11 +75,11 @@ func handleCompareSkills(ctx context.Context, client taskguildv1connect.AgentMan
 	slog.Info("skill comparison complete", "request_id", requestID, "total_diffs", len(diffs))
 
 	// Report diffs to server.
-	_, err := client.ReportSkillComparison(ctx, connect.NewRequest(&v1.ReportSkillComparisonRequest{
+	_, err := client.ReportSkillComparison(ctx, &v1.ReportSkillComparisonRequest{
 		RequestId:   requestID,
 		ProjectName: cfg.ProjectName,
 		Diffs:       diffs,
-	}))
+	})
 	if err != nil {
 		slog.Error("failed to report skill comparison", "request_id", requestID, "error", err)
 	}

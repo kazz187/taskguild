@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
 
 	"github.com/kazz187/taskguild/internal/eventbus"
@@ -19,12 +18,12 @@ import (
 
 // RequestScriptComparison sends a CompareScriptsCommand to connected agent-managers
 // so they compare local scripts with server versions.
-func (s *Server) RequestScriptComparison(ctx context.Context, req *connect.Request[taskguildv1.RequestScriptComparisonRequest]) (*connect.Response[taskguildv1.RequestScriptComparisonResponse], error) {
-	if req.Msg.GetProjectId() == "" {
+func (s *Server) RequestScriptComparison(ctx context.Context, req *taskguildv1.RequestScriptComparisonRequest) (*taskguildv1.RequestScriptComparisonResponse, error) {
+	if req.GetProjectId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
 	}
 
-	proj, err := s.projectRepo.Get(ctx, req.Msg.GetProjectId())
+	proj, err := s.projectRepo.Get(ctx, req.GetProjectId())
 	if err != nil {
 		return nil, cerr.ExtractConnectError(ctx, err)
 	}
@@ -52,20 +51,20 @@ func (s *Server) RequestScriptComparison(ctx context.Context, req *connect.Reque
 	})
 
 	slog.Info("script comparison requested",
-		"project_id", req.Msg.GetProjectId(),
+		"project_id", req.GetProjectId(),
 		"project_name", proj.Name,
 		"request_id", requestID,
 		"script_count", len(scripts),
 	)
 
-	return connect.NewResponse(&taskguildv1.RequestScriptComparisonResponse{
+	return &taskguildv1.RequestScriptComparisonResponse{
 		RequestId: requestID,
-	}), nil
+	}, nil
 }
 
 // ReportScriptComparison receives comparison results from the agent and caches them.
-func (s *Server) ReportScriptComparison(ctx context.Context, req *connect.Request[taskguildv1.ReportScriptComparisonRequest]) (*connect.Response[taskguildv1.ReportScriptComparisonResponse], error) {
-	projectName := req.Msg.GetProjectName()
+func (s *Server) ReportScriptComparison(ctx context.Context, req *taskguildv1.ReportScriptComparisonRequest) (*taskguildv1.ReportScriptComparisonResponse, error) {
+	projectName := req.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -77,65 +76,65 @@ func (s *Server) ReportScriptComparison(ctx context.Context, req *connect.Reques
 
 	// Cache the diffs for this project.
 	s.scriptDiffMu.Lock()
-	s.scriptDiffCache[proj.ID] = req.Msg.GetDiffs()
+	s.scriptDiffCache[proj.ID] = req.GetDiffs()
 	s.scriptDiffMu.Unlock()
 
 	// Publish event so frontend can pick up the comparison results.
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_SCRIPT_COMPARISON,
-		req.Msg.GetRequestId(),
+		req.GetRequestId(),
 		"",
 		map[string]string{
 			eventbus.MetaProjectID: proj.ID,
-			eventbus.MetaRequestID: req.Msg.GetRequestId(),
-			eventbus.MetaDiffCount: strconv.Itoa(len(req.Msg.GetDiffs())),
+			eventbus.MetaRequestID: req.GetRequestId(),
+			eventbus.MetaDiffCount: strconv.Itoa(len(req.GetDiffs())),
 		},
 	)
 
 	slog.Info("script comparison reported",
 		"project_id", proj.ID,
 		"project_name", projectName,
-		"request_id", req.Msg.GetRequestId(),
-		"diff_count", len(req.Msg.GetDiffs()),
+		"request_id", req.GetRequestId(),
+		"diff_count", len(req.GetDiffs()),
 	)
 
-	return connect.NewResponse(&taskguildv1.ReportScriptComparisonResponse{}), nil
+	return &taskguildv1.ReportScriptComparisonResponse{}, nil
 }
 
 // GetScriptComparison returns the cached script diffs for a project.
-func (s *Server) GetScriptComparison(ctx context.Context, req *connect.Request[taskguildv1.GetScriptComparisonRequest]) (*connect.Response[taskguildv1.GetScriptComparisonResponse], error) {
-	if req.Msg.GetProjectId() == "" {
+func (s *Server) GetScriptComparison(ctx context.Context, req *taskguildv1.GetScriptComparisonRequest) (*taskguildv1.GetScriptComparisonResponse, error) {
+	if req.GetProjectId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
 	}
 
 	s.scriptDiffMu.RLock()
-	diffs := s.scriptDiffCache[req.Msg.GetProjectId()]
+	diffs := s.scriptDiffCache[req.GetProjectId()]
 	s.scriptDiffMu.RUnlock()
 
-	return connect.NewResponse(&taskguildv1.GetScriptComparisonResponse{
+	return &taskguildv1.GetScriptComparisonResponse{
 		Diffs: diffs,
-	}), nil
+	}, nil
 }
 
 // ResolveScriptConflict resolves a single script conflict between server and agent versions.
-func (s *Server) ResolveScriptConflict(ctx context.Context, req *connect.Request[taskguildv1.ResolveScriptConflictRequest]) (*connect.Response[taskguildv1.ResolveScriptConflictResponse], error) {
-	if req.Msg.GetProjectId() == "" {
+func (s *Server) ResolveScriptConflict(ctx context.Context, req *taskguildv1.ResolveScriptConflictRequest) (*taskguildv1.ResolveScriptConflictResponse, error) {
+	if req.GetProjectId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
 	}
 
-	proj, err := s.projectRepo.Get(ctx, req.Msg.GetProjectId())
+	proj, err := s.projectRepo.Get(ctx, req.GetProjectId())
 	if err != nil {
 		return nil, cerr.ExtractConnectError(ctx, err)
 	}
 
 	var resultScript *script.Script
 
-	switch req.Msg.GetChoice() {
+	switch req.GetChoice() {
 	case taskguildv1.ScriptResolutionChoice_SCRIPT_RESOLUTION_CHOICE_SERVER:
 		// Server version wins. DB is already correct.
 		// Force-overwrite the agent's local file by sending SyncScriptsCommand.
-		if req.Msg.GetScriptId() != "" {
-			resultScript, err = s.scriptRepo.Get(ctx, req.Msg.GetScriptId())
+		if req.GetScriptId() != "" {
+			resultScript, err = s.scriptRepo.Get(ctx, req.GetScriptId())
 			if err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)
 			}
@@ -143,7 +142,7 @@ func (s *Server) ResolveScriptConflict(ctx context.Context, req *connect.Request
 			s.registry.BroadcastCommandToProject(proj.Name, &taskguildv1.AgentCommand{
 				Command: &taskguildv1.AgentCommand_SyncScripts{
 					SyncScripts: &taskguildv1.SyncScriptsCommand{
-						ForceOverwriteScriptIds: []string{req.Msg.GetScriptId()},
+						ForceOverwriteScriptIds: []string{req.GetScriptId()},
 					},
 				},
 			})
@@ -151,16 +150,16 @@ func (s *Server) ResolveScriptConflict(ctx context.Context, req *connect.Request
 
 	case taskguildv1.ScriptResolutionChoice_SCRIPT_RESOLUTION_CHOICE_AGENT:
 		// Agent version wins. Update the DB with agent's content.
-		if req.Msg.GetScriptId() != "" {
+		if req.GetScriptId() != "" {
 			// Update existing script.
-			resultScript, err = s.scriptRepo.Get(ctx, req.Msg.GetScriptId())
+			resultScript, err = s.scriptRepo.Get(ctx, req.GetScriptId())
 			if err != nil {
 				return nil, cerr.ExtractConnectError(ctx, err)
 			}
 
-			resultScript.Content = req.Msg.GetAgentContent()
-			if req.Msg.GetFilename() != "" {
-				resultScript.Filename = req.Msg.GetFilename()
+			resultScript.Content = req.GetAgentContent()
+			if req.GetFilename() != "" {
+				resultScript.Filename = req.GetFilename()
 			}
 
 			resultScript.IsSynced = true
@@ -175,17 +174,17 @@ func (s *Server) ResolveScriptConflict(ctx context.Context, req *connect.Request
 			// Agent-only script — create new in DB.
 			now := time.Now()
 
-			filename := req.Msg.GetFilename()
+			filename := req.GetFilename()
 			if filename == "" {
-				filename = req.Msg.GetScriptName() + ".sh"
+				filename = req.GetScriptName() + ".sh"
 			}
 
 			resultScript = &script.Script{
 				ID:        ulid.Make().String(),
-				ProjectID: req.Msg.GetProjectId(),
-				Name:      req.Msg.GetScriptName(),
+				ProjectID: req.GetProjectId(),
+				Name:      req.GetScriptName(),
 				Filename:  filename,
-				Content:   req.Msg.GetAgentContent(),
+				Content:   req.GetAgentContent(),
 				IsSynced:  true,
 				CreatedAt: now,
 				UpdatedAt: now,
@@ -202,7 +201,7 @@ func (s *Server) ResolveScriptConflict(ctx context.Context, req *connect.Request
 	}
 
 	// Remove the resolved diff from cache.
-	s.removeScriptDiff(req.Msg.GetProjectId(), req.Msg.GetScriptId(), req.Msg.GetFilename())
+	s.removeScriptDiff(req.GetProjectId(), req.GetScriptId(), req.GetFilename())
 
 	var proto *taskguildv1.ScriptDefinition
 	if resultScript != nil {
@@ -210,15 +209,15 @@ func (s *Server) ResolveScriptConflict(ctx context.Context, req *connect.Request
 	}
 
 	slog.Info("script conflict resolved",
-		"project_id", req.Msg.GetProjectId(),
-		"script_id", req.Msg.GetScriptId(),
-		"script_name", req.Msg.GetScriptName(),
-		"choice", req.Msg.GetChoice().String(),
+		"project_id", req.GetProjectId(),
+		"script_id", req.GetScriptId(),
+		"script_name", req.GetScriptName(),
+		"choice", req.GetChoice().String(),
 	)
 
-	return connect.NewResponse(&taskguildv1.ResolveScriptConflictResponse{
+	return &taskguildv1.ResolveScriptConflictResponse{
 		Script: proto,
-	}), nil
+	}, nil
 }
 
 // removeScriptDiff removes a specific diff entry from the cache.

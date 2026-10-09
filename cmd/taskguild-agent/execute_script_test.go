@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	"github.com/sourcegraph/conc"
 
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
@@ -27,26 +27,26 @@ type scriptMockClient struct {
 	result *v1.ReportScriptExecutionResultRequest
 }
 
-func (m *scriptMockClient) Subscribe(_ context.Context, _ *connect.Request[v1.AgentManagerSubscribeRequest]) (*connect.ServerStreamForClient[v1.AgentCommand], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, nil)
+func (m *scriptMockClient) Subscribe(_ context.Context, _ *v1.AgentManagerSubscribeRequest) (taskguildv1connect.AgentManagerServiceSubscribeClientStream, error) {
+	return taskguildv1connect.AgentManagerServiceSubscribeClientStream{}, connect.NewError(connect.CodeUnimplemented, "")
 }
 
-func (m *scriptMockClient) ReportScriptOutputChunk(_ context.Context, req *connect.Request[v1.ReportScriptOutputChunkRequest]) (*connect.Response[v1.ReportScriptOutputChunkResponse], error) {
+func (m *scriptMockClient) ReportScriptOutputChunk(_ context.Context, req *v1.ReportScriptOutputChunkRequest) (*v1.ReportScriptOutputChunkResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.chunks = append(m.chunks, req.Msg)
+	m.chunks = append(m.chunks, req)
 
-	return connect.NewResponse(&v1.ReportScriptOutputChunkResponse{}), nil
+	return &v1.ReportScriptOutputChunkResponse{}, nil
 }
 
-func (m *scriptMockClient) ReportScriptExecutionResult(_ context.Context, req *connect.Request[v1.ReportScriptExecutionResultRequest]) (*connect.Response[v1.ReportScriptExecutionResultResponse], error) {
+func (m *scriptMockClient) ReportScriptExecutionResult(_ context.Context, req *v1.ReportScriptExecutionResultRequest) (*v1.ReportScriptExecutionResultResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.result = req.Msg
+	m.result = req
 
-	return connect.NewResponse(&v1.ReportScriptExecutionResultResponse{}), nil
+	return &v1.ReportScriptExecutionResultResponse{}, nil
 }
 
 func (m *scriptMockClient) getChunks() []*v1.ReportScriptOutputChunkRequest {

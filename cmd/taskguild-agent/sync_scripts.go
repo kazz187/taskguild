@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"connectrpc.com/connect"
-
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -24,15 +22,15 @@ func syncScripts(ctx context.Context, client taskguildv1connect.AgentManagerServ
 		return
 	}
 
-	resp, err := client.SyncScripts(ctx, connect.NewRequest(&v1.SyncScriptsRequest{
+	resp, err := client.SyncScripts(ctx, &v1.SyncScriptsRequest{
 		ProjectName: cfg.ProjectName,
-	}))
+	})
 	if err != nil {
 		slog.Error("script sync failed", "error", err)
 		return
 	}
 
-	scripts := resp.Msg.GetScripts()
+	scripts := resp.GetScripts()
 	slog.Info("syncing scripts from server", "count", len(scripts))
 
 	scriptsDir := filepath.Join(cfg.WorkDir, ".taskguild", "scripts")

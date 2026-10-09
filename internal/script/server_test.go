@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"connectrpc.com/connect"
-
 	taskguildv1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 )
 
@@ -165,14 +163,14 @@ func TestExecuteScript_Success(t *testing.T) {
 	srv, repo, execReq, broker := newTestServer()
 	seedScript(repo, "sc-1", "proj-1", "deploy")
 
-	resp, err := srv.ExecuteScript(context.Background(), connect.NewRequest(&taskguildv1.ExecuteScriptRequest{
+	resp, err := srv.ExecuteScript(context.Background(), &taskguildv1.ExecuteScriptRequest{
 		ScriptId: "sc-1",
-	}))
+	})
 	if err != nil {
 		t.Fatalf("ExecuteScript failed: %v", err)
 	}
 
-	requestID := resp.Msg.GetRequestId()
+	requestID := resp.GetRequestId()
 	if requestID == "" {
 		t.Fatal("expected non-empty requestID")
 	}
@@ -205,9 +203,9 @@ func TestExecuteScript_Success(t *testing.T) {
 func TestExecuteScript_ScriptNotFound(t *testing.T) {
 	srv, _, _, _ := newTestServer()
 
-	_, err := srv.ExecuteScript(context.Background(), connect.NewRequest(&taskguildv1.ExecuteScriptRequest{
+	_, err := srv.ExecuteScript(context.Background(), &taskguildv1.ExecuteScriptRequest{
 		ScriptId: "nonexistent",
-	}))
+	})
 	if err == nil {
 		t.Fatal("expected error for missing script")
 	}
@@ -219,9 +217,9 @@ func TestExecuteScript_ExecRequestFails_BrokerCleaned(t *testing.T) {
 
 	execReq.execErr = errors.New("agent not connected")
 
-	_, err := srv.ExecuteScript(context.Background(), connect.NewRequest(&taskguildv1.ExecuteScriptRequest{
+	_, err := srv.ExecuteScript(context.Background(), &taskguildv1.ExecuteScriptRequest{
 		ScriptId: "sc-1",
-	}))
+	})
 	if err == nil {
 		t.Fatal("expected error when execReq fails")
 	}
@@ -238,9 +236,9 @@ func TestExecuteScript_RejectedWhileDraining(t *testing.T) {
 
 	broker.SetDraining(true)
 
-	_, err := srv.ExecuteScript(context.Background(), connect.NewRequest(&taskguildv1.ExecuteScriptRequest{
+	_, err := srv.ExecuteScript(context.Background(), &taskguildv1.ExecuteScriptRequest{
 		ScriptId: "sc-1",
-	}))
+	})
 	if err == nil {
 		t.Fatal("expected error when draining")
 	}
@@ -252,9 +250,9 @@ func TestStopScriptExecution_Success(t *testing.T) {
 	srv, _, execReq, broker := newTestServer()
 	broker.RegisterExecution("req-1", "sc-1", "proj-1")
 
-	_, err := srv.StopScriptExecution(context.Background(), connect.NewRequest(&taskguildv1.StopScriptExecutionRequest{
+	_, err := srv.StopScriptExecution(context.Background(), &taskguildv1.StopScriptExecutionRequest{
 		RequestId: "req-1",
-	}))
+	})
 	if err != nil {
 		t.Fatalf("StopScriptExecution failed: %v", err)
 	}
@@ -278,9 +276,9 @@ func TestStopScriptExecution_Success(t *testing.T) {
 func TestStopScriptExecution_EmptyRequestID(t *testing.T) {
 	srv, _, _, _ := newTestServer()
 
-	_, err := srv.StopScriptExecution(context.Background(), connect.NewRequest(&taskguildv1.StopScriptExecutionRequest{
+	_, err := srv.StopScriptExecution(context.Background(), &taskguildv1.StopScriptExecutionRequest{
 		RequestId: "",
-	}))
+	})
 	if err == nil {
 		t.Fatal("expected error for empty request_id")
 	}
@@ -289,9 +287,9 @@ func TestStopScriptExecution_EmptyRequestID(t *testing.T) {
 func TestStopScriptExecution_UnknownRequestID(t *testing.T) {
 	srv, _, _, _ := newTestServer()
 
-	_, err := srv.StopScriptExecution(context.Background(), connect.NewRequest(&taskguildv1.StopScriptExecutionRequest{
+	_, err := srv.StopScriptExecution(context.Background(), &taskguildv1.StopScriptExecutionRequest{
 		RequestId: "unknown",
-	}))
+	})
 	if err == nil {
 		t.Fatal("expected error for unknown request_id")
 	}
@@ -306,15 +304,15 @@ func TestListActiveExecutions(t *testing.T) {
 	broker.RegisterExecution("req-3", "sc-3", "proj-2")
 	broker.CompleteExecution("req-2", true, 0, nil, "", false)
 
-	resp, err := srv.ListActiveExecutions(context.Background(), connect.NewRequest(&taskguildv1.ListActiveExecutionsRequest{
+	resp, err := srv.ListActiveExecutions(context.Background(), &taskguildv1.ListActiveExecutionsRequest{
 		ProjectId: "proj-1",
-	}))
+	})
 	if err != nil {
 		t.Fatalf("ListActiveExecutions failed: %v", err)
 	}
 
-	if len(resp.Msg.GetExecutions()) != 2 {
-		t.Fatalf("expected 2 executions for proj-1, got %d", len(resp.Msg.GetExecutions()))
+	if len(resp.GetExecutions()) != 2 {
+		t.Fatalf("expected 2 executions for proj-1, got %d", len(resp.GetExecutions()))
 	}
 }
 
@@ -325,14 +323,14 @@ func TestEndToEnd_ExecuteAndReceiveViaSubscriber(t *testing.T) {
 	seedScript(repo, "sc-1", "proj-1", "deploy")
 
 	// 1. Frontend triggers execution
-	execResp, err := srv.ExecuteScript(context.Background(), connect.NewRequest(&taskguildv1.ExecuteScriptRequest{
+	execResp, err := srv.ExecuteScript(context.Background(), &taskguildv1.ExecuteScriptRequest{
 		ScriptId: "sc-1",
-	}))
+	})
 	if err != nil {
 		t.Fatalf("ExecuteScript failed: %v", err)
 	}
 
-	requestID := execResp.Msg.GetRequestId()
+	requestID := execResp.GetRequestId()
 
 	// 2. Frontend subscribes to the stream (via broker directly, since
 	//    connect.ServerStream requires HTTP infrastructure to construct)
@@ -433,18 +431,18 @@ done:
 	}
 
 	// 7. Verify execution shows as completed in list
-	listResp, err := srv.ListActiveExecutions(context.Background(), connect.NewRequest(&taskguildv1.ListActiveExecutionsRequest{
+	listResp, err := srv.ListActiveExecutions(context.Background(), &taskguildv1.ListActiveExecutionsRequest{
 		ProjectId: "proj-1",
-	}))
+	})
 	if err != nil {
 		t.Fatalf("ListActiveExecutions failed: %v", err)
 	}
 
-	if len(listResp.Msg.GetExecutions()) != 1 {
-		t.Fatalf("expected 1 execution in list, got %d", len(listResp.Msg.GetExecutions()))
+	if len(listResp.GetExecutions()) != 1 {
+		t.Fatalf("expected 1 execution in list, got %d", len(listResp.GetExecutions()))
 	}
 
-	if !listResp.Msg.GetExecutions()[0].GetCompleted() {
+	if !listResp.GetExecutions()[0].GetCompleted() {
 		t.Error("expected execution to be marked completed")
 	}
 }
@@ -454,14 +452,14 @@ func TestEndToEnd_ExecuteFailure(t *testing.T) {
 	seedScript(repo, "sc-1", "proj-1", "deploy")
 
 	// Execute
-	execResp, err := srv.ExecuteScript(context.Background(), connect.NewRequest(&taskguildv1.ExecuteScriptRequest{
+	execResp, err := srv.ExecuteScript(context.Background(), &taskguildv1.ExecuteScriptRequest{
 		ScriptId: "sc-1",
-	}))
+	})
 	if err != nil {
 		t.Fatalf("ExecuteScript failed: %v", err)
 	}
 
-	requestID := execResp.Msg.GetRequestId()
+	requestID := execResp.GetRequestId()
 
 	// Subscribe
 	ch, unsub := broker.Subscribe(requestID)
@@ -520,14 +518,14 @@ func TestEndToEnd_StoppedByUser(t *testing.T) {
 	seedScript(repo, "sc-1", "proj-1", "deploy")
 
 	// Execute
-	execResp, err := srv.ExecuteScript(context.Background(), connect.NewRequest(&taskguildv1.ExecuteScriptRequest{
+	execResp, err := srv.ExecuteScript(context.Background(), &taskguildv1.ExecuteScriptRequest{
 		ScriptId: "sc-1",
-	}))
+	})
 	if err != nil {
 		t.Fatalf("ExecuteScript failed: %v", err)
 	}
 
-	requestID := execResp.Msg.GetRequestId()
+	requestID := execResp.GetRequestId()
 
 	// Subscribe
 	ch, unsub := broker.Subscribe(requestID)
@@ -579,14 +577,14 @@ func TestEndToEnd_LateJoinerGetsFullReplay(t *testing.T) {
 	seedScript(repo, "sc-1", "proj-1", "deploy")
 
 	// Execute
-	execResp, err := srv.ExecuteScript(context.Background(), connect.NewRequest(&taskguildv1.ExecuteScriptRequest{
+	execResp, err := srv.ExecuteScript(context.Background(), &taskguildv1.ExecuteScriptRequest{
 		ScriptId: "sc-1",
-	}))
+	})
 	if err != nil {
 		t.Fatalf("ExecuteScript failed: %v", err)
 	}
 
-	requestID := execResp.Msg.GetRequestId()
+	requestID := execResp.GetRequestId()
 
 	// Agent sends output and completes BEFORE anyone subscribes
 	broker.PushOutput(requestID, []*taskguildv1.ScriptLogEntry{

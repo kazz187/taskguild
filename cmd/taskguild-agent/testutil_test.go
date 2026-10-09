@@ -6,7 +6,8 @@ import (
 	"net/http/httptest"
 	"sync"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
@@ -118,38 +119,38 @@ type testAgentManagerHandler struct {
 	createInteractionReqs []*v1.CreateInteractionRequest
 }
 
-func (h *testAgentManagerHandler) ReportAgentStatus(ctx context.Context, req *connect.Request[v1.ReportAgentStatusRequest]) (*connect.Response[v1.ReportAgentStatusResponse], error) {
+func (h *testAgentManagerHandler) ReportAgentStatus(ctx context.Context, req *v1.ReportAgentStatusRequest) (*v1.ReportAgentStatusResponse, error) {
 	h.mu.Lock()
-	h.reportAgentStatusReqs = append(h.reportAgentStatusReqs, req.Msg)
+	h.reportAgentStatusReqs = append(h.reportAgentStatusReqs, req)
 	h.mu.Unlock()
 
-	return connect.NewResponse(&v1.ReportAgentStatusResponse{}), nil
+	return &v1.ReportAgentStatusResponse{}, nil
 }
 
-func (h *testAgentManagerHandler) ReportTaskResult(ctx context.Context, req *connect.Request[v1.ReportTaskResultRequest]) (*connect.Response[v1.ReportTaskResultResponse], error) {
+func (h *testAgentManagerHandler) ReportTaskResult(ctx context.Context, req *v1.ReportTaskResultRequest) (*v1.ReportTaskResultResponse, error) {
 	h.mu.Lock()
-	h.reportTaskResultReqs = append(h.reportTaskResultReqs, req.Msg)
+	h.reportTaskResultReqs = append(h.reportTaskResultReqs, req)
 	h.mu.Unlock()
 
-	return connect.NewResponse(&v1.ReportTaskResultResponse{}), nil
+	return &v1.ReportTaskResultResponse{}, nil
 }
 
-func (h *testAgentManagerHandler) ReportTaskLog(ctx context.Context, req *connect.Request[v1.ReportTaskLogRequest]) (*connect.Response[v1.ReportTaskLogResponse], error) {
+func (h *testAgentManagerHandler) ReportTaskLog(ctx context.Context, req *v1.ReportTaskLogRequest) (*v1.ReportTaskLogResponse, error) {
 	h.mu.Lock()
-	h.reportTaskLogReqs = append(h.reportTaskLogReqs, req.Msg)
+	h.reportTaskLogReqs = append(h.reportTaskLogReqs, req)
 	h.mu.Unlock()
 
-	return connect.NewResponse(&v1.ReportTaskLogResponse{}), nil
+	return &v1.ReportTaskLogResponse{}, nil
 }
 
-func (h *testAgentManagerHandler) CreateInteraction(ctx context.Context, req *connect.Request[v1.CreateInteractionRequest]) (*connect.Response[v1.CreateInteractionResponse], error) {
+func (h *testAgentManagerHandler) CreateInteraction(ctx context.Context, req *v1.CreateInteractionRequest) (*v1.CreateInteractionResponse, error) {
 	h.mu.Lock()
-	h.createInteractionReqs = append(h.createInteractionReqs, req.Msg)
+	h.createInteractionReqs = append(h.createInteractionReqs, req)
 	h.mu.Unlock()
 
-	return connect.NewResponse(&v1.CreateInteractionResponse{
+	return &v1.CreateInteractionResponse{
 		Interaction: &v1.Interaction{Id: "test-interaction"},
-	}), nil
+	}, nil
 }
 
 // testTaskHandler embeds UnimplementedTaskServiceHandler and overrides methods.
@@ -162,30 +163,30 @@ type testTaskHandler struct {
 	createTaskReqs       []*v1.CreateTaskRequest
 }
 
-func (h *testTaskHandler) UpdateTask(ctx context.Context, req *connect.Request[v1.UpdateTaskRequest]) (*connect.Response[v1.UpdateTaskResponse], error) {
+func (h *testTaskHandler) UpdateTask(ctx context.Context, req *v1.UpdateTaskRequest) (*v1.UpdateTaskResponse, error) {
 	h.mu.Lock()
-	h.updateTaskReqs = append(h.updateTaskReqs, req.Msg)
+	h.updateTaskReqs = append(h.updateTaskReqs, req)
 	h.mu.Unlock()
 
-	return connect.NewResponse(&v1.UpdateTaskResponse{}), nil
+	return &v1.UpdateTaskResponse{}, nil
 }
 
-func (h *testTaskHandler) UpdateTaskStatus(ctx context.Context, req *connect.Request[v1.UpdateTaskStatusRequest]) (*connect.Response[v1.UpdateTaskStatusResponse], error) {
+func (h *testTaskHandler) UpdateTaskStatus(ctx context.Context, req *v1.UpdateTaskStatusRequest) (*v1.UpdateTaskStatusResponse, error) {
 	h.mu.Lock()
-	h.updateTaskStatusReqs = append(h.updateTaskStatusReqs, req.Msg)
+	h.updateTaskStatusReqs = append(h.updateTaskStatusReqs, req)
 	h.mu.Unlock()
 
-	return connect.NewResponse(&v1.UpdateTaskStatusResponse{}), nil
+	return &v1.UpdateTaskStatusResponse{}, nil
 }
 
-func (h *testTaskHandler) CreateTask(ctx context.Context, req *connect.Request[v1.CreateTaskRequest]) (*connect.Response[v1.CreateTaskResponse], error) {
+func (h *testTaskHandler) CreateTask(ctx context.Context, req *v1.CreateTaskRequest) (*v1.CreateTaskResponse, error) {
 	h.mu.Lock()
-	h.createTaskReqs = append(h.createTaskReqs, req.Msg)
+	h.createTaskReqs = append(h.createTaskReqs, req)
 	h.mu.Unlock()
 
-	return connect.NewResponse(&v1.CreateTaskResponse{
+	return &v1.CreateTaskResponse{
 		Task: &v1.Task{Id: "new-task-1"},
-	}), nil
+	}, nil
 }
 
 // testInteractionHandler embeds UnimplementedInteractionServiceHandler.
@@ -195,7 +196,7 @@ type testInteractionHandler struct {
 
 // SubscribeInteractions blocks until the context is canceled (simulating an
 // idle stream with no events).
-func (h *testInteractionHandler) SubscribeInteractions(ctx context.Context, req *connect.Request[v1.SubscribeInteractionsRequest], stream *connect.ServerStream[v1.InteractionEvent]) error {
+func (h *testInteractionHandler) SubscribeInteractions(ctx context.Context, req *v1.SubscribeInteractionsRequest, stream taskguildv1connect.InteractionServiceSubscribeInteractionsServerStream) error {
 	<-ctx.Done()
 	return ctx.Err()
 }
@@ -221,38 +222,24 @@ func newTestClients() *testClients {
 	taskHandler := &testTaskHandler{}
 	interHandler := &testInteractionHandler{}
 
+	rpcServer := connect.NewServer()
+	taskguildv1connect.RegisterAgentManagerServiceHandler(rpcServer, agentHandler)
+	taskguildv1connect.RegisterTaskServiceHandler(rpcServer, taskHandler)
+	taskguildv1connect.RegisterInteractionServiceHandler(rpcServer, interHandler)
+
 	mux := http.NewServeMux()
-
-	agentPath, agentHTTPHandler := taskguildv1connect.NewAgentManagerServiceHandler(agentHandler)
-	mux.Handle(agentPath, agentHTTPHandler)
-
-	taskPath, taskHTTPHandler := taskguildv1connect.NewTaskServiceHandler(taskHandler)
-	mux.Handle(taskPath, taskHTTPHandler)
-
-	interPath, interHTTPHandler := taskguildv1connect.NewInteractionServiceHandler(interHandler)
-	mux.Handle(interPath, interHTTPHandler)
+	connecthttp.Mount(mux, rpcServer)
 
 	server := httptest.NewUnstartedServer(mux)
 	server.EnableHTTP2 = true
 	server.StartTLS()
 
-	agentClient := taskguildv1connect.NewAgentManagerServiceClient(
-		server.Client(),
-		server.URL,
-	)
-	taskClient := taskguildv1connect.NewTaskServiceClient(
-		server.Client(),
-		server.URL,
-	)
-	interClient := taskguildv1connect.NewInteractionServiceClient(
-		server.Client(),
-		server.URL,
-	)
+	rpcClient := connect.NewClient(connecthttp.NewTransport(server.Client(), server.URL))
 
 	return &testClients{
-		agentClient:  agentClient,
-		taskClient:   taskClient,
-		interClient:  interClient,
+		agentClient:  taskguildv1connect.NewAgentManagerServiceClient(rpcClient),
+		taskClient:   taskguildv1connect.NewTaskServiceClient(rpcClient),
+		interClient:  taskguildv1connect.NewInteractionServiceClient(rpcClient),
 		agentHandler: agentHandler,
 		taskHandler:  taskHandler,
 		interHandler: interHandler,

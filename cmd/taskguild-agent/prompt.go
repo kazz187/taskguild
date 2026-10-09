@@ -9,8 +9,6 @@ import (
 	"regexp"
 	"strings"
 
-	"connectrpc.com/connect"
-
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -94,16 +92,16 @@ func buildUserPromptWithImages(ctx context.Context, metadata map[string]string, 
 	}
 
 	// Fetch all images for this task.
-	listResp, err := taskClient.ListTaskImages(ctx, connect.NewRequest(&v1.ListTaskImagesRequest{
+	listResp, err := taskClient.ListTaskImages(ctx, &v1.ListTaskImagesRequest{
 		TaskId: taskID,
-	}))
+	})
 	if err != nil {
 		return nil, fmt.Errorf("list task images: %w", err)
 	}
 
 	// Build a map of image ID -> image proto for quick lookup.
 	imageMap := make(map[string]*v1.TaskImage)
-	for _, img := range listResp.Msg.GetImages() {
+	for _, img := range listResp.GetImages() {
 		imageMap[img.GetId()] = img
 	}
 
@@ -130,17 +128,17 @@ func buildUserPromptWithImages(ctx context.Context, metadata map[string]string, 
 
 		// Check if this image exists and fetch it.
 		if _, exists := imageMap[imageID]; exists {
-			imgResp, err := taskClient.GetTaskImage(ctx, connect.NewRequest(&v1.GetTaskImageRequest{
+			imgResp, err := taskClient.GetTaskImage(ctx, &v1.GetTaskImageRequest{
 				TaskId:  taskID,
 				ImageId: imageID,
-			}))
+			})
 			if err == nil {
 				blocks = append(blocks, map[string]any{
 					blockFieldType: blockTypeImage,
 					"source": map[string]any{
 						blockFieldType: "base64",
-						"media_type":   imgResp.Msg.GetImage().GetMediaType(),
-						"data":         base64.StdEncoding.EncodeToString(imgResp.Msg.GetData()),
+						"media_type":   imgResp.GetImage().GetMediaType(),
+						"data":         base64.StdEncoding.EncodeToString(imgResp.GetData()),
 					},
 				})
 			} else {

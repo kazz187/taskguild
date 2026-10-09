@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	"github.com/oklog/ulid/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -49,21 +49,21 @@ func (s *Server) notifyChange(projectID string, changedAgentNames []string) {
 	}
 }
 
-func (s *Server) CreateAgent(ctx context.Context, req *connect.Request[taskguildv1.CreateAgentRequest]) (*connect.Response[taskguildv1.CreateAgentResponse], error) {
+func (s *Server) CreateAgent(ctx context.Context, req *taskguildv1.CreateAgentRequest) (*taskguildv1.CreateAgentResponse, error) {
 	now := time.Now()
 
 	a := &Agent{
 		ID:              ulid.Make().String(),
-		ProjectID:       req.Msg.GetProjectId(),
-		Name:            req.Msg.GetName(),
-		Description:     req.Msg.GetDescription(),
-		Prompt:          req.Msg.GetPrompt(),
-		Tools:           req.Msg.GetTools(),
-		DisallowedTools: req.Msg.GetDisallowedTools(),
-		Model:           req.Msg.GetModel(),
-		PermissionMode:  req.Msg.GetPermissionMode(),
-		Skills:          req.Msg.GetSkills(),
-		Memory:          req.Msg.GetMemory(),
+		ProjectID:       req.GetProjectId(),
+		Name:            req.GetName(),
+		Description:     req.GetDescription(),
+		Prompt:          req.GetPrompt(),
+		Tools:           req.GetTools(),
+		DisallowedTools: req.GetDisallowedTools(),
+		Model:           req.GetModel(),
+		PermissionMode:  req.GetPermissionMode(),
+		Skills:          req.GetSkills(),
+		Memory:          req.GetMemory(),
 		IsSynced:        false,
 		CreatedAt:       now,
 		UpdatedAt:       now,
@@ -76,34 +76,34 @@ func (s *Server) CreateAgent(ctx context.Context, req *connect.Request[taskguild
 
 	s.notifyChange(a.ProjectID, []string{a.Name})
 
-	return connect.NewResponse(&taskguildv1.CreateAgentResponse{
+	return &taskguildv1.CreateAgentResponse{
 		Agent: toProto(a),
-	}), nil
+	}, nil
 }
 
-func (s *Server) GetAgent(ctx context.Context, req *connect.Request[taskguildv1.GetAgentRequest]) (*connect.Response[taskguildv1.GetAgentResponse], error) {
-	a, err := s.repo.Get(ctx, req.Msg.GetId())
+func (s *Server) GetAgent(ctx context.Context, req *taskguildv1.GetAgentRequest) (*taskguildv1.GetAgentResponse, error) {
+	a, err := s.repo.Get(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	return connect.NewResponse(&taskguildv1.GetAgentResponse{
+	return &taskguildv1.GetAgentResponse{
 		Agent: toProto(a),
-	}), nil
+	}, nil
 }
 
-func (s *Server) ListAgents(ctx context.Context, req *connect.Request[taskguildv1.ListAgentsRequest]) (*connect.Response[taskguildv1.ListAgentsResponse], error) {
+func (s *Server) ListAgents(ctx context.Context, req *taskguildv1.ListAgentsRequest) (*taskguildv1.ListAgentsResponse, error) {
 	limit, offset := int32(50), int32(0)
 
-	if req.Msg.GetPagination() != nil {
-		if req.Msg.GetPagination().GetLimit() > 0 {
-			limit = req.Msg.GetPagination().GetLimit()
+	if req.GetPagination() != nil {
+		if req.GetPagination().GetLimit() > 0 {
+			limit = req.GetPagination().GetLimit()
 		}
 
-		offset = req.Msg.GetPagination().GetOffset()
+		offset = req.GetPagination().GetOffset()
 	}
 
-	agents, total, err := s.repo.List(ctx, req.Msg.GetProjectId(), int(limit), int(offset))
+	agents, total, err := s.repo.List(ctx, req.GetProjectId(), int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}
@@ -113,56 +113,56 @@ func (s *Server) ListAgents(ctx context.Context, req *connect.Request[taskguildv
 		protos[i] = toProto(a)
 	}
 
-	return connect.NewResponse(&taskguildv1.ListAgentsResponse{
+	return &taskguildv1.ListAgentsResponse{
 		Agents: protos,
 		Pagination: &taskguildv1.PaginationResponse{
 			Total:  int32(total),
 			Limit:  limit,
 			Offset: offset,
 		},
-	}), nil
+	}, nil
 }
 
-func (s *Server) UpdateAgent(ctx context.Context, req *connect.Request[taskguildv1.UpdateAgentRequest]) (*connect.Response[taskguildv1.UpdateAgentResponse], error) {
-	a, err := s.repo.Get(ctx, req.Msg.GetId())
+func (s *Server) UpdateAgent(ctx context.Context, req *taskguildv1.UpdateAgentRequest) (*taskguildv1.UpdateAgentResponse, error) {
+	a, err := s.repo.Get(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	if req.Msg.GetName() != "" {
-		a.Name = req.Msg.GetName()
+	if req.GetName() != "" {
+		a.Name = req.GetName()
 	}
 
-	if req.Msg.GetDescription() != "" {
-		a.Description = req.Msg.GetDescription()
+	if req.GetDescription() != "" {
+		a.Description = req.GetDescription()
 	}
 
-	if req.Msg.GetPrompt() != "" {
-		a.Prompt = req.Msg.GetPrompt()
+	if req.GetPrompt() != "" {
+		a.Prompt = req.GetPrompt()
 	}
 
-	if req.Msg.Tools != nil {
-		a.Tools = req.Msg.GetTools()
+	if req.Tools != nil {
+		a.Tools = req.GetTools()
 	}
 
-	if req.Msg.DisallowedTools != nil {
-		a.DisallowedTools = req.Msg.GetDisallowedTools()
+	if req.DisallowedTools != nil {
+		a.DisallowedTools = req.GetDisallowedTools()
 	}
 
-	if req.Msg.GetModel() != "" {
-		a.Model = req.Msg.GetModel()
+	if req.GetModel() != "" {
+		a.Model = req.GetModel()
 	}
 
-	if req.Msg.GetPermissionMode() != "" {
-		a.PermissionMode = req.Msg.GetPermissionMode()
+	if req.GetPermissionMode() != "" {
+		a.PermissionMode = req.GetPermissionMode()
 	}
 
-	if req.Msg.Skills != nil {
-		a.Skills = req.Msg.GetSkills()
+	if req.Skills != nil {
+		a.Skills = req.GetSkills()
 	}
 
-	if req.Msg.GetMemory() != "" {
-		a.Memory = req.Msg.GetMemory()
+	if req.GetMemory() != "" {
+		a.Memory = req.GetMemory()
 	}
 
 	a.UpdatedAt = time.Now()
@@ -172,34 +172,34 @@ func (s *Server) UpdateAgent(ctx context.Context, req *connect.Request[taskguild
 
 	s.notifyChange(a.ProjectID, []string{a.Name})
 
-	return connect.NewResponse(&taskguildv1.UpdateAgentResponse{
+	return &taskguildv1.UpdateAgentResponse{
 		Agent: toProto(a),
-	}), nil
+	}, nil
 }
 
-func (s *Server) DeleteAgent(ctx context.Context, req *connect.Request[taskguildv1.DeleteAgentRequest]) (*connect.Response[taskguildv1.DeleteAgentResponse], error) {
+func (s *Server) DeleteAgent(ctx context.Context, req *taskguildv1.DeleteAgentRequest) (*taskguildv1.DeleteAgentResponse, error) {
 	// Fetch the agent before deleting to capture the project ID for notification.
-	a, err := s.repo.Get(ctx, req.Msg.GetId())
+	a, err := s.repo.Get(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.repo.Delete(ctx, req.Msg.GetId()); err != nil {
+	if err := s.repo.Delete(ctx, req.GetId()); err != nil {
 		return nil, err
 	}
 
 	s.notifyChange(a.ProjectID, nil)
 
-	return connect.NewResponse(&taskguildv1.DeleteAgentResponse{}), nil
+	return &taskguildv1.DeleteAgentResponse{}, nil
 }
 
 // SyncAgentsFromDir scans a directory for .claude/agents/*.md files and syncs them.
-func (s *Server) SyncAgentsFromDir(ctx context.Context, req *connect.Request[taskguildv1.SyncAgentsFromDirRequest]) (*connect.Response[taskguildv1.SyncAgentsFromDirResponse], error) {
-	dir := req.Msg.GetDirectory()
+func (s *Server) SyncAgentsFromDir(ctx context.Context, req *taskguildv1.SyncAgentsFromDirRequest) (*taskguildv1.SyncAgentsFromDirResponse, error) {
+	dir := req.GetDirectory()
 	if (dir == "" || dir == ".") && s.resolver != nil {
-		resolved, err := s.resolver.ResolveWorkDir(req.Msg.GetProjectId())
+		resolved, err := s.resolver.ResolveWorkDir(req.GetProjectId())
 		if err != nil {
-			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("failed to resolve work directory: %w", err))
+			return nil, connect.Errorf(connect.CodeFailedPrecondition, "failed to resolve work directory: %v", err).WithCause(err)
 		}
 
 		dir = resolved
@@ -214,7 +214,7 @@ func (s *Server) SyncAgentsFromDir(ctx context.Context, req *connect.Request[tas
 	entries, err := os.ReadDir(agentsDir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return connect.NewResponse(&taskguildv1.SyncAgentsFromDirResponse{}), nil
+			return &taskguildv1.SyncAgentsFromDirResponse{}, nil
 		}
 
 		return nil, fmt.Errorf("failed to read agents directory: %w", err)
@@ -239,7 +239,7 @@ func (s *Server) SyncAgentsFromDir(ctx context.Context, req *connect.Request[tas
 		}
 
 		// Try to find existing agent with same name in this project.
-		existing, err := s.repo.FindByName(ctx, req.Msg.GetProjectId(), parsed.Name)
+		existing, err := s.repo.FindByName(ctx, req.GetProjectId(), parsed.Name)
 		if err == nil && existing != nil {
 			// Update existing agent.
 			existing.Description = parsed.Description
@@ -267,7 +267,7 @@ func (s *Server) SyncAgentsFromDir(ctx context.Context, req *connect.Request[tas
 
 			a := &Agent{
 				ID:              ulid.Make().String(),
-				ProjectID:       req.Msg.GetProjectId(),
+				ProjectID:       req.GetProjectId(),
 				Name:            parsed.Name,
 				Description:     parsed.Description,
 				Prompt:          parsed.Prompt,
@@ -293,14 +293,14 @@ func (s *Server) SyncAgentsFromDir(ctx context.Context, req *connect.Request[tas
 	}
 
 	if created > 0 || updated > 0 {
-		s.notifyChange(req.Msg.GetProjectId(), nil)
+		s.notifyChange(req.GetProjectId(), nil)
 	}
 
-	return connect.NewResponse(&taskguildv1.SyncAgentsFromDirResponse{
+	return &taskguildv1.SyncAgentsFromDirResponse{
 		Agents:  synced,
 		Created: created,
 		Updated: updated,
-	}), nil
+	}, nil
 }
 
 // parseAgentMDFile reads a Claude Code agent definition markdown file and

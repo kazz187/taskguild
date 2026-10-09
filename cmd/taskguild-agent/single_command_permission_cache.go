@@ -8,8 +8,6 @@ import (
 	"strings"
 	"sync"
 
-	"connectrpc.com/connect"
-
 	scp "github.com/kazz187/taskguild/internal/singlecommandpermission"
 	"github.com/kazz187/taskguild/pkg/shellparse"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
@@ -92,15 +90,15 @@ func (c *singleCommandPermissionCache) Update(perms []*v1.SingleCommandPermissio
 // Sync fetches the latest single-command permissions from the backend and
 // updates the local cache.
 func (c *singleCommandPermissionCache) Sync(ctx context.Context) {
-	resp, err := c.client.ListSingleCommandPermissions(ctx, connect.NewRequest(&v1.ListSingleCommandPermissionsAgentRequest{
+	resp, err := c.client.ListSingleCommandPermissions(ctx, &v1.ListSingleCommandPermissionsAgentRequest{
 		ProjectName: c.projectName,
-	}))
+	})
 	if err != nil {
 		slog.Error("failed to sync single command permissions", "error", err)
 		return
 	}
 
-	c.Update(resp.Msg.GetPermissions())
+	c.Update(resp.GetPermissions())
 }
 
 // commandCheckResult holds the result of checking a single command.

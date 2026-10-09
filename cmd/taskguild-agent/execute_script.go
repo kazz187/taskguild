@@ -14,7 +14,6 @@ import (
 	"syscall"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/sourcegraph/conc"
 	"github.com/sourcegraph/conc/pool"
 
@@ -74,7 +73,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 	reportResult := func(success bool, exitCode int32, logEntries []*v1.ScriptLogEntry, errMsg string, stoppedByUser bool) {
 		slog.Info("[STREAM-TRACE] agent: reporting execution result to backend", "request_id", requestID, "success", success, "exit_code", exitCode, "log_entry_count", len(logEntries), "error_message", errMsg)
 
-		_, err := client.ReportScriptExecutionResult(context.Background(), connect.NewRequest(&v1.ReportScriptExecutionResultRequest{
+		_, err := client.ReportScriptExecutionResult(context.Background(), &v1.ReportScriptExecutionResultRequest{
 			RequestId:     requestID,
 			ProjectName:   cfg.ProjectName,
 			ScriptId:      scriptID,
@@ -83,7 +82,7 @@ func handleExecuteScript(ctx context.Context, client taskguildv1connect.AgentMan
 			LogEntries:    logEntries,
 			ErrorMessage:  errMsg,
 			StoppedByUser: stoppedByUser,
-		}))
+		})
 		if err != nil {
 			slog.Error("failed to report script execution result", "request_id", requestID, "error", err)
 		}
@@ -426,11 +425,11 @@ func flushLogEntries(
 		return
 	}
 
-	_, err := client.ReportScriptOutputChunk(ctx, connect.NewRequest(&v1.ReportScriptOutputChunkRequest{
+	_, err := client.ReportScriptOutputChunk(ctx, &v1.ReportScriptOutputChunkRequest{
 		RequestId:   requestID,
 		ProjectName: cfg.ProjectName,
 		Entries:     entries,
-	}))
+	})
 	if err != nil {
 		slog.Error("[STREAM-TRACE] agent: failed to send output chunk to backend", "request_id", requestID, "error", err)
 	} else {

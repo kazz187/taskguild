@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"strconv"
 
-	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/kazz187/taskguild/internal/eventbus"
@@ -17,8 +16,8 @@ import (
 
 // --- Script sync & execution RPCs ---
 
-func (s *Server) SyncScripts(ctx context.Context, req *connect.Request[taskguildv1.SyncScriptsRequest]) (*connect.Response[taskguildv1.SyncScriptsResponse], error) {
-	projectName := req.Msg.GetProjectName()
+func (s *Server) SyncScripts(ctx context.Context, req *taskguildv1.SyncScriptsRequest) (*taskguildv1.SyncScriptsResponse, error) {
+	projectName := req.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -38,13 +37,13 @@ func (s *Server) SyncScripts(ctx context.Context, req *connect.Request[taskguild
 		protos[i] = scriptToProto(sc)
 	}
 
-	return connect.NewResponse(&taskguildv1.SyncScriptsResponse{
+	return &taskguildv1.SyncScriptsResponse{
 		Scripts: protos,
-	}), nil
+	}, nil
 }
 
-func (s *Server) ReportScriptExecutionResult(ctx context.Context, req *connect.Request[taskguildv1.ReportScriptExecutionResultRequest]) (*connect.Response[taskguildv1.ReportScriptExecutionResultResponse], error) {
-	projectName := req.Msg.GetProjectName()
+func (s *Server) ReportScriptExecutionResult(ctx context.Context, req *taskguildv1.ReportScriptExecutionResultRequest) (*taskguildv1.ReportScriptExecutionResultResponse, error) {
+	projectName := req.GetProjectName()
 	if projectName == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
@@ -56,59 +55,59 @@ func (s *Server) ReportScriptExecutionResult(ctx context.Context, req *connect.R
 
 	// Complete execution in the broker — this sends the completion event
 	// to all streaming subscribers and closes their channels.
-	slog.Info("[STREAM-TRACE] backend(agentmanager): received execution result from agent", "request_id", req.Msg.GetRequestId(), "success", req.Msg.GetSuccess(), "exit_code", req.Msg.GetExitCode(), "log_entry_count", len(req.Msg.GetLogEntries()))
+	slog.Info("[STREAM-TRACE] backend(agentmanager): received execution result from agent", "request_id", req.GetRequestId(), "success", req.GetSuccess(), "exit_code", req.GetExitCode(), "log_entry_count", len(req.GetLogEntries()))
 
 	if s.scriptBroker != nil {
 		s.scriptBroker.CompleteExecution(
-			req.Msg.GetRequestId(),
-			req.Msg.GetSuccess(),
-			req.Msg.GetExitCode(),
-			req.Msg.GetLogEntries(),
-			req.Msg.GetErrorMessage(),
-			req.Msg.GetStoppedByUser(),
+			req.GetRequestId(),
+			req.GetSuccess(),
+			req.GetExitCode(),
+			req.GetLogEntries(),
+			req.GetErrorMessage(),
+			req.GetStoppedByUser(),
 		)
 	}
 
 	// Publish event so other consumers (e.g. notifications) can react.
 	s.eventBus.PublishNew(
 		taskguildv1.EventType_EVENT_TYPE_SCRIPT_EXECUTION_RESULT,
-		req.Msg.GetRequestId(),
+		req.GetRequestId(),
 		"",
 		map[string]string{
 			eventbus.MetaProjectID:    proj.ID,
-			eventbus.MetaRequestID:    req.Msg.GetRequestId(),
-			eventbus.MetaScriptID:     req.Msg.GetScriptId(),
-			eventbus.MetaSuccess:      strconv.FormatBool(req.Msg.GetSuccess()),
-			eventbus.MetaExitCode:     strconv.Itoa(int(req.Msg.GetExitCode())),
-			eventbus.MetaErrorMessage: req.Msg.GetErrorMessage(),
+			eventbus.MetaRequestID:    req.GetRequestId(),
+			eventbus.MetaScriptID:     req.GetScriptId(),
+			eventbus.MetaSuccess:      strconv.FormatBool(req.GetSuccess()),
+			eventbus.MetaExitCode:     strconv.Itoa(int(req.GetExitCode())),
+			eventbus.MetaErrorMessage: req.GetErrorMessage(),
 		},
 	)
 
 	slog.Info("script execution result reported",
 		"project_id", proj.ID,
-		"script_id", req.Msg.GetScriptId(),
-		"success", req.Msg.GetSuccess(),
-		"exit_code", req.Msg.GetExitCode(),
-		"request_id", req.Msg.GetRequestId(),
+		"script_id", req.GetScriptId(),
+		"success", req.GetSuccess(),
+		"exit_code", req.GetExitCode(),
+		"request_id", req.GetRequestId(),
 	)
 
-	return connect.NewResponse(&taskguildv1.ReportScriptExecutionResultResponse{}), nil
+	return &taskguildv1.ReportScriptExecutionResultResponse{}, nil
 }
 
-func (s *Server) ReportScriptOutputChunk(ctx context.Context, req *connect.Request[taskguildv1.ReportScriptOutputChunkRequest]) (*connect.Response[taskguildv1.ReportScriptOutputChunkResponse], error) {
-	if req.Msg.GetProjectName() == "" {
+func (s *Server) ReportScriptOutputChunk(ctx context.Context, req *taskguildv1.ReportScriptOutputChunkRequest) (*taskguildv1.ReportScriptOutputChunkResponse, error) {
+	if req.GetProjectName() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
 	}
 
-	slog.Info("[STREAM-TRACE] backend(agentmanager): received output chunk from agent", "request_id", req.Msg.GetRequestId(), "entry_count", len(req.Msg.GetEntries()))
+	slog.Info("[STREAM-TRACE] backend(agentmanager): received output chunk from agent", "request_id", req.GetRequestId(), "entry_count", len(req.GetEntries()))
 
 	if s.scriptBroker != nil {
-		s.scriptBroker.PushOutput(req.Msg.GetRequestId(), req.Msg.GetEntries())
+		s.scriptBroker.PushOutput(req.GetRequestId(), req.GetEntries())
 	} else {
-		slog.Warn("[STREAM-TRACE] backend(agentmanager): scriptBroker is nil, cannot push output", "request_id", req.Msg.GetRequestId())
+		slog.Warn("[STREAM-TRACE] backend(agentmanager): scriptBroker is nil, cannot push output", "request_id", req.GetRequestId())
 	}
 
-	return connect.NewResponse(&taskguildv1.ReportScriptOutputChunkResponse{}), nil
+	return &taskguildv1.ReportScriptOutputChunkResponse{}, nil
 }
 
 // RequestScriptExecution sends an ExecuteScriptCommand to connected agent-managers

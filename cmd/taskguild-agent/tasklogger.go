@@ -7,8 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"connectrpc.com/connect"
-
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
 	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
@@ -48,13 +46,13 @@ func newTaskLogger(ctx context.Context, client taskguildv1connect.AgentManagerSe
 
 // Log sends a structured log entry to the server.
 func (tl *taskLogger) Log(category v1.TaskLogCategory, level v1.TaskLogLevel, message string, metadata map[string]string) {
-	_, err := tl.client.ReportTaskLog(tl.ctx, connect.NewRequest(&v1.ReportTaskLogRequest{
+	_, err := tl.client.ReportTaskLog(tl.ctx, &v1.ReportTaskLogRequest{
 		TaskId:   tl.taskID,
 		Level:    level,
 		Category: category,
 		Message:  message,
 		Metadata: metadata,
-	}))
+	})
 	if err != nil {
 		tl.logger.Error("failed to report task log", "error", err)
 	}

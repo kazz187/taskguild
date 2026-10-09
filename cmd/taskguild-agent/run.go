@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -17,7 +18,8 @@ import (
 	"syscall"
 	"time"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	"github.com/oklog/ulid/v2"
 	"github.com/sourcegraph/conc"
 
@@ -237,22 +239,16 @@ func runAgent() {
 
 	// Create Connect RPC clients with API key interceptor
 	httpClient := http.DefaultClient
-	interceptor := newAuthInterceptor(cfg.APIKey)
-	client := taskguildv1connect.NewAgentManagerServiceClient(
-		httpClient,
-		cfg.ServerURL,
-		connect.WithInterceptors(interceptor),
+	rpcClient := connect.NewClient(
+		// connect-go v2 caps each read message at 4 MiB by default. Keep v1's
+		// unbounded reads: GetTaskImage returns images up to
+		// task.MaxImageSizeBytes (10 MiB).
+		connecthttp.NewTransport(httpClient, cfg.ServerURL, connecthttp.WithReadMaxBytes(0)),
+		newAuthInterceptor(cfg.APIKey),
 	)
-	taskClient := taskguildv1connect.NewTaskServiceClient(
-		httpClient,
-		cfg.ServerURL,
-		connect.WithInterceptors(interceptor),
-	)
-	interClient := taskguildv1connect.NewInteractionServiceClient(
-		httpClient,
-		cfg.ServerURL,
-		connect.WithInterceptors(interceptor),
-	)
+	client := taskguildv1connect.NewAgentManagerServiceClient(rpcClient)
+	taskClient := taskguildv1connect.NewTaskServiceClient(rpcClient)
+	interClient := taskguildv1connect.NewInteractionServiceClient(rpcClient)
 
 	// Wait for the server to be ready before making any RPC calls.
 	// This is important during sentinel hot-reload restarts where the
@@ -389,14 +385,14 @@ func runSubscribeLoop(
 	streamCtx, streamCancel := context.WithCancel(ctx)
 	defer streamCancel()
 
-	stream, err := client.Subscribe(streamCtx, connect.NewRequest(&v1.AgentManagerSubscribeRequest{
+	stream, err := client.Subscribe(streamCtx, &v1.AgentManagerSubscribeRequest{
 		AgentManagerId:     cfg.AgentManagerID,
 		MaxConcurrentTasks: int32(cfg.MaxConcurrentTasks),
 		ProjectName:        cfg.ProjectName,
 		ActiveTaskIds:      activeTaskIDs,
 		AgentVersion:       version.Short(),
 		WorkDir:            cfg.WorkDir,
-	}))
+	})
 	if err != nil {
 		return fmt.Errorf("failed to subscribe: %w", err)
 	}
@@ -437,10 +433,17 @@ func runSubscribeLoop(
 		watchdogWg.Wait()
 	}()
 
-	for stream.Receive() {
-		lastReceive.Store(time.Now().UnixNano())
+	for {
+		cmd, err := stream.Receive()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil
+			}
 
-		cmd := stream.Msg()
+			return fmt.Errorf("stream error: %w", err)
+		}
+
+		lastReceive.Store(time.Now().UnixNano())
 
 		// Skip empty commands (e.g. caused by proxy-injected frames or
 		// partial envelope reads from intermediaries).
@@ -482,24 +485,24 @@ func runSubscribeLoop(
 			mu.Unlock()
 
 			// Try to claim the task
-			claimResp, err := client.ClaimTask(ctx, connect.NewRequest(&v1.ClaimTaskRequest{
+			claimResp, err := client.ClaimTask(ctx, &v1.ClaimTaskRequest{
 				TaskId:         taskID,
 				AgentManagerId: cfg.AgentManagerID,
-			}))
+			})
 			if err != nil {
 				slog.Error("failed to claim task", "task_id", taskID, "error", err)
 				continue
 			}
 
-			if !claimResp.Msg.GetSuccess() {
+			if !claimResp.GetSuccess() {
 				slog.Info("task already claimed by another agent", "task_id", taskID)
 				continue
 			}
 
 			slog.Info("claimed task", "task_id", taskID)
 
-			instructions := claimResp.Msg.GetInstructions()
-			metadata := claimResp.Msg.GetMetadata()
+			instructions := claimResp.GetInstructions()
+			metadata := claimResp.GetMetadata()
 
 			taskCtx, taskCancel := context.WithCancel(taskRootCtx)
 
@@ -733,12 +736,6 @@ func runSubscribeLoop(
 			slog.Warn("unknown command type", "type", fmt.Sprintf("%T", cmd.GetCommand()))
 		}
 	}
-
-	if err := stream.Err(); err != nil {
-		return fmt.Errorf("stream error: %w", err)
-	}
-
-	return nil
 }
 
 func heartbeat(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, agentManagerID string) {
@@ -750,9 +747,9 @@ func heartbeat(ctx context.Context, client taskguildv1connect.AgentManagerServic
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			_, err := client.Heartbeat(ctx, connect.NewRequest(&v1.HeartbeatRequest{
+			_, err := client.Heartbeat(ctx, &v1.HeartbeatRequest{
 				AgentManagerId: agentManagerID,
-			}))
+			})
 			if err != nil {
 				slog.Warn("heartbeat error", "error", err)
 			}
@@ -842,10 +839,10 @@ func handleListWorktrees(ctx context.Context, client taskguildv1connect.AgentMan
 			slog.Error("failed to read worktrees directory", "error", err)
 		}
 		// Report empty list so frontend knows the scan completed.
-		_, _ = client.ReportWorktreeList(ctx, connect.NewRequest(&v1.ReportWorktreeListRequest{
+		_, _ = client.ReportWorktreeList(ctx, &v1.ReportWorktreeListRequest{
 			RequestId:   requestID,
 			ProjectName: cfg.ProjectName,
-		}))
+		})
 
 		return
 	}
@@ -909,11 +906,11 @@ func handleListWorktrees(ctx context.Context, client taskguildv1connect.AgentMan
 		})
 	}
 
-	_, err = client.ReportWorktreeList(ctx, connect.NewRequest(&v1.ReportWorktreeListRequest{
+	_, err = client.ReportWorktreeList(ctx, &v1.ReportWorktreeListRequest{
 		RequestId:   requestID,
 		ProjectName: cfg.ProjectName,
 		Worktrees:   worktrees,
-	}))
+	})
 	if err != nil {
 		slog.Error("failed to report worktree list", "error", err)
 	} else {
@@ -928,13 +925,13 @@ func handleDeleteWorktree(ctx context.Context, client taskguildv1connect.AgentMa
 	force := cmd.GetForce()
 
 	reportResult := func(success bool, errMsg string) {
-		_, err := client.ReportWorktreeDeleteResult(ctx, connect.NewRequest(&v1.ReportWorktreeDeleteResultRequest{
+		_, err := client.ReportWorktreeDeleteResult(ctx, &v1.ReportWorktreeDeleteResultRequest{
 			RequestId:    requestID,
 			ProjectName:  cfg.ProjectName,
 			WorktreeName: worktreeName,
 			Success:      success,
 			ErrorMessage: errMsg,
-		}))
+		})
 		if err != nil {
 			slog.Error("failed to report worktree delete result", "error", err)
 		}
@@ -1026,13 +1023,13 @@ func handleDeleteWorktree(ctx context.Context, client taskguildv1connect.AgentMa
 // handleGitPullMain executes `git pull origin main` in the main repository working directory.
 func handleGitPullMain(ctx context.Context, client taskguildv1connect.AgentManagerServiceClient, cfg *config, requestID string) {
 	reportResult := func(success bool, output, errMsg string) {
-		_, err := client.ReportGitPullMainResult(ctx, connect.NewRequest(&v1.ReportGitPullMainResultRequest{
+		_, err := client.ReportGitPullMainResult(ctx, &v1.ReportGitPullMainResultRequest{
 			RequestId:    requestID,
 			ProjectName:  cfg.ProjectName,
 			Success:      success,
 			Output:       output,
 			ErrorMessage: errMsg,
-		}))
+		})
 		if err != nil {
 			slog.Error("failed to report git pull main result", "error", err)
 		}
@@ -1054,31 +1051,17 @@ func handleGitPullMain(ctx context.Context, client taskguildv1connect.AgentManag
 	reportResult(true, output, "")
 }
 
-// authInterceptor adds the API key to outgoing requests.
-type authInterceptor struct {
-	apiKey string
-}
+// newAuthInterceptor adds the API key to outgoing requests.
+func newAuthInterceptor(apiKey string) connect.ClientInterceptor {
+	return func(next connect.ClientFunc) connect.ClientFunc {
+		return func(ctx context.Context, spec connect.Spec) (connect.ClientStream, error) {
+			// connect.Client attaches a CallInfo to ctx before running the
+			// interceptor chain, so it is always present here.
+			if info, ok := connect.CallInfoForClientContext(ctx); ok {
+				info.RequestHeader().Set("Authorization", "Bearer "+apiKey)
+			}
 
-func newAuthInterceptor(apiKey string) *authInterceptor {
-	return &authInterceptor{apiKey: apiKey}
-}
-
-func (i *authInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
-	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-		req.Header().Set("Authorization", "Bearer "+i.apiKey)
-		return next(ctx, req)
+			return next(ctx, spec)
+		}
 	}
-}
-
-func (i *authInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
-	return func(ctx context.Context, spec connect.Spec) connect.StreamingClientConn {
-		conn := next(ctx, spec)
-		conn.RequestHeader().Set("Authorization", "Bearer "+i.apiKey)
-
-		return conn
-	}
-}
-
-func (i *authInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
-	return next
 }

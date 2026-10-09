@@ -8,8 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"connectrpc.com/connect"
-	"connectrpc.com/grpchealth"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
+	"connectrpc.com/grpchealth/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/cors"
 
@@ -157,10 +158,10 @@ func (hc *HealthChecker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Server) interceptors() []connect.Interceptor {
-	return []connect.Interceptor{
-		clog.NewSlogConnectInterceptor(),
-		cerr.NewConvertConnectErrorInterceptor(),
+func (s *Server) interceptors() []connect.ServerInterceptor {
+	return []connect.ServerInterceptor{
+		clog.NewSlogConnectServerInterceptor(),
+		cerr.NewConvertConnectErrorServerInterceptor(),
 	}
 }
 
@@ -242,27 +243,37 @@ func (s *Server) newMux() http.Handler {
 
 	mux.Handle("/health", &HealthChecker{})
 	mux.Handle("/api/", r)
-	mux.Handle(grpchealth.NewHandler(grpchealth.NewStaticChecker()))
 
-	interceptors := s.interceptors()
-	handlerOpts := connect.WithInterceptors(interceptors...)
+	// grpc.health.v1 runs on its own server without interceptors, as in v1, so
+	// health checks are neither access-logged nor error-converted.
+	healthServer := connect.NewServer()
+	grpchealth.Register(healthServer, grpchealth.NewStaticChecker())
+	connecthttp.Mount(mux, healthServer)
 
-	mux.Handle(taskguildv1connect.NewProjectServiceHandler(s.projectServer, handlerOpts))
-	mux.Handle(taskguildv1connect.NewWorkflowServiceHandler(s.workflowServer, handlerOpts))
-	mux.Handle(taskguildv1connect.NewTaskServiceHandler(s.taskServer, handlerOpts))
-	mux.Handle(taskguildv1connect.NewInteractionServiceHandler(s.interactionServer, handlerOpts))
-	mux.Handle(taskguildv1connect.NewAgentManagerServiceHandler(s.agentManagerServer, handlerOpts))
-	mux.Handle(taskguildv1connect.NewAgentServiceHandler(s.agentServer, handlerOpts))
-	mux.Handle(taskguildv1connect.NewSkillServiceHandler(s.skillServer, handlerOpts))
-	mux.Handle(taskguildv1connect.NewScriptServiceHandler(s.scriptServer, handlerOpts))
-	mux.Handle(taskguildv1connect.NewEventServiceHandler(s.eventServer, handlerOpts))
-	mux.Handle(taskguildv1connect.NewTaskLogServiceHandler(s.taskLogServer, handlerOpts))
-	mux.Handle(taskguildv1connect.NewPushNotificationServiceHandler(s.pushNotificationServer, handlerOpts))
-	mux.Handle(taskguildv1connect.NewPermissionServiceHandler(s.permissionServer, handlerOpts))
-	mux.Handle(taskguildv1connect.NewSingleCommandPermissionServiceHandler(s.singleCommandPermissionServer, handlerOpts))
-	mux.Handle(taskguildv1connect.NewTemplateServiceHandler(s.templateServer, handlerOpts))
-	mux.Handle(taskguildv1connect.NewClaudeSettingsServiceHandler(s.claudeSettingsServer, handlerOpts))
-	mux.Handle(taskguildv1connect.NewScheduleServiceHandler(s.scheduleServer, handlerOpts))
+	rpcServer := connect.NewServer(s.interceptors()...)
+	taskguildv1connect.RegisterProjectServiceHandler(rpcServer, s.projectServer)
+	taskguildv1connect.RegisterWorkflowServiceHandler(rpcServer, s.workflowServer)
+	taskguildv1connect.RegisterTaskServiceHandler(rpcServer, s.taskServer)
+	taskguildv1connect.RegisterInteractionServiceHandler(rpcServer, s.interactionServer)
+	taskguildv1connect.RegisterAgentManagerServiceHandler(rpcServer, s.agentManagerServer)
+	taskguildv1connect.RegisterAgentServiceHandler(rpcServer, s.agentServer)
+	taskguildv1connect.RegisterSkillServiceHandler(rpcServer, s.skillServer)
+	taskguildv1connect.RegisterScriptServiceHandler(rpcServer, s.scriptServer)
+	taskguildv1connect.RegisterEventServiceHandler(rpcServer, s.eventServer)
+	taskguildv1connect.RegisterTaskLogServiceHandler(rpcServer, s.taskLogServer)
+	taskguildv1connect.RegisterPushNotificationServiceHandler(rpcServer, s.pushNotificationServer)
+	taskguildv1connect.RegisterPermissionServiceHandler(rpcServer, s.permissionServer)
+	taskguildv1connect.RegisterSingleCommandPermissionServiceHandler(rpcServer, s.singleCommandPermissionServer)
+	taskguildv1connect.RegisterTemplateServiceHandler(rpcServer, s.templateServer)
+	taskguildv1connect.RegisterClaudeSettingsServiceHandler(rpcServer, s.claudeSettingsServer)
+	taskguildv1connect.RegisterScheduleServiceHandler(rpcServer, s.scheduleServer)
+	// connect-go v2 caps each read message at 4 MiB by default. Keep v1's
+	// unbounded reads: UploadTaskImage carries images up to
+	// task.MaxImageSizeBytes (10 MiB, base64-encoded by the JSON codec the
+	// frontend uses), and ReportScriptExecutionResult carries a script's whole
+	// log. Every caller but RespondToInteractionByToken has already passed the
+	// API key check before the body is read.
+	connecthttp.Mount(mux, rpcServer, connecthttp.WithReadMaxBytes(0))
 
 	return mux
 }

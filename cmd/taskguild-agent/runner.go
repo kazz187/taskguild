@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/sourcegraph/conc"
 
 	claudeagent "github.com/kazz187/claude-agent-sdk-go"
@@ -949,11 +948,11 @@ func reportTaskResult(
 ) {
 	logger := clog.LoggerFromContext(ctx)
 
-	_, err := client.ReportTaskResult(ctx, connect.NewRequest(&v1.ReportTaskResultRequest{
+	_, err := client.ReportTaskResult(ctx, &v1.ReportTaskResultRequest{
 		TaskId:       taskID,
 		Summary:      summary,
 		ErrorMessage: errMsg,
-	}))
+	})
 	if err != nil {
 		logger.Error("failed to report task result", "error", err)
 	}
@@ -969,12 +968,12 @@ func reportAgentStatus(
 ) {
 	logger := clog.LoggerFromContext(ctx)
 
-	_, err := client.ReportAgentStatus(ctx, connect.NewRequest(&v1.ReportAgentStatusRequest{
+	_, err := client.ReportAgentStatus(ctx, &v1.ReportAgentStatusRequest{
 		AgentManagerId: agentManagerID,
 		TaskId:         taskID,
 		Status:         status,
 		Message:        message,
-	}))
+	})
 	if err != nil {
 		logger.Error("failed to report agent status", "error", err)
 	}

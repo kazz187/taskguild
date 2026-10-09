@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/oklog/ulid/v2"
 	"github.com/robfig/cron/v3"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -101,25 +100,25 @@ func (s *Server) validateWorkflowAndStatus(ctx context.Context, workflowID, stat
 	return "", cerr.NewError(cerr.FailedPrecondition, "workflow has no initial status", nil).ConnectError()
 }
 
-func (s *Server) CreateSchedule(ctx context.Context, req *connect.Request[taskguildv1.CreateScheduleRequest]) (*connect.Response[taskguildv1.CreateScheduleResponse], error) {
-	if req.Msg.GetProjectId() == "" {
+func (s *Server) CreateSchedule(ctx context.Context, req *taskguildv1.CreateScheduleRequest) (*taskguildv1.CreateScheduleResponse, error) {
+	if req.GetProjectId() == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
 	}
 
-	if strings.TrimSpace(req.Msg.GetName()) == "" {
+	if strings.TrimSpace(req.GetName()) == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "name is required", nil).ConnectError()
 	}
 
-	if strings.TrimSpace(req.Msg.GetTaskTitle()) == "" {
+	if strings.TrimSpace(req.GetTaskTitle()) == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "task_title is required", nil).ConnectError()
 	}
 
-	parsedCron, err := validateCronExpression(req.Msg.GetCronExpression())
+	parsedCron, err := validateCronExpression(req.GetCronExpression())
 	if err != nil {
 		return nil, err
 	}
 
-	statusID, err := s.validateWorkflowAndStatus(ctx, req.Msg.GetWorkflowId(), req.Msg.GetStatusId())
+	statusID, err := s.validateWorkflowAndStatus(ctx, req.GetWorkflowId(), req.GetStatusId())
 	if err != nil {
 		return nil, err
 	}
@@ -127,18 +126,18 @@ func (s *Server) CreateSchedule(ctx context.Context, req *connect.Request[taskgu
 	now := time.Now()
 	sched := &Schedule{
 		ID:              ulid.Make().String(),
-		ProjectID:       req.Msg.GetProjectId(),
-		WorkflowID:      req.Msg.GetWorkflowId(),
-		Name:            req.Msg.GetName(),
-		Description:     req.Msg.GetDescription(),
-		CronExpression:  strings.TrimSpace(req.Msg.GetCronExpression()),
-		Enabled:         req.Msg.GetEnabled(),
-		TaskTitle:       req.Msg.GetTaskTitle(),
-		TaskDescription: req.Msg.GetTaskDescription(),
+		ProjectID:       req.GetProjectId(),
+		WorkflowID:      req.GetWorkflowId(),
+		Name:            req.GetName(),
+		Description:     req.GetDescription(),
+		CronExpression:  strings.TrimSpace(req.GetCronExpression()),
+		Enabled:         req.GetEnabled(),
+		TaskTitle:       req.GetTaskTitle(),
+		TaskDescription: req.GetTaskDescription(),
 		StatusID:        statusID,
-		UseWorktree:     req.Msg.GetUseWorktree(),
-		Effort:          req.Msg.GetEffort(),
-		TaskMetadata:    req.Msg.GetTaskMetadata(),
+		UseWorktree:     req.GetUseWorktree(),
+		Effort:          req.GetEffort(),
+		TaskMetadata:    req.GetTaskMetadata(),
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
@@ -158,34 +157,34 @@ func (s *Server) CreateSchedule(ctx context.Context, req *connect.Request[taskgu
 		}
 	}
 
-	return connect.NewResponse(&taskguildv1.CreateScheduleResponse{
+	return &taskguildv1.CreateScheduleResponse{
 		Schedule: toProto(sched),
-	}), nil
+	}, nil
 }
 
-func (s *Server) GetSchedule(ctx context.Context, req *connect.Request[taskguildv1.GetScheduleRequest]) (*connect.Response[taskguildv1.GetScheduleResponse], error) {
-	sched, err := s.repo.Get(ctx, req.Msg.GetId())
+func (s *Server) GetSchedule(ctx context.Context, req *taskguildv1.GetScheduleRequest) (*taskguildv1.GetScheduleResponse, error) {
+	sched, err := s.repo.Get(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	return connect.NewResponse(&taskguildv1.GetScheduleResponse{
+	return &taskguildv1.GetScheduleResponse{
 		Schedule: toProto(sched),
-	}), nil
+	}, nil
 }
 
-func (s *Server) ListSchedules(ctx context.Context, req *connect.Request[taskguildv1.ListSchedulesRequest]) (*connect.Response[taskguildv1.ListSchedulesResponse], error) {
+func (s *Server) ListSchedules(ctx context.Context, req *taskguildv1.ListSchedulesRequest) (*taskguildv1.ListSchedulesResponse, error) {
 	limit, offset := int32(50), int32(0)
 
-	if req.Msg.GetPagination() != nil {
-		if req.Msg.GetPagination().GetLimit() > 0 {
-			limit = req.Msg.GetPagination().GetLimit()
+	if req.GetPagination() != nil {
+		if req.GetPagination().GetLimit() > 0 {
+			limit = req.GetPagination().GetLimit()
 		}
 
-		offset = req.Msg.GetPagination().GetOffset()
+		offset = req.GetPagination().GetOffset()
 	}
 
-	schedules, total, err := s.repo.List(ctx, req.Msg.GetProjectId(), int(limit), int(offset))
+	schedules, total, err := s.repo.List(ctx, req.GetProjectId(), int(limit), int(offset))
 	if err != nil {
 		return nil, err
 	}
@@ -195,57 +194,57 @@ func (s *Server) ListSchedules(ctx context.Context, req *connect.Request[taskgui
 		protos[i] = toProto(sched)
 	}
 
-	return connect.NewResponse(&taskguildv1.ListSchedulesResponse{
+	return &taskguildv1.ListSchedulesResponse{
 		Schedules: protos,
 		Pagination: &taskguildv1.PaginationResponse{
 			Total:  int32(total),
 			Limit:  limit,
 			Offset: offset,
 		},
-	}), nil
+	}, nil
 }
 
-func (s *Server) UpdateSchedule(ctx context.Context, req *connect.Request[taskguildv1.UpdateScheduleRequest]) (*connect.Response[taskguildv1.UpdateScheduleResponse], error) {
-	sched, err := s.repo.Get(ctx, req.Msg.GetId())
+func (s *Server) UpdateSchedule(ctx context.Context, req *taskguildv1.UpdateScheduleRequest) (*taskguildv1.UpdateScheduleResponse, error) {
+	sched, err := s.repo.Get(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	if strings.TrimSpace(req.Msg.GetName()) == "" {
+	if strings.TrimSpace(req.GetName()) == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "name is required", nil).ConnectError()
 	}
 
-	if strings.TrimSpace(req.Msg.GetTaskTitle()) == "" {
+	if strings.TrimSpace(req.GetTaskTitle()) == "" {
 		return nil, cerr.NewError(cerr.InvalidArgument, "task_title is required", nil).ConnectError()
 	}
 
-	parsedCron, err := validateCronExpression(req.Msg.GetCronExpression())
+	parsedCron, err := validateCronExpression(req.GetCronExpression())
 	if err != nil {
 		return nil, err
 	}
 
-	wfID := req.Msg.GetWorkflowId()
+	wfID := req.GetWorkflowId()
 	if wfID == "" {
 		wfID = sched.WorkflowID
 	}
 
-	statusID, err := s.validateWorkflowAndStatus(ctx, wfID, req.Msg.GetStatusId())
+	statusID, err := s.validateWorkflowAndStatus(ctx, wfID, req.GetStatusId())
 	if err != nil {
 		return nil, err
 	}
 
 	sched.WorkflowID = wfID
-	sched.Name = req.Msg.GetName()
-	sched.Description = req.Msg.GetDescription()
-	sched.CronExpression = strings.TrimSpace(req.Msg.GetCronExpression())
-	sched.TaskTitle = req.Msg.GetTaskTitle()
-	sched.TaskDescription = req.Msg.GetTaskDescription()
+	sched.Name = req.GetName()
+	sched.Description = req.GetDescription()
+	sched.CronExpression = strings.TrimSpace(req.GetCronExpression())
+	sched.TaskTitle = req.GetTaskTitle()
+	sched.TaskDescription = req.GetTaskDescription()
 	sched.StatusID = statusID
-	sched.Effort = req.Msg.GetEffort()
-	sched.TaskMetadata = req.Msg.GetTaskMetadata()
+	sched.Effort = req.GetEffort()
+	sched.TaskMetadata = req.GetTaskMetadata()
 
-	if req.Msg.UseWorktree != nil {
-		sched.UseWorktree = req.Msg.GetUseWorktree()
+	if req.UseWorktree != nil {
+		sched.UseWorktree = req.GetUseWorktree()
 	}
 
 	sched.UpdatedAt = time.Now()
@@ -268,28 +267,28 @@ func (s *Server) UpdateSchedule(ctx context.Context, req *connect.Request[taskgu
 		s.scheduler.Remove(sched.ID)
 	}
 
-	return connect.NewResponse(&taskguildv1.UpdateScheduleResponse{
+	return &taskguildv1.UpdateScheduleResponse{
 		Schedule: toProto(sched),
-	}), nil
+	}, nil
 }
 
-func (s *Server) DeleteSchedule(ctx context.Context, req *connect.Request[taskguildv1.DeleteScheduleRequest]) (*connect.Response[taskguildv1.DeleteScheduleResponse], error) {
-	if err := s.repo.Delete(ctx, req.Msg.GetId()); err != nil {
+func (s *Server) DeleteSchedule(ctx context.Context, req *taskguildv1.DeleteScheduleRequest) (*taskguildv1.DeleteScheduleResponse, error) {
+	if err := s.repo.Delete(ctx, req.GetId()); err != nil {
 		return nil, err
 	}
 
-	s.scheduler.Remove(req.Msg.GetId())
+	s.scheduler.Remove(req.GetId())
 
-	return connect.NewResponse(&taskguildv1.DeleteScheduleResponse{}), nil
+	return &taskguildv1.DeleteScheduleResponse{}, nil
 }
 
-func (s *Server) SetScheduleEnabled(ctx context.Context, req *connect.Request[taskguildv1.SetScheduleEnabledRequest]) (*connect.Response[taskguildv1.SetScheduleEnabledResponse], error) {
-	sched, err := s.repo.Get(ctx, req.Msg.GetId())
+func (s *Server) SetScheduleEnabled(ctx context.Context, req *taskguildv1.SetScheduleEnabledRequest) (*taskguildv1.SetScheduleEnabledResponse, error) {
+	sched, err := s.repo.Get(ctx, req.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	sched.Enabled = req.Msg.GetEnabled()
+	sched.Enabled = req.GetEnabled()
 	sched.UpdatedAt = time.Now()
 
 	if sched.Enabled {
@@ -310,9 +309,9 @@ func (s *Server) SetScheduleEnabled(ctx context.Context, req *connect.Request[ta
 		s.scheduler.Remove(sched.ID)
 	}
 
-	return connect.NewResponse(&taskguildv1.SetScheduleEnabledResponse{
+	return &taskguildv1.SetScheduleEnabledResponse{
 		Schedule: toProto(sched),
-	}), nil
+	}, nil
 }
 
 func toProto(s *Schedule) *taskguildv1.Schedule {

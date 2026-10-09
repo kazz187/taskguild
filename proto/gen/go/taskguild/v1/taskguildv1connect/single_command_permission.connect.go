@@ -5,20 +5,11 @@
 package taskguildv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/kazz187/taskguild/proto/gen/go/taskguild/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// SingleCommandPermissionServiceName is the fully-qualified name of the
@@ -26,187 +17,207 @@ const (
 	SingleCommandPermissionServiceName = "taskguild.v1.SingleCommandPermissionService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// SingleCommandPermissionServiceListSingleCommandPermissionsProcedure is the fully-qualified name
-	// of the SingleCommandPermissionService's ListSingleCommandPermissions RPC.
+	// SingleCommandPermissionServiceListSingleCommandPermissionsProcedure is the procedure name of the
+	// SingleCommandPermissionService's ListSingleCommandPermissions RPC.
 	SingleCommandPermissionServiceListSingleCommandPermissionsProcedure = "/taskguild.v1.SingleCommandPermissionService/ListSingleCommandPermissions"
-	// SingleCommandPermissionServiceCreateSingleCommandPermissionProcedure is the fully-qualified name
-	// of the SingleCommandPermissionService's CreateSingleCommandPermission RPC.
+	// SingleCommandPermissionServiceCreateSingleCommandPermissionProcedure is the procedure name of the
+	// SingleCommandPermissionService's CreateSingleCommandPermission RPC.
 	SingleCommandPermissionServiceCreateSingleCommandPermissionProcedure = "/taskguild.v1.SingleCommandPermissionService/CreateSingleCommandPermission"
-	// SingleCommandPermissionServiceUpdateSingleCommandPermissionProcedure is the fully-qualified name
-	// of the SingleCommandPermissionService's UpdateSingleCommandPermission RPC.
+	// SingleCommandPermissionServiceUpdateSingleCommandPermissionProcedure is the procedure name of the
+	// SingleCommandPermissionService's UpdateSingleCommandPermission RPC.
 	SingleCommandPermissionServiceUpdateSingleCommandPermissionProcedure = "/taskguild.v1.SingleCommandPermissionService/UpdateSingleCommandPermission"
-	// SingleCommandPermissionServiceDeleteSingleCommandPermissionProcedure is the fully-qualified name
-	// of the SingleCommandPermissionService's DeleteSingleCommandPermission RPC.
+	// SingleCommandPermissionServiceDeleteSingleCommandPermissionProcedure is the procedure name of the
+	// SingleCommandPermissionService's DeleteSingleCommandPermission RPC.
 	SingleCommandPermissionServiceDeleteSingleCommandPermissionProcedure = "/taskguild.v1.SingleCommandPermissionService/DeleteSingleCommandPermission"
+)
+
+var (
+	singleCommandPermissionServiceListSingleCommandPermissionsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_single_command_permission_proto.Services().ByName("SingleCommandPermissionService").Methods().ByName("ListSingleCommandPermissions"),
+			Procedure:  SingleCommandPermissionServiceListSingleCommandPermissionsProcedure,
+		}
+	})
+	singleCommandPermissionServiceCreateSingleCommandPermissionSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_single_command_permission_proto.Services().ByName("SingleCommandPermissionService").Methods().ByName("CreateSingleCommandPermission"),
+			Procedure:  SingleCommandPermissionServiceCreateSingleCommandPermissionProcedure,
+		}
+	})
+	singleCommandPermissionServiceUpdateSingleCommandPermissionSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_single_command_permission_proto.Services().ByName("SingleCommandPermissionService").Methods().ByName("UpdateSingleCommandPermission"),
+			Procedure:  SingleCommandPermissionServiceUpdateSingleCommandPermissionProcedure,
+		}
+	})
+	singleCommandPermissionServiceDeleteSingleCommandPermissionSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_taskguild_v1_single_command_permission_proto.Services().ByName("SingleCommandPermissionService").Methods().ByName("DeleteSingleCommandPermission"),
+			Procedure:  SingleCommandPermissionServiceDeleteSingleCommandPermissionProcedure,
+		}
+	})
 )
 
 // SingleCommandPermissionServiceClient is a client for the
 // taskguild.v1.SingleCommandPermissionService service.
 type SingleCommandPermissionServiceClient interface {
 	// ListSingleCommandPermissions returns all single-command permission rules for a project.
-	ListSingleCommandPermissions(context.Context, *connect.Request[v1.ListSingleCommandPermissionsRequest]) (*connect.Response[v1.ListSingleCommandPermissionsResponse], error)
+	ListSingleCommandPermissions(context.Context, *v1.ListSingleCommandPermissionsRequest) (*v1.ListSingleCommandPermissionsResponse, error)
 	// CreateSingleCommandPermission adds a new regex permission rule for a project.
-	CreateSingleCommandPermission(context.Context, *connect.Request[v1.CreateSingleCommandPermissionRequest]) (*connect.Response[v1.CreateSingleCommandPermissionResponse], error)
+	CreateSingleCommandPermission(context.Context, *v1.CreateSingleCommandPermissionRequest) (*v1.CreateSingleCommandPermissionResponse, error)
 	// UpdateSingleCommandPermission modifies an existing permission rule.
-	UpdateSingleCommandPermission(context.Context, *connect.Request[v1.UpdateSingleCommandPermissionRequest]) (*connect.Response[v1.UpdateSingleCommandPermissionResponse], error)
+	UpdateSingleCommandPermission(context.Context, *v1.UpdateSingleCommandPermissionRequest) (*v1.UpdateSingleCommandPermissionResponse, error)
 	// DeleteSingleCommandPermission removes a permission rule.
-	DeleteSingleCommandPermission(context.Context, *connect.Request[v1.DeleteSingleCommandPermissionRequest]) (*connect.Response[v1.DeleteSingleCommandPermissionResponse], error)
+	DeleteSingleCommandPermission(context.Context, *v1.DeleteSingleCommandPermissionRequest) (*v1.DeleteSingleCommandPermissionResponse, error)
 }
 
 // NewSingleCommandPermissionServiceClient constructs a client for the
-// taskguild.v1.SingleCommandPermissionService service. By default, it uses the Connect protocol
-// with the binary Protobuf Codec, asks for gzipped responses, and sends uncompressed requests. To
-// use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC() or connect.WithGRPCWeb()
-// options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewSingleCommandPermissionServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) SingleCommandPermissionServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	singleCommandPermissionServiceMethods := v1.File_taskguild_v1_single_command_permission_proto.Services().ByName("SingleCommandPermissionService").Methods()
-	return &singleCommandPermissionServiceClient{
-		listSingleCommandPermissions: connect.NewClient[v1.ListSingleCommandPermissionsRequest, v1.ListSingleCommandPermissionsResponse](
-			httpClient,
-			baseURL+SingleCommandPermissionServiceListSingleCommandPermissionsProcedure,
-			connect.WithSchema(singleCommandPermissionServiceMethods.ByName("ListSingleCommandPermissions")),
-			connect.WithClientOptions(opts...),
-		),
-		createSingleCommandPermission: connect.NewClient[v1.CreateSingleCommandPermissionRequest, v1.CreateSingleCommandPermissionResponse](
-			httpClient,
-			baseURL+SingleCommandPermissionServiceCreateSingleCommandPermissionProcedure,
-			connect.WithSchema(singleCommandPermissionServiceMethods.ByName("CreateSingleCommandPermission")),
-			connect.WithClientOptions(opts...),
-		),
-		updateSingleCommandPermission: connect.NewClient[v1.UpdateSingleCommandPermissionRequest, v1.UpdateSingleCommandPermissionResponse](
-			httpClient,
-			baseURL+SingleCommandPermissionServiceUpdateSingleCommandPermissionProcedure,
-			connect.WithSchema(singleCommandPermissionServiceMethods.ByName("UpdateSingleCommandPermission")),
-			connect.WithClientOptions(opts...),
-		),
-		deleteSingleCommandPermission: connect.NewClient[v1.DeleteSingleCommandPermissionRequest, v1.DeleteSingleCommandPermissionResponse](
-			httpClient,
-			baseURL+SingleCommandPermissionServiceDeleteSingleCommandPermissionProcedure,
-			connect.WithSchema(singleCommandPermissionServiceMethods.ByName("DeleteSingleCommandPermission")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// singleCommandPermissionServiceClient implements SingleCommandPermissionServiceClient.
-type singleCommandPermissionServiceClient struct {
-	listSingleCommandPermissions  *connect.Client[v1.ListSingleCommandPermissionsRequest, v1.ListSingleCommandPermissionsResponse]
-	createSingleCommandPermission *connect.Client[v1.CreateSingleCommandPermissionRequest, v1.CreateSingleCommandPermissionResponse]
-	updateSingleCommandPermission *connect.Client[v1.UpdateSingleCommandPermissionRequest, v1.UpdateSingleCommandPermissionResponse]
-	deleteSingleCommandPermission *connect.Client[v1.DeleteSingleCommandPermissionRequest, v1.DeleteSingleCommandPermissionResponse]
-}
-
-// ListSingleCommandPermissions calls
-// taskguild.v1.SingleCommandPermissionService.ListSingleCommandPermissions.
-func (c *singleCommandPermissionServiceClient) ListSingleCommandPermissions(ctx context.Context, req *connect.Request[v1.ListSingleCommandPermissionsRequest]) (*connect.Response[v1.ListSingleCommandPermissionsResponse], error) {
-	return c.listSingleCommandPermissions.CallUnary(ctx, req)
-}
-
-// CreateSingleCommandPermission calls
-// taskguild.v1.SingleCommandPermissionService.CreateSingleCommandPermission.
-func (c *singleCommandPermissionServiceClient) CreateSingleCommandPermission(ctx context.Context, req *connect.Request[v1.CreateSingleCommandPermissionRequest]) (*connect.Response[v1.CreateSingleCommandPermissionResponse], error) {
-	return c.createSingleCommandPermission.CallUnary(ctx, req)
-}
-
-// UpdateSingleCommandPermission calls
-// taskguild.v1.SingleCommandPermissionService.UpdateSingleCommandPermission.
-func (c *singleCommandPermissionServiceClient) UpdateSingleCommandPermission(ctx context.Context, req *connect.Request[v1.UpdateSingleCommandPermissionRequest]) (*connect.Response[v1.UpdateSingleCommandPermissionResponse], error) {
-	return c.updateSingleCommandPermission.CallUnary(ctx, req)
-}
-
-// DeleteSingleCommandPermission calls
-// taskguild.v1.SingleCommandPermissionService.DeleteSingleCommandPermission.
-func (c *singleCommandPermissionServiceClient) DeleteSingleCommandPermission(ctx context.Context, req *connect.Request[v1.DeleteSingleCommandPermissionRequest]) (*connect.Response[v1.DeleteSingleCommandPermissionResponse], error) {
-	return c.deleteSingleCommandPermission.CallUnary(ctx, req)
+// taskguild.v1.SingleCommandPermissionService service. Multiple service clients may share a single
+// connect.Client.
+func NewSingleCommandPermissionServiceClient(client *connect.Client) SingleCommandPermissionServiceClient {
+	return &singleCommandPermissionServiceClient{client: client}
 }
 
 // SingleCommandPermissionServiceHandler is an implementation of the
 // taskguild.v1.SingleCommandPermissionService service.
 type SingleCommandPermissionServiceHandler interface {
 	// ListSingleCommandPermissions returns all single-command permission rules for a project.
-	ListSingleCommandPermissions(context.Context, *connect.Request[v1.ListSingleCommandPermissionsRequest]) (*connect.Response[v1.ListSingleCommandPermissionsResponse], error)
+	ListSingleCommandPermissions(context.Context, *v1.ListSingleCommandPermissionsRequest) (*v1.ListSingleCommandPermissionsResponse, error)
 	// CreateSingleCommandPermission adds a new regex permission rule for a project.
-	CreateSingleCommandPermission(context.Context, *connect.Request[v1.CreateSingleCommandPermissionRequest]) (*connect.Response[v1.CreateSingleCommandPermissionResponse], error)
+	CreateSingleCommandPermission(context.Context, *v1.CreateSingleCommandPermissionRequest) (*v1.CreateSingleCommandPermissionResponse, error)
 	// UpdateSingleCommandPermission modifies an existing permission rule.
-	UpdateSingleCommandPermission(context.Context, *connect.Request[v1.UpdateSingleCommandPermissionRequest]) (*connect.Response[v1.UpdateSingleCommandPermissionResponse], error)
+	UpdateSingleCommandPermission(context.Context, *v1.UpdateSingleCommandPermissionRequest) (*v1.UpdateSingleCommandPermissionResponse, error)
 	// DeleteSingleCommandPermission removes a permission rule.
-	DeleteSingleCommandPermission(context.Context, *connect.Request[v1.DeleteSingleCommandPermissionRequest]) (*connect.Response[v1.DeleteSingleCommandPermissionResponse], error)
+	DeleteSingleCommandPermission(context.Context, *v1.DeleteSingleCommandPermissionRequest) (*v1.DeleteSingleCommandPermissionResponse, error)
 }
 
-// NewSingleCommandPermissionServiceHandler builds an HTTP handler from the service implementation.
-// It returns the path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewSingleCommandPermissionServiceHandler(svc SingleCommandPermissionServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	singleCommandPermissionServiceMethods := v1.File_taskguild_v1_single_command_permission_proto.Services().ByName("SingleCommandPermissionService").Methods()
-	singleCommandPermissionServiceListSingleCommandPermissionsHandler := connect.NewUnaryHandler(
-		SingleCommandPermissionServiceListSingleCommandPermissionsProcedure,
-		svc.ListSingleCommandPermissions,
-		connect.WithSchema(singleCommandPermissionServiceMethods.ByName("ListSingleCommandPermissions")),
-		connect.WithHandlerOptions(opts...),
+// RegisterSingleCommandPermissionServiceHandler registers svc as the
+// taskguild.v1.SingleCommandPermissionService implementation on server.
+func RegisterSingleCommandPermissionServiceHandler(server *connect.Server, svc SingleCommandPermissionServiceHandler) {
+	adapter := singleCommandPermissionServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: singleCommandPermissionServiceListSingleCommandPermissionsSpec(), Handler: adapter.listSingleCommandPermissions},
+		connect.Method{Spec: singleCommandPermissionServiceCreateSingleCommandPermissionSpec(), Handler: adapter.createSingleCommandPermission},
+		connect.Method{Spec: singleCommandPermissionServiceUpdateSingleCommandPermissionSpec(), Handler: adapter.updateSingleCommandPermission},
+		connect.Method{Spec: singleCommandPermissionServiceDeleteSingleCommandPermissionSpec(), Handler: adapter.deleteSingleCommandPermission},
 	)
-	singleCommandPermissionServiceCreateSingleCommandPermissionHandler := connect.NewUnaryHandler(
-		SingleCommandPermissionServiceCreateSingleCommandPermissionProcedure,
-		svc.CreateSingleCommandPermission,
-		connect.WithSchema(singleCommandPermissionServiceMethods.ByName("CreateSingleCommandPermission")),
-		connect.WithHandlerOptions(opts...),
-	)
-	singleCommandPermissionServiceUpdateSingleCommandPermissionHandler := connect.NewUnaryHandler(
-		SingleCommandPermissionServiceUpdateSingleCommandPermissionProcedure,
-		svc.UpdateSingleCommandPermission,
-		connect.WithSchema(singleCommandPermissionServiceMethods.ByName("UpdateSingleCommandPermission")),
-		connect.WithHandlerOptions(opts...),
-	)
-	singleCommandPermissionServiceDeleteSingleCommandPermissionHandler := connect.NewUnaryHandler(
-		SingleCommandPermissionServiceDeleteSingleCommandPermissionProcedure,
-		svc.DeleteSingleCommandPermission,
-		connect.WithSchema(singleCommandPermissionServiceMethods.ByName("DeleteSingleCommandPermission")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/taskguild.v1.SingleCommandPermissionService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case SingleCommandPermissionServiceListSingleCommandPermissionsProcedure:
-			singleCommandPermissionServiceListSingleCommandPermissionsHandler.ServeHTTP(w, r)
-		case SingleCommandPermissionServiceCreateSingleCommandPermissionProcedure:
-			singleCommandPermissionServiceCreateSingleCommandPermissionHandler.ServeHTTP(w, r)
-		case SingleCommandPermissionServiceUpdateSingleCommandPermissionProcedure:
-			singleCommandPermissionServiceUpdateSingleCommandPermissionHandler.ServeHTTP(w, r)
-		case SingleCommandPermissionServiceDeleteSingleCommandPermissionProcedure:
-			singleCommandPermissionServiceDeleteSingleCommandPermissionHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedSingleCommandPermissionServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedSingleCommandPermissionServiceHandler struct{}
 
-func (UnimplementedSingleCommandPermissionServiceHandler) ListSingleCommandPermissions(context.Context, *connect.Request[v1.ListSingleCommandPermissionsRequest]) (*connect.Response[v1.ListSingleCommandPermissionsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.SingleCommandPermissionService.ListSingleCommandPermissions is not implemented"))
+func (UnimplementedSingleCommandPermissionServiceHandler) ListSingleCommandPermissions(context.Context, *v1.ListSingleCommandPermissionsRequest) (*v1.ListSingleCommandPermissionsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.SingleCommandPermissionService.ListSingleCommandPermissions is not implemented")
 }
 
-func (UnimplementedSingleCommandPermissionServiceHandler) CreateSingleCommandPermission(context.Context, *connect.Request[v1.CreateSingleCommandPermissionRequest]) (*connect.Response[v1.CreateSingleCommandPermissionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.SingleCommandPermissionService.CreateSingleCommandPermission is not implemented"))
+func (UnimplementedSingleCommandPermissionServiceHandler) CreateSingleCommandPermission(context.Context, *v1.CreateSingleCommandPermissionRequest) (*v1.CreateSingleCommandPermissionResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.SingleCommandPermissionService.CreateSingleCommandPermission is not implemented")
 }
 
-func (UnimplementedSingleCommandPermissionServiceHandler) UpdateSingleCommandPermission(context.Context, *connect.Request[v1.UpdateSingleCommandPermissionRequest]) (*connect.Response[v1.UpdateSingleCommandPermissionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.SingleCommandPermissionService.UpdateSingleCommandPermission is not implemented"))
+func (UnimplementedSingleCommandPermissionServiceHandler) UpdateSingleCommandPermission(context.Context, *v1.UpdateSingleCommandPermissionRequest) (*v1.UpdateSingleCommandPermissionResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.SingleCommandPermissionService.UpdateSingleCommandPermission is not implemented")
 }
 
-func (UnimplementedSingleCommandPermissionServiceHandler) DeleteSingleCommandPermission(context.Context, *connect.Request[v1.DeleteSingleCommandPermissionRequest]) (*connect.Response[v1.DeleteSingleCommandPermissionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("taskguild.v1.SingleCommandPermissionService.DeleteSingleCommandPermission is not implemented"))
+func (UnimplementedSingleCommandPermissionServiceHandler) DeleteSingleCommandPermission(context.Context, *v1.DeleteSingleCommandPermissionRequest) (*v1.DeleteSingleCommandPermissionResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "taskguild.v1.SingleCommandPermissionService.DeleteSingleCommandPermission is not implemented")
+}
+
+type singleCommandPermissionServiceClient struct {
+	client *connect.Client
+}
+
+func (c *singleCommandPermissionServiceClient) ListSingleCommandPermissions(ctx context.Context, req *v1.ListSingleCommandPermissionsRequest) (*v1.ListSingleCommandPermissionsResponse, error) {
+	var res v1.ListSingleCommandPermissionsResponse
+	if err := c.client.CallUnary(ctx, singleCommandPermissionServiceListSingleCommandPermissionsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *singleCommandPermissionServiceClient) CreateSingleCommandPermission(ctx context.Context, req *v1.CreateSingleCommandPermissionRequest) (*v1.CreateSingleCommandPermissionResponse, error) {
+	var res v1.CreateSingleCommandPermissionResponse
+	if err := c.client.CallUnary(ctx, singleCommandPermissionServiceCreateSingleCommandPermissionSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *singleCommandPermissionServiceClient) UpdateSingleCommandPermission(ctx context.Context, req *v1.UpdateSingleCommandPermissionRequest) (*v1.UpdateSingleCommandPermissionResponse, error) {
+	var res v1.UpdateSingleCommandPermissionResponse
+	if err := c.client.CallUnary(ctx, singleCommandPermissionServiceUpdateSingleCommandPermissionSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *singleCommandPermissionServiceClient) DeleteSingleCommandPermission(ctx context.Context, req *v1.DeleteSingleCommandPermissionRequest) (*v1.DeleteSingleCommandPermissionResponse, error) {
+	var res v1.DeleteSingleCommandPermissionResponse
+	if err := c.client.CallUnary(ctx, singleCommandPermissionServiceDeleteSingleCommandPermissionSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type singleCommandPermissionServiceHandler struct {
+	svc SingleCommandPermissionServiceHandler
+}
+
+func (h singleCommandPermissionServiceHandler) listSingleCommandPermissions(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListSingleCommandPermissionsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListSingleCommandPermissions(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h singleCommandPermissionServiceHandler) createSingleCommandPermission(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.CreateSingleCommandPermissionRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.CreateSingleCommandPermission(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h singleCommandPermissionServiceHandler) updateSingleCommandPermission(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.UpdateSingleCommandPermissionRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.UpdateSingleCommandPermission(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h singleCommandPermissionServiceHandler) deleteSingleCommandPermission(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.DeleteSingleCommandPermissionRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.DeleteSingleCommandPermission(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }
