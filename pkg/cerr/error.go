@@ -115,14 +115,73 @@ func ExtractConnectError(ctx context.Context, err error) error {
 
 	var cerr *Error
 	if errors.As(err, &cerr) {
-		if cerr.Stack != "" {
-			clog.AddStack(ctx, cerr.Stack)
+		// 発生箇所のスタックがあれば ctx に保存
+		if stack := innermostStack(err); stack != "" {
+			clog.AddStack(ctx, stack)
 		}
 
 		return cerr.ConnectError()
 	}
 
+	// connect.Error の場合はそのまま返す
+	if connectErr, ok := errors.AsType[*connect.Error](err); ok {
+		// 下流の RPC から受け取ったエラーは Internal として扱う
+		if connectErr.IsRemote() {
+			return NewError(Internal, "server error", err).ConnectError()
+		}
+
+		return connectErr
+	}
+
 	return NewError(Unknown, "unknown error", err).ConnectError()
+}
+
+// innermostStack はエラーチェーンをたどり、スタックトレースを持つ *Error のうち
+// 最も内側 (= 原因の発生箇所に最も近い) ものの Stack を返す。無ければ空文字列。
+//
+// 上位で cerr を包み直すと、クライアントへ返すコードとメッセージは最外の *Error で
+// 決まるが、ログに残すスタックは発生箇所のものにしたい。外側がスタックを取らない
+// コード (NotFound 等) で内側がスタックを取るコード (Internal 等) のときも、発生箇所の
+// スタックが残る。Unwrap() error と Unwrap() []error (errors.Join) の両方をたどる。
+func innermostStack(err error) string {
+	stack, _ := deepestStack(err, 0)
+
+	return stack
+}
+
+// deepestStack は err 以下で Stack を持つ最も深い *Error の Stack とその深さを返す
+// (見つからなければ深さ -1)。
+func deepestStack(err error, depth int) (string, int) {
+	if err == nil {
+		return "", -1
+	}
+
+	// 深さを数えるため、errors.As のようにチェーン全体ではなくこのノードだけを見る
+	node := any(err)
+
+	stack, stackDepth := "", -1
+
+	e, ok := node.(*Error)
+	if ok && e.Stack != "" {
+		stack, stackDepth = e.Stack, depth
+	}
+
+	var children []error
+
+	switch u := node.(type) {
+	case interface{ Unwrap() error }:
+		children = []error{u.Unwrap()}
+	case interface{ Unwrap() []error }:
+		children = u.Unwrap()
+	}
+
+	for _, child := range children {
+		if s, d := deepestStack(child, depth+1); d > stackDepth {
+			stack, stackDepth = s, d
+		}
+	}
+
+	return stack, stackDepth
 }
 
 type httpError struct {
@@ -151,8 +210,9 @@ func ExtractToHTTPResponse(ctx context.Context, rw http.ResponseWriter, response
 
 	var cErr *Error
 	if errors.As(response.err, &cErr) {
-		if cErr.Stack != "" {
-			clog.AddStack(ctx, cErr.Stack)
+		// 発生箇所のスタックがあれば ctx に保存
+		if stack := innermostStack(response.err); stack != "" {
+			clog.AddStack(ctx, stack)
 		}
 
 		writeJSONError(ctx, rw, cErr)
