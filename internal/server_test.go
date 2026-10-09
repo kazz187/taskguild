@@ -3,19 +3,29 @@ package internal_test
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"io"
 	"net"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/kazz187/taskguild/internal"
 	"github.com/kazz187/taskguild/internal/config"
+	"github.com/kazz187/taskguild/internal/task"
+	"github.com/kazz187/taskguild/proto/gen/go/taskguild/v1/taskguildv1connect"
 )
 
-// testShutdownTimeout bounds the graceful shutdown performed during cleanup.
-const testShutdownTimeout = 5 * time.Second
+const (
+	// testShutdownTimeout bounds the graceful shutdown performed during cleanup.
+	testShutdownTimeout = 5 * time.Second
+
+	// testAPIKey is the API key the test server accepts.
+	testAPIKey = "test-api-key"
+)
 
 // TestServeProtocols verifies that a single listener accepts both HTTP/1.1 and
 // cleartext HTTP/2 (h2c) with prior knowledge, which is the behavior the
@@ -23,7 +33,7 @@ const testShutdownTimeout = 5 * time.Second
 func TestServeProtocols(t *testing.T) {
 	t.Parallel()
 
-	baseURL := "http://" + startTestServer(t)
+	baseURL := "http://" + startTestServer(t, nil)
 
 	tests := []struct {
 		name      string
@@ -78,7 +88,7 @@ func TestServeProtocols(t *testing.T) {
 func TestServeGRPCTrailersOverH2C(t *testing.T) {
 	t.Parallel()
 
-	baseURL := "http://" + startTestServer(t)
+	baseURL := "http://" + startTestServer(t, nil)
 
 	client := &http.Client{Transport: &http.Transport{Protocols: h2cProtocols()}}
 	t.Cleanup(client.CloseIdleConnections)
@@ -163,11 +173,11 @@ func TestShutdownAfterListenFailure(t *testing.T) {
 		t.Fatalf("split host port: %v", err)
 	}
 
-	env := &config.Env{APIKey: "test-api-key"}
+	env := &config.Env{APIKey: testAPIKey}
 	env.HTTPHost = host
 	env.HTTPPort = port
 
-	srv := newTestServer(env)
+	srv := newTestServer(env, nil)
 
 	err = srv.ListenAndServe(t.Context())
 	if err == nil {
@@ -181,16 +191,226 @@ func TestShutdownAfterListenFailure(t *testing.T) {
 	}
 }
 
-// newTestServer builds a Server with no backing services.
+// TestReadMaxBytes verifies the per-procedure read limits: connect-go's default
+// of 4 MiB everywhere, including the RPC callable without the API key, and a
+// larger limit that fits the largest image UploadTaskImage accepts.
+func TestReadMaxBytes(t *testing.T) {
+	t.Parallel()
+
+	// Without an image store, UploadTaskImage answers unimplemented, so a
+	// request that gets past the read limit ends with that code.
+	baseURL := "http://" + startTestServer(t, newImagelessTaskServer())
+
+	const mib = 1 << 20
+
+	largestImage := strings.Repeat("A", base64.StdEncoding.EncodedLen(task.MaxImageSizeBytes))
+
+	tests := []struct {
+		name      string
+		procedure string
+		apiKey    string
+		body      string
+		wantCode  string
+	}{
+		{
+			name:      "unauthenticated RPC over the default limit",
+			procedure: taskguildv1connect.InteractionServiceRespondToInteractionByTokenProcedure,
+			body:      `{"token":"` + strings.Repeat("a", 5*mib) + `"}`,
+			wantCode:  "resource_exhausted",
+		},
+		{
+			name:      "authenticated RPC over the default limit",
+			procedure: taskguildv1connect.TaskServiceListTaskImagesProcedure,
+			apiKey:    testAPIKey,
+			body:      `{"taskId":"` + strings.Repeat("a", 5*mib) + `"}`,
+			wantCode:  "resource_exhausted",
+		},
+		{
+			name:      "largest image upload as JSON",
+			procedure: taskguildv1connect.TaskServiceUploadTaskImageProcedure,
+			apiKey:    testAPIKey,
+			body:      `{"taskId":"t","data":"` + largestImage + `"}`,
+			wantCode:  "unimplemented",
+		},
+		{
+			name:      "image upload over its own limit",
+			procedure: taskguildv1connect.TaskServiceUploadTaskImageProcedure,
+			apiKey:    testAPIKey,
+			body:      `{"taskId":"t","data":"` + strings.Repeat("A", 16*mib) + `"}`,
+			wantCode:  "resource_exhausted",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			status, code := postConnectJSON(t, baseURL+tt.procedure, tt.apiKey, tt.body)
+			if code != tt.wantCode {
+				t.Errorf("code = %q (status %d), want %q", code, status, tt.wantCode)
+			}
+		})
+	}
+}
+
+// TestAPIKeyMiddleware verifies that only requests carrying the API key, as
+// X-Api-Key or as a bearer token, reach the Connect handlers.
+func TestAPIKeyMiddleware(t *testing.T) {
+	t.Parallel()
+
+	baseURL := "http://" + startTestServer(t, newImagelessTaskServer())
+	url := baseURL + taskguildv1connect.TaskServiceUploadTaskImageProcedure
+
+	tests := []struct {
+		name       string
+		header     string
+		value      string
+		wantStatus int
+	}{
+		{name: "X-Api-Key", header: "X-Api-Key", value: testAPIKey, wantStatus: http.StatusNotImplemented},
+		{name: "bearer token", header: "Authorization", value: "Bearer " + testAPIKey, wantStatus: http.StatusNotImplemented},
+		{name: "wrong key", header: "X-Api-Key", value: "wrong-api-key", wantStatus: http.StatusUnauthorized},
+		{name: "key with a suffix", header: "X-Api-Key", value: testAPIKey + "x", wantStatus: http.StatusUnauthorized},
+		{name: "no key", wantStatus: http.StatusUnauthorized},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, url, strings.NewReader("{}"))
+			if err != nil {
+				t.Fatalf("new request: %v", err)
+			}
+
+			req.Header.Set("Content-Type", "application/json")
+
+			if tt.header != "" {
+				req.Header.Set(tt.header, tt.value)
+			}
+
+			status, _ := doConnectRequest(t, req)
+			if status != tt.wantStatus {
+				t.Errorf("status = %d, want %d", status, tt.wantStatus)
+			}
+		})
+	}
+}
+
+// TestCORSPreflight verifies that cross-origin requests are allowed from any
+// origin without credentials.
+func TestCORSPreflight(t *testing.T) {
+	t.Parallel()
+
+	baseURL := "http://" + startTestServer(t, nil)
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodOptions,
+		baseURL+taskguildv1connect.TaskServiceListTaskImagesProcedure, nil)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+
+	req.Header.Set("Origin", "http://localhost:5173")
+	req.Header.Set("Access-Control-Request-Method", http.MethodPost)
+	req.Header.Set("Access-Control-Request-Headers", "content-type,x-api-key")
+
+	client := &http.Client{}
+	t.Cleanup(client.CloseIdleConnections)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("OPTIONS: %v", err)
+	}
+
+	closeErr := resp.Body.Close()
+	if closeErr != nil {
+		t.Errorf("close response body: %v", closeErr)
+	}
+
+	if got := resp.Header.Get("Access-Control-Allow-Origin"); got != "*" {
+		t.Errorf("Access-Control-Allow-Origin = %q, want %q", got, "*")
+	}
+
+	if got := resp.Header.Get("Access-Control-Allow-Credentials"); got != "" {
+		t.Errorf("Access-Control-Allow-Credentials = %q, want it unset", got)
+	}
+}
+
+// newImagelessTaskServer returns a task server without an image store or any
+// other dependency. Its image RPCs answer unimplemented before touching them.
+func newImagelessTaskServer() *task.Server {
+	return task.NewServer(nil, nil, nil, nil, nil, nil, nil)
+}
+
+// postConnectJSON sends a unary Connect request with a JSON body, with apiKey
+// as X-Api-Key unless it is empty, and returns the HTTP status and the Connect
+// error code.
+func postConnectJSON(t *testing.T, url, apiKey, body string) (int, string) {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, url, strings.NewReader(body))
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	if apiKey != "" {
+		req.Header.Set("X-Api-Key", apiKey)
+	}
+
+	return doConnectRequest(t, req)
+}
+
+// doConnectRequest sends req and returns the HTTP status and the Connect error
+// code, which is empty when the response is not a Connect error.
+func doConnectRequest(t *testing.T, req *http.Request) (int, string) {
+	t.Helper()
+
+	client := &http.Client{}
+	t.Cleanup(client.CloseIdleConnections)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("POST %s: %v", req.URL.Path, err)
+	}
+
+	defer func() {
+		closeErr := resp.Body.Close()
+		if closeErr != nil {
+			t.Errorf("close response body: %v", closeErr)
+		}
+	}()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read response body: %v", err)
+	}
+
+	var connectErr struct {
+		Code string `json:"code"`
+	}
+
+	err = json.Unmarshal(body, &connectErr)
+	if err != nil {
+		// Not a Connect error, such as the API key middleware's plain-text 401.
+		return resp.StatusCode, ""
+	}
+
+	return resp.StatusCode, connectErr.Code
+}
+
+// newTestServer builds a Server whose only backing service is taskServer,
+// which may be nil.
 //
 // The generated Connect handler constructors only take method values off the
 // service pointers, so nil services are safe: nothing is dereferenced until an
-// RPC is dispatched, and these tests only call /health and the gRPC health
-// endpoint, both of which are served without any injected service.
-func newTestServer(env *config.Env) *internal.Server {
+// RPC is dispatched to them. A request rejected before dispatch (by the API key
+// middleware or the read limit) never touches its service.
+func newTestServer(env *config.Env, taskServer *task.Server) *internal.Server {
 	return internal.NewServer(
 		env,
-		nil, nil, nil, nil,
+		nil, nil, taskServer, nil,
 		nil, nil, nil, nil,
 		nil, nil, nil, nil,
 		nil, nil, nil, nil,
@@ -198,11 +418,11 @@ func newTestServer(env *config.Env) *internal.Server {
 }
 
 // startTestServer starts the production HTTP server on an ephemeral loopback
-// port and returns its "host:port" address.
-func startTestServer(t *testing.T) string {
+// port and returns its "host:port" address. taskServer may be nil.
+func startTestServer(t *testing.T, taskServer *task.Server) string {
 	t.Helper()
 
-	srv := newTestServer(&config.Env{APIKey: "test-api-key"})
+	srv := newTestServer(&config.Env{APIKey: testAPIKey}, taskServer)
 
 	ctx := t.Context()
 
