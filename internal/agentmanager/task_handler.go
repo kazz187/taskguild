@@ -26,7 +26,7 @@ import (
 func (s *Server) Subscribe(ctx context.Context, req *taskguildv1.AgentManagerSubscribeRequest, stream taskguildv1connect.AgentManagerServiceSubscribeServerStream) error {
 	agentManagerID := req.GetAgentManagerId()
 	if agentManagerID == "" {
-		return cerr.NewError(cerr.InvalidArgument, "agent_manager_id is required", nil).ConnectError()
+		return cerr.NewError(cerr.InvalidArgument, "agent_manager_id is required", nil)
 	}
 
 	projectName := req.GetProjectName()
@@ -309,11 +309,11 @@ func (s *Server) sendPendingTasksToStream(ctx context.Context, projectName strin
 
 func (s *Server) Heartbeat(ctx context.Context, req *taskguildv1.HeartbeatRequest) (*taskguildv1.HeartbeatResponse, error) {
 	if req.GetAgentManagerId() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "agent_manager_id is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "agent_manager_id is required", nil)
 	}
 
 	if !s.registry.UpdateHeartbeat(req.GetAgentManagerId(), req.GetActiveTasks()) {
-		return nil, cerr.NewError(cerr.NotFound, "agent-manager not connected", nil).ConnectError()
+		return nil, cerr.NewError(cerr.NotFound, "agent-manager not connected", nil)
 	}
 
 	return &taskguildv1.HeartbeatResponse{}, nil
@@ -600,13 +600,13 @@ func (s *Server) emitResultLog(ctx context.Context, t *task.Task, summary, errMs
 
 func (s *Server) ClaimTask(ctx context.Context, req *taskguildv1.ClaimTaskRequest) (*taskguildv1.ClaimTaskResponse, error) {
 	if req.GetTaskId() == "" || req.GetAgentManagerId() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "task_id and agent_manager_id are required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "task_id and agent_manager_id are required", nil)
 	}
 
 	// Pre-read the task to check worktree occupancy before claiming.
 	taskForCheck, err := s.taskRepo.Get(ctx, req.GetTaskId())
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	var t *task.Task
@@ -655,7 +655,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *taskguildv1.ClaimTaskReques
 			}, nil
 		}
 
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	// Validate project name: if the agent declared a project, verify it matches.
@@ -686,7 +686,7 @@ func (s *Server) ClaimTask(ctx context.Context, req *taskguildv1.ClaimTaskReques
 	// Find agent config for the task's current status.
 	wf, err := s.workflowRepo.Get(ctx, t.WorkflowID)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	var (

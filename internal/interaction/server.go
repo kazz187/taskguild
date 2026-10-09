@@ -97,7 +97,7 @@ func (s *Server) RespondToInteraction(ctx context.Context, req *taskguildv1.Resp
 	}
 
 	if inter.Status != StatusPending {
-		return nil, cerr.NewError(cerr.FailedPrecondition, "interaction is not pending", nil).ConnectError()
+		return nil, cerr.NewError(cerr.FailedPrecondition, "interaction is not pending", nil)
 	}
 
 	now := time.Now()
@@ -124,11 +124,11 @@ func (s *Server) RespondToInteraction(ctx context.Context, req *taskguildv1.Resp
 
 func (s *Server) RespondToInteractionByToken(ctx context.Context, req *taskguildv1.RespondToInteractionByTokenRequest) (*taskguildv1.RespondToInteractionByTokenResponse, error) {
 	if req.GetToken() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "token is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "token is required", nil)
 	}
 
 	if req.GetResponse() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "response is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "response is required", nil)
 	}
 
 	inter, err := s.repo.GetByResponseToken(ctx, req.GetToken())
@@ -137,7 +137,7 @@ func (s *Server) RespondToInteractionByToken(ctx context.Context, req *taskguild
 	}
 
 	if inter.Status != StatusPending {
-		return nil, cerr.NewError(cerr.FailedPrecondition, "interaction is not pending", nil).ConnectError()
+		return nil, cerr.NewError(cerr.FailedPrecondition, "interaction is not pending", nil)
 	}
 
 	now := time.Now()
@@ -171,7 +171,7 @@ func (s *Server) ExpireInteraction(ctx context.Context, req *taskguildv1.ExpireI
 	}
 
 	if inter.Status != StatusPending {
-		return nil, cerr.NewError(cerr.FailedPrecondition, "interaction is not pending", nil).ConnectError()
+		return nil, cerr.NewError(cerr.FailedPrecondition, "interaction is not pending", nil)
 	}
 
 	now := time.Now()
@@ -197,11 +197,11 @@ func (s *Server) ExpireInteraction(ctx context.Context, req *taskguildv1.ExpireI
 
 func (s *Server) SendMessage(ctx context.Context, req *taskguildv1.SendMessageRequest) (*taskguildv1.SendMessageResponse, error) {
 	if req.GetTaskId() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "task_id is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "task_id is required", nil)
 	}
 
 	if req.GetMessage() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "message is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "message is required", nil)
 	}
 
 	t, err := s.taskRepo.Get(ctx, req.GetTaskId())

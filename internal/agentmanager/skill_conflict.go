@@ -21,18 +21,18 @@ import (
 // so they compare local skills with server versions.
 func (s *Server) RequestSkillComparison(ctx context.Context, req *taskguildv1.RequestSkillComparisonRequest) (*taskguildv1.RequestSkillComparisonResponse, error) {
 	if req.GetProjectId() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil)
 	}
 
 	proj, err := s.projectRepo.Get(ctx, req.GetProjectId())
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	// Fetch all skills for this project so the agent can compare.
 	skills, _, err := s.skillRepo.List(ctx, proj.ID, 1000, 0)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	protos := make([]*taskguildv1.SkillDefinition, len(skills))
@@ -67,12 +67,12 @@ func (s *Server) RequestSkillComparison(ctx context.Context, req *taskguildv1.Re
 func (s *Server) ReportSkillComparison(ctx context.Context, req *taskguildv1.ReportSkillComparisonRequest) (*taskguildv1.ReportSkillComparisonResponse, error) {
 	projectName := req.GetProjectName()
 	if projectName == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil)
 	}
 
 	proj, err := s.projectRepo.FindByName(ctx, projectName)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	// Cache the diffs for this project.
@@ -105,7 +105,7 @@ func (s *Server) ReportSkillComparison(ctx context.Context, req *taskguildv1.Rep
 // GetSkillComparison returns the cached skill diffs for a project.
 func (s *Server) GetSkillComparison(ctx context.Context, req *taskguildv1.GetSkillComparisonRequest) (*taskguildv1.GetSkillComparisonResponse, error) {
 	if req.GetProjectId() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil)
 	}
 
 	s.skillDiffMu.RLock()
@@ -120,12 +120,12 @@ func (s *Server) GetSkillComparison(ctx context.Context, req *taskguildv1.GetSki
 // ResolveSkillConflict resolves a single skill conflict between server and agent versions.
 func (s *Server) ResolveSkillConflict(ctx context.Context, req *taskguildv1.ResolveSkillConflictRequest) (*taskguildv1.ResolveSkillConflictResponse, error) {
 	if req.GetProjectId() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil)
 	}
 
 	proj, err := s.projectRepo.Get(ctx, req.GetProjectId())
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	var resultSkill *skill.Skill
@@ -137,7 +137,7 @@ func (s *Server) ResolveSkillConflict(ctx context.Context, req *taskguildv1.Reso
 		if req.GetSkillId() != "" {
 			resultSkill, err = s.skillRepo.Get(ctx, req.GetSkillId())
 			if err != nil {
-				return nil, cerr.ExtractConnectError(ctx, err)
+				return nil, err
 			}
 
 			s.registry.BroadcastCommandToProject(proj.Name, &taskguildv1.AgentCommand{
@@ -157,7 +157,7 @@ func (s *Server) ResolveSkillConflict(ctx context.Context, req *taskguildv1.Reso
 			// Update existing skill.
 			resultSkill, err = s.skillRepo.Get(ctx, req.GetSkillId())
 			if err != nil {
-				return nil, cerr.ExtractConnectError(ctx, err)
+				return nil, err
 			}
 
 			resultSkill.Description = parsed.Description
@@ -175,7 +175,7 @@ func (s *Server) ResolveSkillConflict(ctx context.Context, req *taskguildv1.Reso
 
 			err := s.skillRepo.Update(ctx, resultSkill)
 			if err != nil {
-				return nil, cerr.ExtractConnectError(ctx, err)
+				return nil, err
 			}
 		} else {
 			// Agent-only skill — create new in DB.
@@ -201,12 +201,12 @@ func (s *Server) ResolveSkillConflict(ctx context.Context, req *taskguildv1.Reso
 
 			err := s.skillRepo.Create(ctx, resultSkill)
 			if err != nil {
-				return nil, cerr.ExtractConnectError(ctx, err)
+				return nil, err
 			}
 		}
 
 	default:
-		return nil, cerr.NewError(cerr.InvalidArgument, "invalid resolution choice", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "invalid resolution choice", nil)
 	}
 
 	// Remove the resolved diff from cache.

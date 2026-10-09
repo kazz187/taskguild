@@ -16,12 +16,12 @@ import (
 
 func (s *Server) RequestWorktreeList(ctx context.Context, req *taskguildv1.RequestWorktreeListRequest) (*taskguildv1.RequestWorktreeListResponse, error) {
 	if req.GetProjectId() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil)
 	}
 
 	proj, err := s.projectRepo.Get(ctx, req.GetProjectId())
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	requestID := ulid.Make().String()
@@ -49,12 +49,12 @@ func (s *Server) RequestWorktreeList(ctx context.Context, req *taskguildv1.Reque
 func (s *Server) ReportWorktreeList(ctx context.Context, req *taskguildv1.ReportWorktreeListRequest) (*taskguildv1.ReportWorktreeListResponse, error) {
 	projectName := req.GetProjectName()
 	if projectName == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil)
 	}
 
 	proj, err := s.projectRepo.FindByName(ctx, projectName)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	// Cache the worktree list for this project.
@@ -85,7 +85,7 @@ func (s *Server) ReportWorktreeList(ctx context.Context, req *taskguildv1.Report
 
 func (s *Server) GetWorktreeList(ctx context.Context, req *taskguildv1.GetWorktreeListRequest) (*taskguildv1.GetWorktreeListResponse, error) {
 	if req.GetProjectId() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil)
 	}
 
 	s.worktreeMu.RLock()
@@ -99,16 +99,16 @@ func (s *Server) GetWorktreeList(ctx context.Context, req *taskguildv1.GetWorktr
 
 func (s *Server) RequestWorktreeDelete(ctx context.Context, req *taskguildv1.RequestWorktreeDeleteRequest) (*taskguildv1.RequestWorktreeDeleteResponse, error) {
 	if req.GetProjectId() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil)
 	}
 
 	if req.GetWorktreeName() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "worktree_name is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "worktree_name is required", nil)
 	}
 
 	proj, err := s.projectRepo.Get(ctx, req.GetProjectId())
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	requestID := ulid.Make().String()
@@ -140,12 +140,12 @@ func (s *Server) RequestWorktreeDelete(ctx context.Context, req *taskguildv1.Req
 func (s *Server) ReportWorktreeDeleteResult(ctx context.Context, req *taskguildv1.ReportWorktreeDeleteResultRequest) (*taskguildv1.ReportWorktreeDeleteResultResponse, error) {
 	projectName := req.GetProjectName()
 	if projectName == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil)
 	}
 
 	proj, err := s.projectRepo.FindByName(ctx, projectName)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	// If deletion was successful, remove the worktree from the cache.

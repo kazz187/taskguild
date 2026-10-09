@@ -19,17 +19,17 @@ import (
 func (s *Server) SyncScripts(ctx context.Context, req *taskguildv1.SyncScriptsRequest) (*taskguildv1.SyncScriptsResponse, error) {
 	projectName := req.GetProjectName()
 	if projectName == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil)
 	}
 
 	proj, err := s.projectRepo.FindByName(ctx, projectName)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	scripts, _, err := s.scriptRepo.List(ctx, proj.ID, 1000, 0)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	protos := make([]*taskguildv1.ScriptDefinition, len(scripts))
@@ -45,12 +45,12 @@ func (s *Server) SyncScripts(ctx context.Context, req *taskguildv1.SyncScriptsRe
 func (s *Server) ReportScriptExecutionResult(ctx context.Context, req *taskguildv1.ReportScriptExecutionResultRequest) (*taskguildv1.ReportScriptExecutionResultResponse, error) {
 	projectName := req.GetProjectName()
 	if projectName == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil)
 	}
 
 	proj, err := s.projectRepo.FindByName(ctx, projectName)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	// Complete execution in the broker — this sends the completion event
@@ -96,7 +96,7 @@ func (s *Server) ReportScriptExecutionResult(ctx context.Context, req *taskguild
 
 func (s *Server) ReportScriptOutputChunk(ctx context.Context, req *taskguildv1.ReportScriptOutputChunkRequest) (*taskguildv1.ReportScriptOutputChunkResponse, error) {
 	if req.GetProjectName() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil)
 	}
 
 	slog.Info("[STREAM-TRACE] backend(agentmanager): received output chunk from agent", "request_id", req.GetRequestId(), "entry_count", len(req.GetEntries()))

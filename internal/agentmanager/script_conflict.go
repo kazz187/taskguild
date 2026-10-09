@@ -20,18 +20,18 @@ import (
 // so they compare local scripts with server versions.
 func (s *Server) RequestScriptComparison(ctx context.Context, req *taskguildv1.RequestScriptComparisonRequest) (*taskguildv1.RequestScriptComparisonResponse, error) {
 	if req.GetProjectId() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil)
 	}
 
 	proj, err := s.projectRepo.Get(ctx, req.GetProjectId())
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	// Fetch all scripts for this project so the agent can compare.
 	scripts, _, err := s.scriptRepo.List(ctx, proj.ID, 1000, 0)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	protos := make([]*taskguildv1.ScriptDefinition, len(scripts))
@@ -66,12 +66,12 @@ func (s *Server) RequestScriptComparison(ctx context.Context, req *taskguildv1.R
 func (s *Server) ReportScriptComparison(ctx context.Context, req *taskguildv1.ReportScriptComparisonRequest) (*taskguildv1.ReportScriptComparisonResponse, error) {
 	projectName := req.GetProjectName()
 	if projectName == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil)
 	}
 
 	proj, err := s.projectRepo.FindByName(ctx, projectName)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	// Cache the diffs for this project.
@@ -104,7 +104,7 @@ func (s *Server) ReportScriptComparison(ctx context.Context, req *taskguildv1.Re
 // GetScriptComparison returns the cached script diffs for a project.
 func (s *Server) GetScriptComparison(ctx context.Context, req *taskguildv1.GetScriptComparisonRequest) (*taskguildv1.GetScriptComparisonResponse, error) {
 	if req.GetProjectId() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil)
 	}
 
 	s.scriptDiffMu.RLock()
@@ -119,12 +119,12 @@ func (s *Server) GetScriptComparison(ctx context.Context, req *taskguildv1.GetSc
 // ResolveScriptConflict resolves a single script conflict between server and agent versions.
 func (s *Server) ResolveScriptConflict(ctx context.Context, req *taskguildv1.ResolveScriptConflictRequest) (*taskguildv1.ResolveScriptConflictResponse, error) {
 	if req.GetProjectId() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil)
 	}
 
 	proj, err := s.projectRepo.Get(ctx, req.GetProjectId())
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	var resultScript *script.Script
@@ -136,7 +136,7 @@ func (s *Server) ResolveScriptConflict(ctx context.Context, req *taskguildv1.Res
 		if req.GetScriptId() != "" {
 			resultScript, err = s.scriptRepo.Get(ctx, req.GetScriptId())
 			if err != nil {
-				return nil, cerr.ExtractConnectError(ctx, err)
+				return nil, err
 			}
 
 			s.registry.BroadcastCommandToProject(proj.Name, &taskguildv1.AgentCommand{
@@ -154,7 +154,7 @@ func (s *Server) ResolveScriptConflict(ctx context.Context, req *taskguildv1.Res
 			// Update existing script.
 			resultScript, err = s.scriptRepo.Get(ctx, req.GetScriptId())
 			if err != nil {
-				return nil, cerr.ExtractConnectError(ctx, err)
+				return nil, err
 			}
 
 			resultScript.Content = req.GetAgentContent()
@@ -168,7 +168,7 @@ func (s *Server) ResolveScriptConflict(ctx context.Context, req *taskguildv1.Res
 
 			err := s.scriptRepo.Update(ctx, resultScript)
 			if err != nil {
-				return nil, cerr.ExtractConnectError(ctx, err)
+				return nil, err
 			}
 		} else {
 			// Agent-only script — create new in DB.
@@ -192,12 +192,12 @@ func (s *Server) ResolveScriptConflict(ctx context.Context, req *taskguildv1.Res
 
 			err := s.scriptRepo.Create(ctx, resultScript)
 			if err != nil {
-				return nil, cerr.ExtractConnectError(ctx, err)
+				return nil, err
 			}
 		}
 
 	default:
-		return nil, cerr.NewError(cerr.InvalidArgument, "invalid resolution choice", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "invalid resolution choice", nil)
 	}
 
 	// Remove the resolved diff from cache.

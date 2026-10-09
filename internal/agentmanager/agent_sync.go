@@ -17,17 +17,17 @@ import (
 func (s *Server) SyncAgents(ctx context.Context, req *taskguildv1.SyncAgentsRequest) (*taskguildv1.SyncAgentsResponse, error) {
 	projectName := req.GetProjectName()
 	if projectName == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil)
 	}
 
 	proj, err := s.projectRepo.FindByName(ctx, projectName)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	agents, _, err := s.agentRepo.List(ctx, proj.ID, 1000, 0)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	protos := make([]*taskguildv1.AgentDefinition, len(agents))
@@ -43,18 +43,18 @@ func (s *Server) SyncAgents(ctx context.Context, req *taskguildv1.SyncAgentsRequ
 func (s *Server) SyncPermissions(ctx context.Context, req *taskguildv1.SyncPermissionsRequest) (*taskguildv1.SyncPermissionsResponse, error) {
 	projectName := req.GetProjectName()
 	if projectName == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil)
 	}
 
 	proj, err := s.projectRepo.FindByName(ctx, projectName)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	// Get stored permissions for the project.
 	stored, err := s.permissionRepo.Get(ctx, proj.ID)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	// Merge local permissions with stored (union strategy).
@@ -62,7 +62,7 @@ func (s *Server) SyncPermissions(ctx context.Context, req *taskguildv1.SyncPermi
 
 	// Save merged result.
 	if err := s.permissionRepo.Upsert(ctx, merged); err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	return &taskguildv1.SyncPermissionsResponse{
@@ -113,24 +113,24 @@ func (s *Server) ReportAgentStatus(ctx context.Context, req *taskguildv1.ReportA
 func (s *Server) SyncClaudeSettings(ctx context.Context, req *taskguildv1.SyncClaudeSettingsAgentRequest) (*taskguildv1.SyncClaudeSettingsAgentResponse, error) {
 	projectName := req.GetProjectName()
 	if projectName == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil)
 	}
 
 	proj, err := s.projectRepo.FindByName(ctx, projectName)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	stored, err := s.claudeSettingsRepo.Get(ctx, proj.ID)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	// Merge: local value fills in nil fields.
 	merged := mergeClaudeSettings(stored, req.LocalLanguage, attributionFromProto(req.GetLocalAttribution()))
 
 	if err := s.claudeSettingsRepo.Upsert(ctx, merged); err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	return &taskguildv1.SyncClaudeSettingsAgentResponse{

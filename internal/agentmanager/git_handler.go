@@ -16,12 +16,12 @@ import (
 
 func (s *Server) RequestGitPullMain(ctx context.Context, req *taskguildv1.RequestGitPullMainRequest) (*taskguildv1.RequestGitPullMainResponse, error) {
 	if req.GetProjectId() == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_id is required", nil)
 	}
 
 	proj, err := s.projectRepo.Get(ctx, req.GetProjectId())
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	requestID := ulid.Make().String()
@@ -49,12 +49,12 @@ func (s *Server) RequestGitPullMain(ctx context.Context, req *taskguildv1.Reques
 func (s *Server) ReportGitPullMainResult(ctx context.Context, req *taskguildv1.ReportGitPullMainResultRequest) (*taskguildv1.ReportGitPullMainResultResponse, error) {
 	projectName := req.GetProjectName()
 	if projectName == "" {
-		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil).ConnectError()
+		return nil, cerr.NewError(cerr.InvalidArgument, "project_name is required", nil)
 	}
 
 	proj, err := s.projectRepo.FindByName(ctx, projectName)
 	if err != nil {
-		return nil, cerr.ExtractConnectError(ctx, err)
+		return nil, err
 	}
 
 	// Publish event so frontend can pick up the result.
