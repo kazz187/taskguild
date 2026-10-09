@@ -45,7 +45,7 @@ func ConnectCodeToLevel(code connect.Code) Level {
 	case connect.CodePermissionDenied:
 		return LevelInfo
 	case connect.CodeResourceExhausted:
-		return LevelError
+		return LevelWarn
 	case connect.CodeFailedPrecondition:
 		return LevelInfo
 	case connect.CodeAborted:

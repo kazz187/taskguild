@@ -2,6 +2,8 @@ package internal
 
 import (
 	"context"
+	"crypto/subtle"
+	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"net"
@@ -48,6 +50,15 @@ const (
 	// streaming RPCs (Subscribe, SubscribeInteractions) may be idle for minutes
 	// between messages, so keep it generous.
 	serverIdleTimeout = 10 * time.Minute
+
+	// serverReadHeaderTimeout bounds how long a client may take to send the
+	// request headers, so slow clients cannot hold connections open
+	// indefinitely. It does not limit request bodies or streaming RPCs.
+	serverReadHeaderTimeout = 10 * time.Second
+
+	// uploadTaskImageReadSlackBytes is the room UploadTaskImage's read limit
+	// leaves on top of the image for the other fields and the JSON framing.
+	uploadTaskImageReadSlackBytes = 1 << 20
 )
 
 type Server struct {
@@ -182,7 +193,7 @@ func (s *Server) apiKeyMiddleware(next http.Handler) http.Handler {
 			}
 		}
 
-		if apiKey != s.env.APIKey {
+		if subtle.ConstantTimeCompare([]byte(apiKey), []byte(s.env.APIKey)) != 1 {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -205,11 +216,13 @@ func (s *Server) newHTTPServer(ctx context.Context) *http.Server {
 	protocols.SetHTTP1(true)
 	protocols.SetUnencryptedHTTP2(true)
 
+	// Clients authenticate with the API key header, not cookies, so
+	// credentials are not allowed. Browsers reject credentialed requests to a
+	// wildcard origin anyway.
 	handler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodOptions},
-		AllowedHeaders:   []string{"*"},
-		AllowCredentials: true,
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodOptions},
+		AllowedHeaders: []string{"*"},
 	}).Handler(s.apiKeyMiddleware(s.newMux()))
 
 	return &http.Server{
@@ -220,8 +233,9 @@ func (s *Server) newHTTPServer(ctx context.Context) *http.Server {
 		HTTP2: &http.HTTP2Config{
 			MaxConcurrentStreams: maxConcurrentStreams,
 		},
-		BaseContext: func(_ net.Listener) context.Context { return ctx },
-		IdleTimeout: serverIdleTimeout,
+		BaseContext:       func(_ net.Listener) context.Context { return ctx },
+		IdleTimeout:       serverIdleTimeout,
+		ReadHeaderTimeout: serverReadHeaderTimeout,
 	}
 }
 
@@ -267,13 +281,29 @@ func (s *Server) newMux() http.Handler {
 	taskguildv1connect.RegisterTemplateServiceHandler(rpcServer, s.templateServer)
 	taskguildv1connect.RegisterClaudeSettingsServiceHandler(rpcServer, s.claudeSettingsServer)
 	taskguildv1connect.RegisterScheduleServiceHandler(rpcServer, s.scheduleServer)
-	// connect-go v2 caps each read message at 4 MiB by default. Keep v1's
-	// unbounded reads: UploadTaskImage carries images up to
-	// task.MaxImageSizeBytes (10 MiB, base64-encoded by the JSON codec the
-	// frontend uses), and ReportScriptExecutionResult carries a script's whole
-	// log. Every caller but RespondToInteractionByToken has already passed the
-	// API key check before the body is read.
-	connecthttp.Mount(mux, rpcServer, connecthttp.WithReadMaxBytes(0))
+	connecthttp.Mount(mux, rpcServer, connecthttp.WithConditionalOptions(readMaxBytesOptions))
 
 	return mux
+}
+
+// readMaxBytesOptions keeps connect-go's default limit of 4 MiB per read
+// message, which also covers RespondToInteractionByToken, the one RPC callable
+// without the API key. It raises the limit only for the procedures that carry
+// large payloads by design.
+func readMaxBytesOptions(spec connect.Spec) []connecthttp.Option {
+	switch spec.Procedure {
+	case taskguildv1connect.TaskServiceUploadTaskImageProcedure:
+		// The frontend uses the JSON codec, which carries the image as base64.
+		limit := base64.StdEncoding.EncodedLen(task.MaxImageSizeBytes) + uploadTaskImageReadSlackBytes
+
+		return []connecthttp.Option{connecthttp.WithReadMaxBytes(limit)}
+	case taskguildv1connect.AgentManagerServiceReportScriptExecutionResultProcedure:
+		// The request carries the script's whole log, which the frontend shows
+		// as the final output because live output chunks are best-effort. If it
+		// were rejected the execution would never complete, so it stays
+		// unbounded. Only agents holding the API key can call it.
+		return []connecthttp.Option{connecthttp.WithReadMaxBytes(0)}
+	default:
+		return nil
+	}
 }
