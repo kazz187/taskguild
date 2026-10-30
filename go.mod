@@ -2,6 +2,11 @@ module github.com/kazz187/taskguild
 
 go 1.27.0
 
+// 脆弱性対応: MPTCP (Multipath TCP) を切る。Go 1.24 からリスナーは既定で MPTCP を使う (multipathtcp=2)。
+// go.mod の godebug はこのモジュールの main パッケージ (taskguild-server・taskguild-agent) の既定値になるので、
+// 起動のしかた (sentinel・環境変数の有無) によらず効く。
+godebug multipathtcp=0
+
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.6-20250717185734-6c6e0d3c608e.1
 	connectrpc.com/connect/v2 v2.0.0
